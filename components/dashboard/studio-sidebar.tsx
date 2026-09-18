@@ -1,10 +1,12 @@
 "use client";
 
+import { CodexConnection } from "./codex-connection";
 import { Package, Plus } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
+  SidebarFooter,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -56,6 +58,9 @@ export function StudioSidebar({ activeTab }: { activeTab: string }) {
           </SidebarMenuButton>
         </TabsList>
       </SidebarContent>
+      <SidebarFooter className="p-3">
+        <CodexConnection />
+      </SidebarFooter>
     </Sidebar>
   );
 }
