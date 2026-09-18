@@ -1,9 +1,5 @@
-import { Button } from "@/components/ui/button";
+import { Dashboard } from "@/components/dashboard/dashboard";
 
 export default function Home() {
-  return (
-    <div>
-      <Button>Button</Button>
-    </div>
-  );
+  return <Dashboard />;
 }
