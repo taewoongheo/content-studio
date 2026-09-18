@@ -5,7 +5,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { StudioSidebar } from "./studio-sidebar";
 import { ProductContextForm } from "./product-context-form";
-import { ContentWizard } from "./content-wizard";
+import { ContentForm } from "./content-form/content-form";
 import { useProductContext } from "./use-product-context";
 
 export function Dashboard() {
@@ -68,7 +68,7 @@ export function Dashboard() {
                     원하는 조건을 입력하세요.
                   </p>
                 </div>
-                <ContentWizard
+                <ContentForm
                   context={context}
                   onRegisterContext={() => setTab("products")}
                 />
