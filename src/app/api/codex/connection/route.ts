@@ -1,4 +1,5 @@
 import { codexConnection } from "@/lib/codex/connection";
+import { connectionEvents } from "@/lib/codex/connection-events";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,9 @@ function isLocalRequest(request: Request, mutation = false) {
 
 export async function GET(request: Request) {
   if (!isLocalRequest(request)) return new Response(null, { status: 403 });
+  if (request.headers.get("accept")?.includes("text/event-stream")) {
+    return connectionEvents(codexConnection, request.signal);
+  }
   return Response.json(codexConnection.snapshot(), {
     headers: { "Cache-Control": "no-store" },
   });

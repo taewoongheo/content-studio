@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { CodexConnectionManager } from "./connection";
+import { connectionEvents } from "./connection-events";
 
 async function withFakeCodex(
   account: unknown,
@@ -84,4 +85,36 @@ test("missing executable reports an actionable error and can be disconnected", a
     if (original === undefined) delete process.env.CODEX_BIN;
     else process.env.CODEX_BIN = original;
   }
+});
+
+test("event stream sends initial state and subsequent changes without polling", async () => {
+  await withFakeCodex({ type: "chatgpt" }, async (manager) => {
+    const response = connectionEvents(manager, new AbortController().signal);
+    const reader = response.body!.getReader();
+    const readStatus = async () => {
+      const { value } = await reader.read();
+      return JSON.parse(new TextDecoder().decode(value).slice(6)).status;
+    };
+    assert.equal(await readStatus(), "disconnected");
+    const connecting = manager.connect();
+    assert.equal(await readStatus(), "connecting");
+    await connecting;
+    assert.equal(await readStatus(), "connected");
+    await manager.disconnect();
+    assert.equal(await readStatus(), "disconnected");
+    await reader.cancel();
+    // A closed stream must not receive later notifications or stop Codex.
+    assert.equal((await manager.connect()).status, "connected");
+  });
+});
+
+test("aborting the browser stream removes its subscription", async () => {
+  await withFakeCodex({ type: "chatgpt" }, async (manager) => {
+    const abort = new AbortController();
+    const reader = connectionEvents(manager, abort.signal).body!.getReader();
+    await reader.read();
+    abort.abort();
+    assert.equal((await reader.read()).done, true);
+    assert.equal((await manager.connect()).status, "connected");
+  });
 });

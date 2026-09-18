@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import type { CodexConnection as Connection } from "@/lib/codex/types";
+import { useCodexConnection } from "@/lib/codex/use-codex-connection";
 
 const labels = {
   disconnected: "연결 안 됨",
@@ -19,66 +18,8 @@ const dots = {
   error: "bg-destructive",
 };
 
-async function readResponse(response: Response): Promise<Connection> {
-  if (!response.ok) throw new Error("Connection request failed");
-  return response.json();
-}
-
 export function CodexConnection() {
-  const [connection, setConnection] = useState<Connection | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [requestError, setRequestError] = useState("");
-
-  useEffect(() => {
-    if (busy) return;
-    const controller = new AbortController();
-    let timer: ReturnType<typeof setTimeout>;
-    async function refresh() {
-      try {
-        const state = await readResponse(
-          await fetch("/api/codex/connection", {
-            cache: "no-store",
-            signal: controller.signal,
-          }),
-        );
-        if (!controller.signal.aborted) {
-          setConnection(state);
-          setRequestError("");
-        }
-      } catch {
-        if (!controller.signal.aborted)
-          setRequestError("로컬 서버와 연결할 수 없습니다.");
-      } finally {
-        if (!controller.signal.aborted) timer = setTimeout(refresh, 5000);
-      }
-    }
-    void refresh();
-    return () => {
-      controller.abort();
-      clearTimeout(timer);
-    };
-  }, [busy]);
-
-  async function act(action: "connect" | "disconnect" | "reconnect") {
-    setBusy(true);
-    setRequestError("");
-    try {
-      const state = await readResponse(
-        await fetch("/api/codex/connection", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action }),
-        }),
-      );
-      setConnection(state);
-    } catch {
-      setRequestError(
-        "요청을 완료하지 못했습니다. 로컬 서버 상태를 확인해 주세요.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
+  const { connection, busy, requestError, act } = useCodexConnection();
 
   const status = connection?.status;
   const canDisconnect = status === "connected" || status === "login-required";

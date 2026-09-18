@@ -15,6 +15,7 @@ export class CodexConnectionManager {
   private pending = new Map<number, Pending>();
   private nextId = 0;
   private connecting: Promise<CodexConnection> | null = null;
+  private listeners = new Set<(state: CodexConnection) => void>();
   private state: CodexConnection = {
     status: "disconnected",
     message: "연결되지 않음",
@@ -22,6 +23,23 @@ export class CodexConnectionManager {
 
   snapshot(): CodexConnection {
     return { ...this.state };
+  }
+
+  subscribe(listener: (state: CodexConnection) => void) {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private updateState(state: CodexConnection) {
+    if (
+      this.state.status === state.status &&
+      this.state.message === state.message
+    )
+      return;
+    this.state = state;
+    for (const listener of this.listeners) listener(this.snapshot());
   }
 
   connect(): Promise<CodexConnection> {
@@ -34,7 +52,7 @@ export class CodexConnectionManager {
   }
 
   private async start(): Promise<CodexConnection> {
-    this.state = { status: "connecting", message: "Codex에 연결하는 중…" };
+    this.updateState({ status: "connecting", message: "Codex에 연결하는 중…" });
     const child = spawn(
       /* turbopackIgnore: true */ process.env.CODEX_BIN || "codex",
       ["app-server"],
@@ -112,13 +130,16 @@ export class CodexConnectionManager {
       refreshToken: false,
     })) as { account?: { type?: string } | null };
     if (result.account?.type === "chatgpt") {
-      this.state = { status: "connected", message: "ChatGPT 계정으로 연결됨" };
+      this.updateState({
+        status: "connected",
+        message: "ChatGPT 계정으로 연결됨",
+      });
     } else {
-      this.state = {
+      this.updateState({
         status: "login-required",
         message:
           "터미널에서 codex login으로 ChatGPT에 로그인한 후 다시 연결하세요. API 키 연결은 사용하지 않습니다.",
-      };
+      });
     }
   }
 
@@ -158,14 +179,14 @@ export class CodexConnectionManager {
   private fail(child: ChildProcessWithoutNullStreams, message: string) {
     if (this.child !== child) return;
     this.stop();
-    this.state = { status: "error", message };
+    this.updateState({ status: "error", message });
   }
 
   async disconnect(): Promise<CodexConnection> {
     // Wait for initialization so a late response cannot resurrect the connection.
     if (this.connecting) await this.connecting;
     this.stop();
-    this.state = { status: "disconnected", message: "연결되지 않음" };
+    this.updateState({ status: "disconnected", message: "연결되지 않음" });
     return this.snapshot();
   }
 }
