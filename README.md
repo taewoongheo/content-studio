@@ -190,3 +190,23 @@ Next.js 서버: 웹 API · 데이터 저장 · 제작 요청 처리
 - **연결 해제**는 Content Studio가 실행한 프로세스만 종료한다. Codex 계정에서 로그아웃하거나 다른 Codex 앱을 종료하지 않는다.
 - CLI가 서버의 PATH에 없으면 `CODEX_BIN` 환경변수에 실행 파일의 절대 경로를 지정한다.
 - 현재 구현은 단일 로컬 Node.js 서버 기준이다. 서버 재시작 후에는 다시 연결해야 한다. 연결 상태 확인은 모델 생성 요청을 보내지 않으며, 콘텐츠 생성 연결은 다음 작업이다.
+
+### 코드 구조
+
+```text
+src/
+  app/                       라우트 진입점과 서버 요청 처리
+  screens/dashboard/
+    dashboard-screen.tsx     대시보드 화면 구성
+    components/              대시보드 전용 UI
+      content-form/          제작 폼 UI·상태·검증·테스트
+    hooks/                   대시보드에서 사용하는 훅
+  components/ui/             화면 간 공유하는 기본 UI 컴포넌트
+  hooks/                     공통 훅
+  lib/codex/                 서버의 Codex 프로세스·연결 관리
+public/                      정적 파일
+```
+
+애플리케이션 코드는 `src/`에 모으고, 화면 UI의 책임은 `src/screens/`에 둔다. 화면 전용 컴포넌트·훅·유틸·테스트는 해당 스크린 안에 함께 두고, 여러 화면에서 실제로 공유하는 컴포넌트는 `src/components/`에 둔다. 서버 실행 코드는 스크린 UI와 분리한다.
+
+`@/` 별칭은 `src/`를 가리킨다. 프로젝트 설정 파일과 `.env.*`, `public/`은 프로젝트 루트에 유지한다.

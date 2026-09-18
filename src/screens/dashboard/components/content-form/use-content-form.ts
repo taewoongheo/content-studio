@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from "react";
-import type { ProductContext } from "../use-product-context";
+import type { ProductContext } from "../../hooks/use-product-context";
 import {
   templates,
   type ContentType,

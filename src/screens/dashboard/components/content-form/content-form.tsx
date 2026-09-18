@@ -2,7 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { ProductContext } from "../use-product-context";
+import type { ProductContext } from "../../hooks/use-product-context";
 import { contentTypes, creationMethods } from "./model";
 import { ChoiceSection } from "./choice-section";
 import { MaterialsFields } from "./materials-fields";

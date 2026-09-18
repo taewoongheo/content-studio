@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { StudioSidebar } from "./studio-sidebar";
-import { ProductContextForm } from "./product-context-form";
-import { ContentForm } from "./content-form/content-form";
-import { useProductContext } from "./use-product-context";
+import { StudioSidebar } from "./components/studio-sidebar";
+import { ProductContextForm } from "./components/product-context-form";
+import { ContentForm } from "./components/content-form/content-form";
+import { useProductContext } from "./hooks/use-product-context";
 
-export function Dashboard() {
+export function DashboardScreen() {
   const [tab, setTab] = useState("create");
   const { context, loaded, storageError, saveContext } = useProductContext();
   return (

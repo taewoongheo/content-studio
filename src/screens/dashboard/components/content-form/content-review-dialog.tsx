@@ -6,7 +6,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import type { ProductContext } from "../use-product-context";
+import type { ProductContext } from "../../hooks/use-product-context";
 import {
   contentTypes,
   creationMethods,
