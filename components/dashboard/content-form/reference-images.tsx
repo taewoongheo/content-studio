@@ -18,7 +18,7 @@ export function ReferenceImages({
   return (
     <>
       <FormField>
-        <Label htmlFor="reference-images">또는 레퍼런스 이미지</Label>
+        <Label htmlFor="reference-images">레퍼런스 이미지</Label>
         <div
           className={
             "grid gap-4 rounded-lg border border-dashed p-4 [&_input]:h-auto [&_input]:p-2"

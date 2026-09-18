@@ -67,7 +67,7 @@ export function ContentSettings({
   const typeTitle = contentTypes.find((item) => item.id === type)!.title;
   return (
     <section
-      className="grid gap-4 border-t pt-6"
+      className="grid gap-4 rounded-lg bg-surface-subtle p-6 max-md:p-4"
       aria-labelledby="settings-heading"
     >
       <div className="grid gap-2">

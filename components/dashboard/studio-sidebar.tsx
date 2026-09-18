@@ -30,19 +30,6 @@ export function StudioSidebar({ activeTab }: { activeTab: string }) {
         >
           <SidebarMenuButton
             className="h-11"
-            isActive={activeTab === "create"}
-            render={
-              <TabsTrigger
-                value="create"
-                className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent"
-              />
-            }
-          >
-            <Plus aria-hidden="true" />
-            <span>새 콘텐츠 만들기</span>
-          </SidebarMenuButton>
-          <SidebarMenuButton
-            className="h-11"
             isActive={activeTab === "products"}
             render={
               <TabsTrigger
@@ -53,6 +40,19 @@ export function StudioSidebar({ activeTab }: { activeTab: string }) {
           >
             <Package aria-hidden="true" />
             <span>제품 컨텍스트</span>
+          </SidebarMenuButton>
+          <SidebarMenuButton
+            className="h-11"
+            isActive={activeTab === "create"}
+            render={
+              <TabsTrigger
+                value="create"
+                className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent"
+              />
+            }
+          >
+            <Plus aria-hidden="true" />
+            <span>새 콘텐츠 만들기</span>
           </SidebarMenuButton>
         </TabsList>
       </SidebarContent>

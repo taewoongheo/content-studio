@@ -59,7 +59,7 @@ export function MaterialsFields({
   const description = descriptions[method];
   return (
     <section
-      className="grid gap-6 border-t pt-6"
+      className="grid gap-6 rounded-lg bg-surface-subtle p-6 max-md:p-4"
       aria-labelledby="materials-heading"
     >
       <div className="grid gap-2">
@@ -104,6 +104,11 @@ export function MaterialsFields({
               </p>
             )}
           </FormField>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <span className="h-px flex-1 bg-border" aria-hidden="true" />
+            <span>또는</span>
+            <span className="h-px flex-1 bg-border" aria-hidden="true" />
+          </div>
           {imageReferences ? (
             <ReferenceImages
               files={files}
@@ -114,9 +119,7 @@ export function MaterialsFields({
           ) : (
             <FormField>
               <Label htmlFor="reference-text">
-                {type === "video"
-                  ? "또는 참고할 대본·장면 설명"
-                  : "또는 참고할 원문"}
+                {type === "video" ? "참고할 대본·장면 설명" : "참고할 원문"}
               </Label>
               <Textarea
                 id="reference-text"
@@ -159,26 +162,31 @@ export function MaterialsFields({
           ))}
         </RadioGroup>
       )}
-      <FormField>
-        <Label htmlFor="notes">
-          {method === "scratch" ? "아이디어와 제작 방향" : "추가 요청"}
-          <span className="font-normal text-muted-foreground">선택</span>
-        </Label>
-        <Textarea
-          id="notes"
-          name="notes"
-          aria-describedby="notes-hint"
-          value={notes}
-          onChange={(event) => onChange({ notes: event.target.value })}
-          maxLength={3000}
-          placeholder="주제, 말투, 강조할 내용 등을 입력하세요."
-        />
-        <p id="notes-hint" className="text-sm leading-6 text-muted-foreground">
-          {method === "scratch"
-            ? "선택 입력입니다. 비워두면 저장된 제품 설명과 대상 사용자를 기준으로 준비합니다."
-            : "특히 참고할 부분, 원하는 말투, 포함하거나 제외할 내용을 적어주세요. 비워두어도 됩니다."}
-        </p>
-      </FormField>
+      <div className={method === "scratch" ? undefined : "border-t pt-6"}>
+        <FormField>
+          <Label htmlFor="notes">
+            {method === "scratch" ? "아이디어와 제작 방향" : "추가 요청"}
+            <span className="font-normal text-muted-foreground">선택</span>
+          </Label>
+          <Textarea
+            id="notes"
+            name="notes"
+            aria-describedby="notes-hint"
+            value={notes}
+            onChange={(event) => onChange({ notes: event.target.value })}
+            maxLength={3000}
+            placeholder="주제, 말투, 강조할 내용 등을 입력하세요."
+          />
+          <p
+            id="notes-hint"
+            className="text-sm leading-6 text-muted-foreground"
+          >
+            {method === "scratch"
+              ? "선택 입력입니다. 비워두면 저장된 제품 설명과 대상 사용자를 기준으로 준비합니다."
+              : "특히 참고할 부분, 원하는 말투, 포함하거나 제외할 내용을 적어주세요. 비워두어도 됩니다."}
+          </p>
+        </FormField>
+      </div>
     </section>
   );
 }
