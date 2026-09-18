@@ -1,0 +1,54 @@
+language: "en-US"
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  review_status: true
+  review_details: true
+  collapse_walkthrough: true
+  changed_files_summary: true
+  sequence_diagrams: false
+  estimate_code_review_effort: false
+  poem: false
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    - "src/**"
+    - "README.md"
+    - "package.json"
+    - "tsconfig.json"
+    - "next.config.ts"
+    - "components.json"
+    - "!.next/**"
+    - "!node_modules/**"
+    - "!pnpm-lock.yaml"
+  path_instructions:
+    - path: "src/app/**"
+      instructions: |
+        Review Next.js App Router boundaries and Node.js versus client runtime usage.
+        Route handlers must validate local-origin requests and avoid exposing process,
+        filesystem, or credential details to the browser. Keep server-only work out of
+        client components.
+    - path: "src/screens/**"
+      instructions: |
+        Review screen-level composition, accessibility, responsive behavior, and state
+        ownership. Keep screen-specific UI inside the screen and shared UI in src/components.
+        Follow the project's minimal shadcn and Tailwind visual language.
+    - path: "src/lib/codex/**"
+      instructions: |
+        Review child-process lifecycle, JSONL request correlation, stream cleanup,
+        timeouts, reconnect behavior, and prevention of duplicate Codex processes.
+        Do not treat API keys as interchangeable with the user's ChatGPT-managed Codex login.
+    - path: "**/*.tsx"
+      instructions: |
+        Review React accessibility, stable event behavior, predictable state updates,
+        and unnecessary polling or duplicate network requests. Keep styling in Tailwind.
+    - path: "**/*.ts"
+      instructions: |
+        Prefer explicit types, consistent return values, focused responsibilities, and
+        meaningful error handling. Preserve the existing local-first behavior.
+
+chat:
+  auto_reply: true

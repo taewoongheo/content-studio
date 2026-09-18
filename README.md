@@ -1,183 +1,92 @@
 # Content Studio
 
-## 해결하려는 문제
+Content Studio is a local-first workspace for producing publishable content from a product context and references. It reduces the need to repeat product details, describe visual direction from scratch, and rebuild generated results manually.
 
-Content Studio는 유통 과정 중 **원하는 방향과 품질의 콘텐츠를 빠르고 편리하게 생산하는 문제**를 해결한다.
+## Roadmap
 
-사용자는 매번 제품을 설명하거나, 원하는 시각적 구성을 긴 문장으로 지시하거나, 생성된 결과를 처음부터 다시 만드는 부담을 줄일 수 있다.
+| Stage | Goal | Scope |
+| --- | --- | --- |
+| **1 — Production MVP** | Complete one piece of content quickly | Slideshow, video, text, three creation methods, product context, proposals and choices, conversational AI editing, save and recovery, export |
+| **2 — Repeatable operations** | Reuse validated workflows across content and accounts | Reusable formats, multiple content jobs, account-level content management and distribution |
+| **3 — Automated decisions** | Reduce the work required to decide what to make | Relevant content and format discovery, topic and format recommendations, and feedback into later decisions |
 
-## 단계별 로드맵
+Stage one includes slideshow, video, and text content with reference-based, template-based, and from-scratch creation. The three content types are media types; references and templates define the format. Their inputs and production steps can differ.
 
-| 단계                    | 목표                                              | 주요 범위                                                                                              | 단계 완료를 판단할 기준                                                                         |
-| ----------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| **1단계 — 생산 MVP**    | 원하는 콘텐츠 한 건을 빠르게 완성                 | 슬라이드쇼·영상·텍스트, 세 가지 생성 방식, 제품 컨텍스트, 제안·선택, AI 대화 수정, 저장·복구, 내보내기 | 실제 게시 가능한 콘텐츠를 기존 방식보다 적은 시간과 수정 노력으로 완성                          |
-| **2단계 — 반복 운영**   | 검증된 제작 흐름을 여러 콘텐츠와 계정에 반복 적용 | 포맷 재사용, 여러 제작 작업 관리, 계정별 콘텐츠 관리·배포                                              | 여러 콘텐츠를 반복 제작하고 계정별 배포 상황을 관리                                             |
-| **3단계 — 판단 자동화** | 무엇을 만들지 선택하는 부담을 줄임                | 제품·계정에 맞는 관련 게시물과 포맷 탐색, 주제·포맷 추천 및 선택 자동화, 결과를 다음 결정에 반영       | 제품·계정 컨텍스트를 바탕으로 제작 방향을 제안·실행하고, 결정 근거와 개선 여부를 확인할 수 있음 |
-
-## 1단계 범위
-
-| 콘텐츠 유형 | 생성 방식                                     | 정의 수준                                          |
-| ----------- | --------------------------------------------- | -------------------------------------------------- |
-| 슬라이드쇼  | 레퍼런스 기반 / 템플릿 기반 / 처음부터 만들기 | 공통 흐름과 레퍼런스 기반 경로를 아래에 상세 정의  |
-| 영상        | 레퍼런스 기반 / 템플릿 기반 / 처음부터 만들기 | 영상 유형과 매체별 입력·제작·편집·출력 절차는 미정 |
-| 텍스트      | 레퍼런스 기반 / 템플릿 기반 / 처음부터 만들기 | 게시 대상과 매체별 입력·제작·편집·출력 절차는 미정 |
-
-슬라이드쇼·영상·텍스트는 콘텐츠 유형이고, 레퍼런스나 템플릿의 표현 규칙은 포맷이다. 유형별 입력과 순서가 다를 수 있다.
-
-### 기본 사용자 흐름
-
-아래는 슬라이드쇼의 기본 흐름이다. 영상과 텍스트는 같은 제안·선택·대화 수정 원칙을 사용하되 매체에 맞게 단계를 정한다.
+## Current product flow
 
 ```text
-제품 컨텍스트 선택
-→ 콘텐츠 유형·생성 방식 선택
-→ 방식별 입력: 레퍼런스 / 템플릿 / 직접 제작 조건
-→ 주제 제안·선택
-→ 훅 제안·선택
-→ 본문 구성 및 슬라이드별 카피 제안·선택
-→ 이미지 확보 및 시각 제작
-→ 최종 미리보기에서 AI와 대화하며 수정
-→ 내보내기
+Select product context
+→ Choose content type and creation method
+→ Enter references, template, or direct production requirements
+→ Propose and choose a topic
+→ Propose and choose a hook
+→ Propose the body structure and copy
+→ Gather images and produce the visual result
+→ Review and revise with AI conversation
+→ Export
 ```
 
-- 주제·훅·본문 생성 중 필요한 경우 리서치를 수행한다.
-- 사용자는 중간 결과에 피드백을 주고 다시 제안받을 수 있다.
-- 수동 진행은 사용자의 선택을 반영해 다음 단계로 넘어간다.
-- 자동 진행은 단계별 선택을 AI가 수행하고 사용자는 최종 결과를 검토하는 형태다. **1단계 포함 여부와 검토 설정은 미정**이다.
+The current UI implements the product context form, the content creation input form, and local Codex connection status. AI generation, proposals, editing, persistence of content jobs, and export are planned next.
 
-## 1단계 기능 명세
+## Product requirements
 
-### 0. 콘텐츠 유형 및 생성 방식 선택
+- Product context is registered once and reused across content jobs.
+- A creation job selects a media type and one of three creation methods.
+- Reference-based creation accepts links and media appropriate to the selected type.
+- Template-based creation selects a content structure, separate from visual design.
+- From-scratch creation accepts optional ideas and production direction.
+- Later stages will support proposals, user choices, conversational revision, recovery, preview, and export.
 
-- 새 제작 작업에서 슬라이드쇼·영상·텍스트 중 유형을 선택한다.
-- 유형에 맞는 레퍼런스 기반·템플릿 기반·처음부터 만들기 중 생성 방식을 선택한다.
-- **레퍼런스 기반:** 참고할 자료를 입력하고 해석한 결과를 제작에 활용한다.
-- **템플릿 기반:** 사용할 템플릿을 선택하고 제품 컨텍스트에 맞는 내용을 생성한다. 기본 제공, 사용자 등록, 완성된 콘텐츠에서 저장하는 방식 중 지원할 방법은 미정이다.
-- **처음부터 만들기:** 레퍼런스나 템플릿 없이 시작한다. 필요한 제작 조건을 입력받거나 AI 제안으로 정한다. 정확한 입력과 제안 절차는 미정이다.
-- 이후 제안·선택·대화 수정·저장·내보내기를 유형에 맞게 제공한다.
-- 1단계의 템플릿 선택·적용과, 2단계의 여러 콘텐츠에 대한 반복 적용·운영은 구분한다.
-
-### 1. 제품 컨텍스트 관리
-
-- 제품에 관한 정보를 등록·조회·수정하고 저장한다.
-- 콘텐츠 제작을 시작할 때 사용할 제품 컨텍스트를 지정한다.
-- 저장된 컨텍스트를 다음 제작에서도 재사용해 반복 입력을 줄인다.
-- 사용자가 주제·전달 의도·완성된 카피를 미리 작성하지 않아도 제안을 받을 수 있다.
-- 제품 설명, 대상 사용자, 핵심 가치, 표현 제약 등의 상세 입력 항목과 필수 여부는 미정이다.
-
-### 2. 레퍼런스 입력 및 해석
-
-- 훅이 있는 커버 이미지, 본문 예시 이미지, 레퍼런스 링크 등을 입력받는 흐름을 제공한다.
-- 레퍼런스에서 파악한 시각적 구성과 표현 방식을 현재 제품의 콘텐츠 제작에 활용한다.
-- 사용자는 대화로 원하는 방향을 보충할 수 있다.
-- 원본의 문구·주장·이미지를 그대로 재사용하는 것과 표현 구조를 참고하는 것은 구분한다.
-- 각 입력의 필수 여부, 업로드 가능한 형식·개수, 링크에서 자동으로 추출할 범위는 미정이다.
-- 커버와 반복 본문을 기본 입력 구조로 검토하되, 모든 콘텐츠를 이 두 종류의 페이지로 제한할지는 미정이다.
-
-### 3. 주제 제안·선택
-
-- 제품 컨텍스트와 레퍼런스를 기반으로 주제 후보를 제안한다.
-- 사용자는 후보를 선택하거나, 피드백을 전달해 수정·재제안을 요청할 수 있다.
-- 선택한 주제를 이후 훅·본문·시각 제작에 사용한다.
-- 필요한 지식이 부족한 경우 리서치를 수행한다.
-- 후보 개수와 직접 주제 입력 UI는 미정이다.
-
-### 4. 훅 제안·선택
-
-- 선택된 주제와 레퍼런스의 표현 방식을 반영해 커버의 훅 후보를 제안한다.
-- 사용자는 후보를 선택하고, 대화로 표현과 방향을 조정할 수 있다.
-- 주장 확인이나 내용 보강이 필요한 경우 리서치를 수행한다.
-- 선택한 훅을 본문 구성과 커버 제작에 반영한다.
-
-### 5. 본문 구성 및 슬라이드별 카피
-
-- 선택된 주제와 훅을 바탕으로 슬라이드의 순서와 각 페이지의 내용을 제안한다.
-- 슬라이드별 카피를 확인하고 선택·수정 요청할 수 있다.
-- 내용 보강·검증에 필요한 경우 리서치를 수행한다.
-- 페이지 수를 정하는 방식과, 한 장씩 선택할지 전체 초안을 검토할지는 미정이다.
-
-### 6. 필요한 경우 수행하는 리서치
-
-- 목적은 현재 콘텐츠의 주제·주장·카피에 필요한 정보 보강과 사실 검증이다.
-- 제공된 자료와 사용할 수 있는 기존 근거를 활용하고, 부족하면 웹 조사 도구를 호출한다.
-- 리서치 결과를 요청한 제작 단계로 전달해 작업을 계속한다.
-- 리서치를 모든 단계에서 의무적으로 실행하지 않는다.
-- 관련 게시물을 찾아 새로운 포맷을 발굴하는 기능은 3단계의 탐색 범위다.
-- 검색 도구, 조사 종료 기준, 출처 저장·표시 방식, 별도 리서치 저장소의 범위는 미정이다.
-
-### 7. 매체별 결과물 제작
-
-- 레퍼런스에서 파악한 표현 방식과 선택된 카피를 사용해 실제 슬라이드를 만든다.
-- 슬라이드의 텍스트와 이미지를 배치하고 미리보기를 제공한다.
-- 결과는 이후 수정하고 내보낼 수 있는 형태로 보존한다.
-- 이미지 확보 방식은 미정이다. 사용자 업로드, 로컬 자원, 웹 검색, AI 생성 중 지원할 범위를 정해야 한다.
-- 렌더링 기술, 캔버스 크기·비율, 지원 글꼴도 아직 확정하지 않았다.
-- 영상은 구성·카피를 바탕으로 영상을 제작하고 미리보기를 제공한다. 장면·음성·음악·자막·길이 등 구체적인 지원 범위와 순서는 미정이다.
-- 텍스트는 게시할 본문을 작성하고 미리보기를 제공한다. 블로그·SNS 등 지원 대상과 서식·분량은 미정이다.
-
-### 8. AI 대화 편집
-
-- 제작 중간 단계에서 결과에 대해 대화하고 방향을 수정할 수 있다.
-- 최종 제작 화면에서는 매체별 결과물 미리보기와 사이드 채팅을 함께 제공한다.
-- 사용자는 내용과 시각적 표현의 수정을 요청하고 반영된 결과를 확인한다.
-- 수정 후 다시 내보낼 수 있어야 한다.
-- 페이지·요소를 클릭해 수정 대상을 지정하는 방식, 직접 텍스트 편집·드래그 편집, 변경 전 미리보기·승인, 실행 취소의 지원 범위는 미정이다.
-
-### 9. 저장 및 중단 후 복구
-
-- 제작 작업의 제품 컨텍스트, 입력 자료, 단계별 제안·선택 결과, 현재 진행 상태와 생성물을 로컬에 저장한다.
-- 기존 작업을 다시 열어 완료된 결과를 확인하고 제작을 이어갈 수 있다.
-- 페이지를 새로고침하거나 다시 열었을 때 저장된 결과를 복원한다.
-- AI 요청에 문제가 생기면 사용자가 완료 여부를 확인하고 다시 시도할 수 있어야 한다.
-- 실행 중 서버가 종료되었을 때 해당 단계를 다시 실행할지 세부 작업부터 재개할지, 저장 시점·대화 보존 범위는 미정이다.
-
-### 10. 내보내기
-
-- 완성된 콘텐츠를 매체에 맞는 형태로 내보낸다.
-- 슬라이드쇼는 페이지 순서를 유지한 파일로 내려받는다. PNG/JPEG/PDF/ZIP 중 제공 형식과 해상도는 미정이다.
-- 영상은 재생 가능한 영상 파일로 내보낸다. 규격·컨테이너·코덱 등은 미정이다.
-- 텍스트는 게시에 사용할 수 있는 형태로 내보낸다. 복사·파일 다운로드 지원 방식과 서식은 미정이다.
-- 1단계에서는 사용자가 플랫폼에 직접 게시한다. 자동 배포는 2단계에서 다룬다.
-
-## 1단계 성공 기준
-
-**사용자의 목표: 게시 가능한 콘텐츠 4개를 만드는 데 1시간 이하.** 아직 달성한 성과가 아니다.
-
-- 핵심 지표: 게시 가능한 결과까지 걸린 시간과 사용자의 직접 수정 노력.
-- 품질 기준: 사용자가 원하는 방향을 반영하고, 내용과 시각적 구성을 검토한 뒤 실제 게시할 수 있는 결과.
-- 생성 속도만 빠르고 외부 도구에서 대량 수정이 필요하면 목표를 달성한 것으로 보지 않는다.
-- 측정 범위에 제품·레퍼런스 준비, AI 대기, 외부 수정, 실제 게시 시간을 어디까지 포함할지는 미정이다.
-- 목표 검증 시 콘텐츠 유형·분량·품질 기준을 기록하고, 시간과 수정 노력을 같은 조건에서 비교한다.
-- 조회수·참여율은 첫 생산 MVP의 주 성공 지표로 사용하지 않는다.
-
-## 기술 및 실행 구조
+## Technical architecture
 
 ```text
-브라우저: 제작 단계 UI · 매체별 미리보기 · 채팅
+Browser: production UI, previews, and conversation
     ↕
-Next.js 서버: 웹 API · 데이터 저장 · 제작 요청 처리
+Next.js server: route handlers, local data, and agent requests
     ↕                         ↕
-로컬 DB / 파일          Codex app-server
-                       AI 작업·도구 실행
+Local database/files       Codex app-server
+                            agent work and tools
 ```
 
-| 항목          | 상태와 방향                                                                             |
-| ------------- | --------------------------------------------------------------------------------------- |
-| 웹 프레임워크 | **Next.js App Router + TypeScript 확정.** UI와 웹 API를 한 프로젝트에서 개발한다.       |
-| 실행 환경     | **개인용 로컬 실행.** 서버가 로컬 DB·파일과 Codex에 접근한다.                           |
-| AI 연결       | **구독으로 로그인한 로컬 Codex 연동 방향 확정.** app-server 연결은 구현·검증 예정이다.  |
-| DB            | **로컬 DB 사용.** SQLite가 논의된 후보이며 드라이버·스키마는 미정이다.                  |
-| 프로세스      | 단계별 함수와 저장된 상태로 처리한다. **핵심 제작 흐름에 LangGraph를 도입하지 않는다.** |
-| 리서치 확장   | 심층 리서치의 실행 관리가 실제로 복잡해지면 리서치 내부에만 별도 도구 도입을 검토한다.  |
-| UI 기반       | 기존 UI 라이브러리를 활용하는 방향. shadcn/ui가 추천 후보이며 최종 선택은 미정이다.     |
-| 편집·렌더링   | 새로 구축한다. 기존 편집기 기술을 그대로 채택하기로 결정하지 않았다.                    |
+| Area | Direction |
+| --- | --- |
+| Web framework | Next.js App Router and TypeScript |
+| Runtime | Personal local execution; the server can access local files and Codex |
+| AI connection | ChatGPT-authenticated local Codex through `codex app-server` |
+| Database | Local database; SQLite remains the current candidate |
+| Workflow | Explicit stage functions and saved state; no LangGraph in the core flow |
+| UI | shadcn components with Tailwind CSS |
 
-자동 제작 작업의 수명은 브라우저 화면을 계속 열어두는 것에 의존하지 않도록 설계한다. 실행 관리 방식은 구현 시 정한다.
+## Local Codex connection
 
-## 참고 제품
+Install and authenticate the Codex CLI before starting the Next.js server:
 
-- Mirr: 콘텐츠 생산과 반복 운영의 전체 흐름.
-- Scorper: 단계별 제안·선택과 포맷을 유지하는 제작 경험. Clone의 실제 품질은 직접 검증하지 않았다.
-- PostNitro: 미리보기와 사이드 채팅을 함께 사용하는 편집 경험.
+```bash
+codex login
+pnpm dev
+```
 
-참고 제품의 기능은 도입 확정 목록이나 경쟁 우위를 증명하는 근거가 아니다. 실제 사용에서 줄이고 싶은 불편을 바탕으로 구현한다.
+The server starts `codex app-server` through a Node.js child process during Next.js startup. The process communicates over JSON lines through standard input and output. The sidebar receives connection changes through an SSE stream instead of polling repeatedly. The connection status checks the ChatGPT-managed account and does not send a model-generation request.
+
+The repository configuration for CodeRabbit lives in `.coderabbit.yaml`. It sets English reviews, a balanced review profile, automatic review for non-draft pull requests, and path-specific guidance for the Next.js screens and Codex process lifecycle.
+
+## Source layout
+
+```text
+src/
+  app/                       routes and server handlers
+  screens/dashboard/
+    dashboard-screen.tsx    dashboard composition
+    components/              dashboard-specific UI and forms
+    hooks/                   dashboard-specific hooks
+  components/ui/             shared UI primitives
+  hooks/                     shared hooks
+  lib/codex/                 Codex process and connection management
+public/                      static files
+```
+
+Application code lives in `src/`. Screen-specific UI stays under `src/screens/`; shared components belong under `src/components/`. Project configuration, `.env.*` files, and `public/` remain at the repository root. The `@/` import alias points to `src/`.
+
+## Success criteria
+
+The first production goal is to create four publishable pieces of content in one hour or less. The primary measures are time to a publishable result and the amount of manual revision required. Reach and engagement are not first-stage success metrics.
