@@ -1,20 +1,9 @@
 import { codexConnection } from "@/lib/codex/connection";
 import { connectionEvents } from "@/lib/codex/connection-events";
+import { isLocalRequest } from "@/lib/http/local-request";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function isLocalRequest(request: Request, mutation = false) {
-  const host = request.headers.get("host");
-  if (!host) return false;
-  // Next.js can normalize request.url to a different loopback hostname.
-  // Compare the browser's Origin to the validated incoming Host instead.
-  const url = new URL(`${new URL(request.url).protocol}//${host}`);
-  if (!["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) return false;
-  if (request.headers.get("sec-fetch-site") === "cross-site") return false;
-  const origin = request.headers.get("origin");
-  return mutation ? origin === url.origin : !origin || origin === url.origin;
-}
 
 export async function GET(request: Request) {
   if (!isLocalRequest(request)) return new Response(null, { status: 403 });
