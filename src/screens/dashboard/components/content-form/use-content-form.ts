@@ -1,55 +1,19 @@
 import { useRef, useState, type FormEvent } from "react";
 import type { ProductContext } from "../../hooks/use-product-context";
-import {
-  templates,
-  type ContentType,
-  type Method,
-  type Materials,
-  type ContentSettings,
-} from "./model";
-import { validateMaterials, validateReferenceImages } from "./validation";
+import type { ContentSettings } from "./model";
+import { validateReference, validateReferenceImages } from "./validation";
 
 export function useContentForm(context: ProductContext | null) {
-  const [type, setType] = useState<ContentType>("slideshow");
-  const [method, setMethod] = useState<Method>("reference");
-  const [materials, setMaterials] = useState<Materials>({
-    reference: "",
-    referenceText: "",
-    files: [],
-    template: templates[0],
-    notes: "",
-  });
+  const [files, setFiles] = useState<File[]>([]);
   const [settings, setSettings] = useState<ContentSettings>({
-    ratio: "4:5",
+    ratio: "9:16",
     count: "6장",
-    videoRatio: "9:16",
-    duration: "30초",
-    channel: "SNS 게시글",
-    length: "보통 · 약 500자",
     language: "한국어",
   });
   const [reviewOpen, setReviewOpen] = useState(false);
   const [error, setError] = useState("");
   const [fileError, setFileError] = useState("");
   const referenceInput = useRef<HTMLInputElement>(null);
-
-  function changeType(value: ContentType) {
-    setType(value);
-    setError("");
-    setFileError("");
-  }
-
-  function changeMethod(value: Method) {
-    setMethod(value);
-    setError("");
-  }
-
-  function changeMaterials(patch: Partial<Materials>) {
-    setMaterials((previous) => ({ ...previous, ...patch }));
-    if (patch.reference !== undefined || patch.referenceText !== undefined) {
-      setError("");
-    }
-  }
 
   function changeSettings(patch: Partial<ContentSettings>) {
     setSettings((previous) => ({ ...previous, ...patch }));
@@ -58,30 +22,37 @@ export function useContentForm(context: ProductContext | null) {
   function addFiles(list: FileList | null) {
     if (!list) return;
     const incoming = Array.from(list);
-    const message = validateReferenceImages(materials.files.length, incoming);
+    const message = validateReferenceImages(files.length, incoming);
     if (message) {
       setFileError(message);
       return;
     }
-    setMaterials((previous) => ({
-      ...previous,
-      files: [...previous.files, ...incoming],
-    }));
+    setFiles((previous) => [...previous, ...incoming]);
     setFileError("");
     setError("");
   }
 
   function removeFile(index: number) {
-    setMaterials((previous) => ({
-      ...previous,
-      files: previous.files.filter((_, i) => i !== index),
-    }));
+    setFiles((previous) => previous.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  function moveFile(index: number, direction: -1 | 1) {
+    setFiles((previous) => {
+      const target = index + direction;
+      if (target < 0 || target >= previous.length) return previous;
+      const reordered = [...previous];
+      [reordered[index], reordered[target]] = [
+        reordered[target],
+        reordered[index],
+      ];
+      return reordered;
+    });
   }
 
   function review(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!context) return;
-    const message = validateMaterials(type, method, materials);
+    const message = validateReference(files);
     setError(message);
     if (message) {
       referenceInput.current?.focus();
@@ -91,20 +62,16 @@ export function useContentForm(context: ProductContext | null) {
   }
 
   return {
-    type,
-    method,
-    materials,
+    files,
     settings,
     reviewOpen,
     error,
     fileError,
     referenceInput,
-    changeType,
-    changeMethod,
-    changeMaterials,
     changeSettings,
     addFiles,
     removeFile,
+    moveFile,
     review,
     setReviewOpen,
   };

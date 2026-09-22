@@ -78,6 +78,9 @@ export async function saveContentJobInput(formData: FormData): Promise<{
   cleanup: () => Promise<void>;
 }> {
   const productContext = parseProductContext(formData.get("productContext"));
+  const aspectRatio = formData.get("aspectRatio");
+  if (aspectRatio !== "4:5" && aspectRatio !== "1:1" && aspectRatio !== "9:16")
+    throw new ContentJobInputError("화면 비율을 확인해 주세요.");
   const slideCount = Number(formData.get("slideCount"));
   if (!Number.isInteger(slideCount) || slideCount < 4 || slideCount > 10)
     throw new ContentJobInputError("슬라이드 수는 4장부터 10장까지입니다.");
@@ -126,6 +129,7 @@ export async function saveContentJobInput(formData: FormData): Promise<{
     return {
       input: {
         productContext,
+        aspectRatio,
         slideCount,
         outputLanguage: outputLanguage.trim(),
         referenceImages,

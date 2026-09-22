@@ -1,36 +1,34 @@
 "use client";
 
+import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { ContentJobSnapshot } from "@/lib/content-jobs/types";
+import { createContentJob } from "@/screens/content-job/api";
 import type { ProductContext } from "../../hooks/use-product-context";
-import { contentTypes, creationMethods } from "./model";
-import { ChoiceSection } from "./choice-section";
-import { MaterialsFields } from "./materials-fields";
-import { ContentSettings } from "./content-settings";
 import { ContentReviewDialog } from "./content-review-dialog";
+import { ContentSettings } from "./content-settings";
+import { slideCount } from "./model";
+import { ReferenceImages } from "./reference-images";
 import { useContentForm } from "./use-content-form";
 
 export function ContentForm({
   context,
   onRegisterContext,
+  onJobStarted,
 }: {
   context: ProductContext | null;
   onRegisterContext: () => void;
+  onJobStarted: (job: ContentJobSnapshot) => void;
 }) {
   const form = useContentForm(context);
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState("");
 
   if (!context)
     return (
-      <section
-        className={
-          "flex max-w-[640px] flex-col items-start gap-4 rounded-lg border p-8 max-md:p-6"
-        }
-        aria-labelledby="context-required"
-      >
-        <h2
-          id="context-required"
-          className="text-xl font-semibold tracking-tight"
-        >
+      <section className="flex max-w-[640px] flex-col items-start gap-4 rounded-lg border p-8 max-md:p-6" aria-labelledby="context-required">
+        <h2 id="context-required" className="text-xl font-semibold tracking-tight">
           제품 컨텍스트를 먼저 등록하세요
         </h2>
         <p className="text-sm leading-6 text-muted-foreground">
@@ -42,46 +40,51 @@ export function ContentForm({
         </Button>
       </section>
     );
+  const productContext = context;
+
+  async function start() {
+    setStarting(true);
+    setStartError("");
+    try {
+      const job = await createContentJob({
+        context: productContext,
+        files: form.files,
+        aspectRatio: form.settings.ratio,
+        slideCount: slideCount(form.settings),
+        outputLanguage: form.settings.language,
+      });
+      form.setReviewOpen(false);
+      onJobStarted(job);
+    } catch (error) {
+      setStartError(
+        error instanceof Error ? error.message : "분석을 시작하지 못했습니다.",
+      );
+    } finally {
+      setStarting(false);
+    }
+  }
 
   return (
     <div className="max-w-[850px]">
       <form onSubmit={form.review} className="grid gap-8">
-        <ChoiceSection
-          name="content-type"
-          idPrefix="type"
-          title="콘텐츠 유형"
-          options={contentTypes}
-          value={form.type}
-          onChange={form.changeType}
-        />
-        <ChoiceSection
-          name="method"
-          idPrefix="method"
-          title="제작 방식"
-          options={creationMethods}
-          value={form.method}
-          onChange={form.changeMethod}
-        />
-        <MaterialsFields
-          type={form.type}
-          method={form.method}
-          value={form.materials}
-          onChange={form.changeMaterials}
-          error={form.error}
-          fileError={form.fileError}
-          referenceInput={form.referenceInput}
+        <section className="grid gap-2">
+          <h2 className="text-base font-semibold">제작 방식</h2>
+          <p className="text-sm leading-6 text-muted-foreground">
+            TikTok 슬라이드쇼 · 레퍼런스 기반
+          </p>
+        </section>
+        <ReferenceImages
+          files={form.files}
+          error={form.error || form.fileError}
+          inputRef={form.referenceInput}
           onAddFiles={form.addFiles}
           onRemoveFile={form.removeFile}
+          onMoveFile={form.moveFile}
         />
-        <ContentSettings
-          type={form.type}
-          value={form.settings}
-          onChange={form.changeSettings}
-        />
+        <ContentSettings value={form.settings} onChange={form.changeSettings} />
         <div className="flex flex-wrap items-center justify-between gap-4 border-t pt-6">
           <p className="max-w-md text-sm leading-6 text-muted-foreground">
-            현재는 입력 확인까지 지원합니다. AI 생성은 준비 중이며, 제작 입력은
-            새로고침하면 초기화됩니다.
+            이미지가 분석된 뒤 전략, 본문, 훅을 순서대로 검토합니다.
           </p>
           <Button type="submit" className="h-11 px-5">
             입력 내용 확인
@@ -93,10 +96,11 @@ export function ContentForm({
         open={form.reviewOpen}
         onOpenChange={form.setReviewOpen}
         context={context}
-        type={form.type}
-        method={form.method}
-        materials={form.materials}
+        files={form.files}
         settings={form.settings}
+        starting={starting}
+        error={startError}
+        onStart={() => void start()}
       />
     </div>
   );

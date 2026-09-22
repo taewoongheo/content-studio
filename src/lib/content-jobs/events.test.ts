@@ -10,6 +10,7 @@ const input = {
     audience: "대상",
     constraints: "",
   },
+  aspectRatio: "9:16" as const,
   slideCount: 4,
   outputLanguage: "한국어",
   referenceImages: [

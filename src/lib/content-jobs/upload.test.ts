@@ -18,6 +18,7 @@ function validForm() {
       constraints: "과장 금지",
     }),
   );
+  form.set("aspectRatio", "9:16");
   form.set("slideCount", "6");
   form.set("outputLanguage", "한국어");
   form.append("images", new File([pngHeader], "one.png", { type: "image/png" }));
@@ -32,6 +33,7 @@ test("stores ordered images with stable IDs and exposes cleanup", async () => {
       saved.input.referenceImages.map((image) => image.id),
       ["image-1", "image-2"],
     );
+    assert.equal(saved.input.aspectRatio, "9:16");
     await access(saved.input.referenceImages[0].path);
   } finally {
     await saved.cleanup();
@@ -50,5 +52,15 @@ test("rejects invalid image signatures before creating a job", async () => {
     saveContentJobInput(form),
     (error: unknown) =>
       error instanceof ContentJobInputError && /형식/.test(error.message),
+  );
+});
+
+test("rejects unsupported aspect ratios", async () => {
+  const form = validForm();
+  form.set("aspectRatio", "16:9");
+  await assert.rejects(
+    saveContentJobInput(form),
+    (error: unknown) =>
+      error instanceof ContentJobInputError && /화면 비율/.test(error.message),
   );
 });

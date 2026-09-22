@@ -17,6 +17,7 @@ export type ReferenceImageInput = {
 
 export type ContentJobInput = {
   productContext: ProductContextInput;
+  aspectRatio: "4:5" | "1:1" | "9:16";
   slideCount: number;
   outputLanguage: string;
   referenceImages: ReferenceImageInput[];

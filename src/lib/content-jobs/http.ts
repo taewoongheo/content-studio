@@ -23,6 +23,7 @@ export function contentJobErrorResponse(error: unknown) {
       { status: statuses[error.code] },
     );
   }
+  console.error("콘텐츠 작업 요청을 처리하지 못했습니다.", error);
   return Response.json(
     { error: "요청을 처리하지 못했습니다." },
     { status: 500 },

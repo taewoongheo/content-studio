@@ -264,6 +264,55 @@ export class ContentWorkflowService {
     });
   }
 
+  reviseFinal(
+    id: string,
+    copyValue: unknown,
+    hookValue: unknown,
+    selectedHookId: string,
+    expectedRevision: number,
+  ) {
+    const job = this.registry.getRecord(id);
+    if (job.state.status !== "completed")
+      throw new ContentJobError(
+        "INVALID_STAGE",
+        "완료된 콘텐츠만 최종 편집할 수 있습니다.",
+      );
+    const strategy = job.state.strategy.accepted as
+      | (StrategyOutput & { selectedStrategyId: string })
+      | null;
+    const copy = validateCopyOutput(
+      copyValue,
+      job.slideCount,
+      strategy?.evidence.map((item) => item.id) ?? [],
+    );
+    if (!copy.ok) throw outputError(copy.errors);
+    const hooks = validateHookOutput(
+      hookValue,
+      copy.value.slides.map((slide) => slide.id),
+    );
+    if (!hooks.ok) throw outputError(hooks.errors);
+    if (!hooks.value.hooks.some((hook) => hook.id === selectedHookId))
+      throw new ContentJobError(
+        "INVALID_OUTPUT",
+        "선택한 훅을 후보 목록에서 찾을 수 없습니다.",
+      );
+    return this.registry.update(id, (current) => {
+      const withCopy = acceptStage(
+        current.state,
+        "copy",
+        stageRecord(copy.value),
+        expectedRevision,
+      );
+      current.state = acceptStage(
+        withCopy,
+        "hooks",
+        stageRecord({ ...hooks.value, selectedHookId }),
+        withCopy.revision,
+      );
+      current.lastError = null;
+    });
+  }
+
   private accept(
     id: string,
     stage: ContentStage,

@@ -89,6 +89,20 @@ export async function POST(request: Request, context: Context) {
           revision,
         );
         break;
+      case "revise_final":
+        if (typeof input.selectedId !== "string")
+          return Response.json(
+            { error: "선택한 훅이 필요합니다." },
+            { status: 400 },
+          );
+        job = contentWorkflow.reviseFinal(
+          jobId,
+          input.copy,
+          input.hooks,
+          input.selectedId,
+          revision,
+        );
+        break;
       default:
         return Response.json(
           { error: "지원하지 않는 작업입니다." },

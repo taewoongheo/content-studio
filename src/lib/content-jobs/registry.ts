@@ -133,6 +133,7 @@ export class ContentJobRegistry {
     return {
       id: value.id,
       productContext: value.productContext,
+      aspectRatio: value.aspectRatio,
       slideCount: value.slideCount,
       outputLanguage: value.outputLanguage,
       state: value.state,

@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
+import type { ContentJobSnapshot } from "@/lib/content-jobs/types";
+import { ContentJobScreen } from "@/screens/content-job/content-job-screen";
+import { getContentJob } from "@/screens/content-job/api";
 import { StudioSidebar } from "./components/studio-sidebar";
 import { ProductContextForm } from "./components/product-context-form";
 import { ContentForm } from "./components/content-form/content-form";
@@ -10,7 +13,35 @@ import { useProductContext } from "./hooks/use-product-context";
 
 export function DashboardScreen() {
   const [tab, setTab] = useState("create");
+  const [job, setJob] = useState<ContentJobSnapshot | null>(null);
   const { context, loaded, storageError, saveContext } = useProductContext();
+
+  useEffect(() => {
+    const jobId = new URL(window.location.href).searchParams.get("job");
+    if (!jobId) return;
+    void getContentJob(jobId)
+      .then(setJob)
+      .catch(() => {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("job");
+        window.history.replaceState(null, "", url);
+      });
+  }, []);
+
+  function showJob(nextJob: ContentJobSnapshot) {
+    setJob(nextJob);
+    setTab("create");
+    const url = new URL(window.location.href);
+    url.searchParams.set("job", nextJob.id);
+    window.history.replaceState(null, "", url);
+  }
+
+  function startNewJob() {
+    setJob(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("job");
+    window.history.replaceState(null, "", url);
+  }
   return (
     <Tabs
       orientation="vertical"
@@ -59,19 +90,26 @@ export function DashboardScreen() {
                 keepMounted
                 className="data-[hidden]:hidden"
               >
-                <div className={"mb-8"}>
-                  <h1 className="text-3xl font-semibold tracking-tight">
-                    새 콘텐츠 만들기
-                  </h1>
-                  <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                    만들 콘텐츠의 유형과 제작 방식을 선택하고, 참고 자료와
-                    원하는 조건을 입력하세요.
-                  </p>
-                </div>
-                <ContentForm
-                  context={context}
-                  onRegisterContext={() => setTab("products")}
-                />
+                {job ? (
+                  <ContentJobScreen initialJob={job} onNewJob={startNewJob} />
+                ) : (
+                  <>
+                    <div className="mb-8">
+                      <h1 className="text-3xl font-semibold tracking-tight">
+                        새 콘텐츠 만들기
+                      </h1>
+                      <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                        레퍼런스 슬라이드를 순서대로 추가하고 제작 조건을
+                        설정하세요.
+                      </p>
+                    </div>
+                    <ContentForm
+                      context={context}
+                      onRegisterContext={() => setTab("products")}
+                      onJobStarted={showJob}
+                    />
+                  </>
+                )}
               </TabsContent>
               <TabsContent
                 value="products"

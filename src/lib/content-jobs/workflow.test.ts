@@ -12,6 +12,7 @@ const jobInput: ContentJobInput = {
     audience: "근력 운동 사용자",
     constraints: "과장 금지",
   },
+  aspectRatio: "9:16",
   slideCount: 2,
   outputLanguage: "한국어",
   referenceImages: [
@@ -191,6 +192,24 @@ test("each job gets one thread and all four stages reuse it", async () => {
   );
 
   assert.equal(job.state.status, "completed");
+  const revisionBeforeFinalEdit = job.state.revision;
+  const editedCopy = structuredClone(copyOutput);
+  editedCopy.slides[0].headline = "수정한 제목";
+  const editedHooks = structuredClone(hookOutput);
+  editedHooks.hooks[0].text = "수정한 훅";
+  job = service.reviseFinal(
+    job.id,
+    editedCopy,
+    editedHooks,
+    "hook-1",
+    revisionBeforeFinalEdit,
+  );
+  assert.equal(job.state.status, "completed");
+  assert.equal(job.state.revision, revisionBeforeFinalEdit + 2);
+  assert.equal(
+    (job.state.copy.accepted as typeof copyOutput).slides[0].headline,
+    "수정한 제목",
+  );
   assert.deepEqual(codex.startedThreads, ["thread-1"]);
   assert.deepEqual(codex.turnThreadIds, [
     "thread-1",
