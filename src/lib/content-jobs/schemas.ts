@@ -1,9 +1,66 @@
 import Ajv, { type ErrorObject } from "ajv";
 
 export type StructuredOutputSchema = Record<string, unknown>;
-export type StructuredOutputValidation =
-  | { ok: true; value: unknown }
+export type StructuredOutputValidation<Value = unknown> =
+  | { ok: true; value: Value }
   | { ok: false; errors: string[] };
+
+export type ReferenceAnalysisOutput = {
+  sourceLanguage: string;
+  outputLanguage: string;
+  visualLanguage: { summary: string; imageIds: string[] };
+  slides: Array<{
+    imageId: string;
+    role: string;
+    transitionFromPrevious: string;
+  }>;
+  writingStyle: { summary: string; imageIds: string[] };
+  textDensity: { summary: string; imageIds: string[] };
+  hook: { originalText: string; pattern: string; imageIds: string[] };
+  uncertainties: string[];
+};
+
+export type StrategyOutput = {
+  evidence: Array<{ id: string; url: string; title: string; summary: string }>;
+  strategies: Array<{
+    id: string;
+    topic: string;
+    angle: string;
+    referenceFit: string;
+    slidePlan: Array<{
+      id: string;
+      role: string;
+      productFact: string;
+      evidenceIds: string[];
+    }>;
+    warnings: string[];
+  }>;
+  missingInformation: string[];
+};
+
+export type CopyOutput = {
+  slides: Array<{
+    id: string;
+    role: string;
+    headline: string;
+    body: string;
+    visualDirection: string;
+    transitionFromPrevious: string;
+    claimReferences: string[];
+  }>;
+  uncertainties: string[];
+};
+
+export type HookOutput = {
+  hooks: Array<{
+    id: string;
+    text: string;
+    pattern: string;
+    angle: string;
+    supportingSlideIds: string[];
+  }>;
+  warnings: string[];
+};
 
 const stringSchema = { type: "string" } as const;
 const stringArraySchema = {
@@ -123,11 +180,11 @@ function formatError(error: ErrorObject) {
   return `${path}: ${error.message ?? "유효하지 않은 값입니다."}`;
 }
 
-export function validateStructuredOutput(
+export function validateStructuredOutput<Value = unknown>(
   schema: StructuredOutputSchema,
   value: unknown,
-): StructuredOutputValidation {
+): StructuredOutputValidation<Value> {
   const validate = ajv.compile(schema);
-  if (validate(value)) return { ok: true, value };
+  if (validate(value)) return { ok: true, value: value as Value };
   return { ok: false, errors: (validate.errors ?? []).map(formatError) };
 }
