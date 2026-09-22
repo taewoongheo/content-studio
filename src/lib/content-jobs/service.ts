@@ -4,11 +4,14 @@ import { ContentWorkflowService } from "./workflow";
 
 const globalServices = globalThis as typeof globalThis & {
   contentStudioJobRegistry?: ContentJobRegistry;
-  contentStudioWorkflow?: ContentWorkflowService;
 };
 
 export const contentJobRegistry = (globalServices.contentStudioJobRegistry ??=
   new ContentJobRegistry());
 
-export const contentWorkflow = (globalServices.contentStudioWorkflow ??=
-  new ContentWorkflowService(codexConnection, contentJobRegistry));
+// The registry and Codex process must survive development reloads, but this
+// stateless facade should be recreated so edited workflow methods take effect.
+export const contentWorkflow = new ContentWorkflowService(
+  codexConnection,
+  contentJobRegistry,
+);

@@ -195,7 +195,10 @@ test("each job gets one thread and all four stages reuse it", async () => {
   const revisionBeforeFinalEdit = job.state.revision;
   const editedCopy = structuredClone(copyOutput);
   editedCopy.slides[0].headline = "수정한 제목";
-  const editedHooks = structuredClone(hookOutput);
+  const editedHooks = {
+    ...structuredClone(hookOutput),
+    selectedHookId: "hook-1",
+  };
   editedHooks.hooks[0].text = "수정한 훅";
   job = service.reviseFinal(
     job.id,

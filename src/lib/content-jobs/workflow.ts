@@ -50,6 +50,13 @@ function stageRecord(value: object) {
   return value as Record<string, unknown>;
 }
 
+function editableHookOutput(value: unknown) {
+  if (typeof value !== "object" || value === null) return value;
+  const output = { ...(value as Record<string, unknown>) };
+  delete output.selectedHookId;
+  return output;
+}
+
 function outputError(errors: string[]) {
   return new ContentJobError("INVALID_OUTPUT", errors.join(" "));
 }
@@ -287,7 +294,7 @@ export class ContentWorkflowService {
     );
     if (!copy.ok) throw outputError(copy.errors);
     const hooks = validateHookOutput(
-      hookValue,
+      editableHookOutput(hookValue),
       copy.value.slides.map((slide) => slide.id),
     );
     if (!hooks.ok) throw outputError(hooks.errors);
