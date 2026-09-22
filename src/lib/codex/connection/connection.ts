@@ -1,15 +1,15 @@
-import { getCodexCommand } from "./command";
+import { getCodexCommand } from "../transport/command";
 import {
   CodexJsonRpcTransport,
   type CodexTransportFailure,
-} from "./transport";
+} from "../transport/transport";
 import type {
   CodexConnection,
   CodexJsonValue,
   CodexNotification,
   CodexUserInput,
   StructuredTurnResult,
-} from "./types";
+} from "../transport/types";
 
 const REQUEST_TIMEOUT_MS = 15_000;
 const TURN_TIMEOUT_MS = 10 * 60_000;

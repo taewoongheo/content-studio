@@ -8,7 +8,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { ProductContext } from "../../hooks/use-product-context";
-import { getSettingsSummary, type ContentSettings } from "./model";
+import {
+  getSettingsSummary,
+  type ContentSettings,
+} from "./settings/model";
 
 export function ContentReviewDialog({
   open,

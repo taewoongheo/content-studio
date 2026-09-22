@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { ContentJobSnapshot } from "@/lib/content-jobs/types";
+import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import { createContentJob } from "@/screens/content-job/api";
 import type { ProductContext } from "../../hooks/use-product-context";
 import { ContentReviewDialog } from "./content-review-dialog";
-import { ContentSettings } from "./content-settings";
-import { slideCount } from "./model";
-import { ReferenceImages } from "./reference-images";
+import { ReferenceImages } from "./reference-input/reference-images";
+import { ContentSettings } from "./settings/content-settings";
+import { slideCount } from "./settings/model";
 import { useContentForm } from "./use-content-form";
 
 export function ContentForm({

@@ -9,8 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import type {
   AcceptedHookOutput,
   CopyOutput,
-} from "@/lib/content-jobs/contracts";
-import { ReviewShell } from "./review-shell";
+} from "@/lib/content-jobs/structured-output/contracts";
+import { ReviewShell } from "../review-shell";
 
 export function FinalEditor({
   copy,

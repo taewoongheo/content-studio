@@ -1,5 +1,5 @@
-import type { ContentJobRecord } from "./types";
-import type { StrategyOutput } from "./schemas";
+import type { ContentJobRecord } from "../domain/types";
+import type { StrategyOutput } from "../structured-output/schemas";
 
 function json(value: unknown) {
   return JSON.stringify(value, null, 2);

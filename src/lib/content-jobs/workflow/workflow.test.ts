@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { CodexJsonValue, StructuredTurnResult } from "../codex/types";
+import type {
+  CodexJsonValue,
+  StructuredTurnResult,
+} from "../../codex/transport/types";
 import { ContentJobRegistry } from "./registry";
 import { ContentWorkflowService } from "./workflow";
-import type { ContentJobInput } from "./types";
+import type { ContentJobInput } from "../domain/types";
 
 const jobInput: ContentJobInput = {
   productContext: {

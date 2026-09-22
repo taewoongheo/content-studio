@@ -1,4 +1,4 @@
-import type { ContentJobSnapshot } from "@/lib/content-jobs/types";
+import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import type { ProductContext } from "@/screens/dashboard/hooks/use-product-context";
 
 async function readResponse(response: Response) {

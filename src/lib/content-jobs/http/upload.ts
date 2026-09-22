@@ -1,7 +1,7 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { extname, join } from "node:path";
-import type { ContentJobInput, ProductContextInput } from "./types";
+import type { ContentJobInput, ProductContextInput } from "../domain/types";
 
 export const MAX_REFERENCE_IMAGES = 20;
 export const MAX_REFERENCE_IMAGE_BYTES = 10 * 1024 * 1024;

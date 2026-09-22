@@ -1,5 +1,5 @@
-import { codexConnection } from "@/lib/codex/connection";
-import { connectionEvents } from "@/lib/codex/connection-events";
+import { codexConnection } from "@/lib/codex/connection/connection";
+import { connectionEvents } from "@/lib/codex/connection/connection-events";
 import { isLocalRequest } from "@/lib/http/local-request";
 
 export const runtime = "nodejs";

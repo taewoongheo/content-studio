@@ -1,9 +1,9 @@
-import { contentJobEvents } from "@/lib/content-jobs/events";
-import { contentJobErrorResponse } from "@/lib/content-jobs/http";
+import { contentJobEvents } from "@/lib/content-jobs/http/events";
+import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
 import {
   contentJobRegistry,
   contentWorkflow,
-} from "@/lib/content-jobs/service";
+} from "@/lib/content-jobs/workflow/service";
 import { isLocalRequest } from "@/lib/http/local-request";
 
 export const runtime = "nodejs";

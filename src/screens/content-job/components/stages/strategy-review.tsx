@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { StrategyOutput } from "@/lib/content-jobs/contracts";
-import { ReviewShell } from "./review-shell";
+import type { StrategyOutput } from "@/lib/content-jobs/structured-output/contracts";
+import { ReviewShell } from "../review-shell";
 
 export function StrategyReview({
   value,

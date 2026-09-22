@@ -1,18 +1,18 @@
-import type { CodexConnectionManager } from "../codex/connection";
-import type { CodexJsonValue, CodexUserInput } from "../codex/types";
+import type { CodexConnectionManager } from "../../codex/connection/connection";
+import type { CodexJsonValue, CodexUserInput } from "../../codex/transport/types";
 import {
   acceptStage,
   proposeStage,
   transitionJob,
   type ContentJobStatus,
   type ContentStage,
-} from "./domain";
+} from "../domain/domain";
 import {
   validateCopyOutput,
   validateHookOutput,
   validateReferenceOutput,
   validateStrategyOutput,
-} from "./output-validation";
+} from "../structured-output/output-validation";
 import {
   copyPrompt,
   hookPrompt,
@@ -29,9 +29,9 @@ import {
   type ReferenceAnalysisOutput,
   type StrategyOutput,
   type StructuredOutputSchema,
-} from "./schemas";
+} from "../structured-output/schemas";
 import { ContentJobError, ContentJobRegistry } from "./registry";
-import type { ContentJobInput, ContentJobRecord } from "./types";
+import type { ContentJobInput, ContentJobRecord } from "../domain/types";
 
 type CodexWorkflowClient = Pick<
   CodexConnectionManager,

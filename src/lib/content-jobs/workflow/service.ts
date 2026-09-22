@@ -1,4 +1,4 @@
-import { codexConnection } from "../codex/connection";
+import { codexConnection } from "../../codex/connection/connection";
 import { ContentJobRegistry } from "./registry";
 import { ContentWorkflowService } from "./workflow";
 

@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { createContentJobState } from "./domain";
+import { createContentJobState } from "../domain/domain";
 import type {
   ContentJobInput,
   ContentJobOperation,
   ContentJobRecord,
   ContentJobSnapshot,
-} from "./types";
+} from "../domain/types";
 
 export type ContentJobErrorCode =
   | "JOB_NOT_FOUND"

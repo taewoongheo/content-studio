@@ -1,5 +1,5 @@
-import { ContentJobDomainError } from "./domain";
-import { ContentJobError } from "./registry";
+import { ContentJobDomainError } from "../domain/domain";
+import { ContentJobError } from "../workflow/registry";
 import { ContentJobInputError } from "./upload";
 
 function errorName(error: unknown) {

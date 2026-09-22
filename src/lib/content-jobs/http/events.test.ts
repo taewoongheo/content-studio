@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { contentJobEvents } from "./events";
-import { ContentJobRegistry } from "./registry";
+import { ContentJobRegistry } from "../workflow/registry";
 
 const input = {
   productContext: {

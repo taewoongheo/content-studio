@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import type { ContentJobSnapshot } from "@/lib/content-jobs/types";
+import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import { ContentJobScreen } from "@/screens/content-job/content-job-screen";
 import { getContentJob } from "@/screens/content-job/api";
 import { StudioSidebar } from "./components/studio-sidebar";

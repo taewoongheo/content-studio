@@ -1,6 +1,6 @@
-import { contentWorkflow } from "@/lib/content-jobs/service";
-import { contentJobErrorResponse } from "@/lib/content-jobs/http";
-import { saveContentJobInput } from "@/lib/content-jobs/upload";
+import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
+import { saveContentJobInput } from "@/lib/content-jobs/http/upload";
+import { contentWorkflow } from "@/lib/content-jobs/workflow/service";
 import { isLocalRequest } from "@/lib/http/local-request";
 
 export const runtime = "nodejs";

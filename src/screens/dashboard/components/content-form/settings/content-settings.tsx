@@ -1,4 +1,4 @@
-import { FormField } from "./form-field";
+import { FormField } from "../form-field";
 import { Label } from "@/components/ui/label";
 import {
   NativeSelect,

@@ -1,7 +1,10 @@
 import { useRef, useState, type FormEvent } from "react";
 import type { ProductContext } from "../../hooks/use-product-context";
-import type { ContentSettings } from "./model";
-import { validateReference, validateReferenceImages } from "./validation";
+import {
+  validateReference,
+  validateReferenceImages,
+} from "./reference-input/validation";
+import type { ContentSettings } from "./settings/model";
 
 export function useContentForm(context: ProductContext | null) {
   const [files, setFiles] = useState<File[]>([]);

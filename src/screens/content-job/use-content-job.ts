@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { ContentJobSnapshot } from "@/lib/content-jobs/types";
+import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import { postContentJobAction } from "./api";
 
 export function useContentJob(initialJob: ContentJobSnapshot) {

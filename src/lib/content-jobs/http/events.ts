@@ -1,5 +1,5 @@
-import type { ContentJobRegistry } from "./registry";
-import type { ContentJobSnapshot } from "./types";
+import type { ContentJobSnapshot } from "../domain/types";
+import type { ContentJobRegistry } from "../workflow/registry";
 
 export function contentJobEvents(
   registry: ContentJobRegistry,

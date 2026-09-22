@@ -8,13 +8,13 @@ import type {
   HookOutput,
   ReferenceAnalysisOutput,
   StrategyOutput,
-} from "@/lib/content-jobs/contracts";
-import type { ContentJobSnapshot } from "@/lib/content-jobs/types";
-import { CopyReview } from "./components/copy-review";
-import { FinalEditor } from "./components/final-editor";
-import { HookReview } from "./components/hook-review";
-import { ReferenceReview } from "./components/reference-review";
-import { StrategyReview } from "./components/strategy-review";
+} from "@/lib/content-jobs/structured-output/contracts";
+import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
+import { CopyReview } from "./components/stages/copy-review";
+import { FinalEditor } from "./components/stages/final-editor";
+import { HookReview } from "./components/stages/hook-review";
+import { ReferenceReview } from "./components/stages/reference-review";
+import { StrategyReview } from "./components/stages/strategy-review";
 import { useContentJob } from "./use-content-job";
 
 const runningCopy: Record<string, [string, string]> = {

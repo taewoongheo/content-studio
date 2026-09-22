@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { CodexConnection } from "./types";
+import type { CodexConnection } from "./transport/types";
 
 export function useCodexConnection() {
   const [connection, setConnection] = useState<CodexConnection | null>(null);
