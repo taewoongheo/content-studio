@@ -1,5 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createInterface } from "node:readline";
+import { getCodexCommand } from "./command";
 import type { CodexConnection } from "./types";
 
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -53,9 +54,10 @@ export class CodexConnectionManager {
 
   private async start(): Promise<CodexConnection> {
     this.updateState({ status: "connecting", message: "Codex에 연결하는 중…" });
+    const { command, args } = getCodexCommand();
     const child = spawn(
-      /* turbopackIgnore: true */ process.env.CODEX_BIN || "codex",
-      ["app-server"],
+      /* turbopackIgnore: true */ command,
+      args,
       {
         stdio: "pipe",
         shell: false,
