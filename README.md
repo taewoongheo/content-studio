@@ -68,6 +68,8 @@ pnpm dev
 
 The server starts `codex app-server` through a Node.js child process during Next.js startup. The process communicates over JSON lines through standard input and output. The sidebar receives connection changes through an SSE stream instead of polling repeatedly. The connection status checks the ChatGPT-managed account and does not send a model-generation request.
 
+The `dev` and `start` scripts bind Next.js to `127.0.0.1` because the local API can start and stop the Codex child process. Keep that loopback binding when changing how the application is launched; the API's Host and Origin checks are additional browser-request validation, not a network access boundary.
+
 The repository configuration for CodeRabbit lives in `.coderabbit.yaml`. It sets English reviews, a balanced review profile, automatic review for non-draft pull requests, and path-specific guidance for the Next.js screens and Codex process lifecycle.
 
 ## Source layout
