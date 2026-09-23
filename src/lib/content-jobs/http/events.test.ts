@@ -4,6 +4,7 @@ import { contentJobEvents } from "./events";
 import { ContentJobRegistry } from "../workflow/registry";
 
 const input = {
+  model: "gpt-6-luna",
   productContext: {
     name: "제품",
     description: "설명",

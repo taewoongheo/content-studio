@@ -17,6 +17,7 @@ export function ContentReviewDialog({
   open,
   onOpenChange,
   context,
+  model,
   files,
   settings,
   starting,
@@ -26,6 +27,7 @@ export function ContentReviewDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   context: ProductContext;
+  model: string;
   files: File[];
   settings: ContentSettings;
   starting: boolean;
@@ -45,6 +47,10 @@ export function ContentReviewDialog({
           <div>
             <dt>제품</dt>
             <dd>{context.name}</dd>
+          </div>
+          <div>
+            <dt>Codex 모델</dt>
+            <dd>{model || "선택 필요"}</dd>
           </div>
           <div>
             <dt>게시 대상</dt>
@@ -77,7 +83,7 @@ export function ContentReviewDialog({
           <Button
             type="button"
             className="h-11 px-5"
-            disabled={starting}
+            disabled={starting || !model}
             onClick={onStart}
           >
             {starting && <LoaderCircle className="animate-spin motion-reduce:animate-none" aria-hidden="true" />}

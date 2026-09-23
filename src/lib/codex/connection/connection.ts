@@ -10,6 +10,10 @@ import type {
   CodexUserInput,
   StructuredTurnResult,
 } from "../transport/types";
+import {
+  visibleImageModels,
+  type CodexModel,
+} from "./models/model-selection";
 
 const REQUEST_TIMEOUT_MS = 15_000;
 const TURN_TIMEOUT_MS = 10 * 60_000;
@@ -174,6 +178,22 @@ export class CodexConnectionManager {
       message:
         "터미널에서 codex login으로 ChatGPT에 로그인한 후 다시 연결하세요. API 키 연결은 사용하지 않습니다.",
     });
+  }
+
+  async listModels() {
+    const models: CodexModel[] = [];
+    let cursor: string | null = null;
+    do {
+      const result: { data: CodexModel[]; nextCursor: string | null } =
+        await this.request("model/list", {
+          cursor,
+          limit: 100,
+          includeHidden: false,
+        });
+      models.push(...result.data);
+      cursor = result.nextCursor;
+    } while (cursor);
+    return visibleImageModels(models);
   }
 
   async startThread(params: { cwd?: string; model?: string } = {}) {

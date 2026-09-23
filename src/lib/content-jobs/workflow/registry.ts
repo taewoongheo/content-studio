@@ -132,6 +132,7 @@ export class ContentJobRegistry {
     const value = structuredClone(job);
     return {
       id: value.id,
+      model: value.model,
       productContext: value.productContext,
       aspectRatio: value.aspectRatio,
       slideCount: value.slideCount,

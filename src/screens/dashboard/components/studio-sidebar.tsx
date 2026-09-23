@@ -10,8 +10,15 @@ import {
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { CodexConnectionController } from "@/lib/codex/use-codex-connection";
 
-export function StudioSidebar({ activeTab }: { activeTab: string }) {
+export function StudioSidebar({
+  activeTab,
+  codex,
+}: {
+  activeTab: string;
+  codex: CodexConnectionController;
+}) {
   return (
     <Sidebar
       collapsible="none"
@@ -59,7 +66,7 @@ export function StudioSidebar({ activeTab }: { activeTab: string }) {
         </TabsList>
       </SidebarContent>
       <SidebarFooter className="p-3">
-        <CodexConnection />
+        <CodexConnection controller={codex} />
       </SidebarFooter>
     </Sidebar>
   );

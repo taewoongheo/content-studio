@@ -9,6 +9,7 @@ import { ContentWorkflowService } from "./workflow";
 import type { ContentJobInput } from "../domain/types";
 
 const jobInput: ContentJobInput = {
+  model: "gpt-6-luna",
   productContext: {
     name: "LiftCode",
     description: "운동 기록 앱",
@@ -117,6 +118,7 @@ const hookOutput = {
 class FakeCodexClient {
   nextThread = 0;
   startedThreads: string[] = [];
+  startedModels: Array<string | undefined> = [];
   turnThreadIds: string[] = [];
   outputs: CodexJsonValue[] = [];
   pendingTurn: Promise<StructuredTurnResult> | null = null;
@@ -125,9 +127,10 @@ class FakeCodexClient {
     return { status: "connected" as const, message: "연결됨" };
   }
 
-  async startThread() {
+  async startThread(params: { model?: string } = {}) {
     const threadId = `thread-${++this.nextThread}`;
     this.startedThreads.push(threadId);
+    this.startedModels.push(params.model);
     return { threadId };
   }
 
@@ -166,6 +169,7 @@ test("each job gets one thread and all four stages reuse it", async () => {
     hookOutput,
   );
   let job = await service.createJob(jobInput);
+  assert.deepEqual(codex.startedModels, ["gpt-6-luna"]);
 
   job = await service.analyzeReference(job.id);
   job = service.acceptReference(

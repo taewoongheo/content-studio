@@ -9,6 +9,7 @@ const pngHeader = new Uint8Array([
 
 function validForm() {
   const form = new FormData();
+  form.set("model", "gpt-6-luna");
   form.set(
     "productContext",
     JSON.stringify({
@@ -34,6 +35,7 @@ test("stores ordered images with stable IDs and exposes cleanup", async () => {
       ["image-1", "image-2"],
     );
     assert.equal(saved.input.aspectRatio, "9:16");
+    assert.equal(saved.input.model, "gpt-6-luna");
     await access(saved.input.referenceImages[0].path);
   } finally {
     await saved.cleanup();

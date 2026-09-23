@@ -17,10 +17,12 @@ import { WorkflowPlaceholder } from "./workflow-placeholder";
 
 export function ContentForm({
   context,
+  codexModel,
   onRegisterContext,
   onJobStarted,
 }: {
   context: ProductContext | null;
+  codexModel: string;
   onRegisterContext: () => void;
   onJobStarted: (job: ContentJobSnapshot) => void;
 }) {
@@ -46,11 +48,12 @@ export function ContentForm({
   const productContext = context;
 
   async function start() {
-    if (!form.canCreate) return;
+    if (!form.canCreate || !codexModel) return;
     setStarting(true);
     setStartError("");
     try {
       const job = await createContentJob({
+        model: codexModel,
         context: productContext,
         files: form.files,
         aspectRatio: form.settings.ratio,
@@ -119,6 +122,7 @@ export function ContentForm({
         open={form.reviewOpen}
         onOpenChange={form.setReviewOpen}
         context={context}
+        model={codexModel}
         files={form.files}
         settings={form.settings}
         starting={starting}

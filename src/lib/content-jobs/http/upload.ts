@@ -77,6 +77,13 @@ export async function saveContentJobInput(formData: FormData): Promise<{
   input: ContentJobInput;
   cleanup: () => Promise<void>;
 }> {
+  const model = formData.get("model");
+  if (
+    typeof model !== "string" ||
+    !model.trim() ||
+    model.length > 100
+  )
+    throw new ContentJobInputError("Codex 모델을 선택해 주세요.");
   const productContext = parseProductContext(formData.get("productContext"));
   const aspectRatio = formData.get("aspectRatio");
   if (aspectRatio !== "4:5" && aspectRatio !== "1:1" && aspectRatio !== "9:16")
@@ -128,6 +135,7 @@ export async function saveContentJobInput(formData: FormData): Promise<{
     );
     return {
       input: {
+        model: model.trim(),
         productContext,
         aspectRatio,
         slideCount,

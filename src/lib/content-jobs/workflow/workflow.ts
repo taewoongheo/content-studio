@@ -80,7 +80,10 @@ export class ContentWorkflowService {
         "Codex에 연결한 뒤 다시 시도해 주세요.",
       );
     }
-    const { threadId } = await this.codex.startThread({ cwd: this.cwd });
+    const { threadId } = await this.codex.startThread({
+      cwd: this.cwd,
+      model: input.model,
+    });
     return this.registry.add(input, threadId);
   }
 

@@ -16,12 +16,14 @@ async function readResponse(response: Response) {
 }
 
 export async function createContentJob({
+  model,
   context,
   files,
   aspectRatio,
   slideCount,
   outputLanguage,
 }: {
+  model: string;
   context: ProductContext;
   files: File[];
   aspectRatio: "4:5" | "1:1" | "9:16";
@@ -29,6 +31,7 @@ export async function createContentJob({
   outputLanguage: string;
 }) {
   const form = new FormData();
+  form.set("model", model);
   form.set("productContext", JSON.stringify(context));
   form.set("aspectRatio", aspectRatio);
   form.set("slideCount", String(slideCount));

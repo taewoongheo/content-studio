@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
+import { useCodexConnection } from "@/lib/codex/use-codex-connection";
 import { ContentJobScreen } from "@/screens/content-job/content-job-screen";
 import { getContentJob } from "@/screens/content-job/api";
 import { StudioSidebar } from "./components/studio-sidebar";
@@ -14,6 +15,7 @@ import { useProductContext } from "./hooks/use-product-context";
 export function DashboardScreen() {
   const [tab, setTab] = useState("create");
   const [job, setJob] = useState<ContentJobSnapshot | null>(null);
+  const codex = useCodexConnection();
   const { context, loaded, storageError, saveContext } = useProductContext();
 
   useEffect(() => {
@@ -63,7 +65,7 @@ export function DashboardScreen() {
         >
           본문으로 이동
         </a>
-        <StudioSidebar activeTab={tab} />
+        <StudioSidebar activeTab={tab} codex={codex} />
         <main
           id="main"
           className={
@@ -105,6 +107,7 @@ export function DashboardScreen() {
                     </div>
                     <ContentForm
                       context={context}
+                      codexModel={codex.selectedModel}
                       onRegisterContext={() => setTab("products")}
                       onJobStarted={showJob}
                     />

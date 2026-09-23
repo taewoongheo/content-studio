@@ -29,8 +29,15 @@ readline.createInterface({input: process.stdin}).on('line', line => {
     send({id:message.id,result:{}});
   } else if (message.method === 'account/read' && initialized) {
     send({id:message.id,result:{account:${JSON.stringify(account)}}});
+  } else if (message.method === 'model/list' && initialized) {
+    send({id:message.id,result:{data:[
+      {id:'sol',model:'gpt-6-sol',displayName:'GPT-6 Sol',description:'workhorse',hidden:false,isDefault:true,inputModalities:['text','image']},
+      {id:'luna',model:'gpt-6-luna',displayName:'GPT-6 Luna',description:'efficient',hidden:false,isDefault:false,inputModalities:['text','image']},
+      {id:'hidden',model:'hidden-model',displayName:'Hidden',description:'',hidden:true,isDefault:false,inputModalities:['text','image']}
+    ],nextCursor:null}});
   } else if (message.method === 'thread/start' && initialized) {
-    const threadId = 'thread-' + ++nextThread;
+    const prefix = message.params.model ? message.params.model + '-' : '';
+    const threadId = prefix + 'thread-' + ++nextThread;
     send({id:message.id,result:{thread:{id:threadId}}});
     send({method:'thread/started',params:{thread:{id:threadId}}});
   } else if (message.method === 'turn/start' && initialized) {
@@ -167,6 +174,26 @@ test("one app-server process starts a separate thread for each job", async () =>
     const second = await manager.startThread({ cwd: "/tmp/project-b" });
     assert.equal(first.threadId, "thread-1");
     assert.equal(second.threadId, "thread-2");
+  });
+});
+
+test("lists available models and forwards the selected model to a thread", async () => {
+  await withFakeCodex({ type: "chatgpt" }, async (manager) => {
+    await manager.connect();
+    const models = await manager.listModels();
+    assert.deepEqual(
+      models.map((model) => model.model),
+      ["gpt-6-sol", "gpt-6-luna"],
+    );
+    assert.equal(
+      (
+        await manager.startThread({
+          cwd: "/tmp/project",
+          model: "gpt-6-luna",
+        })
+      ).threadId,
+      "gpt-6-luna-thread-1",
+    );
   });
 });
 
