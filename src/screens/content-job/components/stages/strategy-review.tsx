@@ -40,11 +40,11 @@ export function StrategyReview({
     >
       <div className="grid gap-4">
         {draft.strategies.map((strategy, index) => (
-          <label
+          <section
             key={strategy.id}
-            className="grid cursor-pointer gap-5 rounded-lg border p-6 has-[:checked]:border-foreground has-[:checked]:ring-1 has-[:checked]:ring-foreground max-md:p-4"
+            className="grid gap-5 rounded-lg border p-6 has-[:checked]:border-foreground has-[:checked]:ring-1 has-[:checked]:ring-foreground max-md:p-4"
           >
-            <span className="flex items-center gap-3">
+            <label className="flex w-fit cursor-pointer items-center gap-3">
               <input
                 type="radio"
                 name="strategy"
@@ -54,7 +54,7 @@ export function StrategyReview({
                 className="size-4"
               />
               <span className="font-semibold">전략 {index + 1}</span>
-            </span>
+            </label>
             <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
               <Field label="주제">
                 <Input
@@ -120,25 +120,10 @@ export function StrategyReview({
                 </div>
               ))}
             </div>
-          </label>
+            <StrategyEvidence strategy={strategy} evidence={draft.evidence} />
+          </section>
         ))}
       </div>
-      <section className="grid gap-3 rounded-lg bg-surface-subtle p-5">
-        <h2 className="font-semibold">조사 근거</h2>
-        {draft.evidence.map((item) => (
-          <div key={item.id} className="grid gap-1 text-sm">
-            <a
-              href={item.url}
-              target="_blank"
-              rel="noreferrer"
-              className="font-medium underline underline-offset-4"
-            >
-              {item.title}
-            </a>
-            <p className="leading-6 text-muted-foreground">{item.summary}</p>
-          </div>
-        ))}
-      </section>
       <div className="flex justify-end border-t pt-6">
         <Button
           className="h-11 px-5"
@@ -149,6 +134,44 @@ export function StrategyReview({
         </Button>
       </div>
     </ReviewShell>
+  );
+}
+
+function StrategyEvidence({
+  strategy,
+  evidence,
+}: {
+  strategy: StrategyOutput["strategies"][number];
+  evidence: StrategyOutput["evidence"];
+}) {
+  const evidenceIds = new Set(
+    strategy.slidePlan.flatMap((slide) => slide.evidenceIds),
+  );
+  const matching = evidence.filter((item) => evidenceIds.has(item.id));
+
+  return (
+    <div className="grid gap-3 border-t pt-4">
+      <h2 className="text-sm font-medium">조사 근거</h2>
+      {matching.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          연결된 조사 근거가 없습니다.
+        </p>
+      ) : (
+        matching.map((item) => (
+          <div key={item.id} className="grid gap-1 text-sm">
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noreferrer"
+              className="w-fit font-medium underline underline-offset-4"
+            >
+              {item.title}
+            </a>
+            <p className="leading-6 text-muted-foreground">{item.summary}</p>
+          </div>
+        ))
+      )}
+    </div>
   );
 }
 
