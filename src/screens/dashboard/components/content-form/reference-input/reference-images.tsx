@@ -1,8 +1,8 @@
-import type { RefObject } from "react";
-import { ArrowDown, ArrowUp, FileImage, X } from "lucide-react";
+import { useRef, useState, type DragEvent, type RefObject } from "react";
+import { ArrowDown, ArrowUp, FileImage, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { FormField } from "../form-field";
 
 export function ReferenceImages({
@@ -20,6 +20,28 @@ export function ReferenceImages({
   onRemoveFile: (index: number) => void;
   onMoveFile: (index: number, direction: -1 | 1) => void;
 }) {
+  const [isDragging, setIsDragging] = useState(false);
+  const dragDepth = useRef(0);
+
+  function enterDropZone(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    dragDepth.current += 1;
+    setIsDragging(true);
+  }
+
+  function leaveDropZone(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    dragDepth.current = Math.max(0, dragDepth.current - 1);
+    if (dragDepth.current === 0) setIsDragging(false);
+  }
+
+  function dropFiles(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    dragDepth.current = 0;
+    setIsDragging(false);
+    onAddFiles(event.dataTransfer.files);
+  }
+
   return (
     <section className="grid gap-5 rounded-lg bg-surface-subtle p-6 max-md:p-4" aria-labelledby="reference-heading">
       <div className="grid gap-2">
@@ -33,28 +55,58 @@ export function ReferenceImages({
       <FormField>
         <Label htmlFor="reference-images">이미지 추가</Label>
         <div
-          className="grid gap-3 rounded-lg border border-dashed bg-background p-4 [&_input]:h-auto [&_input]:p-2"
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={(event) => {
+          className={cn(
+            "grid min-h-44 place-items-center rounded-lg border border-dashed bg-background p-6 text-center transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+            isDragging && "border-foreground bg-muted",
+          )}
+          onDragEnter={enterDropZone}
+          onDragOver={(event) => {
             event.preventDefault();
-            onAddFiles(event.dataTransfer.files);
+            event.dataTransfer.dropEffect = "copy";
           }}
+          onDragLeave={leaveDropZone}
+          onDrop={dropFiles}
         >
-          <Input
+          <input
             ref={inputRef}
             id="reference-images"
             type="file"
             accept="image/png,image/jpeg,image/webp"
             multiple
+            className="sr-only"
             aria-invalid={Boolean(error)}
+            aria-describedby="reference-images-hint"
             onChange={(event) => {
               onAddFiles(event.target.files);
               event.target.value = "";
             }}
           />
-          <p className="text-sm text-muted-foreground">
-            PNG, JPG, WebP · 최대 20장 · 장당 10MB
-          </p>
+          <div className="grid justify-items-center gap-3 pointer-events-none">
+            <span className="grid size-11 place-items-center rounded-full border bg-background">
+              <Upload className="size-5" aria-hidden="true" />
+            </span>
+            <div className="grid gap-1">
+              <p className="text-sm font-medium">
+                {isDragging
+                  ? "이미지를 놓아서 추가하세요"
+                  : "이미지를 여기로 드래그하세요"}
+              </p>
+              <p
+                id="reference-images-hint"
+                className="text-sm text-muted-foreground"
+              >
+                PNG, JPG, WebP · 최대 20장 · 장당 10MB
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="pointer-events-auto"
+              onClick={() => inputRef.current?.click()}
+            >
+              파일 선택
+            </Button>
+          </div>
         </div>
       </FormField>
       {files.length > 0 && (

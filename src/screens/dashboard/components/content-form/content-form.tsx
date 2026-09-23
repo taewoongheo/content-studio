@@ -8,9 +8,12 @@ import { createContentJob } from "@/screens/content-job/api";
 import type { ProductContext } from "../../hooks/use-product-context";
 import { ContentReviewDialog } from "./content-review-dialog";
 import { ReferenceImages } from "./reference-input/reference-images";
+import { ChoiceSection } from "./selection/choice-section";
+import { contentTypes, creationMethods } from "./selection/model";
 import { ContentSettings } from "./settings/content-settings";
 import { slideCount } from "./settings/model";
 import { useContentForm } from "./use-content-form";
+import { WorkflowPlaceholder } from "./workflow-placeholder";
 
 export function ContentForm({
   context,
@@ -43,6 +46,7 @@ export function ContentForm({
   const productContext = context;
 
   async function start() {
+    if (!form.canCreate) return;
     setStarting(true);
     setStartError("");
     try {
@@ -67,30 +71,49 @@ export function ContentForm({
   return (
     <div className="max-w-[850px]">
       <form onSubmit={form.review} className="grid gap-8">
-        <section className="grid gap-2">
-          <h2 className="text-base font-semibold">제작 방식</h2>
-          <p className="text-sm leading-6 text-muted-foreground">
-            TikTok 슬라이드쇼 · 레퍼런스 기반
-          </p>
-        </section>
-        <ReferenceImages
-          files={form.files}
-          error={form.error || form.fileError}
-          inputRef={form.referenceInput}
-          onAddFiles={form.addFiles}
-          onRemoveFile={form.removeFile}
-          onMoveFile={form.moveFile}
+        <ChoiceSection
+          name="content-type"
+          title="콘텐츠 유형"
+          value={form.type}
+          columns={2}
+          options={contentTypes}
+          onChange={form.changeType}
         />
-        <ContentSettings value={form.settings} onChange={form.changeSettings} />
-        <div className="flex flex-wrap items-center justify-between gap-4 border-t pt-6">
-          <p className="max-w-md text-sm leading-6 text-muted-foreground">
-            이미지가 분석된 뒤 전략, 본문, 훅을 순서대로 검토합니다.
-          </p>
-          <Button type="submit" className="h-11 px-5">
-            입력 내용 확인
-            <ArrowRight aria-hidden="true" />
-          </Button>
-        </div>
+        <ChoiceSection
+          name="creation-method"
+          title="제작 방식"
+          value={form.method}
+          columns={3}
+          options={creationMethods}
+          onChange={form.changeMethod}
+        />
+        {form.canCreate ? (
+          <>
+            <ReferenceImages
+              files={form.files}
+              error={form.error || form.fileError}
+              inputRef={form.referenceInput}
+              onAddFiles={form.addFiles}
+              onRemoveFile={form.removeFile}
+              onMoveFile={form.moveFile}
+            />
+            <ContentSettings
+              value={form.settings}
+              onChange={form.changeSettings}
+            />
+            <div className="flex flex-wrap items-center justify-between gap-4 border-t pt-6">
+              <p className="max-w-md text-sm leading-6 text-muted-foreground">
+                이미지가 분석된 뒤 전략, 본문, 훅을 순서대로 검토합니다.
+              </p>
+              <Button type="submit" className="h-11 px-5">
+                입력 내용 확인
+                <ArrowRight aria-hidden="true" />
+              </Button>
+            </div>
+          </>
+        ) : (
+          <WorkflowPlaceholder type={form.type} method={form.method} />
+        )}
       </form>
       <ContentReviewDialog
         open={form.reviewOpen}
