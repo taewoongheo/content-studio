@@ -15,6 +15,7 @@ import {
   type ReferenceImageDraft,
 } from "./reference-input/reference-images-model";
 import {
+  DEFAULT_SLIDESHOW_STRUCTURE,
   isImplementedWorkflow,
   type ContentType,
   type CreationMethod,
@@ -24,7 +25,7 @@ import type { ContentSettings } from "./settings/model";
 
 export function useContentForm(context: ProductContext | null) {
   const [type, setType] = useState<ContentType>("slideshow");
-  const [structure, setStructure] = useState<SlideshowStructure>("sequential");
+  const [structure, setStructure] = useState<SlideshowStructure>(DEFAULT_SLIDESHOW_STRUCTURE);
   const [method, setMethod] = useState<CreationMethod>("reference");
   const [referenceImages, setReferenceImages] = useState<
     ReferenceImageDraft[]

@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   contentTypes,
   creationMethods,
+  DEFAULT_SLIDESHOW_STRUCTURE,
   isImplementedWorkflow,
   slideshowStructures,
 } from "./model";
@@ -25,6 +26,7 @@ test("keeps all three creation methods while only enabling slideshow reference",
 });
 
 test("slideshow structure is chosen independently of creation method", () => {
+  assert.equal(DEFAULT_SLIDESHOW_STRUCTURE, "repeating");
   assert.deepEqual(
     slideshowStructures.map((structure) => structure.id),
     ["repeating", "sequential"],

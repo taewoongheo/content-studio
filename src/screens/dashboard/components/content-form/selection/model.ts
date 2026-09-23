@@ -17,6 +17,8 @@ export const contentTypes = [
 
 export type ContentType = (typeof contentTypes)[number]["id"];
 
+export const DEFAULT_SLIDESHOW_STRUCTURE: SlideshowStructure = "repeating";
+
 export const slideshowStructures = [
   {
     id: "repeating",
