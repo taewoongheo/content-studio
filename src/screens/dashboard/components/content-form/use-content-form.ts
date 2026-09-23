@@ -1,9 +1,14 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { ProductContext } from "../../hooks/use-product-context";
 import {
   validateReference,
   validateReferenceImages,
 } from "./reference-input/validation";
+import {
+  createReferenceImageDrafts,
+  reorderReferenceImages,
+  type ReferenceImageDraft,
+} from "./reference-input/reference-images-model";
 import {
   isImplementedWorkflow,
   type ContentType,
@@ -14,7 +19,9 @@ import type { ContentSettings } from "./settings/model";
 export function useContentForm(context: ProductContext | null) {
   const [type, setType] = useState<ContentType>("slideshow");
   const [method, setMethod] = useState<CreationMethod>("reference");
-  const [files, setFiles] = useState<File[]>([]);
+  const [referenceImages, setReferenceImages] = useState<
+    ReferenceImageDraft[]
+  >([]);
   const [settings, setSettings] = useState<ContentSettings>({
     ratio: "9:16",
     count: "6장",
@@ -24,7 +31,17 @@ export function useContentForm(context: ProductContext | null) {
   const [error, setError] = useState("");
   const [fileError, setFileError] = useState("");
   const referenceInput = useRef<HTMLInputElement>(null);
+  const previewUrls = useRef(new Set<string>());
   const canCreate = isImplementedWorkflow(type, method);
+  const files = referenceImages.map((image) => image.file);
+
+  useEffect(() => {
+    const urls = previewUrls.current;
+    return () => {
+      for (const url of urls) URL.revokeObjectURL(url);
+      urls.clear();
+    };
+  }, []);
 
   function changeType(nextType: ContentType) {
     setType(nextType);
@@ -47,31 +64,33 @@ export function useContentForm(context: ProductContext | null) {
   function addFiles(list: FileList | null) {
     if (!list) return;
     const incoming = Array.from(list);
-    const message = validateReferenceImages(files.length, incoming);
+    const message = validateReferenceImages(referenceImages.length, incoming);
     if (message) {
       setFileError(message);
       return;
     }
-    setFiles((previous) => [...previous, ...incoming]);
+    const drafts = createReferenceImageDrafts(incoming);
+    for (const draft of drafts) previewUrls.current.add(draft.previewUrl);
+    setReferenceImages((previous) => [...previous, ...drafts]);
     setFileError("");
     setError("");
   }
 
-  function removeFile(index: number) {
-    setFiles((previous) => previous.filter((_, itemIndex) => itemIndex !== index));
+  function removeImage(id: string) {
+    const removed = referenceImages.find((image) => image.id === id);
+    if (removed) {
+      URL.revokeObjectURL(removed.previewUrl);
+      previewUrls.current.delete(removed.previewUrl);
+    }
+    setReferenceImages((previous) =>
+      previous.filter((image) => image.id !== id),
+    );
   }
 
-  function moveFile(index: number, direction: -1 | 1) {
-    setFiles((previous) => {
-      const target = index + direction;
-      if (target < 0 || target >= previous.length) return previous;
-      const reordered = [...previous];
-      [reordered[index], reordered[target]] = [
-        reordered[target],
-        reordered[index],
-      ];
-      return reordered;
-    });
+  function reorderImages(activeId: string, overId: string) {
+    setReferenceImages((previous) =>
+      reorderReferenceImages(previous, activeId, overId),
+    );
   }
 
   function review(event: FormEvent<HTMLFormElement>) {
@@ -90,6 +109,7 @@ export function useContentForm(context: ProductContext | null) {
     type,
     method,
     canCreate,
+    referenceImages,
     files,
     settings,
     reviewOpen,
@@ -100,8 +120,8 @@ export function useContentForm(context: ProductContext | null) {
     changeMethod,
     changeSettings,
     addFiles,
-    removeFile,
-    moveFile,
+    removeImage,
+    reorderImages,
     review,
     setReviewOpen,
   };

@@ -90,12 +90,12 @@ export function ContentForm({
         {form.canCreate ? (
           <>
             <ReferenceImages
-              files={form.files}
+              images={form.referenceImages}
               error={form.error || form.fileError}
               inputRef={form.referenceInput}
               onAddFiles={form.addFiles}
-              onRemoveFile={form.removeFile}
-              onMoveFile={form.moveFile}
+              onRemoveImage={form.removeImage}
+              onReorderImages={form.reorderImages}
             />
             <ContentSettings
               value={form.settings}
