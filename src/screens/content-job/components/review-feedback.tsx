@@ -20,36 +20,57 @@ export function ReviewNotes({ items }: { items: string[] }) {
   );
 }
 
-export function RegenerateControl({
+export function ReviewCompletion({
+  scope,
+  approveLabel,
   disabled,
+  approveDisabled,
   onRegenerate,
+  onApprove,
 }: {
+  scope: string;
+  approveLabel: string;
   disabled: boolean;
+  approveDisabled: boolean;
   onRegenerate: (guidance: string) => Promise<void>;
+  onApprove: () => Promise<void>;
 }) {
   const [guidance, setGuidance] = useState("");
   return (
-    <section className="grid gap-3 rounded-lg border p-5" aria-label="제안 재생성">
-      <Label htmlFor="regeneration-guidance">수정 요청</Label>
-      <Textarea
-        id="regeneration-guidance"
-        value={guidance}
-        onChange={(event) => setGuidance(event.target.value)}
-        placeholder="예: 제품 홍보보다 사용자의 실제 문제에 초점을 맞춰 주세요."
-        maxLength={2000}
-        disabled={disabled}
-      />
-      <p className="text-xs leading-5 text-muted-foreground">
-        현재 편집 내용과 수정 요청을 바탕으로 이 단계의 제안을 다시 만듭니다.
-      </p>
-      <div className="flex justify-end">
+    <section className="grid gap-5 border-t pt-6" aria-label={`${scope} 검토 작업`}>
+      <div className="grid gap-2">
+        <Label htmlFor="regeneration-guidance">이 단계 전체에 대한 수정 요청</Label>
+        <Textarea
+          id="regeneration-guidance"
+          name="regenerationGuidance"
+          aria-describedby="regeneration-scope"
+          value={guidance}
+          onChange={(event) => setGuidance(event.target.value)}
+          placeholder="예: 제품 홍보보다 사용자의 실제 문제에 초점을 맞춰 주세요."
+          maxLength={2000}
+          disabled={disabled}
+        />
+        <p id="regeneration-scope" className="text-xs leading-5 text-muted-foreground">
+          재생성하면 {scope}를 새로 제안받습니다. 현재 편집 내용도 함께 반영합니다.
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
         <Button
           type="button"
           variant="outline"
+          className="h-11 px-5"
           disabled={disabled || !guidance.trim()}
           onClick={() => void onRegenerate(guidance.trim())}
         >
           재생성
+        </Button>
+        <Button
+          type="button"
+          className="h-11 px-5"
+          disabled={disabled || approveDisabled}
+          onClick={() => void onApprove()}
+        >
+          {approveLabel}
         </Button>
       </div>
     </section>

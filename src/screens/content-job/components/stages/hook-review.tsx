@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { HookOutput } from "@/lib/content-jobs/structured-output/contracts";
 import { ReviewShell } from "../review-shell";
-import { RegenerateControl, ReviewNotes } from "../review-feedback";
+import { ReviewCompletion, ReviewNotes } from "../review-feedback";
 
 export function HookReview({
   value,
@@ -88,16 +87,14 @@ export function HookReview({
         ))}
       </div>
       <ReviewNotes items={draft.warnings} />
-      <RegenerateControl disabled={disabled} onRegenerate={(guidance) => onRegenerate(draft, guidance)} />
-      <div className="flex justify-end border-t pt-6">
-        <Button
-          className="h-11 px-5"
-          disabled={disabled || !selectedId}
-          onClick={() => void onApprove(draft, selectedId)}
-        >
-          훅 선택하고 완료
-        </Button>
-      </div>
+      <ReviewCompletion
+        scope="훅 후보 4개 전체"
+        approveLabel="훅 선택하고 완료"
+        disabled={disabled}
+        approveDisabled={!selectedId}
+        onRegenerate={(guidance) => onRegenerate(draft, guidance)}
+        onApprove={() => onApprove(draft, selectedId)}
+      />
     </ReviewShell>
   );
 }

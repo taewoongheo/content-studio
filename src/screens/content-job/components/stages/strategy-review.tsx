@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { StrategyOutput } from "@/lib/content-jobs/structured-output/contracts";
 import type { SlideshowStructure } from "@/lib/content-jobs/domain/types";
 import { ReviewShell } from "../review-shell";
-import { RegenerateControl, ReviewNotes } from "../review-feedback";
+import { ReviewCompletion, ReviewNotes } from "../review-feedback";
 import { structureRoleLabel } from "./structure-label";
 
 export function StrategyReview({
@@ -135,16 +134,14 @@ export function StrategyReview({
         ))}
       </div>
       <ReviewNotes items={draft.missingInformation} />
-      <RegenerateControl disabled={disabled} onRegenerate={(guidance) => onRegenerate(draft, guidance)} />
-      <div className="flex justify-end border-t pt-6">
-        <Button
-          className="h-11 px-5"
-          disabled={disabled || !selectedId}
-          onClick={() => void onApprove(draft, selectedId)}
-        >
-          선택하고 본문 만들기
-        </Button>
-      </div>
+      <ReviewCompletion
+        scope="전략 3개"
+        approveLabel="선택하고 본문 만들기"
+        disabled={disabled}
+        approveDisabled={!selectedId}
+        onRegenerate={(guidance) => onRegenerate(draft, guidance)}
+        onApprove={() => onApprove(draft, selectedId)}
+      />
     </ReviewShell>
   );
 }

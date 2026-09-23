@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { ReferenceAnalysisOutput } from "@/lib/content-jobs/structured-output/contracts";
 import type { SlideshowStructure } from "@/lib/content-jobs/domain/types";
 import { ReviewShell } from "../review-shell";
-import { RegenerateControl, ReviewNotes } from "../review-feedback";
+import { ReviewCompletion, ReviewNotes } from "../review-feedback";
 import { structureRoleLabel } from "./structure-label";
 
 export function ReferenceReview({
@@ -154,16 +153,14 @@ export function ReferenceReview({
         ))}
       </div>
       <ReviewNotes items={draft.uncertainties} />
-      <RegenerateControl disabled={disabled} onRegenerate={(guidance) => onRegenerate(draft, guidance)} />
-      <div className="flex justify-end border-t pt-6">
-        <Button
-          className="h-11 px-5"
-          disabled={disabled}
-          onClick={() => void onApprove(draft)}
-        >
-          승인하고 전략 만들기
-        </Button>
-      </div>
+      <ReviewCompletion
+        scope="레퍼런스 분석 전체"
+        approveLabel="승인하고 전략 만들기"
+        disabled={disabled}
+        approveDisabled={false}
+        onRegenerate={(guidance) => onRegenerate(draft, guidance)}
+        onApprove={() => onApprove(draft)}
+      />
     </ReviewShell>
   );
 }
