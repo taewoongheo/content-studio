@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { StrategyOutput } from "@/lib/content-jobs/structured-output/contracts";
 import type { SlideshowStructure } from "@/lib/content-jobs/domain/types";
 import { ReviewShell } from "../review-shell";
+import { RegenerateControl, ReviewNotes } from "../review-feedback";
 import { structureRoleLabel } from "./structure-label";
 
 export function StrategyReview({
@@ -15,11 +16,13 @@ export function StrategyReview({
   structure,
   disabled,
   onApprove,
+  onRegenerate,
 }: {
   value: StrategyOutput;
   structure: SlideshowStructure;
   disabled: boolean;
   onApprove: (value: StrategyOutput, selectedId: string) => Promise<void>;
+  onRegenerate: (value: StrategyOutput, guidance: string) => Promise<void>;
 }) {
   const [draft, setDraft] = useState(() => structuredClone(value));
   const [selectedId, setSelectedId] = useState(value.strategies[0]?.id ?? "");
@@ -127,9 +130,12 @@ export function StrategyReview({
               ))}
             </div>
             <StrategyEvidence strategy={strategy} evidence={draft.evidence} />
+            {strategy.warnings.length > 0 && <ReviewNotes items={strategy.warnings} />}
           </section>
         ))}
       </div>
+      <ReviewNotes items={draft.missingInformation} />
+      <RegenerateControl disabled={disabled} onRegenerate={(guidance) => onRegenerate(draft, guidance)} />
       <div className="flex justify-end border-t pt-6">
         <Button
           className="h-11 px-5"

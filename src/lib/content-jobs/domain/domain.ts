@@ -18,6 +18,7 @@ type StageValue = Record<string, unknown>;
 
 export type StageResult = {
   proposal: StageValue | null;
+  proposalHistory: StageValue[];
   accepted: StageValue | null;
   revisions: StageValue[];
 };
@@ -47,6 +48,7 @@ export class ContentJobDomainError extends Error {
 
 const emptyStage = (): StageResult => ({
   proposal: null,
+  proposalHistory: [],
   accepted: null,
   revisions: [],
 });
@@ -61,6 +63,13 @@ const nextStatus: Partial<Record<ContentJobStatus, ContentJobStatus>> = {
   reviewing_copy: "generating_hooks",
   generating_hooks: "reviewing_hooks",
   reviewing_hooks: "completed",
+};
+
+const regenerateStatus: Partial<Record<ContentJobStatus, ContentJobStatus>> = {
+  reviewing_reference: "analyzing_reference",
+  reviewing_strategy: "researching_strategy",
+  reviewing_copy: "drafting_copy",
+  reviewing_hooks: "generating_hooks",
 };
 
 function assertRevision(state: ContentJobState, expectedRevision: number) {
@@ -90,7 +99,11 @@ export function transitionJob(
 ): ContentJobState {
   assertRevision(state, expectedRevision);
   const isFailure = status === "failed" && state.status !== "completed";
-  if (nextStatus[state.status] !== status && !isFailure) {
+  if (
+    nextStatus[state.status] !== status &&
+    regenerateStatus[state.status] !== status &&
+    !isFailure
+  ) {
     throw new ContentJobDomainError(
       "INVALID_TRANSITION",
       `${state.status}에서 ${status}(으)로 이동할 수 없습니다.`,
@@ -108,7 +121,13 @@ export function proposeStage(
   assertRevision(state, expectedRevision);
   return {
     ...state,
-    [stage]: { ...state[stage], proposal },
+    [stage]: {
+      ...state[stage],
+      proposal,
+      proposalHistory: state[stage].proposal === null
+        ? (state[stage].proposalHistory ?? [])
+        : [...(state[stage].proposalHistory ?? []), state[stage].proposal],
+    },
     revision: state.revision + 1,
   };
 }

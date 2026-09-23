@@ -10,6 +10,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type Context = { params: Promise<{ jobId: string }> };
+type RegenerationInput = {
+  expectedRevision: number;
+  guidance: string;
+  draft: unknown;
+};
 
 export async function GET(request: Request, context: Context) {
   if (!isLocalRequest(request)) return new Response(null, { status: 403 });
@@ -43,6 +48,41 @@ export async function POST(request: Request, context: Context) {
     } as const;
     if (typeof action === "string" && action in generation) {
       const running = generation[action as keyof typeof generation]();
+      void running.catch(() => {});
+      return Response.json(contentJobRegistry.get(jobId), {
+        status: 202,
+        headers: { "Cache-Control": "no-store" },
+      });
+    }
+    const regeneration = {
+      regenerate_reference: (request: RegenerationInput) =>
+        contentWorkflow.analyzeReference(jobId, request),
+      regenerate_strategy: (request: RegenerationInput) =>
+        contentWorkflow.generateStrategies(jobId, request),
+      regenerate_copy: (request: RegenerationInput) =>
+        contentWorkflow.generateCopy(jobId, request),
+      regenerate_hooks: (request: RegenerationInput) =>
+        contentWorkflow.generateHooks(jobId, request),
+    } as const;
+    if (typeof action === "string" && action in regeneration) {
+      if (
+        !Number.isInteger(input.expectedRevision) ||
+        typeof input.guidance !== "string" ||
+        input.guidance.trim().length === 0 ||
+        input.guidance.length > 2000 ||
+        typeof input.draft !== "object" ||
+        input.draft === null ||
+        Array.isArray(input.draft)
+      )
+        return Response.json(
+          { error: "수정 요청, 편집 초안과 현재 revision을 확인해 주세요." },
+          { status: 400 },
+        );
+      const running = regeneration[action as keyof typeof regeneration]({
+        expectedRevision: input.expectedRevision as number,
+        guidance: input.guidance,
+        draft: input.draft,
+      });
       void running.catch(() => {});
       return Response.json(contentJobRegistry.get(jobId), {
         status: 202,

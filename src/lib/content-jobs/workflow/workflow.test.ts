@@ -330,6 +330,88 @@ test("different jobs receive different threads", async () => {
   assert.deepEqual(codex.startedThreads, ["thread-1", "thread-2"]);
 });
 
+test("regenerates the current stage with user direction and keeps the previous proposal", async () => {
+  const { codex, service } = createService();
+  codex.outputs.push(referenceOutput, { ...referenceOutput, writingStyle: { summary: "더 짧게", imageIds: ["image-1"] } });
+  let job = await service.createJob(jobInput);
+  job = await service.analyzeReference(job.id);
+  const draft = structuredClone(referenceOutput);
+  draft.writingStyle.summary = "사용자가 편집한 초안";
+  job = await service.analyzeReference(job.id, {
+    expectedRevision: job.state.revision,
+    guidance: "문체를 간결하게",
+    draft,
+  });
+  assert.equal(job.state.status, "reviewing_reference");
+  assert.equal((job.state.reference.proposal as typeof referenceOutput).writingStyle.summary, "더 짧게");
+  assert.deepEqual(job.state.reference.proposalHistory, [referenceOutput]);
+  assert.deepEqual(codex.turnThreadIds, ["thread-1", "thread-1"]);
+  assert.match((codex.turnInputs[1].at(-1) as { text: string }).text, /문체를 간결하게/);
+  assert.match((codex.turnInputs[1].at(-1) as { text: string }).text, /사용자가 편집한 초안/);
+  await assert.rejects(
+    service.analyzeReference(job.id, { expectedRevision: 0, guidance: "다시", draft }),
+    /revision/,
+  );
+  await assert.rejects(
+    service.analyzeReference(job.id, {
+      expectedRevision: job.state.revision,
+      guidance: "   ",
+      draft,
+    }),
+    /수정 요청/,
+  );
+  assert.equal(codex.turnInputs.length, 2);
+});
+
+test("regeneration failure keeps the edited draft available for review", async () => {
+  const { codex, service } = createService();
+  codex.outputs.push(referenceOutput, { wrong: true });
+  let job = await service.createJob(jobInput);
+  job = await service.analyzeReference(job.id);
+  const draft = structuredClone(referenceOutput);
+  draft.writingStyle.summary = "편집한 문체";
+  await assert.rejects(
+    service.analyzeReference(job.id, {
+      expectedRevision: job.state.revision,
+      guidance: "더 짧게",
+      draft,
+    }),
+  );
+  job = service.registry.get(job.id);
+  assert.equal(job.state.status, "reviewing_reference");
+  assert.deepEqual(job.state.reference.proposal, draft);
+  assert.deepEqual(job.state.reference.proposalHistory, []);
+});
+
+test("strategy, copy, and hooks can each be regenerated before approval", async () => {
+  const { codex, service } = createService();
+  codex.outputs.push(
+    referenceOutput,
+    strategyOutput,
+    { ...strategyOutput, missingInformation: ["추가 확인"] },
+    copyOutput,
+    { ...copyOutput, uncertainties: ["수치 확인"] },
+    hookOutput,
+    { ...hookOutput, warnings: ["표현 확인"] },
+  );
+  let job = await service.createJob(jobInput);
+  job = await service.analyzeReference(job.id);
+  job = service.acceptReference(job.id, job.state.reference.proposal, job.state.revision);
+  job = await service.generateStrategies(job.id);
+  job = await service.generateStrategies(job.id, { expectedRevision: job.state.revision, guidance: "주제를 바꿔줘", draft: strategyOutput });
+  assert.deepEqual(job.state.strategy.proposalHistory, [strategyOutput]);
+  job = service.acceptStrategy(job.id, job.state.strategy.proposal, "strategy-1", job.state.revision);
+  job = await service.generateCopy(job.id);
+  job = await service.generateCopy(job.id, { expectedRevision: job.state.revision, guidance: "본문을 짧게", draft: copyOutput });
+  assert.deepEqual(job.state.copy.proposalHistory, [copyOutput]);
+  job = service.acceptCopy(job.id, job.state.copy.proposal, job.state.revision);
+  job = await service.generateHooks(job.id);
+  job = await service.generateHooks(job.id, { expectedRevision: job.state.revision, guidance: "질문형 훅", draft: hookOutput });
+  assert.deepEqual(job.state.hooks.proposalHistory, [hookOutput]);
+  assert.equal(job.state.status, "reviewing_hooks");
+  assert.deepEqual(codex.turnThreadIds, Array(7).fill("thread-1"));
+});
+
 test("invalid output restores the reviewable state and can be retried", async () => {
   const { codex, service } = createService();
   codex.outputs.push({ wrong: true }, referenceOutput);

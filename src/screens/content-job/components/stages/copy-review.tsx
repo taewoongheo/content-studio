@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { CopyOutput } from "@/lib/content-jobs/structured-output/contracts";
 import type { SlideshowStructure } from "@/lib/content-jobs/domain/types";
 import { ReviewShell } from "../review-shell";
+import { RegenerateControl, ReviewNotes } from "../review-feedback";
 import { structureRoleLabel } from "./structure-label";
 
 export function CopyReview({
@@ -15,11 +16,13 @@ export function CopyReview({
   structure,
   disabled,
   onApprove,
+  onRegenerate,
 }: {
   value: CopyOutput;
   structure: SlideshowStructure;
   disabled: boolean;
   onApprove: (value: CopyOutput) => Promise<void>;
+  onRegenerate: (value: CopyOutput, guidance: string) => Promise<void>;
 }) {
   const [draft, setDraft] = useState(() => structuredClone(value));
   function updateSlide(
@@ -96,6 +99,8 @@ export function CopyReview({
           </article>
         ))}
       </div>
+      <ReviewNotes items={draft.uncertainties} />
+      <RegenerateControl disabled={disabled} onRegenerate={(guidance) => onRegenerate(draft, guidance)} />
       <div className="flex justify-end border-t pt-6">
         <Button
           className="h-11 px-5"

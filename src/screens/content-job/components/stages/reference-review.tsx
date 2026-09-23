@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { ReferenceAnalysisOutput } from "@/lib/content-jobs/structured-output/contracts";
 import type { SlideshowStructure } from "@/lib/content-jobs/domain/types";
 import { ReviewShell } from "../review-shell";
+import { RegenerateControl, ReviewNotes } from "../review-feedback";
 import { structureRoleLabel } from "./structure-label";
 
 export function ReferenceReview({
@@ -15,11 +16,13 @@ export function ReferenceReview({
   structure,
   disabled,
   onApprove,
+  onRegenerate,
 }: {
   value: ReferenceAnalysisOutput;
   structure: SlideshowStructure;
   disabled: boolean;
   onApprove: (value: ReferenceAnalysisOutput) => Promise<void>;
+  onRegenerate: (value: ReferenceAnalysisOutput, guidance: string) => Promise<void>;
 }) {
   const [draft, setDraft] = useState(() => structuredClone(value));
   return (
@@ -150,16 +153,8 @@ export function ReferenceReview({
           </div>
         ))}
       </div>
-      <TextField
-        label="불확실한 부분"
-        value={draft.uncertainties.join("\n")}
-        onChange={(value) =>
-          setDraft({
-            ...draft,
-            uncertainties: value.split("\n").filter(Boolean),
-          })
-        }
-      />
+      <ReviewNotes items={draft.uncertainties} />
+      <RegenerateControl disabled={disabled} onRegenerate={(guidance) => onRegenerate(draft, guidance)} />
       <div className="flex justify-end border-t pt-6">
         <Button
           className="h-11 px-5"

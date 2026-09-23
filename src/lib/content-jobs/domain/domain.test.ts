@@ -54,21 +54,25 @@ test("상위 단계 수정은 하위 결과만 무효화하고 이력을 남긴�
     revision: 7,
     reference: {
       proposal: { language: "en" },
+      proposalHistory: [],
       accepted: { language: "en" },
       revisions: [],
     },
     strategy: {
       proposal: { id: "strategy-1" },
+      proposalHistory: [],
       accepted: { id: "strategy-1" },
       revisions: [],
     },
     copy: {
       proposal: { slides: 5 },
+      proposalHistory: [],
       accepted: { slides: 5 },
       revisions: [],
     },
     hooks: {
       proposal: { count: 4 },
+      proposalHistory: [],
       accepted: { count: 4 },
       revisions: [],
     },
@@ -112,4 +116,17 @@ test("AI 제안값과 사용자 승인값을 분리한다", () => {
   assert.deepEqual(accepted.reference.proposal, { language: "en" });
   assert.deepEqual(accepted.reference.accepted, { language: "ko" });
   assert.deepEqual(accepted.reference.revisions, []);
+});
+
+test("검토 중 재생성은 같은 단계로 돌아오고 이전 제안을 보관한다", () => {
+  let state = createContentJobState();
+  state = transitionJob(state, "analyzing_reference", state.revision);
+  state = proposeStage(state, "reference", { summary: "처음" }, state.revision);
+  state = transitionJob(state, "reviewing_reference", state.revision);
+  state = transitionJob(state, "analyzing_reference", state.revision);
+  state = proposeStage(state, "reference", { summary: "다시" }, state.revision);
+  state = transitionJob(state, "reviewing_reference", state.revision);
+  assert.deepEqual(state.reference.proposal, { summary: "다시" });
+  assert.deepEqual(state.reference.proposalHistory, [{ summary: "처음" }]);
+  assert.equal(state.reference.accepted, null);
 });

@@ -24,6 +24,7 @@ import {
   hookSchema,
   referenceAnalysisSchema,
   strategySchema,
+  validateStructuredOutput,
   type CopyOutput,
   type HookOutput,
   type ReferenceAnalysisOutput,
@@ -40,6 +41,12 @@ type CodexWorkflowClient = Pick<
 
 type WorkflowOptions = {
   cwd?: string;
+};
+
+type RegenerationRequest = {
+  expectedRevision: number;
+  guidance: string;
+  draft: unknown;
 };
 
 function schemaValue(schema: StructuredOutputSchema) {
@@ -96,7 +103,7 @@ export class ContentWorkflowService {
     return this.registry.add(input, threadId);
   }
 
-  analyzeReference(id: string) {
+  analyzeReference(id: string, regeneration?: RegenerationRequest) {
     return this.generate(
       id,
       "analyze_reference",
@@ -121,10 +128,12 @@ export class ContentWorkflowService {
           job.referenceImages.map((image) => image.id),
           job.structure,
         ),
+      () => true,
+      regeneration,
     );
   }
 
-  generateStrategies(id: string) {
+  generateStrategies(id: string, regeneration?: RegenerationRequest) {
     const job = this.registry.getRecord(id);
     return this.generate(
       id,
@@ -138,10 +147,11 @@ export class ContentWorkflowService {
       (current, output) =>
         validateStrategyOutput(output, current.slideCount, current.structure),
       (current) => current.state.reference.accepted !== null,
+      regeneration,
     );
   }
 
-  generateCopy(id: string) {
+  generateCopy(id: string, regeneration?: RegenerationRequest) {
     const job = this.registry.getRecord(id);
     return this.generate(
       id,
@@ -164,10 +174,11 @@ export class ContentWorkflowService {
         );
       },
       (current) => current.state.strategy.accepted !== null,
+      regeneration,
     );
   }
 
-  generateHooks(id: string) {
+  generateHooks(id: string, regeneration?: RegenerationRequest) {
     return this.generate(
       id,
       "generate_hooks",
@@ -185,6 +196,7 @@ export class ContentWorkflowService {
         );
       },
       (current) => current.state.copy.accepted !== null,
+      regeneration,
     );
   }
 
@@ -387,13 +399,38 @@ export class ContentWorkflowService {
       value: unknown,
     ) => { ok: true; value: Value } | { ok: false; errors: string[] },
     prerequisite: (job: ContentJobRecord) => boolean = () => true,
+    regeneration?: RegenerationRequest,
   ) {
     return this.registry.runExclusive(id, operation, async (job) => {
-      if (job.state.status !== requiredStatus || !prerequisite(job)) {
+      const expectedStatus = regeneration ? reviewStatus : requiredStatus;
+      if (job.state.status !== expectedStatus || !prerequisite(job)) {
         throw new ContentJobError(
           "INVALID_STAGE",
           "이전 단계의 승인 결과가 필요합니다.",
         );
+      }
+      if (regeneration) {
+        if (job.state.revision !== regeneration.expectedRevision)
+          throw new ContentJobError(
+            "INVALID_STAGE",
+            "작업 revision이 바뀌었습니다. 최신 결과를 확인해 주세요.",
+          );
+        const guidance = regeneration.guidance.trim();
+        if (!guidance || guidance.length > 2000)
+          throw new ContentJobError(
+            "INVALID_OUTPUT",
+            "수정 요청은 1~2000자로 입력해 주세요.",
+          );
+        const serializedDraft = JSON.stringify(regeneration.draft);
+        if (
+          typeof serializedDraft !== "string" ||
+          serializedDraft.length > 100_000 ||
+          !validateStructuredOutput(outputSchema, regeneration.draft).ok
+        )
+          throw new ContentJobError(
+            "INVALID_OUTPUT",
+            "현재 단계의 편집 내용을 확인해 주세요.",
+          );
       }
       const before = structuredClone(job.state);
       this.registry.update(id, (current) => {
@@ -404,9 +441,16 @@ export class ContentWorkflowService {
         );
       });
       try {
+        const input = buildInput(job);
+        if (regeneration) {
+          input.push({
+            type: "text",
+            text: `현재 단계의 사용자 편집 초안:\n${JSON.stringify(regeneration.draft)}\n\n사용자의 수정 요청:\n${regeneration.guidance.trim()}\n\n승인된 이전 단계 결과와 필수 스키마를 유지하면서 이 요청을 반영해 현재 단계의 제안을 새로 작성하세요. 불확실한 사실은 추측하지 말고 확인 필요 항목에 남기세요.`,
+          });
+        }
         const turn = await this.codex.runStructuredTurn({
           threadId: job.threadId,
-          input: buildInput(job),
+          input,
           outputSchema: schemaValue(outputSchema),
         });
         if (turn.status !== "completed") {
@@ -430,7 +474,15 @@ export class ContentWorkflowService {
         });
       } catch (error) {
         this.registry.update(id, (current) => {
-          current.state = before;
+          current.state = regeneration
+            ? {
+                ...before,
+                [stage]: {
+                  ...before[stage],
+                  proposal: regeneration.draft as Record<string, unknown>,
+                },
+              }
+            : before;
         });
         throw error;
       }

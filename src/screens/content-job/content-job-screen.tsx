@@ -59,6 +59,18 @@ export function ContentJobScreen({
     }
   }
 
+  async function regenerate(
+    action: string,
+    draft: object,
+    guidance: string,
+  ) {
+    try {
+      await send({ action, draft, guidance, expectedRevision: job.state.revision });
+    } catch {
+      // The hook exposes the actionable error next to the current stage.
+    }
+  }
+
   const running = runningCopy[status];
   return (
     <div className="mx-auto grid max-w-[900px] gap-6">
@@ -109,6 +121,7 @@ export function ContentJobScreen({
               "generate_strategies",
             )
           }
+          onRegenerate={(value, guidance) => regenerate("regenerate_reference", value, guidance)}
         />
       ) : status === "reviewing_strategy" && job.state.strategy.proposal ? (
         <StrategyReview
@@ -127,6 +140,7 @@ export function ContentJobScreen({
               "generate_copy",
             )
           }
+          onRegenerate={(value, guidance) => regenerate("regenerate_strategy", value, guidance)}
         />
       ) : status === "reviewing_copy" && job.state.copy.proposal ? (
         <CopyReview
@@ -144,6 +158,7 @@ export function ContentJobScreen({
               "generate_hooks",
             )
           }
+          onRegenerate={(value, guidance) => regenerate("regenerate_copy", value, guidance)}
         />
       ) : status === "reviewing_hooks" && job.state.hooks.proposal ? (
         <HookReview
@@ -162,6 +177,7 @@ export function ContentJobScreen({
               // The hook exposes the actionable error next to the editor.
             }
           }}
+          onRegenerate={(value, guidance) => regenerate("regenerate_hooks", value, guidance)}
         />
       ) : status === "completed" &&
         job.state.copy.accepted &&

@@ -7,15 +7,18 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { HookOutput } from "@/lib/content-jobs/structured-output/contracts";
 import { ReviewShell } from "../review-shell";
+import { RegenerateControl, ReviewNotes } from "../review-feedback";
 
 export function HookReview({
   value,
   disabled,
   onApprove,
+  onRegenerate,
 }: {
   value: HookOutput;
   disabled: boolean;
   onApprove: (value: HookOutput, selectedId: string) => Promise<void>;
+  onRegenerate: (value: HookOutput, guidance: string) => Promise<void>;
 }) {
   const [draft, setDraft] = useState(() => structuredClone(value));
   const [selectedId, setSelectedId] = useState(value.hooks[0]?.id ?? "");
@@ -84,11 +87,8 @@ export function HookReview({
           </label>
         ))}
       </div>
-      {draft.warnings.length > 0 && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
-          {draft.warnings.join(" ")}
-        </div>
-      )}
+      <ReviewNotes items={draft.warnings} />
+      <RegenerateControl disabled={disabled} onRegenerate={(guidance) => onRegenerate(draft, guidance)} />
       <div className="flex justify-end border-t pt-6">
         <Button
           className="h-11 px-5"
