@@ -21,6 +21,7 @@ const referenceAnalysis = {
   ],
   writingStyle: { summary: "짧고 직접적", imageIds: ["image-1"] },
   textDensity: { summary: "한 장당 두 문장", imageIds: ["image-1"] },
+  repetitionPattern: "",
   hook: {
     originalText: "Stop doing this",
     pattern: "금지형",

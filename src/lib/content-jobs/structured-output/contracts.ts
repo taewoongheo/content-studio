@@ -9,6 +9,7 @@ export type ReferenceAnalysisOutput = {
   }>;
   writingStyle: { summary: string; imageIds: string[] };
   textDensity: { summary: string; imageIds: string[] };
+  repetitionPattern: string;
   hook: { originalText: string; pattern: string; imageIds: string[] };
   uncertainties: string[];
 };

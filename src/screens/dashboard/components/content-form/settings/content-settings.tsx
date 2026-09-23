@@ -5,6 +5,7 @@ import {
   NativeSelectOption,
 } from "@/components/ui/native-select";
 import type { ContentSettings as Settings } from "./model";
+import type { SlideshowStructure } from "@/lib/content-jobs/domain/types";
 
 function Setting({
   id,
@@ -39,9 +40,11 @@ function Setting({
 
 export function ContentSettings({
   value,
+  structure,
   onChange,
 }: {
   value: Settings;
+  structure: SlideshowStructure;
   onChange: (patch: Partial<Settings>) => void;
 }) {
   return (
@@ -51,7 +54,9 @@ export function ContentSettings({
           TikTok 슬라이드쇼 설정
         </h2>
         <p className="text-sm leading-6 text-muted-foreground">
-          게시 화면, 결과 장수와 사용할 언어를 정하세요.
+          {structure === "repeating"
+            ? "총 장수에는 훅 1장과 CTA 1장이 포함됩니다. 나머지는 같은 포맷의 본문입니다."
+            : "게시 화면, 결과 장수와 사용할 언어를 정하세요."}
         </p>
       </div>
       <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">

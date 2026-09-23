@@ -89,7 +89,7 @@ export function ContentJobScreen({
             <h1 className="text-xl font-semibold">{running[0]}</h1>
             <p className="text-sm leading-6 text-muted-foreground">{running[1]}</p>
             <p className="text-xs text-muted-foreground">
-              {job.referenceImages.length}개 레퍼런스 · {job.aspectRatio} · {job.slideCount}장 · {job.outputLanguage}
+              {job.structure === "repeating" ? "반복형" : "장면별 구성"} · {job.referenceImages.length}개 레퍼런스 · {job.aspectRatio} · {job.slideCount}장 · {job.outputLanguage}
             </p>
           </div>
         </section>
@@ -97,6 +97,7 @@ export function ContentJobScreen({
         <ReferenceReview
           key={`reference-${job.state.revision}`}
           value={job.state.reference.proposal as ReferenceAnalysisOutput}
+          structure={job.structure}
           disabled={submitting || Boolean(job.activeOperation)}
           onApprove={(value) =>
             approveAndGenerate(
@@ -113,6 +114,7 @@ export function ContentJobScreen({
         <StrategyReview
           key={`strategy-${job.state.revision}`}
           value={job.state.strategy.proposal as StrategyOutput}
+          structure={job.structure}
           disabled={submitting || Boolean(job.activeOperation)}
           onApprove={(value, selectedId) =>
             approveAndGenerate(
@@ -130,6 +132,7 @@ export function ContentJobScreen({
         <CopyReview
           key={`copy-${job.state.revision}`}
           value={job.state.copy.proposal as CopyOutput}
+          structure={job.structure}
           disabled={submitting || Boolean(job.activeOperation)}
           onApprove={(value) =>
             approveAndGenerate(
@@ -167,6 +170,7 @@ export function ContentJobScreen({
           key={`final-${job.state.revision}`}
           copy={job.state.copy.accepted as CopyOutput}
           hooks={job.state.hooks.accepted as AcceptedHookOutput}
+          structure={job.structure}
           disabled={submitting}
           onSave={async (copy, hooks, selectedId) => {
             try {

@@ -10,16 +10,20 @@ import type {
   AcceptedHookOutput,
   CopyOutput,
 } from "@/lib/content-jobs/structured-output/contracts";
+import type { SlideshowStructure } from "@/lib/content-jobs/domain/types";
 import { ReviewShell } from "../review-shell";
+import { structureRoleLabel } from "./structure-label";
 
 export function FinalEditor({
   copy,
   hooks,
+  structure,
   disabled,
   onSave,
 }: {
   copy: CopyOutput;
   hooks: AcceptedHookOutput;
+  structure: SlideshowStructure;
   disabled: boolean;
   onSave: (
     copy: CopyOutput,
@@ -70,8 +74,10 @@ export function FinalEditor({
             <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
               <Field label="역할">
                 <Input
-                  value={slide.role}
-                  onChange={(event) =>
+                  value={structure === "repeating" ? structureRoleLabel(slide.role) : slide.role}
+                  readOnly={structure === "repeating"}
+                  onChange={(event) => {
+                    if (structure === "repeating") return;
                     setCopyDraft((current) => ({
                       ...current,
                       slides: current.slides.map((item, itemIndex) =>
@@ -79,14 +85,18 @@ export function FinalEditor({
                           ? { ...item, role: event.target.value }
                           : item,
                       ),
-                    }))
-                  }
+                    }));
+                  }}
                 />
               </Field>
               <Field label="헤드라인">
                 <Input
-                  value={slide.headline}
-                  onChange={(event) =>
+                  value={structure === "repeating" && index === 0 && selectedHook
+                    ? selectedHook.text
+                    : slide.headline}
+                  readOnly={structure === "repeating" && index === 0}
+                  onChange={(event) => {
+                    if (structure === "repeating" && index === 0) return;
                     setCopyDraft((current) => ({
                       ...current,
                       slides: current.slides.map((item, itemIndex) =>
@@ -94,8 +104,8 @@ export function FinalEditor({
                           ? { ...item, headline: event.target.value }
                           : item,
                       ),
-                    }))
-                  }
+                    }));
+                  }}
                 />
               </Field>
             </div>

@@ -4,6 +4,7 @@ import {
   contentTypes,
   creationMethods,
   isImplementedWorkflow,
+  slideshowStructures,
 } from "./model";
 
 test("keeps slideshow and video as top-level content types", () => {
@@ -21,4 +22,14 @@ test("keeps all three creation methods while only enabling slideshow reference",
   assert.equal(isImplementedWorkflow("slideshow", "reference"), true);
   assert.equal(isImplementedWorkflow("slideshow", "template"), false);
   assert.equal(isImplementedWorkflow("video", "reference"), false);
+});
+
+test("slideshow structure is chosen independently of creation method", () => {
+  assert.deepEqual(
+    slideshowStructures.map((structure) => structure.id),
+    ["repeating", "sequential"],
+  );
+  assert.equal(isImplementedWorkflow("slideshow", "reference", "repeating"), true);
+  assert.equal(isImplementedWorkflow("slideshow", "reference", "sequential"), true);
+  assert.equal(isImplementedWorkflow("slideshow", "template", "repeating"), false);
 });

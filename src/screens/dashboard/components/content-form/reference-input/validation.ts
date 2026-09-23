@@ -1,3 +1,5 @@
+import { REFERENCE_ROLES, type ReferenceRole } from "@/lib/content-jobs/domain/types";
+
 export const MAX_REFERENCE_IMAGES = 20;
 export const MAX_REFERENCE_IMAGE_BYTES = 10 * 1024 * 1024;
 const REFERENCE_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -24,4 +26,18 @@ export function validateReference(files: File[]) {
   return files.length === 0
     ? "레퍼런스 슬라이드를 순서대로 추가해 주세요."
     : "";
+}
+
+export function validateRepeatingReference(
+  images: readonly { role: ReferenceRole }[],
+) {
+  const roles = images.map((image) => image.role);
+  if (
+    roles.length === REFERENCE_ROLES.length &&
+    REFERENCE_ROLES.every((role) => roles.includes(role))
+  )
+    return "";
+  if (REFERENCE_ROLES.some((role) => !roles.includes(role)))
+    return "훅, 반복 본문, CTA 이미지를 모두 추가해 주세요.";
+  return "훅, 반복 본문, CTA 이미지를 하나씩만 추가해 주세요.";
 }

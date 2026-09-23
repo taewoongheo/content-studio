@@ -1,7 +1,12 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { extname, join } from "node:path";
-import type { ContentJobInput, ProductContextInput } from "../domain/types";
+import {
+  REFERENCE_ROLES,
+  type ContentJobInput,
+  type ProductContextInput,
+  type SlideshowStructure,
+} from "../domain/types";
 
 export const MAX_REFERENCE_IMAGES = 20;
 export const MAX_REFERENCE_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -62,7 +67,7 @@ function validSignature(type: keyof typeof imageTypes, bytes: Uint8Array) {
   );
 }
 
-function parseImages(formData: FormData) {
+function parseImages(formData: FormData, structure: SlideshowStructure) {
   const images = formData.getAll("images").filter(
     (entry): entry is File => entry instanceof File,
   );
@@ -70,7 +75,24 @@ function parseImages(formData: FormData) {
     throw new ContentJobInputError(
       `레퍼런스 이미지는 1장 이상 ${MAX_REFERENCE_IMAGES}장 이하로 추가해 주세요.`,
     );
-  return images;
+  const roles = formData.getAll("imageRoles");
+  if (structure === "repeating") {
+    if (
+      images.length !== REFERENCE_ROLES.length ||
+      roles.length !== REFERENCE_ROLES.length ||
+      roles.some((role, index) => role !== REFERENCE_ROLES[index])
+    )
+      throw new ContentJobInputError(
+        "반복형은 훅, 반복 본문, CTA 이미지를 하나씩 추가해 주세요.",
+      );
+    return images.map((image, index) => ({
+      image,
+      role: REFERENCE_ROLES[index],
+    }));
+  }
+  if (roles.length > 0)
+    throw new ContentJobInputError("장면별 구성에는 이미지 역할을 지정하지 마세요.");
+  return images.map((image) => ({ image, role: null }));
 }
 
 export async function saveContentJobInput(formData: FormData): Promise<{
@@ -85,6 +107,9 @@ export async function saveContentJobInput(formData: FormData): Promise<{
   )
     throw new ContentJobInputError("Codex 모델을 선택해 주세요.");
   const productContext = parseProductContext(formData.get("productContext"));
+  const structure = formData.get("structure");
+  if (structure !== "repeating" && structure !== "sequential")
+    throw new ContentJobInputError("슬라이드 구성을 선택해 주세요.");
   const aspectRatio = formData.get("aspectRatio");
   if (aspectRatio !== "4:5" && aspectRatio !== "1:1" && aspectRatio !== "9:16")
     throw new ContentJobInputError("화면 비율을 확인해 주세요.");
@@ -98,9 +123,9 @@ export async function saveContentJobInput(formData: FormData): Promise<{
     outputLanguage.length > 50
   )
     throw new ContentJobInputError("결과 언어를 확인해 주세요.");
-  const images = parseImages(formData);
+  const images = parseImages(formData, structure);
   const buffers = await Promise.all(
-    images.map(async (image) => {
+    images.map(async ({ image, role }) => {
       if (
         !(image.type in imageTypes) ||
         image.size === 0 ||
@@ -112,14 +137,14 @@ export async function saveContentJobInput(formData: FormData): Promise<{
       const buffer = new Uint8Array(await image.arrayBuffer());
       if (!validSignature(image.type as keyof typeof imageTypes, buffer))
         throw new ContentJobInputError("이미지 파일 형식을 확인해 주세요.");
-      return { image, buffer };
+      return { image, role, buffer };
     }),
   );
   const directory = await mkdtemp(join(tmpdir(), "content-studio-job-"));
   const cleanup = () => rm(directory, { recursive: true, force: true });
   try {
     const referenceImages = await Promise.all(
-      buffers.map(async ({ image, buffer }, index) => {
+      buffers.map(async ({ image, role, buffer }, index) => {
         const id = `image-${index + 1}`;
         const type = image.type as keyof typeof imageTypes;
         const path = join(directory, `${id}${imageTypes[type]}`);
@@ -130,12 +155,14 @@ export async function saveContentJobInput(formData: FormData): Promise<{
           path,
           type,
           size: image.size,
+          role,
         };
       }),
     );
     return {
       input: {
         model: model.trim(),
+        structure,
         productContext,
         aspectRatio,
         slideCount,

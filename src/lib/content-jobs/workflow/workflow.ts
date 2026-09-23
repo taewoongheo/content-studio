@@ -61,6 +61,15 @@ function outputError(errors: string[]) {
   return new ContentJobError("INVALID_OUTPUT", errors.join(" "));
 }
 
+function applyHookToFirstSlide(copy: CopyOutput, text: string): CopyOutput {
+  return {
+    ...copy,
+    slides: copy.slides.map((slide, index) =>
+      index === 0 ? { ...slide, headline: text } : slide,
+    ),
+  };
+}
+
 export class ContentWorkflowService {
   private readonly cwd: string;
 
@@ -110,6 +119,7 @@ export class ContentWorkflowService {
         validateReferenceOutput(
           output,
           job.referenceImages.map((image) => image.id),
+          job.structure,
         ),
     );
   }
@@ -126,7 +136,7 @@ export class ContentWorkflowService {
       strategySchema(job.slideCount),
       (current) => [{ type: "text", text: strategyPrompt(current) }],
       (current, output) =>
-        validateStrategyOutput(output, current.slideCount),
+        validateStrategyOutput(output, current.slideCount, current.structure),
       (current) => current.state.reference.accepted !== null,
     );
   }
@@ -150,6 +160,7 @@ export class ContentWorkflowService {
           output,
           current.slideCount,
           strategy?.evidence.map((item) => item.id) ?? [],
+          current.structure,
         );
       },
       (current) => current.state.strategy.accepted !== null,
@@ -186,6 +197,7 @@ export class ContentWorkflowService {
     const result = validateReferenceOutput(
       value,
       job.referenceImages.map((image) => image.id),
+      job.structure,
     );
     if (!result.ok) throw outputError(result.errors);
     return this.accept(
@@ -204,7 +216,7 @@ export class ContentWorkflowService {
     expectedRevision: number,
   ) {
     const job = this.registry.getRecord(id);
-    const result = validateStrategyOutput(value, job.slideCount);
+    const result = validateStrategyOutput(value, job.slideCount, job.structure);
     if (!result.ok) throw outputError(result.errors);
     if (!result.value.strategies.some((item) => item.id === selectedStrategyId))
       throw new ContentJobError(
@@ -229,6 +241,7 @@ export class ContentWorkflowService {
       value,
       job.slideCount,
       strategy?.evidence.map((item) => item.id) ?? [],
+      job.structure,
     );
     if (!result.ok) throw outputError(result.errors);
     return this.accept(
@@ -253,7 +266,8 @@ export class ContentWorkflowService {
       copy?.slides.map((slide) => slide.id) ?? [],
     );
     if (!result.ok) throw outputError(result.errors);
-    if (!result.value.hooks.some((item) => item.id === selectedHookId))
+    const selectedHook = result.value.hooks.find((item) => item.id === selectedHookId);
+    if (!selectedHook)
       throw new ContentJobError(
         "INVALID_OUTPUT",
         "선택한 훅을 후보 목록에서 찾을 수 없습니다.",
@@ -266,6 +280,14 @@ export class ContentWorkflowService {
       "reviewing_hooks",
     );
     return this.registry.update(id, (current) => {
+      if (current.structure === "repeating" && current.state.copy.accepted) {
+        const copy = current.state.copy.accepted as CopyOutput;
+        current.state.copy = {
+          ...current.state.copy,
+          accepted: applyHookToFirstSlide(copy, selectedHook.text),
+          revisions: [...current.state.copy.revisions, current.state.copy.accepted],
+        };
+      }
       current.state = transitionJob(
         current.state,
         "completed",
@@ -294,6 +316,7 @@ export class ContentWorkflowService {
       copyValue,
       job.slideCount,
       strategy?.evidence.map((item) => item.id) ?? [],
+      job.structure,
     );
     if (!copy.ok) throw outputError(copy.errors);
     const hooks = validateHookOutput(
@@ -301,16 +324,20 @@ export class ContentWorkflowService {
       copy.value.slides.map((slide) => slide.id),
     );
     if (!hooks.ok) throw outputError(hooks.errors);
-    if (!hooks.value.hooks.some((hook) => hook.id === selectedHookId))
+    const selectedHook = hooks.value.hooks.find((hook) => hook.id === selectedHookId);
+    if (!selectedHook)
       throw new ContentJobError(
         "INVALID_OUTPUT",
         "선택한 훅을 후보 목록에서 찾을 수 없습니다.",
       );
     return this.registry.update(id, (current) => {
+      const finalCopy = current.structure === "repeating"
+        ? applyHookToFirstSlide(copy.value, selectedHook.text)
+        : copy.value;
       const withCopy = acceptStage(
         current.state,
         "copy",
-        stageRecord(copy.value),
+        stageRecord(finalCopy),
         expectedRevision,
       );
       current.state = acceptStage(

@@ -6,14 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { CopyOutput } from "@/lib/content-jobs/structured-output/contracts";
+import type { SlideshowStructure } from "@/lib/content-jobs/domain/types";
 import { ReviewShell } from "../review-shell";
+import { structureRoleLabel } from "./structure-label";
 
 export function CopyReview({
   value,
+  structure,
   disabled,
   onApprove,
 }: {
   value: CopyOutput;
+  structure: SlideshowStructure;
   disabled: boolean;
   onApprove: (value: CopyOutput) => Promise<void>;
 }) {
@@ -45,8 +49,12 @@ export function CopyReview({
             <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
               <Field label="역할">
                 <Input
-                  value={slide.role}
-                  onChange={(event) => updateSlide(index, { role: event.target.value })}
+                  value={structure === "repeating" ? structureRoleLabel(slide.role) : slide.role}
+                  readOnly={structure === "repeating"}
+                  onChange={(event) => {
+                    if (structure === "sequential")
+                      updateSlide(index, { role: event.target.value });
+                  }}
                 />
               </Field>
               <Field label="헤드라인">

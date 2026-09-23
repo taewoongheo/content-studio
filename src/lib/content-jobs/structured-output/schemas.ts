@@ -54,6 +54,7 @@ export const referenceAnalysisSchema = objectSchema({
     summary: stringSchema,
     imageIds: stringArraySchema,
   }),
+  repetitionPattern: stringSchema,
   hook: objectSchema({
     originalText: stringSchema,
     pattern: stringSchema,

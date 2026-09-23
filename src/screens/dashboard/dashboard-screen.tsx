@@ -101,7 +101,7 @@ export function DashboardScreen() {
                         새 콘텐츠 만들기
                       </h1>
                       <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                        레퍼런스 슬라이드를 순서대로 추가하고 제작 조건을
+                        슬라이드 구성과 레퍼런스를 선택하고 제작 조건을
                         설정하세요.
                       </p>
                     </div>

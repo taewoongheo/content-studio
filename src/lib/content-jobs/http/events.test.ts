@@ -5,6 +5,7 @@ import { ContentJobRegistry } from "../workflow/registry";
 
 const input = {
   model: "gpt-6-luna",
+  structure: "sequential" as const,
   productContext: {
     name: "제품",
     description: "설명",
@@ -21,6 +22,7 @@ const input = {
       path: "/private/reference.png",
       type: "image/png" as const,
       size: 8,
+      role: null,
     },
   ],
 };

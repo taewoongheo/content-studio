@@ -26,8 +26,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { FormField } from "../form-field";
-import type { ReferenceImageDraft } from "./reference-images-model";
+import { FormField } from "../../form-field";
+import type { ReferenceImageDraft } from "../reference-images-model";
 
 function ReferenceThumbnail({ image }: { image: ReferenceImageDraft }) {
   return (

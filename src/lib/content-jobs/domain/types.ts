@@ -1,5 +1,9 @@
 import type { ContentJobState, ContentStage } from "./domain";
 
+export const REFERENCE_ROLES = ["hook", "body", "cta"] as const;
+export type ReferenceRole = (typeof REFERENCE_ROLES)[number];
+export type SlideshowStructure = "repeating" | "sequential";
+
 export type ProductContextInput = {
   name: string;
   description: string;
@@ -13,10 +17,12 @@ export type ReferenceImageInput = {
   path: string;
   type: "image/jpeg" | "image/png" | "image/webp";
   size: number;
+  role: ReferenceRole | null;
 };
 
 export type ContentJobInput = {
   model: string;
+  structure: SlideshowStructure;
   productContext: ProductContextInput;
   aspectRatio: "4:5" | "1:1" | "9:16";
   slideCount: number;

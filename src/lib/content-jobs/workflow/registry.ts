@@ -133,6 +133,7 @@ export class ContentJobRegistry {
     return {
       id: value.id,
       model: value.model,
+      structure: value.structure,
       productContext: value.productContext,
       aspectRatio: value.aspectRatio,
       slideCount: value.slideCount,
@@ -147,6 +148,7 @@ export class ContentJobRegistry {
         name: image.name,
         type: image.type,
         size: image.size,
+        role: image.role,
       })),
     };
   }

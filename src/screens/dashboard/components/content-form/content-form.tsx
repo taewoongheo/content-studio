@@ -7,9 +7,10 @@ import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import { createContentJob } from "@/screens/content-job/api";
 import type { ProductContext } from "../../hooks/use-product-context";
 import { ContentReviewDialog } from "./content-review-dialog";
-import { ReferenceImages } from "./reference-input/reference-images";
+import { ReferenceRoleImages } from "./reference-input/repeating/reference-role-images";
+import { ReferenceImages } from "./reference-input/sequential/reference-images";
 import { ChoiceSection } from "./selection/choice-section";
-import { contentTypes, creationMethods } from "./selection/model";
+import { contentTypes, creationMethods, slideshowStructures } from "./selection/model";
 import { ContentSettings } from "./settings/content-settings";
 import { slideCount } from "./settings/model";
 import { useContentForm } from "./use-content-form";
@@ -55,7 +56,8 @@ export function ContentForm({
       const job = await createContentJob({
         model: codexModel,
         context: productContext,
-        files: form.files,
+        referenceInputs: form.referenceInputs,
+        structure: form.structure,
         aspectRatio: form.settings.ratio,
         slideCount: slideCount(form.settings),
         outputLanguage: form.settings.language,
@@ -82,6 +84,16 @@ export function ContentForm({
           options={contentTypes}
           onChange={form.changeType}
         />
+        {form.type === "slideshow" && (
+          <ChoiceSection
+            name="slideshow-structure"
+            title="슬라이드 구성"
+            value={form.structure}
+            columns={2}
+            options={slideshowStructures}
+            onChange={form.changeStructure}
+          />
+        )}
         <ChoiceSection
           name="creation-method"
           title="제작 방식"
@@ -92,16 +104,26 @@ export function ContentForm({
         />
         {form.canCreate ? (
           <>
-            <ReferenceImages
-              images={form.referenceImages}
-              error={form.error || form.fileError}
-              inputRef={form.referenceInput}
-              onAddFiles={form.addFiles}
-              onRemoveImage={form.removeImage}
-              onReorderImages={form.reorderImages}
-            />
+            {form.structure === "repeating" ? (
+              <ReferenceRoleImages
+                images={form.roleImages}
+                error={form.error || form.fileError}
+                onAddFile={form.setRoleImage}
+                onRemoveImage={form.removeRoleImage}
+              />
+            ) : (
+              <ReferenceImages
+                images={form.referenceImages}
+                error={form.error || form.fileError}
+                inputRef={form.referenceInput}
+                onAddFiles={form.addFiles}
+                onRemoveImage={form.removeImage}
+                onReorderImages={form.reorderImages}
+              />
+            )}
             <ContentSettings
               value={form.settings}
+              structure={form.structure}
               onChange={form.changeSettings}
             />
             <div className="flex flex-wrap items-center justify-between gap-4 border-t pt-6">
@@ -115,7 +137,7 @@ export function ContentForm({
             </div>
           </>
         ) : (
-          <WorkflowPlaceholder type={form.type} method={form.method} />
+          <WorkflowPlaceholder type={form.type} method={form.method} structure={form.structure} />
         )}
       </form>
       <ContentReviewDialog
@@ -123,6 +145,7 @@ export function ContentForm({
         onOpenChange={form.setReviewOpen}
         context={context}
         model={codexModel}
+        structure={form.structure}
         files={form.files}
         settings={form.settings}
         starting={starting}

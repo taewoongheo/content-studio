@@ -22,6 +22,7 @@ function validForm() {
   form.set("aspectRatio", "9:16");
   form.set("slideCount", "6");
   form.set("outputLanguage", "한국어");
+  form.set("structure", "sequential");
   form.append("images", new File([pngHeader], "one.png", { type: "image/png" }));
   form.append("images", new File([pngHeader], "two.png", { type: "image/png" }));
   return form;
@@ -36,11 +37,41 @@ test("stores ordered images with stable IDs and exposes cleanup", async () => {
     );
     assert.equal(saved.input.aspectRatio, "9:16");
     assert.equal(saved.input.model, "gpt-6-luna");
+    assert.equal(saved.input.structure, "sequential");
+    assert.deepEqual(saved.input.referenceImages.map((image) => image.role), [null, null]);
     await access(saved.input.referenceImages[0].path);
   } finally {
     await saved.cleanup();
   }
   await assert.rejects(access(saved.input.referenceImages[0].path));
+});
+
+test("stores three labeled representative images for a repeating slideshow", async () => {
+  const form = validForm();
+  form.set("structure", "repeating");
+  form.delete("images");
+  for (const role of ["hook", "body", "cta"]) {
+    form.append("images", new File([pngHeader], `${role}.png`, { type: "image/png" }));
+    form.append("imageRoles", role);
+  }
+  const saved = await saveContentJobInput(form);
+  try {
+    assert.equal(saved.input.structure, "repeating");
+    assert.deepEqual(
+      saved.input.referenceImages.map((image) => image.role),
+      ["hook", "body", "cta"],
+    );
+  } finally {
+    await saved.cleanup();
+  }
+});
+
+test("rejects incomplete or mismatched repeating references", async () => {
+  const form = validForm();
+  form.set("structure", "repeating");
+  form.append("imageRoles", "hook");
+  form.append("imageRoles", "body");
+  await assert.rejects(saveContentJobInput(form), /훅.*반복 본문.*CTA/);
 });
 
 test("rejects invalid image signatures before creating a job", async () => {

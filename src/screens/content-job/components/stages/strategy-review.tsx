@@ -6,14 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { StrategyOutput } from "@/lib/content-jobs/structured-output/contracts";
+import type { SlideshowStructure } from "@/lib/content-jobs/domain/types";
 import { ReviewShell } from "../review-shell";
+import { structureRoleLabel } from "./structure-label";
 
 export function StrategyReview({
   value,
+  structure,
   disabled,
   onApprove,
 }: {
   value: StrategyOutput;
+  structure: SlideshowStructure;
   disabled: boolean;
   onApprove: (value: StrategyOutput, selectedId: string) => Promise<void>;
 }) {
@@ -93,16 +97,18 @@ export function StrategyReview({
                   </span>
                   <Input
                     aria-label={`${slideIndex + 1}장 역할`}
-                    value={slide.role}
-                    onChange={(event) =>
+                    value={structure === "repeating" ? structureRoleLabel(slide.role) : slide.role}
+                    readOnly={structure === "repeating"}
+                    onChange={(event) => {
+                      if (structure === "repeating") return;
                       updateStrategy(index, {
                         slidePlan: strategy.slidePlan.map((item, itemIndex) =>
                           itemIndex === slideIndex
                             ? { ...item, role: event.target.value }
                             : item,
                         ),
-                      })
-                    }
+                      });
+                    }}
                   />
                   <Textarea
                     aria-label={`${slideIndex + 1}장 핵심 내용`}

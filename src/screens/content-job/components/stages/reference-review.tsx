@@ -6,14 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { ReferenceAnalysisOutput } from "@/lib/content-jobs/structured-output/contracts";
+import type { SlideshowStructure } from "@/lib/content-jobs/domain/types";
 import { ReviewShell } from "../review-shell";
+import { structureRoleLabel } from "./structure-label";
 
 export function ReferenceReview({
   value,
+  structure,
   disabled,
   onApprove,
 }: {
   value: ReferenceAnalysisOutput;
+  structure: SlideshowStructure;
   disabled: boolean;
   onApprove: (value: ReferenceAnalysisOutput) => Promise<void>;
 }) {
@@ -73,6 +77,15 @@ export function ReferenceReview({
             })
           }
         />
+        {structure === "repeating" && (
+          <TextField
+            label="반복 본문 규칙"
+            value={draft.repetitionPattern}
+            onChange={(repetitionPattern) =>
+              setDraft({ ...draft, repetitionPattern })
+            }
+          />
+        )}
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
           <TextField
             label="원문 훅"
@@ -91,25 +104,34 @@ export function ReferenceReview({
         </div>
       </div>
       <div className="grid gap-3">
-        <h2 className="text-base font-semibold">슬라이드 전개</h2>
+        <h2 className="text-base font-semibold">
+          {structure === "repeating" ? "대표 이미지별 역할" : "슬라이드 전개"}
+        </h2>
         {draft.slides.map((slide, index) => (
           <div key={slide.imageId} className="grid gap-4 rounded-lg border p-5">
             <p className="text-sm font-medium">
               {index + 1}. {slide.imageId}
             </p>
             <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-              <TextField
-                label="역할"
-                value={slide.role}
-                onChange={(role) =>
-                  setDraft((current) => ({
-                    ...current,
-                    slides: current.slides.map((item, itemIndex) =>
-                      itemIndex === index ? { ...item, role } : item,
-                    ),
-                  }))
-                }
-              />
+              <Field label="역할">
+                {structure === "repeating" ? (
+                  <Input value={structureRoleLabel(slide.role)} readOnly />
+                ) : (
+                  <Input
+                    value={slide.role}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        slides: current.slides.map((item, itemIndex) =>
+                          itemIndex === index
+                            ? { ...item, role: event.target.value }
+                            : item,
+                        ),
+                      }))
+                    }
+                  />
+                )}
+              </Field>
               <TextField
                 label="이전 장면과의 연결"
                 value={slide.transitionFromPrevious}

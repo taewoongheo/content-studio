@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type {
   CodexJsonValue,
+  CodexUserInput,
   StructuredTurnResult,
 } from "../../codex/transport/types";
 import { ContentJobRegistry } from "./registry";
@@ -10,6 +11,7 @@ import type { ContentJobInput } from "../domain/types";
 
 const jobInput: ContentJobInput = {
   model: "gpt-6-luna",
+  structure: "sequential",
   productContext: {
     name: "LiftCode",
     description: "운동 기록 앱",
@@ -26,6 +28,7 @@ const jobInput: ContentJobInput = {
       path: "/tmp/one.png",
       type: "image/png",
       size: 100,
+      role: null,
     },
     {
       id: "image-2",
@@ -33,6 +36,7 @@ const jobInput: ContentJobInput = {
       path: "/tmp/two.png",
       type: "image/png",
       size: 100,
+      role: null,
     },
   ],
 };
@@ -58,6 +62,7 @@ const referenceOutput = {
   ],
   writingStyle: { summary: "짧은 문장", imageIds: ["image-1"] },
   textDensity: { summary: "두 문장", imageIds: ["image-2"] },
+  repetitionPattern: "",
   hook: {
     originalText: "Stop guessing",
     pattern: "금지형",
@@ -120,6 +125,7 @@ class FakeCodexClient {
   startedThreads: string[] = [];
   startedModels: Array<string | undefined> = [];
   turnThreadIds: string[] = [];
+  turnInputs: CodexUserInput[][] = [];
   outputs: CodexJsonValue[] = [];
   pendingTurn: Promise<StructuredTurnResult> | null = null;
 
@@ -134,8 +140,9 @@ class FakeCodexClient {
     return { threadId };
   }
 
-  async runStructuredTurn({ threadId }: { threadId: string }) {
+  async runStructuredTurn({ threadId, input }: { threadId: string; input: CodexUserInput[] }) {
     this.turnThreadIds.push(threadId);
+    this.turnInputs.push(input);
     if (this.pendingTurn) return this.pendingTurn;
     const output = this.outputs.shift();
     assert.notEqual(output, undefined);
@@ -228,6 +235,92 @@ test("each job gets one thread and all four stages reuse it", async () => {
     "thread-1",
   ]);
   assert.equal(JSON.stringify(job).includes("/tmp/one.png"), false);
+});
+
+test("repeating references expand three representatives into hook, repeated body, and CTA", async () => {
+  const { codex, service } = createService();
+  const repeatingInput: ContentJobInput = {
+    ...jobInput,
+    structure: "repeating",
+    slideCount: 4,
+    referenceImages: [
+      { ...jobInput.referenceImages[0], role: "hook" },
+      { ...jobInput.referenceImages[1], role: "body" },
+      {
+        ...jobInput.referenceImages[1],
+        id: "image-3",
+        name: "three.png",
+        path: "/tmp/three.png",
+        role: "cta",
+      },
+    ],
+  };
+  const repeatedReference = {
+    ...referenceOutput,
+    repetitionPattern: "가운데 장에서 동일한 제목 위치와 본문 배치를 사용한다",
+    slides: ["hook", "body", "cta"].map((role, index) => ({
+      imageId: `image-${index + 1}`,
+      role,
+      transitionFromPrevious: "같은 리듬",
+    })),
+  };
+  const repeatedStrategy = {
+    ...strategyOutput,
+    strategies: strategyOutput.strategies.map((strategy) => ({
+      ...strategy,
+      slidePlan: ["hook", "body", "body", "cta"].map((role, index) => ({
+        id: `${strategy.id}-slide-${index + 1}`,
+        role,
+        productFact: "제품 정보",
+        evidenceIds: ["evidence-1"],
+      })),
+    })),
+  };
+  const repeatedCopy = {
+    ...copyOutput,
+    slides: ["hook", "body", "body", "cta"].map((role, index) => ({
+      id: `slide-${index + 1}`,
+      role,
+      headline: `제목 ${index + 1}`,
+      body: `본문 ${index + 1}`,
+      visualDirection: "동일한 본문 레이아웃",
+      transitionFromPrevious: "반복",
+      claimReferences: ["product-context", "evidence-1"],
+    })),
+  };
+  codex.outputs.push(repeatedReference, repeatedStrategy, repeatedCopy, hookOutput);
+  let job = await service.createJob(repeatingInput);
+  job = await service.analyzeReference(job.id);
+  job = service.acceptReference(job.id, job.state.reference.proposal, job.state.revision);
+  job = await service.generateStrategies(job.id);
+  job = service.acceptStrategy(job.id, job.state.strategy.proposal, "strategy-1", job.state.revision);
+  job = await service.generateCopy(job.id);
+  job = service.acceptCopy(job.id, job.state.copy.proposal, job.state.revision);
+  job = await service.generateHooks(job.id);
+  job = service.acceptHook(job.id, job.state.hooks.proposal, "hook-1", job.state.revision);
+
+  assert.equal(job.state.status, "completed");
+  assert.deepEqual(codex.turnThreadIds, ["thread-1", "thread-1", "thread-1", "thread-1"]);
+  assert.equal(codex.turnInputs[0].filter((item) => item.type === "localImage").length, 3);
+  assert.match((codex.turnInputs[0][0] as { text: string }).text, /image-2=body/);
+  assert.match((codex.turnInputs[1][0] as { text: string }).text, /가운데 2장/);
+  assert.deepEqual(
+    (job.state.copy.accepted as typeof repeatedCopy).slides.map((slide) => slide.role),
+    ["hook", "body", "body", "cta"],
+  );
+  assert.equal(
+    (job.state.copy.accepted as typeof repeatedCopy).slides[0].headline,
+    "훅 문구 1",
+  );
+  const revisedCopy = structuredClone(job.state.copy.accepted as typeof repeatedCopy);
+  revisedCopy.slides[0].headline = "이전 훅";
+  const revisedHooks = structuredClone(job.state.hooks.accepted as typeof hookOutput & { selectedHookId: string });
+  revisedHooks.hooks[0].text = "새 훅";
+  job = service.reviseFinal(job.id, revisedCopy, revisedHooks, "hook-1", job.state.revision);
+  assert.equal(
+    (job.state.copy.accepted as typeof repeatedCopy).slides[0].headline,
+    "새 훅",
+  );
 });
 
 test("different jobs receive different threads", async () => {

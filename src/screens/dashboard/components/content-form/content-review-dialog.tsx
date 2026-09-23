@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { ProductContext } from "../../hooks/use-product-context";
+import type { SlideshowStructure } from "@/lib/content-jobs/domain/types";
 import {
   getSettingsSummary,
   type ContentSettings,
@@ -18,6 +19,7 @@ export function ContentReviewDialog({
   onOpenChange,
   context,
   model,
+  structure,
   files,
   settings,
   starting,
@@ -28,6 +30,7 @@ export function ContentReviewDialog({
   onOpenChange: (open: boolean) => void;
   context: ProductContext;
   model: string;
+  structure: SlideshowStructure;
   files: File[];
   settings: ContentSettings;
   starting: boolean;
@@ -57,8 +60,12 @@ export function ContentReviewDialog({
             <dd>TikTok 슬라이드쇼</dd>
           </div>
           <div>
+            <dt>슬라이드 구성</dt>
+            <dd>{structure === "repeating" ? "반복형" : "장면별 구성"}</dd>
+          </div>
+          <div>
             <dt>레퍼런스</dt>
-            <dd>{files.length}장</dd>
+            <dd>{structure === "repeating" ? "훅 · 반복 본문 · CTA 대표 이미지" : `${files.length}장`}</dd>
           </div>
           <div>
             <dt>설정</dt>

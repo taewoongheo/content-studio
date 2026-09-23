@@ -1,3 +1,7 @@
+import type { SlideshowStructure } from "@/lib/content-jobs/domain/types";
+
+export type { SlideshowStructure } from "@/lib/content-jobs/domain/types";
+
 export const contentTypes = [
   {
     id: "slideshow",
@@ -12,6 +16,23 @@ export const contentTypes = [
 ] as const;
 
 export type ContentType = (typeof contentTypes)[number]["id"];
+
+export const slideshowStructures = [
+  {
+    id: "repeating",
+    title: "반복형",
+    description: "훅과 CTA 사이에 같은 시각 포맷을 반복합니다.",
+  },
+  {
+    id: "sequential",
+    title: "장면별 구성",
+    description: "슬라이드마다 다른 구성으로 내용을 전개합니다.",
+  },
+] as const satisfies readonly {
+  id: SlideshowStructure;
+  title: string;
+  description: string;
+}[];
 
 export const creationMethods = [
   {
@@ -36,8 +57,13 @@ export type CreationMethod = (typeof creationMethods)[number]["id"];
 export function isImplementedWorkflow(
   type: ContentType,
   method: CreationMethod,
+  structure: SlideshowStructure = "sequential",
 ) {
-  return type === "slideshow" && method === "reference";
+  return (
+    type === "slideshow" &&
+    method === "reference" &&
+    (structure === "repeating" || structure === "sequential")
+  );
 }
 
 export function getWorkflowLabel(

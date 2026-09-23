@@ -1,4 +1,5 @@
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
+import type { ReferenceRole, SlideshowStructure } from "@/lib/content-jobs/domain/types";
 import type { ProductContext } from "@/screens/dashboard/hooks/use-product-context";
 
 async function readResponse(response: Response) {
@@ -18,25 +19,31 @@ async function readResponse(response: Response) {
 export async function createContentJob({
   model,
   context,
-  files,
+  referenceInputs,
+  structure,
   aspectRatio,
   slideCount,
   outputLanguage,
 }: {
   model: string;
   context: ProductContext;
-  files: File[];
+  referenceInputs: Array<{ file: File; role: ReferenceRole | null }>;
+  structure: SlideshowStructure;
   aspectRatio: "4:5" | "1:1" | "9:16";
   slideCount: number;
   outputLanguage: string;
 }) {
   const form = new FormData();
   form.set("model", model);
+  form.set("structure", structure);
   form.set("productContext", JSON.stringify(context));
   form.set("aspectRatio", aspectRatio);
   form.set("slideCount", String(slideCount));
   form.set("outputLanguage", outputLanguage);
-  for (const file of files) form.append("images", file);
+  for (const { file, role } of referenceInputs) {
+    form.append("images", file);
+    if (role) form.append("imageRoles", role);
+  }
   const created = await readResponse(
     await fetch("/api/content-jobs", { method: "POST", body: form }),
   );
