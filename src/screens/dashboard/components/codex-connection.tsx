@@ -91,7 +91,6 @@ export function CodexConnection({
             {models.map((model) => (
               <NativeSelectOption key={model.id} value={model.model}>
                 {model.displayName}
-                {model.model.includes("luna") ? " · 절약 추천" : ""}
               </NativeSelectOption>
             ))}
           </NativeSelect>
