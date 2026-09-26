@@ -7,6 +7,7 @@ import { applyEditorCommands, BACKGROUND_ELEMENT_ID, createDocumentFromAnalysis 
 import { editorAnalysisSchema, validateEditorAnalysis, validateEditorCommands } from "../schema";
 import type {
   EditorCommand,
+  EditorChatTarget,
   EditorDocument,
   EditorHook,
   EditorTopic,
@@ -16,8 +17,9 @@ import type {
 } from "../types";
 import { analysisPrompt, bodyPrompt, chatPrompt, hooksPrompt, topicsPrompt } from "./prompts";
 import { bodyFillSchema, chatEditSchema, hookSuggestionsSchema, topicSuggestionsSchema } from "./schemas";
-import { resolveChatTarget, targetedChatPrompt, targetedChatSchema, targetedMutationCommands,
-  type ChatTarget, type TargetedChatOutput } from "./targeted/chat";
+import { resolveChatTarget, targetedMutationCommands } from "./targeted/chat";
+import { targetedChatPrompt } from "./targeted/prompt";
+import { targetedChatSchema, type TargetedChatOutput } from "./targeted/schema";
 import { validateStructuredOutput } from "../../structured-output/schemas";
 
 type CodexClient = Pick<CodexConnectionManager, "runStructuredTurn">;
@@ -58,7 +60,7 @@ function assertRevision(job: ContentJobRecord, expected: number) {
     throw new ContentJobError("OPERATION_IN_PROGRESS", "AI 작업이 끝난 뒤 수정해 주세요.");
 }
 
-function appendMessage(job: ContentJobRecord, role: "user" | "assistant", text: string, target?: ChatTarget) {
+function appendMessage(job: ContentJobRecord, role: "user" | "assistant", text: string, target?: EditorChatTarget) {
   job.editor.messages.push({ id: randomUUID(), role, text, ...(target ? { target } : {}) });
   if (job.editor.messages.length > 60) job.editor.messages.splice(0, job.editor.messages.length - 60);
 }
@@ -144,6 +146,11 @@ function mutationCommands(output: ChatOutput): EditorCommand[] {
   ];
 }
 
+function checkedChatCommands(build: () => EditorCommand[]): EditorCommand[] {
+  try { return build(); }
+  catch (error) { invalid(error instanceof Error ? error.message : "AI 수정 명령이 올바르지 않습니다."); }
+}
+
 export class EditorWorkflowService {
   constructor(private readonly codex: CodexClient, private readonly registry: ContentJobRegistry) {}
 
@@ -162,6 +169,18 @@ export class EditorWorkflowService {
     const result = validateStructuredOutput<Value>(schema, turn.output);
     if (!result.ok) invalid(result.errors.join(" "));
     return result.value;
+  }
+
+  private async generateChatEdit(job: ContentJobRecord, document: EditorDocument,
+    target: EditorChatTarget | null): Promise<{ reply: string; commands: EditorCommand[] }> {
+    if (target) {
+      const output = await this.turn<TargetedChatOutput>(job, targetedChatSchema,
+        [{ type: "text", text: targetedChatPrompt(job, target) }]);
+      return { reply: output.reply,
+        commands: checkedChatCommands(() => targetedMutationCommands(document, target, output)) };
+    }
+    const output = await this.turn<ChatOutput>(job, chatEditSchema, [{ type: "text", text: chatPrompt(job) }]);
+    return { reply: output.reply, commands: checkedChatCommands(() => mutationCommands(output)) };
   }
 
   initialize(id: string) {
@@ -309,7 +328,7 @@ export class EditorWorkflowService {
     return this.registry.runExclusive(id, "chat_edit", async (job) => {
       const document = readyDocument(job);
       if (job.editor.revision !== expectedRevision) stale();
-      let target: ChatTarget | null = null;
+      let target: EditorChatTarget | null = null;
       if (requestedTarget !== undefined) {
         try { target = resolveChatTarget(document, requestedTarget); }
         catch (error) { invalid(error instanceof Error ? error.message : "선택한 Element가 올바르지 않습니다."); }
@@ -318,15 +337,7 @@ export class EditorWorkflowService {
         appendMessage(current, "user", trimmed, target ?? undefined);
         current.editor.revision += 1;
       });
-      const output = target
-        ? await this.turn<TargetedChatOutput>(job, targetedChatSchema,
-          [{ type: "text", text: targetedChatPrompt(job, target) }])
-        : await this.turn<ChatOutput>(job, chatEditSchema, [{ type: "text", text: chatPrompt(job) }]);
-      let commands: EditorCommand[];
-      try { commands = target
-        ? targetedMutationCommands(document, target, output as TargetedChatOutput)
-        : mutationCommands(output as ChatOutput); }
-      catch (error) { invalid(error instanceof Error ? error.message : "AI 수정 명령이 올바르지 않습니다."); }
+      const { reply, commands } = await this.generateChatEdit(job, document, target);
       let next: EditorDocument;
       try { next = applyEditorCommands(document, commands); }
       catch (error) { invalid(error instanceof Error ? error.message : "AI 수정 명령이 올바르지 않습니다."); }
@@ -334,7 +345,7 @@ export class EditorWorkflowService {
       return this.registry.update(id, (current) => {
         if (commands.length > 0) replaceWithReconciliation(current, document, next);
         else current.editor.revision += 1;
-        appendMessage(current, "assistant", output.reply);
+        appendMessage(current, "assistant", reply);
       });
     });
   }

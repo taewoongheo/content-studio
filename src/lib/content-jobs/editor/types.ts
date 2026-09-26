@@ -62,11 +62,17 @@ export type EditorTopic = {
   sourceUrls: string[];
 };
 export type EditorHook = { id: string; text: string; rationale: string };
+export type EditorChatTarget = {
+  slideId: string;
+  placementId: string;
+  elementId: string;
+  slideIds: string[];
+};
 export type EditorMessage = {
   id: string;
   role: "user" | "assistant";
   text: string;
-  target?: { slideId: string; placementId: string; elementId: string; slideIds: string[] };
+  target?: EditorChatTarget;
 };
 export type EditorJobState = {
   status: "pending" | "analyzing" | "ready";

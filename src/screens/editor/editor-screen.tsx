@@ -306,7 +306,7 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
             </div>
             <ChatPanel editor={job.editor} activeOperation={job.activeOperation} disabled={disabled}
               selectedTarget={slide && placement && element ? {
-                slideId: slide.id, placementId: placement.id, elementId: element.id, slideIds: selectedSlideIds,
+                target: { slideId: slide.id, placementId: placement.id, elementId: element.id, slideIds: selectedSlideIds },
                 name: element.name, scopeLabel: visualScopeLabel(selectedSlideIds.length, appliedSlides.length),
               } : null} onAction={action} />
           </aside>

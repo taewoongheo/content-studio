@@ -4,11 +4,10 @@ import { useState } from "react";
 import { LoaderCircle, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import type { EditorJobState } from "@/lib/content-jobs/editor/types";
+import type { EditorChatTarget, EditorJobState } from "@/lib/content-jobs/editor/types";
 import type { ContentJobOperation } from "@/lib/content-jobs/domain/types";
-import type { ChatTarget } from "@/lib/content-jobs/editor/workflow/targeted/chat";
 
-type SelectedChatTarget = ChatTarget & { name: string; scopeLabel: string };
+type SelectedChatTarget = { target: EditorChatTarget; name: string; scopeLabel: string };
 
 const operationLabels: Partial<Record<ContentJobOperation, string>> = {
   suggest_topics: "주제를 조사하고 있습니다…",
@@ -33,15 +32,14 @@ export function ChatPanel({
   const [message, setMessage] = useState("");
   const [dismissedTargetKey, setDismissedTargetKey] = useState<string | null>(null);
   const targetKey = selectedTarget
-    ? `${selectedTarget.slideId}:${selectedTarget.placementId}:${selectedTarget.elementId}:${selectedTarget.slideIds.join(",")}` : null;
+    ? `${selectedTarget.target.slideId}:${selectedTarget.target.placementId}:${selectedTarget.target.elementId}:${selectedTarget.target.slideIds.join(",")}` : null;
   const activeTarget = targetKey && targetKey !== dismissedTargetKey ? selectedTarget : null;
 
   async function sendMessage() {
     const trimmed = message.trim();
     if (!trimmed) return;
     if (await onAction({ action: "chat_edit", message: trimmed,
-      ...(activeTarget ? { target: { slideId: activeTarget.slideId, placementId: activeTarget.placementId,
-        elementId: activeTarget.elementId, slideIds: activeTarget.slideIds } } : {}) })) setMessage("");
+      ...(activeTarget ? { target: activeTarget.target } : {}) })) setMessage("");
   }
 
   return (
