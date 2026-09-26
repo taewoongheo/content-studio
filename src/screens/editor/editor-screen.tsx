@@ -12,11 +12,10 @@ import { useContentJob } from "@/screens/content-job/use-content-job";
 import { ChatPanel } from "./components/chat-panel";
 import { ElementInspector, type ElementInspectorHandle } from "./components/inspector/element-inspector";
 import { ElementScopePicker } from "./components/element-scope-picker";
-import { defaultPlacement, defaultVisualSlides, selectVisualSlides, type ScopeChoice } from "./components/element-scope";
+import { selectVisualSlides, type ScopeChoice } from "./components/element-scope";
 import { SlideCanvas } from "./components/slide-canvas";
 import { SlideBackground } from "./components/inspector/slide-background";
-
-const roleLabels = { hook: "훅", body: "본문", cta: "CTA" } as const;
+import { resolveEditorSelection, roleLabels } from "./editor-selection";
 
 export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobSnapshot; onNewJob: () => void }) {
   const { job, submitting, clientError, send } = useContentJob(initialJob);
@@ -32,21 +31,8 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
   }, [job.editor.revision]);
   const document = useMemo(() => job.editor.document
     ? ensureSharedBackground(structuredClone(job.editor.document)) : null, [job.editor.document]);
-  const slide = document?.slides.find((item) => item.id === slideId) ?? document?.slides[0];
-  const placement = slide?.placements.find((item) => item.id === placementId) ?? (slide ? defaultPlacement(slide) : null);
-  const element = document?.elements.find((item) => item.id === placement?.elementId) ?? null;
-  const appliedSlides = element ? document?.slides.flatMap((item, index) => item.placements.some((placed) => placed.elementId === element.id)
-    ? [{ slideId: item.id, label: `${index + 1}장 · ${roleLabels[item.role]}` }] : []) ?? [] : [];
-  const visualTargets = element ? document?.slides.flatMap((item) => item.placements
-    .filter((placed) => placed.elementId === element.id)
-    .map((placed) => ({ slideId: item.id, placement: placed }))) ?? [] : [];
-  const scopeKey = slide && placement ? `${slide.id}:${placement.id}` : "";
-  const selectedSlideIds = slide && placement
-    ? selectVisualSlides(slide.id, appliedSlides.map((item) => item.slideId),
-      scopeSelection?.key === scopeKey ? scopeSelection.slideIds
-        : defaultVisualSlides(element?.kind ?? "text", slide.id, appliedSlides.map((item) => item.slideId)),
-      { slideId: slide.id, checked: true })
-    : [];
+  const { slide, placement, element, appliedSlides, visualTargets, scopeKey, selectedSlideIds } =
+    resolveEditorSelection(document, slideId, placementId, scopeSelection);
   const disabled = submitting || Boolean(job.activeOperation);
   const issue = clientError || imageError || job.lastError;
   const referenceImage = job.structure === "repeating"

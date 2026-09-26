@@ -1,4 +1,5 @@
 import type { SlideshowStructure } from "../domain/types";
+import { BACKGROUND_ELEMENT_ID, BACKGROUND_FRAME, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, syncBackgroundColors } from "./background";
 import type {
   EditorAnalysis,
   EditorCommand,
@@ -6,52 +7,13 @@ import type {
   EditorSlide,
   DuplicationScope,
   ElementFrame,
-  ElementDefinition,
   ElementStyle,
   PlacedElement,
   SlideRole,
 } from "./types";
 
 const colorPattern = /^#[0-9a-fA-F]{6}$/;
-export const BACKGROUND_ELEMENT_ID = "__background__";
-export const BACKGROUND_PLACEMENT_ID = "__background-placement__";
-const fullFrame: ElementFrame = { x: 0, y: 0, width: 1, height: 1 };
-
-function makeBackgroundElement(color: string, sourceImageId: string): ElementDefinition {
-  return {
-    id: BACKGROUND_ELEMENT_ID, name: "배경", role: "슬라이드 전체의 바탕색", kind: "background",
-    frame: { ...fullFrame }, sourceImageId,
-    style: { color: "#111111", backgroundColor: color, fontSize: 36, fontWeight: 400,
-      textAlign: "center", borderRadius: 0, fontFamily: "sans-serif", imageFit: "cover" },
-  };
-}
-
-export function ensureSharedBackground(document: EditorDocument): EditorDocument {
-  if (document.slides.length === 0) return document;
-  let background = document.elements.find((element) => element.id === BACKGROUND_ELEMENT_ID);
-  if (background && background.kind !== "background") throw new Error("배경 Element ID가 다른 Element에 사용 중입니다.");
-  if (!background) {
-    const sourceImageId = document.elements[0]?.sourceImageId ?? "";
-    background = makeBackgroundElement(document.slides[0].backgroundColor, sourceImageId);
-    document.elements.push(background);
-  }
-  for (const slide of document.slides) {
-    if (slide.placements.some((placement) => placement.elementId === BACKGROUND_ELEMENT_ID)) continue;
-    slide.placements.push({ id: BACKGROUND_PLACEMENT_ID, elementId: BACKGROUND_ELEMENT_ID, value: "",
-      frameOverride: null, styleOverride: slide.backgroundColor === background.style.backgroundColor
-        ? null : { backgroundColor: slide.backgroundColor } });
-  }
-  return document;
-}
-
-function syncBackgroundColors(document: EditorDocument) {
-  const background = document.elements.find((element) => element.id === BACKGROUND_ELEMENT_ID);
-  if (!background) return;
-  for (const slide of document.slides) {
-    const placement = slide.placements.find((item) => item.elementId === BACKGROUND_ELEMENT_ID);
-    if (placement) slide.backgroundColor = placement.styleOverride?.backgroundColor ?? background.style.backgroundColor;
-  }
-}
+export { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID, ensureSharedBackground } from "./background";
 
 function validFrame(frame: ElementFrame) {
   return Object.values(frame).every((value) => Number.isFinite(value)) &&
@@ -84,7 +46,7 @@ export function validateEditorDocument(document: EditorDocument): string[] {
   const background = document.elements.find((element) => element.id === BACKGROUND_ELEMENT_ID);
   if (!background || background.kind !== "background" ||
     document.elements.filter((element) => element.kind === "background").length !== 1 ||
-    !Object.keys(fullFrame).every((key) => background.frame[key as keyof ElementFrame] === fullFrame[key as keyof ElementFrame]))
+    !Object.keys(BACKGROUND_FRAME).every((key) => background.frame[key as keyof ElementFrame] === BACKGROUND_FRAME[key as keyof ElementFrame]))
     errors.push("공통 배경 Element가 올바르지 않습니다.");
   if (document.slides.length < 2 || document.slides.length > 20)
     errors.push("슬라이드 수가 올바르지 않습니다.");
