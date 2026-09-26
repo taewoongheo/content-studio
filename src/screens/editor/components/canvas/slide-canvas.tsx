@@ -1,0 +1,180 @@
+"use client";
+
+import { useRef, useState, type PointerEvent } from "react";
+import Image from "next/image";
+import type { EditorDocument, EditorSlide, ElementFrame } from "@/lib/content-jobs/editor/types";
+import { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID } from "@/lib/content-jobs/editor/document";
+import { moveOrResizeFrame, type DragMode } from "./frame-geometry";
+
+type Gesture = { pointerId: number; placementId: string; mode: DragMode; startX: number; startY: number;
+  canvasWidth: number; canvasHeight: number; frame: ElementFrame };
+const handles = ["nw", "ne", "sw", "se"] as const;
+const handlePositions = { nw: "-left-1.5 -top-1.5 cursor-nwse-resize", ne: "-right-1.5 -top-1.5 cursor-nesw-resize",
+  sw: "-bottom-1.5 -left-1.5 cursor-nesw-resize", se: "-bottom-1.5 -right-1.5 cursor-nwse-resize" } as const;
+
+export function SlideCanvas({
+  document,
+  slide,
+  jobId,
+  selectedPlacementId,
+  disabled,
+  showGuides,
+  onSelect,
+  onSelectBackground,
+  onFrameChange,
+}: {
+  document: EditorDocument;
+  slide: EditorSlide;
+  jobId: string;
+  selectedPlacementId: string | null;
+  disabled: boolean;
+  showGuides: boolean;
+  onSelect: (placementId: string) => void;
+  onSelectBackground: () => void;
+  onFrameChange: (placementId: string, frame: ElementFrame) => Promise<boolean>;
+}) {
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const gesture = useRef<Gesture | null>(null);
+  const [preview, setPreview] = useState<{ placementId: string; frame: ElementFrame } | null>(null);
+  const elements = new Map(document.elements.map((element) => [element.id, element]));
+
+  function beginGesture(event: PointerEvent<HTMLButtonElement>, placementId: string, frame: ElementFrame, mode: DragMode) {
+    event.stopPropagation();
+    if (disabled) return;
+    if (selectedPlacementId !== placementId) {
+      onSelect(placementId);
+      return;
+    }
+    const bounds = canvasRef.current?.getBoundingClientRect();
+    if (!bounds) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    gesture.current = { pointerId: event.pointerId, placementId, mode, startX: event.clientX, startY: event.clientY,
+      canvasWidth: bounds.width, canvasHeight: bounds.height, frame };
+  }
+
+  function frameAtPointer(event: PointerEvent<HTMLButtonElement>) {
+    const active = gesture.current;
+    if (!active || active.pointerId !== event.pointerId) return null;
+    return { placementId: active.placementId, frame: moveOrResizeFrame(active.frame, active.mode,
+      (event.clientX - active.startX) / active.canvasWidth, (event.clientY - active.startY) / active.canvasHeight,
+      showGuides) };
+  }
+
+  function moveGesture(event: PointerEvent<HTMLButtonElement>) {
+    const next = frameAtPointer(event);
+    if (next) setPreview(next);
+  }
+
+  async function finishGesture(event: PointerEvent<HTMLButtonElement>) {
+    const active = gesture.current;
+    const next = frameAtPointer(event);
+    if (!active || !next) return;
+    gesture.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    if (Object.keys(next.frame).every((key) => next.frame[key as keyof ElementFrame] === active.frame[key as keyof ElementFrame])) {
+      setPreview(null);
+      return;
+    }
+    setPreview(next);
+    try {
+      await onFrameChange(next.placementId, next.frame);
+    } finally {
+      setPreview(null);
+    }
+  }
+
+  function cancelGesture(event: PointerEvent<HTMLButtonElement>) {
+    if (gesture.current?.pointerId !== event.pointerId) return;
+    gesture.current = null;
+    setPreview(null);
+  }
+
+  return (
+    <div
+      ref={canvasRef}
+      className={`relative mx-auto h-full w-auto max-h-full max-w-full overflow-hidden border bg-white shadow-sm ${selectedPlacementId === BACKGROUND_PLACEMENT_ID ? "ring-2 ring-foreground/70 ring-offset-2" : ""}`}
+      style={{ aspectRatio: document.aspectRatio.replace(":", "/"), backgroundColor: slide.backgroundColor, containerType: "inline-size" }}
+      aria-label={`${slide.role} 슬라이드 미리보기`}
+    >
+      <button type="button" className="absolute inset-0 size-full cursor-default border-0 bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-foreground" onClick={onSelectBackground} aria-label="슬라이드 배경 선택" aria-pressed={selectedPlacementId === BACKGROUND_PLACEMENT_ID} />
+      {slide.placements.map((placement, index) => {
+        if (placement.elementId === BACKGROUND_ELEMENT_ID) return null;
+        const element = elements.get(placement.elementId);
+        if (!element) return null;
+        const frame = preview?.placementId === placement.id ? preview.frame : placement.frameOverride ?? element.frame;
+        const style = { ...element.style, ...placement.styleOverride };
+        const selected = selectedPlacementId === placement.id;
+        return (
+          <div
+            key={placement.id}
+            className={`absolute ${selected ? "ring-2 ring-primary" : ""}`}
+            style={{
+              left: `${frame.x * 100}%`,
+              top: `${frame.y * 100}%`,
+              width: `${frame.width * 100}%`,
+              height: `${frame.height * 100}%`,
+              zIndex: selected ? slide.placements.length + 2 : index + 1,
+            }}
+          >
+          <button
+            type="button"
+            disabled={disabled}
+            className={`relative size-full touch-none cursor-move overflow-hidden text-left outline-none focus-visible:ring-2 focus-visible:ring-primary ${selected ? "" : "hover:ring-1 hover:ring-foreground/50"}`}
+            style={{
+              backgroundColor: element.kind === "text" || element.kind === "image" ? style.backgroundColor : "transparent",
+              color: style.color,
+              fontSize: `${style.fontSize / 10.8}cqw`,
+              fontWeight: style.fontWeight,
+              textAlign: style.textAlign,
+              fontFamily: style.fontFamily,
+              borderRadius: element.kind === "circle" ? "50%" : `${style.borderRadius / 10.8}cqw`,
+            }}
+            onClick={() => onSelect(placement.id)}
+            onPointerDown={(event) => beginGesture(event, placement.id, frame, "move")}
+            onPointerMove={moveGesture}
+            onPointerUp={(event) => void finishGesture(event)}
+            onPointerCancel={cancelGesture}
+            aria-label={`${element.name} Element 선택`}
+          >
+            {element.kind === "rectangle" || element.kind === "circle" || element.kind === "triangle" ? (
+              <span className="block size-full" style={{ backgroundColor: style.backgroundColor,
+                borderRadius: element.kind === "circle" ? "50%" : `${style.borderRadius / 10.8}cqw`,
+                clipPath: element.kind === "triangle" ? "polygon(50% 0, 0 100%, 100% 100%)" : undefined }} />
+            ) : element.kind === "image" ? (
+              placement.value ? (
+                <Image
+                  src={`/api/content-jobs/${encodeURIComponent(jobId)}/assets/${encodeURIComponent(placement.value)}`}
+                  alt={element.name}
+                  fill
+                  unoptimized
+                  sizes="380px"
+                  style={{ objectFit: style.imageFit }}
+                />
+              ) : (
+                <span className="grid size-full place-items-center border border-dashed border-muted-foreground/40 bg-muted/40 p-2 text-center text-xs font-medium text-muted-foreground">
+                  {element.name}
+                </span>
+              )
+            ) : (
+              <span className={`flex size-full items-center justify-center whitespace-pre-wrap break-words p-[2%] leading-tight ${placement.value ? "" : "text-muted-foreground/70"}`}>
+                {placement.value || element.name}
+              </span>
+            )}
+          </button>
+          {selected && handles.map((handle) => (
+            <button key={handle} type="button" disabled={disabled} aria-label={`${element.name} ${handle} 크기 조절`}
+              className={`absolute z-10 size-3 rounded-[2px] border border-primary bg-background shadow-sm touch-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${handlePositions[handle]}`}
+              onPointerDown={(event) => beginGesture(event, placement.id, frame, handle)}
+              onPointerMove={moveGesture} onPointerUp={(event) => void finishGesture(event)} onPointerCancel={cancelGesture} />
+          ))}
+          </div>
+        );
+      })}
+      {showGuides && <div className="pointer-events-none absolute inset-0 z-50" aria-hidden="true">
+        <div className="absolute inset-y-0 left-1/2 w-px bg-blue-600" />
+        <div className="absolute inset-x-0 top-1/2 h-px bg-blue-600" />
+      </div>}
+    </div>
+  );
+}

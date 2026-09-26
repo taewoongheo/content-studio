@@ -5,7 +5,7 @@ import Image from "next/image";
 import { ArrowLeft, LoaderCircle, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
-import type { DuplicationScope, EditorCommand, ElementDefinition, ElementKind } from "@/lib/content-jobs/editor/types";
+import type { DuplicationScope, EditorCommand, ElementDefinition, ElementFrame, ElementKind } from "@/lib/content-jobs/editor/types";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, getDuplicateTargets } from "@/lib/content-jobs/editor/document";
 import { uploadEditorImage } from "@/screens/content-job/api";
 import { useContentJob } from "@/screens/content-job/use-content-job";
@@ -13,8 +13,9 @@ import { ChatPanel } from "./components/chat-panel";
 import { ElementInspector, type ElementInspectorHandle } from "./components/inspector/element-inspector";
 import { ElementScopePicker } from "./components/element-scope-picker";
 import { selectVisualSlides, type ScopeChoice } from "./components/element-scope";
-import { SlideCanvas } from "./components/slide-canvas";
+import { SlideCanvas } from "./components/canvas/slide-canvas";
 import { SlideBackground } from "./components/inspector/slide-background";
+import { frameCommandsForScope } from "./components/canvas/frame-commands";
 import { resolveEditorSelection, roleLabels } from "./editor-selection";
 
 export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobSnapshot; onNewJob: () => void }) {
@@ -23,6 +24,7 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
   const [placementId, setPlacementId] = useState<string | null>(null);
   const [scopeSelection, setScopeSelection] = useState<{ key: string; slideIds: string[] } | null>(null);
   const [imageError, setImageError] = useState("");
+  const [showGuides, setShowGuides] = useState(true);
   const inspectorRef = useRef<ElementInspectorHandle>(null);
   const latestRevision = useRef(job.editor.revision);
   const commandQueue = useRef<Promise<unknown>>(Promise.resolve());
@@ -121,6 +123,13 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
     setScopeSelection({ key: scopeKey, slideIds: next });
   }
 
+  async function changeFrame(targetPlacementId: string, frame: ElementFrame) {
+    if (!slide || !placement || !element || placement.id !== targetPlacementId || element.kind === "background") return false;
+    if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
+    const commands = frameCommandsForScope(element.id, frame, visualTargets, selectedSlideIds);
+    return commands.length === 0 || saveCommands(commands);
+  }
+
   return (
     <div className="flex h-svh min-h-0 flex-col overflow-hidden bg-background text-foreground max-lg:h-auto max-lg:min-h-svh max-lg:overflow-visible">
       <header className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b px-3 py-1.5 sm:px-4">
@@ -191,7 +200,13 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
             <nav aria-label="페이지 선택" className="shrink-0 border-b px-4 py-3">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-sm font-semibold">페이지</h2>
-                {referenceImage && (
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant={showGuides ? "secondary" : "ghost"} size="sm"
+                    aria-pressed={showGuides} onClick={() => setShowGuides((current) => !current)}
+                    title="중앙 가로·세로선에 Element가 맞춰집니다.">
+                    가이드 {showGuides ? "켜짐" : "꺼짐"}
+                  </Button>
+                  {referenceImage && (
                   <details className="relative text-xs">
                     <summary className="cursor-pointer rounded-md px-2 py-1 font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-foreground">레퍼런스 보기</summary>
                     <div className="absolute top-full right-0 z-20 mt-2 rounded-lg border bg-background p-2 shadow-lg">
@@ -205,7 +220,8 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
                       />
                     </div>
                   </details>
-                )}
+                  )}
+                </div>
               </div>
               <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
                 {document.slides.map((item, index) => (
@@ -222,7 +238,10 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
               </div>
             </nav>
             <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted/20 p-5 sm:p-6">
-              <SlideCanvas document={document} slide={slide} jobId={job.id} selectedPlacementId={placement?.id ?? null} onSelect={setPlacementId} onSelectBackground={() => setPlacementId(BACKGROUND_PLACEMENT_ID)} />
+              <SlideCanvas key={slide.id} document={document} slide={slide} jobId={job.id}
+                selectedPlacementId={placement?.id ?? null} disabled={disabled} showGuides={showGuides}
+                onSelect={setPlacementId} onSelectBackground={() => setPlacementId(BACKGROUND_PLACEMENT_ID)}
+                onFrameChange={changeFrame} />
             </div>
             <div className="shrink-0 border-t px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
