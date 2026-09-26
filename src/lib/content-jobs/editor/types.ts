@@ -66,6 +66,7 @@ export type EditorMessage = {
   id: string;
   role: "user" | "assistant";
   text: string;
+  target?: { slideId: string; placementId: string; elementId: string; slideIds: string[] };
 };
 export type EditorJobState = {
   status: "pending" | "analyzing" | "ready";

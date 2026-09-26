@@ -43,6 +43,7 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
 
   async function action(body: Record<string, unknown>) {
     try {
+      if (body.action === "chat_edit" && inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
       await commandQueue.current;
       const updated = await send({ ...body, expectedRevision: latestRevision.current });
       latestRevision.current = updated.editor.revision;
@@ -303,7 +304,11 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
             <div className="shrink-0 border-b px-4 py-3">
               <h2 className="text-sm font-semibold">AI 채팅 편집</h2>
             </div>
-            <ChatPanel editor={job.editor} activeOperation={job.activeOperation} disabled={disabled} onAction={action} />
+            <ChatPanel editor={job.editor} activeOperation={job.activeOperation} disabled={disabled}
+              selectedTarget={slide && placement && element ? {
+                slideId: slide.id, placementId: placement.id, elementId: element.id, slideIds: selectedSlideIds,
+                name: element.name, scopeLabel: visualScopeLabel(selectedSlideIds.length, appliedSlides.length),
+              } : null} onAction={action} />
           </aside>
         </main>
       ) : null}

@@ -69,7 +69,7 @@ export async function POST(request: Request, context: Context) {
         default:
           if (typeof input.message !== "string")
             return Response.json({ error: "메시지를 입력해 주세요." }, { status: 400 });
-          running = editorWorkflow.chat(jobId, input.message, revision);
+          running = editorWorkflow.chat(jobId, input.message, revision, input.target);
       }
       void running.catch(() => {});
       return Response.json(contentJobRegistry.get(jobId), {

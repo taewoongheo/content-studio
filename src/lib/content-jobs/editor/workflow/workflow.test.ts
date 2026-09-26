@@ -138,6 +138,117 @@ test("AI가 전체 배경색을 바꾸면 공유 배경 Element를 수정한다"
   assert.equal(updated.editor.document?.slides.every((slide) => slide.backgroundColor === "#223344"), true);
 });
 
+const unchangedStyle = {
+  color: null, backgroundColor: null, fontSize: null, fontWeight: null,
+  textAlign: null, borderRadius: null, fontFamily: null, imageFit: null,
+};
+
+test("선택한 Element의 스타일 속성 하나만 모든 적용 장에 수정한다", async () => {
+  const { codex, job, service } = setup();
+  codex.outputs.push(analysis, {
+    intent: "edit",
+    reply: "본문 제목의 배경만 바꿨습니다.",
+    style: { ...unchangedStyle, backgroundColor: "#FF0000" }, frame: null, slotValues: [],
+  });
+  const ready = await service.initialize(job.id);
+  const target = { slideId: "slide-2", placementId: "placement-2-1", elementId: "body-title",
+    slideIds: ["slide-2", "slide-3"] };
+  const updated = await service.chat(job.id, "배경을 붉게 바꿔줘", ready.editor.revision, target);
+  const document = updated.editor.document!;
+  assert.equal(document.elements.find((element) => element.id === "body-title")?.style.backgroundColor, "#FF0000");
+  assert.equal(document.elements.find((element) => element.id === "body-title")?.style.fontSize, 36);
+  assert.equal(document.elements.find((element) => element.id === "hook-title")?.style.backgroundColor, "#FFFFFF");
+  assert.deepEqual(updated.editor.messages.at(-2)?.target, target);
+  assert.match(codex.inputs[1].find((item) => item.type === "text")?.text ?? "", /"elementId":"body-title"/);
+});
+
+test("일부 장만 선택하면 같은 Element의 다른 장은 유지한다", async () => {
+  const { codex, job, service } = setup();
+  codex.outputs.push(analysis, {
+    intent: "edit",
+    reply: "2장만 변경했습니다.", style: { ...unchangedStyle, color: "#FF0000" },
+    frame: null, slotValues: [],
+  });
+  const ready = await service.initialize(job.id);
+  const updated = await service.chat(job.id, "이 장의 제목을 빨갛게", ready.editor.revision, {
+    slideId: "slide-2", placementId: "placement-2-1", elementId: "body-title", slideIds: ["slide-2"],
+  });
+  assert.equal(updated.editor.document?.slides[1].placements[0].styleOverride?.color, "#FF0000");
+  assert.equal(updated.editor.document?.slides[2].placements[0].styleOverride, null);
+  assert.equal(updated.editor.document?.elements.find((element) => element.id === "body-title")?.style.color, "#111111");
+});
+
+test("선택한 텍스트 슬롯만 채우고 질문에는 문서를 수정하지 않는다", async () => {
+  const { codex, job, service } = setup();
+  codex.outputs.push(analysis, {
+    intent: "edit",
+    reply: "첫 본문 제목을 바꿨습니다.", style: unchangedStyle, frame: null,
+    slotValues: [{ slideId: "slide-2", placementId: "placement-2-1", value: "새 제목" }],
+  }, {
+    intent: "answer",
+    reply: "현재 제목은 새 제목입니다.", style: unchangedStyle, frame: null, slotValues: [],
+  });
+  const ready = await service.initialize(job.id);
+  const target = { slideId: "slide-2", placementId: "placement-2-1", elementId: "body-title",
+    slideIds: ["slide-2", "slide-3"] };
+  const updated = await service.chat(job.id, "2장 제목만 새 제목으로", ready.editor.revision, target);
+  assert.equal(updated.editor.document?.slides[1].placements[0].value, "새 제목");
+  assert.equal(updated.editor.document?.slides[2].placements[0].value, "");
+  const asked = await service.chat(job.id, "지금 제목이 뭐야?", updated.editor.revision, target);
+  assert.deepEqual(asked.editor.document, updated.editor.document);
+});
+
+test("선택 범위 밖의 수정과 잘못된 선택 정보는 거부한다", async () => {
+  const { codex, job, service } = setup();
+  codex.outputs.push(analysis, {
+    intent: "edit",
+    reply: "바꿨습니다.", style: unchangedStyle, frame: null,
+    slotValues: [{ slideId: "slide-1", placementId: "placement-1-1", value: "잘못된 대상" }],
+  });
+  const ready = await service.initialize(job.id);
+  await assert.rejects(service.chat(job.id, "제목 바꿔줘", ready.editor.revision, {
+    slideId: "slide-2", placementId: "placement-2-1", elementId: "body-title", slideIds: ["slide-2"],
+  }), /선택 범위 밖/);
+  assert.equal(service.get(job.id).editor.document?.slides[0].placements[0].value, "");
+  const current = service.get(job.id);
+  await assert.rejects(service.chat(job.id, "다시", current.editor.revision, {
+    slideId: "slide-2", placementId: "placement-2-1", elementId: "hook-title", slideIds: ["slide-2"],
+  }), /선택한 Element/);
+  assert.equal(codex.inputs.length, 2);
+});
+
+test("수정했다고 답하면서 변경 명령이 없으면 적용하지 않는다", async () => {
+  const { codex, job, service } = setup();
+  codex.outputs.push(analysis, {
+    intent: "edit", reply: "배경을 바꿨습니다.", style: unchangedStyle, frame: null, slotValues: [],
+  });
+  const ready = await service.initialize(job.id);
+  await assert.rejects(service.chat(job.id, "배경을 빨갛게", ready.editor.revision, {
+    slideId: "slide-2", placementId: "placement-2-1", elementId: "body-title", slideIds: ["slide-2"],
+  }), /수정 여부/);
+  assert.deepEqual(service.get(job.id).editor.document, ready.editor.document);
+});
+
+test("선택한 배경은 범위 내 배경색만 바꾸고 다른 스타일 수정은 거부한다", async () => {
+  const { codex, job, service } = setup();
+  codex.outputs.push(analysis, {
+    intent: "edit",
+    reply: "배경을 바꿨습니다.", style: { ...unchangedStyle, backgroundColor: "#BB0000" },
+    frame: null, slotValues: [],
+  }, {
+    intent: "edit",
+    reply: "변경했습니다.", style: { ...unchangedStyle, color: "#BB0000" },
+    frame: null, slotValues: [],
+  });
+  const ready = await service.initialize(job.id);
+  const target = { slideId: "slide-2", placementId: "__background-placement__", elementId: BACKGROUND_ELEMENT_ID,
+    slideIds: ["slide-2"] };
+  const updated = await service.chat(job.id, "이 장 배경을 붉게", ready.editor.revision, target);
+  assert.equal(updated.editor.document?.slides[1].backgroundColor, "#BB0000");
+  assert.equal(updated.editor.document?.slides[0].backgroundColor, "#FFFFFF");
+  await assert.rejects(service.chat(job.id, "글자색 바꿔줘", updated.editor.revision, target), /배경색만/);
+});
+
 test("주제 확정은 본문 슬롯을 채우고 훅 선택은 첫 장을 채운다", async () => {
   const { codex, job, service } = setup();
   codex.outputs.push(analysis, {

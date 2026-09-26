@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { LoaderCircle, Send } from "lucide-react";
+import { LoaderCircle, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { EditorJobState } from "@/lib/content-jobs/editor/types";
 import type { ContentJobOperation } from "@/lib/content-jobs/domain/types";
+import type { ChatTarget } from "@/lib/content-jobs/editor/workflow/targeted/chat";
+
+type SelectedChatTarget = ChatTarget & { name: string; scopeLabel: string };
 
 const operationLabels: Partial<Record<ContentJobOperation, string>> = {
   suggest_topics: "주제를 조사하고 있습니다…",
@@ -18,19 +21,27 @@ export function ChatPanel({
   editor,
   activeOperation,
   disabled,
+  selectedTarget,
   onAction,
 }: {
   editor: EditorJobState;
   activeOperation: ContentJobOperation | null;
   disabled: boolean;
+  selectedTarget: SelectedChatTarget | null;
   onAction: (body: Record<string, unknown>) => Promise<boolean>;
 }) {
   const [message, setMessage] = useState("");
+  const [dismissedTargetKey, setDismissedTargetKey] = useState<string | null>(null);
+  const targetKey = selectedTarget
+    ? `${selectedTarget.slideId}:${selectedTarget.placementId}:${selectedTarget.elementId}:${selectedTarget.slideIds.join(",")}` : null;
+  const activeTarget = targetKey && targetKey !== dismissedTargetKey ? selectedTarget : null;
 
   async function sendMessage() {
     const trimmed = message.trim();
     if (!trimmed) return;
-    if (await onAction({ action: "chat_edit", message: trimmed })) setMessage("");
+    if (await onAction({ action: "chat_edit", message: trimmed,
+      ...(activeTarget ? { target: { slideId: activeTarget.slideId, placementId: activeTarget.placementId,
+        elementId: activeTarget.elementId, slideIds: activeTarget.slideIds } } : {}) })) setMessage("");
   }
 
   return (
@@ -91,6 +102,21 @@ export function ChatPanel({
         )}
       </div>
       <div className="grid gap-3 border-t p-4">
+        {activeTarget ? (
+          <div className="flex min-w-0 items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-xs">
+            <span className="shrink-0 text-muted-foreground">선택된 Element</span>
+            <span className="min-w-0 flex-1 truncate font-semibold" title={activeTarget.name}>{activeTarget.name}</span>
+            <span className="shrink-0 text-muted-foreground">{activeTarget.scopeLabel}</span>
+            <button type="button" onClick={() => setDismissedTargetKey(targetKey)} disabled={disabled}
+              className="rounded p-1 hover:bg-muted focus-visible:outline-2 focus-visible:outline-foreground disabled:opacity-50"
+              aria-label="채팅 대상 해제" title="채팅 대상 해제"><X className="size-3.5" aria-hidden="true" /></button>
+          </div>
+        ) : selectedTarget ? (
+          <button type="button" onClick={() => setDismissedTargetKey(null)} disabled={disabled}
+            className="justify-self-start rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-foreground disabled:opacity-50">
+            선택한 Element를 채팅 대상으로 사용
+          </button>
+        ) : null}
         <label className="sr-only" htmlFor="editor-message">수정 요청 또는 질문</label>
         <Textarea
           id="editor-message"
