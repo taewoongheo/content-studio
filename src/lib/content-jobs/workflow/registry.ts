@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createContentJobState } from "../domain/domain";
+import type { EditorDocument, EditorJobState } from "../editor/types";
+import { ensureSharedBackground } from "../editor/document";
 import type {
   ContentJobInput,
   ContentJobOperation,
@@ -31,6 +33,36 @@ type RegistryOptions = {
 
 type JobListener = (snapshot: ContentJobSnapshot) => void;
 
+function createEditorState(): EditorJobState {
+  return {
+    status: "pending",
+    revision: 0,
+    document: null,
+    messages: [],
+    topicSuggestions: [],
+    selectedTopic: null,
+    bodyReady: false,
+    hookSuggestions: [],
+    selectedHookId: null,
+  };
+}
+
+function normalizeLegacySlots(document: EditorDocument | null) {
+  if (!document) return;
+  ensureSharedBackground(document);
+  const placeholders = new Map<string, string>();
+  for (const element of document.elements) {
+    const legacy = element as typeof element & { slot?: { placeholder?: string } };
+    if (legacy.slot?.placeholder) placeholders.set(element.id, legacy.slot.placeholder);
+    delete legacy.slot;
+  }
+  for (const slide of document.slides) {
+    for (const placement of slide.placements) {
+      if (placement.value === placeholders.get(placement.elementId)) placement.value = "";
+    }
+  }
+}
+
 export class ContentJobRegistry {
   private jobs = new Map<string, ContentJobRecord>();
   private listeners = new Map<string, Set<JobListener>>();
@@ -49,6 +81,9 @@ export class ContentJobRegistry {
       id: this.createId(),
       threadId,
       state: createContentJobState(),
+      editor: createEditorState(),
+      editorHistory: [],
+      assets: [],
       activeOperation: null,
       lastError: null,
       createdAt: timestamp,
@@ -125,6 +160,13 @@ export class ContentJobRegistry {
         "작업을 찾을 수 없습니다. 서버가 재시작되었다면 새 작업을 만들어 주세요.",
       );
     }
+    // The registry survives Next.js development reloads. Jobs created before
+    // the editor was introduced can still be present in that shared instance.
+    job.editor ??= createEditorState();
+    job.editorHistory ??= [];
+    job.assets ??= [];
+    normalizeLegacySlots(job.editor.document);
+    for (const entry of job.editorHistory) normalizeLegacySlots(entry.document);
     return job;
   }
 
@@ -139,6 +181,7 @@ export class ContentJobRegistry {
       slideCount: value.slideCount,
       outputLanguage: value.outputLanguage,
       state: value.state,
+      editor: value.editor,
       activeOperation: value.activeOperation,
       lastError: value.lastError,
       createdAt: value.createdAt,
@@ -150,6 +193,7 @@ export class ContentJobRegistry {
         size: image.size,
         role: image.role,
       })),
+      assets: value.assets.map(({ id, name, type, size }) => ({ id, name, type, size })),
     };
   }
 
@@ -157,4 +201,11 @@ export class ContentJobRegistry {
     const snapshot = this.snapshot(job);
     for (const listener of this.listeners.get(job.id) ?? []) listener(snapshot);
   }
+}
+
+export function reuseContentJobRegistry(retained?: ContentJobRegistry) {
+  if (!retained) return new ContentJobRegistry();
+  if (!(retained instanceof ContentJobRegistry))
+    Object.setPrototypeOf(retained, ContentJobRegistry.prototype);
+  return retained;
 }

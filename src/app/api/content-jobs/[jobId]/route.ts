@@ -3,6 +3,7 @@ import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
 import {
   contentJobRegistry,
   contentWorkflow,
+  editorWorkflow,
 } from "@/lib/content-jobs/workflow/service";
 import { isLocalRequest } from "@/lib/http/local-request";
 
@@ -40,6 +41,56 @@ export async function POST(request: Request, context: Context) {
       return Response.json({ error: "잘못된 요청입니다." }, { status: 400 });
     const input = body as Record<string, unknown>;
     const action = input.action;
+    if (action === "initialize_editor") {
+      const running = editorWorkflow.initialize(jobId);
+      void running.catch(() => {});
+      return Response.json(contentJobRegistry.get(jobId), {
+        status: 202,
+        headers: { "Cache-Control": "no-store" },
+      });
+    }
+    if (["suggest_topics", "select_topic", "suggest_hooks", "chat_edit"].includes(String(action))) {
+      if (!Number.isInteger(input.expectedRevision))
+        return Response.json({ error: "현재 편집 문서의 revision이 필요합니다." }, { status: 400 });
+      const revision = input.expectedRevision as number;
+      let running: Promise<unknown>;
+      switch (action) {
+        case "suggest_topics":
+          running = editorWorkflow.suggestTopics(jobId, revision);
+          break;
+        case "select_topic":
+          if (typeof input.topicId !== "string")
+            return Response.json({ error: "주제를 선택해 주세요." }, { status: 400 });
+          running = editorWorkflow.selectTopic(jobId, input.topicId, revision);
+          break;
+        case "suggest_hooks":
+          running = editorWorkflow.suggestHooks(jobId, revision);
+          break;
+        default:
+          if (typeof input.message !== "string")
+            return Response.json({ error: "메시지를 입력해 주세요." }, { status: 400 });
+          running = editorWorkflow.chat(jobId, input.message, revision);
+      }
+      void running.catch(() => {});
+      return Response.json(contentJobRegistry.get(jobId), {
+        status: 202,
+        headers: { "Cache-Control": "no-store" },
+      });
+    }
+    if (["editor_command", "editor_undo", "select_editor_hook"].includes(String(action))) {
+      if (!Number.isInteger(input.expectedRevision))
+        return Response.json({ error: "현재 편집 문서의 revision이 필요합니다." }, { status: 400 });
+      const revision = input.expectedRevision as number;
+      const job = action === "editor_command"
+        ? editorWorkflow.applyCommands(jobId, input.commands, revision)
+        : action === "editor_undo"
+          ? editorWorkflow.undo(jobId, revision)
+          : typeof input.hookId === "string"
+            ? editorWorkflow.selectHook(jobId, input.hookId, revision)
+            : null;
+      if (!job) return Response.json({ error: "훅을 선택해 주세요." }, { status: 400 });
+      return Response.json(job, { headers: { "Cache-Control": "no-store" } });
+    }
     const generation = {
       analyze_reference: () => contentWorkflow.analyzeReference(jobId),
       generate_strategies: () => contentWorkflow.generateStrategies(jobId),

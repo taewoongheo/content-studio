@@ -47,7 +47,7 @@ export async function createContentJob({
   const created = await readResponse(
     await fetch("/api/content-jobs", { method: "POST", body: form }),
   );
-  return postContentJobAction(created.id, { action: "analyze_reference" });
+  return postContentJobAction(created.id, { action: "initialize_editor" });
 }
 
 export async function postContentJobAction(
@@ -70,4 +70,13 @@ export async function getContentJob(jobId: string) {
       cache: "no-store",
     }),
   );
+}
+
+export async function uploadEditorImage(jobId: string, image: File) {
+  const form = new FormData();
+  form.set("image", image);
+  return readResponse(await fetch(`/api/content-jobs/${encodeURIComponent(jobId)}/assets`, {
+    method: "POST",
+    body: form,
+  }));
 }

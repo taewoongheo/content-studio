@@ -1,4 +1,5 @@
 import type { ContentJobState, ContentStage } from "./domain";
+import type { EditorHistoryEntry, EditorJobState } from "../editor/types";
 
 export const REFERENCE_ROLES = ["hook", "body", "cta"] as const;
 export type ReferenceRole = (typeof REFERENCE_ROLES)[number];
@@ -20,6 +21,14 @@ export type ReferenceImageInput = {
   role: ReferenceRole | null;
 };
 
+export type EditorAsset = {
+  id: string;
+  name: string;
+  path: string;
+  type: "image/jpeg" | "image/png" | "image/webp";
+  size: number;
+};
+
 export type ContentJobInput = {
   model: string;
   structure: SlideshowStructure;
@@ -34,12 +43,20 @@ export type ContentJobOperation =
   | "analyze_reference"
   | "generate_strategies"
   | "generate_copy"
-  | "generate_hooks";
+  | "generate_hooks"
+  | "initialize_editor"
+  | "suggest_topics"
+  | "fill_body"
+  | "suggest_hooks"
+  | "chat_edit";
 
 export type ContentJobRecord = ContentJobInput & {
   id: string;
   threadId: string;
   state: ContentJobState;
+  editor: EditorJobState;
+  editorHistory: EditorHistoryEntry[];
+  assets: EditorAsset[];
   activeOperation: ContentJobOperation | null;
   lastError: string | null;
   createdAt: string;
@@ -48,9 +65,10 @@ export type ContentJobRecord = ContentJobInput & {
 
 export type ContentJobSnapshot = Omit<
   ContentJobRecord,
-  "threadId" | "referenceImages"
+  "threadId" | "referenceImages" | "editorHistory" | "assets"
 > & {
   referenceImages: Array<Omit<ReferenceImageInput, "path">>;
+  assets: Array<Omit<EditorAsset, "path">>;
 };
 
 export type AcceptStageInput = {

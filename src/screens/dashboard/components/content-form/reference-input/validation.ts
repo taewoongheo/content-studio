@@ -22,10 +22,11 @@ export function validateReferenceImages(
   return "";
 }
 
-export function validateReference(files: File[]) {
-  return files.length === 0
-    ? "레퍼런스 슬라이드를 순서대로 추가해 주세요."
-    : "";
+export function validateReference(files: File[], slideCount?: number) {
+  if (files.length === 0) return "레퍼런스 슬라이드를 순서대로 추가해 주세요.";
+  if (slideCount !== undefined && files.length !== slideCount)
+    return `장면별 구성은 ${slideCount}장의 레퍼런스 이미지를 추가해 주세요.`;
+  return "";
 }
 
 export function validateRepeatingReference(

@@ -21,7 +21,7 @@ import {
   type CreationMethod,
   type SlideshowStructure,
 } from "./selection/model";
-import type { ContentSettings } from "./settings/model";
+import { slideCount, type ContentSettings } from "./settings/model";
 
 export function useContentForm(context: ProductContext | null) {
   const [type, setType] = useState<ContentType>("slideshow");
@@ -161,7 +161,7 @@ export function useContentForm(context: ProductContext | null) {
     if (!context || !canCreate) return;
     const message = structure === "repeating"
       ? validateRepeatingReference(roleReferences)
-      : validateReference(files);
+      : validateReference(files, slideCount(settings));
     setError(message);
     if (message) {
       if (structure === "sequential") referenceInput.current?.focus();

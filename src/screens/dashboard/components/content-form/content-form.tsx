@@ -128,7 +128,7 @@ export function ContentForm({
             />
             <div className="flex flex-wrap items-center justify-between gap-4 border-t pt-6">
               <p className="max-w-md text-sm leading-6 text-muted-foreground">
-                이미지가 분석된 뒤 전략, 본문, 훅을 순서대로 검토합니다.
+                이미지를 분석해 슬라이드 편집기 초안을 만듭니다. 편집기에서 주제와 훅을 정할 수 있습니다.
               </p>
               <Button type="submit" className="h-11 px-5">
                 입력 내용 확인

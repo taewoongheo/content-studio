@@ -1,0 +1,107 @@
+import type { SlideshowStructure } from "../domain/types";
+
+export type SlideRole = "hook" | "body" | "cta";
+export type ElementKind = "background" | "text" | "image" | "rectangle" | "circle" | "triangle";
+export type DuplicationScope = "current" | "all";
+export type ElementFrame = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+export type ElementStyle = {
+  color: string;
+  backgroundColor: string;
+  fontSize: number;
+  fontWeight: number;
+  textAlign: "left" | "center" | "right";
+  borderRadius: number;
+  fontFamily: "sans-serif" | "serif" | "monospace";
+  imageFit: "cover" | "contain";
+};
+export type ElementDefinition = {
+  id: string;
+  name: string;
+  role: string;
+  kind: ElementKind;
+  frame: ElementFrame;
+  style: ElementStyle;
+  sourceImageId: string;
+};
+export type PlacedElement = {
+  id: string;
+  elementId: string;
+  value: string;
+  frameOverride: ElementFrame | null;
+  styleOverride: Partial<ElementStyle> | null;
+};
+export type EditorSlide = {
+  id: string;
+  role: SlideRole;
+  backgroundColor: string;
+  placements: PlacedElement[];
+};
+export type EditorFormatNotes = {
+  visualRules: string;
+  writingStyle: string;
+  hookPattern: string;
+  bodyProgression: string;
+};
+export type EditorDocument = {
+  version: 1;
+  structure: SlideshowStructure;
+  aspectRatio: "4:5" | "1:1" | "9:16";
+  formatNotes: EditorFormatNotes;
+  elements: ElementDefinition[];
+  slides: EditorSlide[];
+};
+export type EditorTopic = {
+  id: string;
+  title: string;
+  angle: string;
+  rationale: string;
+  sourceUrls: string[];
+};
+export type EditorHook = { id: string; text: string; rationale: string };
+export type EditorMessage = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+};
+export type EditorJobState = {
+  status: "pending" | "analyzing" | "ready";
+  revision: number;
+  document: EditorDocument | null;
+  messages: EditorMessage[];
+  topicSuggestions: EditorTopic[];
+  selectedTopic: EditorTopic | null;
+  bodyReady: boolean;
+  hookSuggestions: EditorHook[];
+  selectedHookId: string | null;
+};
+export type EditorHistoryEntry = Pick<
+  EditorJobState,
+  "document" | "selectedTopic" | "bodyReady" | "hookSuggestions" | "selectedHookId"
+>;
+export type EditorAnalysis = {
+  formatNotes: EditorDocument["formatNotes"];
+  elements: ElementDefinition[];
+  slides: Array<{
+    imageId: string;
+    role: SlideRole;
+    backgroundColor: string;
+    elementIds: string[];
+  }>;
+};
+
+export type EditorCommand =
+  | { type: "set_slide_background"; slideId: string; color: string }
+  | { type: "set_slot_value"; slideId: string; placementId: string; value: string }
+  | { type: "update_visual"; scope: "common"; elementId: string; frame?: ElementFrame; style?: Partial<ElementStyle> }
+  | { type: "update_visual"; scope: "local"; slideId: string; placementId: string; frame?: ElementFrame; style?: Partial<ElementStyle> }
+  | { type: "update_element"; elementId: string; name?: string; role?: string }
+  | { type: "add_element"; element: ElementDefinition }
+  | { type: "place_element"; slideId: string; elementId: string; placementId: string }
+  | { type: "remove_placement"; slideId: string; placementId: string }
+  | { type: "duplicate_placement"; scope: DuplicationScope; sourceSlideId: string; sourcePlacementId: string;
+      newElementId: string; placements: Array<{ slideId: string; sourcePlacementId: string; newPlacementId: string }> };

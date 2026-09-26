@@ -13,6 +13,11 @@ test("requires at least one ordered reference image", () => {
   assert.equal(validateReference([{} as File]), "");
 });
 
+test("장면별 구성은 설정한 슬라이드 수와 이미지 수가 같아야 한다", () => {
+  assert.match(validateReference([{} as File], 4), /4장/);
+  assert.equal(validateReference(Array(4).fill({} as File), 4), "");
+});
+
 test("repeating references require one image for each role", () => {
   assert.match(
     validateRepeatingReference([{ role: "hook" }, { role: "body" }]),

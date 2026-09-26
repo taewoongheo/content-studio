@@ -5,7 +5,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import { useCodexConnection } from "@/lib/codex/use-codex-connection";
-import { ContentJobScreen } from "@/screens/content-job/content-job-screen";
+import { EditorScreen } from "@/screens/editor/editor-screen";
 import { getContentJob } from "@/screens/content-job/api";
 import { StudioSidebar } from "./components/studio-sidebar";
 import { ProductContextForm } from "./components/product-context-form";
@@ -44,6 +44,7 @@ export function DashboardScreen() {
     url.searchParams.delete("job");
     window.history.replaceState(null, "", url);
   }
+  if (job) return <EditorScreen initialJob={job} onNewJob={startNewJob} />;
   return (
     <Tabs
       orientation="vertical"
@@ -92,27 +93,20 @@ export function DashboardScreen() {
                 keepMounted
                 className="data-[hidden]:hidden"
               >
-                {job ? (
-                  <ContentJobScreen initialJob={job} onNewJob={startNewJob} />
-                ) : (
-                  <>
-                    <div className="mb-8">
-                      <h1 className="text-3xl font-semibold tracking-tight">
-                        새 콘텐츠 만들기
-                      </h1>
-                      <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                        슬라이드 구성과 레퍼런스를 선택하고 제작 조건을
-                        설정하세요.
-                      </p>
-                    </div>
-                    <ContentForm
-                      context={context}
-                      codexModel={codex.selectedModel}
-                      onRegisterContext={() => setTab("products")}
-                      onJobStarted={showJob}
-                    />
-                  </>
-                )}
+                <div className="mb-8">
+                  <h1 className="text-3xl font-semibold tracking-tight">
+                    새 콘텐츠 만들기
+                  </h1>
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                    슬라이드 구성과 레퍼런스를 선택하고 제작 조건을 설정하세요.
+                  </p>
+                </div>
+                <ContentForm
+                  context={context}
+                  codexModel={codex.selectedModel}
+                  onRegisterContext={() => setTab("products")}
+                  onJobStarted={showJob}
+                />
               </TabsContent>
               <TabsContent
                 value="products"

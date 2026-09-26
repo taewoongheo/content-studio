@@ -11,7 +11,7 @@ import {
 export const MAX_REFERENCE_IMAGES = 20;
 export const MAX_REFERENCE_IMAGE_BYTES = 10 * 1024 * 1024;
 
-const imageTypes = {
+export const imageTypes = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
   "image/webp": ".webp",
@@ -54,7 +54,7 @@ function parseProductContext(value: FormDataEntryValue | null) {
   return data as ProductContextInput;
 }
 
-function validSignature(type: keyof typeof imageTypes, bytes: Uint8Array) {
+export function validSignature(type: keyof typeof imageTypes, bytes: Uint8Array) {
   if (type === "image/jpeg")
     return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
   if (type === "image/png")
@@ -124,6 +124,8 @@ export async function saveContentJobInput(formData: FormData): Promise<{
   )
     throw new ContentJobInputError("결과 언어를 확인해 주세요.");
   const images = parseImages(formData, structure);
+  if (structure === "sequential" && images.length !== slideCount)
+    throw new ContentJobInputError(`장면별 구성은 슬라이드 수와 같은 ${slideCount}장의 레퍼런스 이미지가 필요합니다.`);
   const buffers = await Promise.all(
     images.map(async ({ image, role }) => {
       if (
