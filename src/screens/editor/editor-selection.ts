@@ -21,7 +21,7 @@ export function resolveEditorSelection(
   const selectedSlideIds = slide && placement
     ? selectVisualSlides(slide.id, appliedSlides.map((item) => item.slideId),
       scopeSelection?.key === scopeKey ? scopeSelection.slideIds
-        : defaultVisualSlides(element?.kind ?? "text", slide.id, appliedSlides.map((item) => item.slideId)),
+        : defaultVisualSlides(appliedSlides.map((item) => item.slideId)),
       { slideId: slide.id, checked: true })
     : [];
   return { slide, placement, element, appliedSlides, visualTargets, scopeKey, selectedSlideIds };

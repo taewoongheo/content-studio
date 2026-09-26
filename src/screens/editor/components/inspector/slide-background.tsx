@@ -1,17 +1,13 @@
 "use client";
 
-import { visualScopeLabel } from "../element-scope";
-
-export function SlideBackground({ color, disabled, selectedCount, totalCount, onSave }: {
+export function SlideBackground({ color, disabled, onSave }: {
   color: string;
   disabled: boolean;
-  selectedCount: number;
-  totalCount: number;
   onSave: (color: string) => Promise<boolean>;
 }) {
   return (
     <div className="grid min-w-0 gap-5 p-4">
-      <div className="flex items-baseline justify-between gap-2 text-sm"><span className="font-semibold">배경</span><span className="text-xs text-muted-foreground">{visualScopeLabel(selectedCount, totalCount)}에 적용</span></div>
+      <div className="text-sm font-semibold">배경</div>
       <label className="grid gap-2 text-sm font-medium">
         배경색
         <span className="flex items-center gap-3 rounded-lg border bg-background p-3">

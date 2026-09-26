@@ -52,7 +52,7 @@ test("AI 수정 명령은 허용된 종류와 필드만 받는다", () => {
     type: "set_slot_value", slideId: "slide-1", placementId: "placement-1-1", value: "새 제목",
   }] }).ok, true);
   assert.equal(validateEditorCommands({ commands: [{ type: "delete_all" }] }).ok, false);
-  assert.equal(validateEditorCommands({ commands: [{ type: "duplicate_placement", scope: "all",
+  assert.equal(validateEditorCommands({ commands: [{ type: "duplicate_placement",
     sourceSlideId: "slide-2", sourcePlacementId: "placement-2-1", newElementId: "copy",
     placements: [{ slideId: "slide-2", sourcePlacementId: "placement-2-1", newPlacementId: "new-placement" }],
   }] }).ok, true);

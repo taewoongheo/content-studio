@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { defaultPlacement, defaultVisualSlides, selectVisualSlides, visualScopeLabel } from "./element-scope";
+import { defaultPlacement, defaultVisualSlides, removalCommandsForScope, selectVisualSlides, visualScopeLabel } from "./element-scope";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID } from "@/lib/content-jobs/editor/document";
 import type { EditorSlide } from "@/lib/content-jobs/editor/types";
 
@@ -16,9 +16,8 @@ test("페이지를 열면 첫 일반 Element를 고르고 없으면 배경을 �
   assert.equal(defaultPlacement({ ...slide, placements: [background] })?.id, BACKGROUND_PLACEMENT_ID);
 });
 
-test("배경의 기본 적용 범위는 전체이고 다른 Element는 현재 장이다", () => {
-  assert.deepEqual(defaultVisualSlides("background", "slide-2", available), available);
-  assert.deepEqual(defaultVisualSlides("text", "slide-2", available), ["slide-2"]);
+test("모든 Element의 기본 적용 범위는 해당 Element가 있는 전체 장이다", () => {
+  assert.deepEqual(defaultVisualSlides(available), available);
 });
 
 test("현재 장은 적용 범위에서 해제할 수 없다", () => {
@@ -34,7 +33,17 @@ test("전체 및 장별 선택은 현재 장을 포함하고 사용하지 않는
 });
 
 test("적용 범위 이름은 현재·전체·일부를 구분한다", () => {
-  assert.equal(visualScopeLabel(1, 3), "현재 장");
-  assert.equal(visualScopeLabel(3, 3), "전체");
-  assert.equal(visualScopeLabel(2, 3), "선택한 2장");
+  assert.equal(visualScopeLabel(1, 3), "현재 장만 적용 · 1/3장");
+  assert.equal(visualScopeLabel(3, 3), "전체 적용 · 3/3장");
+  assert.equal(visualScopeLabel(2, 3), "일부 적용 · 2/3장");
+  assert.equal(visualScopeLabel(1, 1), "이 장에만 존재");
+});
+
+test("삭제는 선택한 장에 있는 해당 Element 배치에만 적용한다", () => {
+  const targets = available.map((slideId, index) => ({ slideId, placement: { id: `p${index}`, elementId: "title",
+    value: "", frameOverride: null, styleOverride: null } }));
+  assert.deepEqual(removalCommandsForScope(targets, ["slide-2", "slide-4"]), [
+    { type: "remove_placement", slideId: "slide-2", placementId: "p0" },
+    { type: "remove_placement", slideId: "slide-4", placementId: "p2" },
+  ]);
 });

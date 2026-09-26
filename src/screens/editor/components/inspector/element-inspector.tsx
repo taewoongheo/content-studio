@@ -1,13 +1,10 @@
 "use client";
 
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
-import { Copy, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { DuplicationScope, EditorCommand, ElementDefinition, ElementFrame, ElementStyle, PlacedElement } from "@/lib/content-jobs/editor/types";
+import type { EditorCommand, ElementDefinition, ElementFrame, ElementStyle, PlacedElement } from "@/lib/content-jobs/editor/types";
 import { commandsFromDraft, makeElementDraft, validElementDraft, type VisualTarget } from "./element-draft";
-import { visualScopeLabel } from "../element-scope";
 import { useAutosave } from "./use-autosave";
 
 type Props = {
@@ -16,19 +13,15 @@ type Props = {
   placement: PlacedElement;
   slideId: string;
   selectedSlideIds: string[];
-  sharedCount: number;
   visualTargets: VisualTarget[];
   disabled: boolean;
   onSave: (commands: EditorCommand[]) => Promise<boolean>;
-  onDelete: () => Promise<void>;
-  onDuplicate: (scope: DuplicationScope) => Promise<void>;
   onUploadImage: (file: File) => Promise<void>;
 };
 
 export type ElementInspectorHandle = { flushPending: () => Promise<boolean> };
 
-export function ElementInspector({ ref, element, placement, slideId, selectedSlideIds, sharedCount, visualTargets, disabled, onSave, onDelete, onDuplicate, onUploadImage }: Props) {
-  const [duplicateScope, setDuplicateScope] = useState<DuplicationScope>("current");
+export function ElementInspector({ ref, element, placement, slideId, selectedSlideIds, visualTargets, disabled, onSave, onUploadImage }: Props) {
   const [draft, setDraft] = useState(() => makeElementDraft(element, placement));
   const previous = useRef({ element, placement });
   const commands = commandsFromDraft(draft, element, placement, slideId, visualTargets, selectedSlideIds);
@@ -56,11 +49,6 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
     setDraft((current) => ({ ...current, style: { ...current.style, [key]: value } }));
   }
 
-  async function duplicate() {
-    if (commands.length > 0 && valid && !(await onSave(commands))) return;
-    await onDuplicate(duplicateScope);
-  }
-
   return (
     <div className="grid min-w-0 gap-5 p-4">
       {(!valid || failed) && <p role="alert" className="text-xs text-destructive">
@@ -86,7 +74,7 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
       </div>
 
       <div className="grid gap-3 border-t pt-5">
-        <div className="flex items-baseline justify-between gap-2 text-sm"><span className="font-semibold">위치·스타일</span><span className="text-xs text-muted-foreground">{visualScopeLabel(selectedSlideIds.length, sharedCount)}에 적용</span></div>
+        <div className="text-sm font-semibold">위치·스타일</div>
         <fieldset disabled={disabled} className="grid min-w-0 grid-cols-2 gap-3 [&>*]:min-w-0">
           <NumberField label="X (%)" value={draft.frame.x * 100} onChange={(value) => updateFrame("x", value)} />
           <NumberField label="Y (%)" value={draft.frame.y * 100} onChange={(value) => updateFrame("y", value)} />
@@ -127,16 +115,6 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
         </fieldset>
       </div>
 
-      <div className="grid gap-3 border-t pt-5">
-        <label className="flex items-center gap-2 text-sm font-medium">
-          <input type="checkbox" checked={duplicateScope === "all"} disabled={disabled} onChange={(event) => setDuplicateScope(event.target.checked ? "all" : "current")} />
-          같은 Element가 있는 모든 슬라이드에 복제{sharedCount > 1 ? ` (${sharedCount}장)` : ""}
-        </label>
-        <div className="flex min-w-0 items-center gap-2">
-          <Button variant="outline" size="sm" disabled={disabled || !valid} onClick={() => void duplicate()}><Copy aria-hidden="true" /> 복제</Button>
-          <Button variant="destructive" size="icon-sm" disabled={disabled} onClick={() => void onDelete()} aria-label="현재 슬라이드에서 Element 제거"><Trash2 aria-hidden="true" /></Button>
-        </div>
-      </div>
     </div>
   );
 }

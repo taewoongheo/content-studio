@@ -5,7 +5,6 @@ import type {
   EditorCommand,
   EditorDocument,
   EditorSlide,
-  DuplicationScope,
   ElementFrame,
   ElementStyle,
   PlacedElement,
@@ -145,11 +144,12 @@ function requirePlacement(slide: EditorSlide, placementId: string) {
   return placement;
 }
 
-export function getDuplicateTargets(document: EditorDocument, slideId: string, placementId: string, scope: DuplicationScope) {
+export function getDuplicateTargets(document: EditorDocument, slideId: string, placementId: string, selectedSlideIds: string[]) {
   const source = requirePlacement(requireSlide(document, slideId), placementId);
   if (source.elementId === BACKGROUND_ELEMENT_ID) throw new Error("배경 Element는 복제할 수 없습니다.");
-  if (scope === "current") return [{ slideId, sourcePlacementId: placementId }];
-  return document.slides.flatMap((slide) => slide.placements
+  const selected = new Set(selectedSlideIds);
+  if (!selected.has(slideId)) throw new Error("현재 장을 복제 범위에 포함해 주세요.");
+  return document.slides.filter((slide) => selected.has(slide.id)).flatMap((slide) => slide.placements
     .filter((placement) => placement.elementId === source.elementId)
     .map((placement) => ({ slideId: slide.id, sourcePlacementId: placement.id })));
 }
@@ -251,7 +251,8 @@ export function applyEditorCommand(document: EditorDocument, command: EditorComm
       if (!sourceElement) throw new Error("원본 Element를 찾을 수 없습니다.");
       if (next.elements.some((element) => element.id === command.newElementId))
         throw new Error("이미 존재하는 Element ID입니다.");
-      const targets = getDuplicateTargets(next, command.sourceSlideId, command.sourcePlacementId, command.scope);
+      const selectedSlideIds = [...new Set(command.placements.map((target) => target.slideId))];
+      const targets = getDuplicateTargets(next, command.sourceSlideId, command.sourcePlacementId, selectedSlideIds);
       const expected = new Set(targets.map((target) => `${target.slideId}:${target.sourcePlacementId}`));
       const provided = command.placements.map((target) => `${target.slideId}:${target.sourcePlacementId}`);
       if (provided.length !== expected.size || new Set(provided).size !== expected.size ||

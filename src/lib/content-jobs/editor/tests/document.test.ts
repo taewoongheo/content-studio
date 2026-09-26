@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   applyEditorCommand,
+  applyEditorCommands,
   createDocumentFromAnalysis,
   ensureSharedBackground,
   BACKGROUND_ELEMENT_ID,
@@ -63,7 +64,7 @@ test("배경은 모든 장이 공유하는 삭제 불가 Element이며 기존 �
   assert.equal(document.slides[2].placements.at(-1)?.styleOverride?.backgroundColor, "#222222");
   assert.throws(() => applyEditorCommand(document, { type: "remove_placement", slideId: "slide-2", placementId: BACKGROUND_PLACEMENT_ID }), /배경/);
   assert.throws(() => applyEditorCommand(document, { type: "set_slot_value", slideId: "slide-2", placementId: BACKGROUND_PLACEMENT_ID, value: "텍스트" }), /배경/);
-  assert.throws(() => applyEditorCommand(document, { type: "duplicate_placement", scope: "current",
+  assert.throws(() => applyEditorCommand(document, { type: "duplicate_placement",
     sourceSlideId: "slide-2", sourcePlacementId: BACKGROUND_PLACEMENT_ID, newElementId: "bg-copy",
     placements: [{ slideId: "slide-2", sourcePlacementId: BACKGROUND_PLACEMENT_ID, newPlacementId: "bg-copy-placement" }] }), /배경/);
   const unified = applyEditorCommand(document, { type: "update_visual", scope: "common",
@@ -205,7 +206,7 @@ test("공유 Element 복제는 원본이 놓인 모든 장에 새 공유 원본�
   const first = applyEditorCommand(initial, { type: "set_slot_value", slideId: "slide-2", placementId: "placement-2-1", value: "스쿼트" });
   const second = applyEditorCommand(first, { type: "set_slot_value", slideId: "slide-3", placementId: "placement-3-1", value: "데드리프트" });
   const duplicated = applyEditorCommand(second, {
-    type: "duplicate_placement", scope: "all", sourceSlideId: "slide-2", sourcePlacementId: "placement-2-1",
+    type: "duplicate_placement", sourceSlideId: "slide-2", sourcePlacementId: "placement-2-1",
     newElementId: "title-copy",
     placements: [
       { slideId: "slide-2", sourcePlacementId: "placement-2-1", newPlacementId: "copy-2" },
@@ -221,20 +222,47 @@ test("공유 Element 복제는 원본이 놓인 모든 장에 새 공유 원본�
   assert.equal(second.elements.length, 2);
 });
 
-test("이 장만 복제하면 독립 Element가 만들어지고 복제 범위 누락은 거부한다", () => {
+test("선택한 장만 복제하면 독립 Element가 만들어지고 다른 Element 배치는 거부한다", () => {
   const initial = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
   const duplicated = applyEditorCommand(initial, {
-    type: "duplicate_placement", scope: "current", sourceSlideId: "slide-2", sourcePlacementId: "placement-2-1",
+    type: "duplicate_placement", sourceSlideId: "slide-2", sourcePlacementId: "placement-2-1",
     newElementId: "local-copy",
     placements: [{ slideId: "slide-2", sourcePlacementId: "placement-2-1", newPlacementId: "copy-2" }],
   });
   assert.equal(duplicated.slides[1].placements.length, 3);
   assert.equal(duplicated.slides[2].placements.length, 2);
   assert.throws(() => applyEditorCommand(initial, {
-    type: "duplicate_placement", scope: "all", sourceSlideId: "slide-2", sourcePlacementId: "placement-2-1",
-    newElementId: "incomplete-copy",
-    placements: [{ slideId: "slide-2", sourcePlacementId: "placement-2-1", newPlacementId: "copy-2" }],
+    type: "duplicate_placement", sourceSlideId: "slide-2", sourcePlacementId: "placement-2-1",
+    newElementId: "invalid-copy",
+    placements: [{ slideId: "slide-2", sourcePlacementId: "__background-placement__", newPlacementId: "copy-2" }],
   }), /모든 배치/);
+});
+
+test("선택한 일부 장에서만 공유 Element를 복제한다", () => {
+  const initial = createDocumentFromAnalysis(analysis, "repeating", 5, "9:16");
+  const duplicated = applyEditorCommand(initial, {
+    type: "duplicate_placement", sourceSlideId: "slide-2", sourcePlacementId: "placement-2-1",
+    newElementId: "partial-copy",
+    placements: [
+      { slideId: "slide-2", sourcePlacementId: "placement-2-1", newPlacementId: "copy-2" },
+      { slideId: "slide-4", sourcePlacementId: "placement-4-1", newPlacementId: "copy-4" },
+    ],
+  });
+  assert.equal(duplicated.slides[1].placements[1].elementId, "partial-copy");
+  assert.equal(duplicated.slides[2].placements.some((placement) => placement.elementId === "partial-copy"), false);
+  assert.equal(duplicated.slides[3].placements[1].elementId, "partial-copy");
+});
+
+test("선택한 일부 장에서만 공유 Element 배치를 제거한다", () => {
+  const initial = createDocumentFromAnalysis(analysis, "repeating", 5, "9:16");
+  const removed = applyEditorCommands(initial, [
+    { type: "remove_placement", slideId: "slide-2", placementId: "placement-2-1" },
+    { type: "remove_placement", slideId: "slide-4", placementId: "placement-4-1" },
+  ]);
+  assert.equal(removed.slides[1].placements.some((placement) => placement.elementId === "title"), false);
+  assert.equal(removed.slides[2].placements.some((placement) => placement.elementId === "title"), true);
+  assert.equal(removed.slides[3].placements.some((placement) => placement.elementId === "title"), false);
+  assert.equal(initial.slides[1].placements.some((placement) => placement.elementId === "title"), true);
 });
 
 test("사각형·원형·삼각형 Element를 편집 문서에 추가할 수 있다", () => {

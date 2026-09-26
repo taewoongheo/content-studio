@@ -28,17 +28,19 @@ export function ElementScopePicker({ currentSlideId, slides, selectedSlideIds, i
 
   return (
     <Popover.Root>
-      <Popover.Trigger render={<Button variant="outline" size="sm" disabled={disabled || busy} />}>
-        <Layers3 aria-hidden="true" /> 적용: {visualScopeLabel(selectedSlideIds.length, slides.length)}
+      <Popover.Trigger render={<Button variant={allSelected ? "secondary" : "outline"} size="sm" disabled={disabled || busy} />}>
+        <Layers3 aria-hidden="true" /> {visualScopeLabel(selectedSlideIds.length, slides.length)}
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner side="top" align="start" sideOffset={8} collisionPadding={12} className="z-50">
           <Popover.Popup className="w-[min(18rem,calc(100vw-1.5rem))] rounded-xl border bg-popover p-3 text-popover-foreground shadow-lg outline-none">
-            <Popover.Title className="text-sm font-semibold">{isBackground ? "배경색" : "위치·스타일"} 적용 범위</Popover.Title>
-            {!isBackground && <Popover.Description className="mt-1 text-xs text-muted-foreground">내용은 현재 장에서만 바뀝니다.</Popover.Description>}
+            <Popover.Title className="text-sm font-semibold">적용 대상 슬라이드</Popover.Title>
+            <Popover.Description className="mt-1 text-xs leading-5 text-muted-foreground">{isBackground
+              ? "선택한 장의 배경색이 바뀝니다."
+              : "이 Element가 있는 장 중 위치·스타일 변경과 복제·제거할 대상을 고릅니다. 내용은 현재 장에서만 바뀝니다."}</Popover.Description>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <Button variant={selectedSlideIds.length === 1 ? "secondary" : "outline"} size="sm" disabled={disabled || busy} onClick={() => void choose("current")}>현재 장</Button>
-              <Button variant={allSelected ? "secondary" : "outline"} size="sm" disabled={disabled || busy} onClick={() => void choose("all")}>전체</Button>
+              <Button variant={allSelected ? "secondary" : "outline"} size="sm" disabled={disabled || busy} onClick={() => void choose("all")}>전체 장</Button>
             </div>
             {slides.length > 1 && <div className="mt-3 max-h-44 space-y-0.5 overflow-y-auto border-t pt-2">
               {slides.map((slide) => {
@@ -51,7 +53,7 @@ export function ElementScopePicker({ currentSlideId, slides, selectedSlideIds, i
                 </label>;
               })}
             </div>}
-            {allSelected && slides.length > 1 && !isBackground && <p className="mt-3 border-t pt-2 text-xs leading-5 text-muted-foreground">위치를 바꾸면 전체 위치가 통일됩니다. 바꾼 스타일은 기존 개별값을 덮습니다.</p>}
+            {allSelected && slides.length > 1 && !isBackground && <p className="mt-3 border-t pt-2 text-xs leading-5 text-muted-foreground">전체에 적용하면 위치가 통일되고, 바꾼 스타일은 개별값을 덮습니다.</p>}
           </Popover.Popup>
         </Popover.Positioner>
       </Popover.Portal>

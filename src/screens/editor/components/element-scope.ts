@@ -1,5 +1,5 @@
 import { BACKGROUND_ELEMENT_ID } from "@/lib/content-jobs/editor/document";
-import type { EditorSlide, ElementKind, PlacedElement } from "@/lib/content-jobs/editor/types";
+import type { EditorCommand, EditorSlide, PlacedElement } from "@/lib/content-jobs/editor/types";
 
 export function defaultPlacement(slide: EditorSlide): PlacedElement | null {
   return slide.placements.find((placement) => placement.elementId !== BACKGROUND_ELEMENT_ID) ??
@@ -8,8 +8,8 @@ export function defaultPlacement(slide: EditorSlide): PlacedElement | null {
 
 export type ScopeChoice = "current" | "all" | { slideId: string; checked: boolean };
 
-export function defaultVisualSlides(kind: ElementKind, currentSlideId: string, availableSlideIds: string[]) {
-  return kind === "background" ? [...availableSlideIds] : [currentSlideId];
+export function defaultVisualSlides(availableSlideIds: string[]) {
+  return [...availableSlideIds];
 }
 
 export function selectVisualSlides(
@@ -33,7 +33,18 @@ export function selectVisualSlides(
 }
 
 export function visualScopeLabel(selectedCount: number, availableCount: number) {
-  if (selectedCount <= 1) return "현재 장";
-  if (selectedCount === availableCount) return "전체";
-  return `선택한 ${selectedCount}장`;
+  if (availableCount <= 1) return "이 장에만 존재";
+  if (selectedCount === availableCount) return `전체 적용 · ${availableCount}/${availableCount}장`;
+  if (selectedCount <= 1) return `현재 장만 적용 · 1/${availableCount}장`;
+  return `일부 적용 · ${selectedCount}/${availableCount}장`;
+}
+
+export function removalCommandsForScope(
+  targets: Array<{ slideId: string; placement: PlacedElement }>,
+  selectedSlideIds: string[],
+): EditorCommand[] {
+  const selected = new Set(selectedSlideIds);
+  return targets.filter((target) => selected.has(target.slideId)).map((target) => ({
+    type: "remove_placement", slideId: target.slideId, placementId: target.placement.id,
+  }));
 }

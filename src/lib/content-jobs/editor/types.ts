@@ -2,7 +2,6 @@ import type { SlideshowStructure } from "../domain/types";
 
 export type SlideRole = "hook" | "body" | "cta";
 export type ElementKind = "background" | "text" | "image" | "rectangle" | "circle" | "triangle";
-export type DuplicationScope = "current" | "all";
 export type ElementFrame = {
   x: number;
   y: number;
@@ -103,5 +102,5 @@ export type EditorCommand =
   | { type: "add_element"; element: ElementDefinition }
   | { type: "place_element"; slideId: string; elementId: string; placementId: string }
   | { type: "remove_placement"; slideId: string; placementId: string }
-  | { type: "duplicate_placement"; scope: DuplicationScope; sourceSlideId: string; sourcePlacementId: string;
+  | { type: "duplicate_placement"; sourceSlideId: string; sourcePlacementId: string;
       newElementId: string; placements: Array<{ slideId: string; sourcePlacementId: string; newPlacementId: string }> };

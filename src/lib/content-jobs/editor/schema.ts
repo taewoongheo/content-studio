@@ -66,7 +66,7 @@ const commandVariants = [
   object({ type: { const: "add_element" }, element: editorElementSchema }),
   object({ type: { const: "place_element" }, slideId: text, elementId: text, placementId: text }),
   object({ type: { const: "remove_placement" }, slideId: text, placementId: text }),
-  object({ type: { const: "duplicate_placement" }, scope: { type: "string", enum: ["current", "all"] }, sourceSlideId: text,
+  object({ type: { const: "duplicate_placement" }, sourceSlideId: text,
     sourcePlacementId: text, newElementId: text, placements: { type: "array", items: object({ slideId: text,
       sourcePlacementId: text, newPlacementId: text }), minItems: 1, maxItems: 20 } }),
 ];

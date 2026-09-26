@@ -2,17 +2,17 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { ArrowLeft, LoaderCircle, Undo2 } from "lucide-react";
+import { ArrowLeft, Copy, Layers3, LoaderCircle, Trash2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
-import type { DuplicationScope, EditorCommand, ElementDefinition, ElementFrame, ElementKind } from "@/lib/content-jobs/editor/types";
+import type { EditorCommand, ElementDefinition, ElementFrame, ElementKind } from "@/lib/content-jobs/editor/types";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, getDuplicateTargets } from "@/lib/content-jobs/editor/document";
 import { uploadEditorImage } from "@/screens/content-job/api";
 import { useContentJob } from "@/screens/content-job/use-content-job";
 import { ChatPanel } from "./components/chat-panel";
 import { ElementInspector, type ElementInspectorHandle } from "./components/inspector/element-inspector";
 import { ElementScopePicker } from "./components/element-scope-picker";
-import { selectVisualSlides, type ScopeChoice } from "./components/element-scope";
+import { removalCommandsForScope, selectVisualSlides, visualScopeLabel, type ScopeChoice } from "./components/element-scope";
 import { SlideCanvas } from "./components/canvas/slide-canvas";
 import { SlideBackground } from "./components/inspector/slide-background";
 import { frameCommandsForScope } from "./components/canvas/frame-commands";
@@ -105,14 +105,24 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
     if (saved) setPlacementId(newPlacementId);
   }
 
-  async function duplicateElement(scope: DuplicationScope) {
-    if (!document || !slide || !placement) return;
-    const targets = getDuplicateTargets(document, slide.id, placement.id, scope);
+  async function duplicateElement() {
+    if (!document || !slide || !placement || element?.kind === "background") return;
+    if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return;
+    const targets = getDuplicateTargets(document, slide.id, placement.id, selectedSlideIds);
     const placements = targets.map((target) => ({ ...target, newPlacementId: crypto.randomUUID() }));
     const newElementId = crypto.randomUUID();
-    const saved = await saveCommands([{ type: "duplicate_placement", scope, sourceSlideId: slide.id,
+    const saved = await saveCommands([{ type: "duplicate_placement", sourceSlideId: slide.id,
       sourcePlacementId: placement.id, newElementId, placements }]);
     if (saved) setPlacementId(placements.find((item) => item.slideId === slide.id && item.sourcePlacementId === placement.id)?.newPlacementId ?? null);
+  }
+
+  async function removeElement() {
+    if (!placement || element?.kind === "background") return;
+    const commands = removalCommandsForScope(visualTargets, selectedSlideIds);
+    if (commands.length === 0) return;
+    if (commands.length > 1 && !window.confirm(`선택한 ${selectedSlideIds.length}장에서 ${element?.name ?? "Element"}를 제거할까요?\n되돌리기로 복원할 수 있습니다.`)) return;
+    const saved = await saveCommands(commands);
+    if (saved) setPlacementId(null);
   }
 
   async function changeVisualScope(choice: ScopeChoice) {
@@ -164,8 +174,6 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
                 <SlideBackground
                   color={slide.backgroundColor}
                   disabled={disabled}
-                  selectedCount={selectedSlideIds.length}
-                  totalCount={appliedSlides.length}
                   onSave={(color) => saveCommands(selectedSlideIds.length === document.slides.length
                     ? [{ type: "update_visual", scope: "common", elementId: BACKGROUND_ELEMENT_ID,
                       style: { backgroundColor: color } }]
@@ -181,15 +189,9 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
                   placement={placement}
                   slideId={slide.id}
                   selectedSlideIds={selectedSlideIds}
-                  sharedCount={appliedSlides.length}
                   visualTargets={visualTargets}
                   disabled={disabled}
                   onSave={saveCommands}
-                  onDuplicate={duplicateElement}
-                  onDelete={async () => {
-                    const saved = await saveCommands([{ type: "remove_placement", slideId: slide.id, placementId: placement.id }]);
-                    if (saved) setPlacementId(null);
-                  }}
                   onUploadImage={uploadImage}
                 />
               ) : null}
@@ -256,8 +258,17 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
                     disabled={disabled}
                     onChange={changeVisualScope}
                   />}
+                  {element && placement && appliedSlides.length === 1 && <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Layers3 className="size-3.5" aria-hidden="true" /> {visualScopeLabel(1, 1)}
+                  </span>}
                 </div>
-                <div className="flex gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {element && placement && element.kind !== "background" && <div className="mr-1 flex items-center gap-1.5 border-r pr-2">
+                    <Button size="sm" variant="outline" disabled={disabled} onClick={() => void duplicateElement()} aria-label={`선택한 ${selectedSlideIds.length}장에서 ${element.name} 복제`}><Copy className="size-3.5" aria-hidden="true" /> 복제</Button>
+                    <Button size="icon-sm" variant="destructive" disabled={disabled} onClick={() => void removeElement()}
+                      aria-label={`선택한 ${selectedSlideIds.length}장에서 ${element.name} 제거`}
+                      title={`선택한 ${selectedSlideIds.length}장에서 제거`}><Trash2 className="size-3.5" aria-hidden="true" /></Button>
+                  </div>}
                   <Button size="sm" variant="outline" disabled={disabled} onClick={() => void addElement("text")}>텍스트 추가</Button>
                   <Button size="sm" variant="outline" disabled={disabled} onClick={() => void addElement("image")}>이미지 추가</Button>
                   <label className="sr-only" htmlFor="add-shape">도형 추가</label>

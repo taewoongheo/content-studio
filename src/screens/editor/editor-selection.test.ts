@@ -24,7 +24,7 @@ test("선택한 장의 첫 일반 Element와 공유 범위를 찾는다", () => 
   const selection = resolveEditorSelection(document, "slide-2", null, null);
   assert.equal(selection.element?.id, "title");
   assert.deepEqual(selection.appliedSlides.map((slide) => slide.slideId), ["slide-2", "slide-3"]);
-  assert.deepEqual(selection.selectedSlideIds, ["slide-2"]);
+  assert.deepEqual(selection.selectedSlideIds, ["slide-2", "slide-3"]);
   assert.equal(selection.visualTargets.length, 2);
 });
 
