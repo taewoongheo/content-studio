@@ -3,7 +3,7 @@ import type { ElementFrame } from "@/lib/content-jobs/editor/types";
 export type DragMode = "move" | "nw" | "ne" | "sw" | "se";
 
 const MIN_FRAME_SIZE = 0.04;
-const SNAP_DISTANCE = 0.012;
+const SNAP_DISTANCE = 0.016;
 const PRECISION = 10_000;
 
 function clamp(value: number, min: number, max: number) {

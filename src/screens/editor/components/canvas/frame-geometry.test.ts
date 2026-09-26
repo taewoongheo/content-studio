@@ -11,6 +11,8 @@ test("이동은 크기를 유지하고 슬라이드 밖으로 나가지 않는�
 
 test("중앙선에 가까우면 맞춰 붙고 다른 위치에는 스냅되지 않는다", () => {
   assert.deepEqual(moveOrResizeFrame(frame, "move", 0.145, 0.19), { x: 0.35, y: 0.4, width: 0.3, height: 0.2 });
+  assert.deepEqual(moveOrResizeFrame(frame, "move", 0.164, 0), { x: 0.35, y: 0.2, width: 0.3, height: 0.2 });
+  assert.deepEqual(moveOrResizeFrame(frame, "move", 0.168, 0), { x: 0.368, y: 0.2, width: 0.3, height: 0.2 });
   assert.deepEqual(moveOrResizeFrame(frame, "move", -0.09, -0.07),
     { x: 0.11, y: 0.13, width: 0.3, height: 0.2 });
 });
@@ -22,6 +24,10 @@ test("가이드를 끄면 중앙선에 맞춰 붙지 않는다", () => {
 test("크기 조절도 중앙선에 맞춰 붙는다", () => {
   assert.deepEqual(moveOrResizeFrame(frame, "se", 0.005, 0.095),
     { x: 0.2, y: 0.2, width: 0.3, height: 0.3 });
+  assert.deepEqual(moveOrResizeFrame(frame, "se", 0.014, 0),
+    { x: 0.2, y: 0.2, width: 0.3, height: 0.2 });
+  assert.deepEqual(moveOrResizeFrame(frame, "se", 0.018, 0),
+    { x: 0.2, y: 0.2, width: 0.318, height: 0.2 });
 });
 
 test("모서리 크기 조절은 반대쪽 모서리를 고정하고 최소 크기를 보장한다", () => {
