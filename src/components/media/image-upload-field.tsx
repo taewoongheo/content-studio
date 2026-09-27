@@ -3,7 +3,7 @@
 import { useRef, useState, type DragEvent } from "react";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { selectUploadImage } from "./image-upload";
+import { selectUploadImage } from "@/lib/image-upload";
 
 type ImageUploadFieldProps = {
   id: string;

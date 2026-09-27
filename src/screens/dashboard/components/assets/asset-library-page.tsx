@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { StoredAsset } from "@/lib/local-db/assets";
 import type { StoredCharacter } from "@/lib/local-db/characters";
 import { createCharacter, deleteAsset, deleteCharacter, listLibrary, uploadAsset } from "../../api";
-import { ImageUploadField } from "./image-upload-field";
+import { ImageUploadField } from "@/components/media/image-upload-field";
 
 function AssetTile({ asset, busy, protectedAsset = false, onDelete }: { asset: StoredAsset; busy: boolean; protectedAsset?: boolean; onDelete: (asset: StoredAsset) => void }) {
   return <div className="flex min-w-0 items-center gap-3 rounded-lg border bg-card p-2.5">
