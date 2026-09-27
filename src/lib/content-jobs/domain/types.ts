@@ -24,7 +24,6 @@ export type ReferenceImageInput = {
 export type EditorAsset = {
   id: string;
   name: string;
-  path: string;
   type: "image/jpeg" | "image/png" | "image/webp";
   size: number;
 };
@@ -68,7 +67,7 @@ export type ContentJobSnapshot = Omit<
   "threadId" | "referenceImages" | "editorHistory" | "assets"
 > & {
   referenceImages: Array<Omit<ReferenceImageInput, "path">>;
-  assets: Array<Omit<EditorAsset, "path">>;
+  assets: EditorAsset[];
 };
 
 export type AcceptStageInput = {

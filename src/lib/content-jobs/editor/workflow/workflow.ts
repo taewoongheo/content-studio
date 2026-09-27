@@ -10,13 +10,16 @@ import type {
   EditorChatTarget,
   EditorDocument,
   EditorHook,
+  EditorProposalTarget,
   EditorTopic,
   ElementDefinition,
   ElementFrame,
   ElementStyle,
 } from "../types";
-import { analysisPrompt, bodyPrompt, chatPrompt, hooksPrompt, topicsPrompt } from "./prompts";
-import { bodyFillSchema, chatEditSchema, hookSuggestionsSchema, topicSuggestionsSchema } from "./schemas";
+import { analysisPrompt, answerPrompt, bodyPrompt, chatPrompt, directHookPrompt, directTopicPrompt, hookRevisionPrompt, hooksPrompt, topicRevisionPrompt, topicsPrompt } from "./prompts";
+import { bodyFillSchema, chatAnswerSchema, chatEditSchema, hookRevisionSchema, hookSuggestionsSchema, topicRevisionSchema, topicSuggestionsSchema } from "./schemas";
+import { addProposalSet, resolveProposal, reviseHook, reviseTopic, staleHookProposals } from "./proposals/state";
+import { CodexChatRouter, type ChatRouter, type ChatRoute } from "./routing/router";
 import { resolveChatTarget, targetedMutationCommands } from "./targeted/chat";
 import { targetedChatPrompt } from "./targeted/prompt";
 import { targetedChatSchema, type TargetedChatOutput } from "./targeted/schema";
@@ -47,6 +50,13 @@ function stale(): never {
   throw new ContentJobError("INVALID_STAGE", "편집 문서가 변경되었습니다. 최신 결과를 확인해 주세요.");
 }
 
+function invalidSourceUrls(urls: string[]) {
+  return urls.some((url) => {
+    try { return !["http:", "https:"].includes(new URL(url).protocol); }
+    catch { return true; }
+  });
+}
+
 function readyDocument(job: ContentJobRecord): EditorDocument {
   if (job.editor.status !== "ready" || !job.editor.document)
     throw new ContentJobError("INVALID_STAGE", "레퍼런스 분석이 끝난 뒤 이용할 수 있습니다.");
@@ -60,9 +70,18 @@ function assertRevision(job: ContentJobRecord, expected: number) {
     throw new ContentJobError("OPERATION_IN_PROGRESS", "AI 작업이 끝난 뒤 수정해 주세요.");
 }
 
-function appendMessage(job: ContentJobRecord, role: "user" | "assistant", text: string, target?: EditorChatTarget) {
-  job.editor.messages.push({ id: randomUUID(), role, text, ...(target ? { target } : {}) });
+function appendMessage(job: ContentJobRecord, role: "user" | "assistant", text: string,
+  target?: EditorChatTarget, proposalTarget?: EditorProposalTarget) {
+  const id = randomUUID();
+  const proposalSet = job.editor.proposalSets.find((set) => set.id === proposalTarget?.setId);
+  const proposal = proposalSet?.items.find((item) => item.id === proposalTarget?.candidateId);
+  const proposalLabel = proposal && proposalSet
+    ? `${proposalSet.kind === "topic" ? "주제 제안" : "훅 제안"} · ${proposalSet.kind === "topic"
+      ? (proposal as EditorTopic).title : (proposal as EditorHook).text}` : undefined;
+  job.editor.messages.push({ id, role, text, ...(target ? { target } : {}),
+    ...(proposalTarget ? { proposalTarget, proposalLabel } : {}) });
   if (job.editor.messages.length > 60) job.editor.messages.splice(0, job.editor.messages.length - 60);
+  return id;
 }
 
 function replaceDocument(job: ContentJobRecord, document: EditorDocument) {
@@ -73,6 +92,7 @@ function replaceDocument(job: ContentJobRecord, document: EditorDocument) {
       bodyReady: job.editor.bodyReady,
       hookSuggestions: job.editor.hookSuggestions,
       selectedHookId: job.editor.selectedHookId,
+      proposalSets: job.editor.proposalSets,
     }));
     if (job.editorHistory.length > 30) job.editorHistory.shift();
   }
@@ -120,6 +140,7 @@ function replaceWithReconciliation(job: ContentJobRecord, before: EditorDocument
   const result = reconcileHook(job, before, after);
   replaceDocument(job, result.document);
   if (result.bodyChanged) job.editor.hookSuggestions = [];
+  if (result.bodyChanged) staleHookProposals(job.editor);
   if (result.selectedHookChanged) job.editor.selectedHookId = null;
 }
 
@@ -151,8 +172,24 @@ function checkedChatCommands(build: () => EditorCommand[]): EditorCommand[] {
   catch (error) { invalid(error instanceof Error ? error.message : "AI 수정 명령이 올바르지 않습니다."); }
 }
 
+function requestedProposal(job: ContentJobRecord, value: unknown): EditorProposalTarget | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "object" || Array.isArray(value)) invalid("선택한 제안 정보가 올바르지 않습니다.");
+  const target = value as Record<string, unknown>;
+  if (typeof target.setId !== "string" || typeof target.candidateId !== "string" ||
+    !job.editor.proposalSets.some((set) => set.id === target.setId &&
+      set.items.some((item) => item.id === target.candidateId)))
+    invalid("선택한 제안을 찾을 수 없습니다.");
+  return { setId: target.setId, candidateId: target.candidateId };
+}
+
 export class EditorWorkflowService {
-  constructor(private readonly codex: CodexClient, private readonly registry: ContentJobRegistry) {}
+  private readonly router: ChatRouter;
+
+  constructor(private readonly codex: CodexClient, private readonly registry: ContentJobRegistry,
+    router?: ChatRouter) {
+    this.router = router ?? new CodexChatRouter(codex);
+  }
 
   get(id: string) {
     return this.registry.get(id);
@@ -217,80 +254,109 @@ export class EditorWorkflowService {
     });
   }
 
+  private async proposeTopics(id: string, job: ContentJobRecord, guidance = "") {
+    const output = await this.turn<TopicOutput>(job, topicSuggestionsSchema,
+      [{ type: "text", text: topicsPrompt(job, guidance) }]);
+    if (new Set(output.topics.map((item) => item.id)).size !== 3 ||
+      output.topics.some((item) => !item.title.trim() || invalidSourceUrls(item.sourceUrls)))
+      invalid("주제 후보의 ID, 제목 또는 근거 URL이 올바르지 않습니다.");
+    return this.registry.update(id, (current) => {
+      current.editor.revision += 1;
+      const messageId = appendMessage(current, "assistant", output.message);
+      addProposalSet(current.editor, "topic", output.topics, messageId);
+    });
+  }
+
   suggestTopics(id: string, expectedRevision: number) {
     return this.registry.runExclusive(id, "suggest_topics", async (job) => {
       readyDocument(job);
       if (job.editor.revision !== expectedRevision) stale();
-      const output = await this.turn<TopicOutput>(job, topicSuggestionsSchema, [{ type: "text", text: topicsPrompt(job) }]);
-      if (new Set(output.topics.map((item) => item.id)).size !== 3 ||
-        output.topics.some((item) => !item.title.trim() || item.sourceUrls.some((url) => {
-          try { return !["http:", "https:"].includes(new URL(url).protocol); } catch { return true; }
-        }))) invalid("주제 후보의 ID, 제목 또는 근거 URL이 올바르지 않습니다.");
-      return this.registry.update(id, (current) => {
-        current.editor.topicSuggestions = output.topics;
-        current.editor.revision += 1;
-        appendMessage(current, "assistant", output.message);
-      });
+      return this.proposeTopics(id, job);
     });
   }
 
-  selectTopic(id: string, topicId: string, expectedRevision: number) {
+  private async applyTopic(id: string, job: ContentJobRecord, topic: EditorTopic) {
+    const document = readyDocument(job);
+    const output = await this.turn<BodyOutput>(job, bodyFillSchema,
+      [{ type: "text", text: bodyPrompt(job, topic) }]);
+    const expected = bodySlots(document);
+    const provided = output.slotValues.map((item) => `${item.slideId}:${item.placementId}`);
+    if (expected.length === 0 || provided.length !== expected.length ||
+      new Set(provided).size !== provided.length ||
+      provided.some((key) => !expected.includes(key)) ||
+      output.slotValues.some((item) => !item.value.trim()))
+      invalid("본문의 텍스트 슬롯을 모두 정확히 한 번씩 채워야 합니다.");
+    const next = applyEditorCommands(document, output.slotValues.map((item) => ({ type: "set_slot_value", ...item })));
+    assertImageAssets(job, next);
+    return this.registry.update(id, (current) => {
+      replaceWithReconciliation(current, document, next);
+      current.editor.selectedTopic = structuredClone(topic);
+      current.editor.bodyReady = true;
+      current.editor.hookSuggestions = [];
+      current.editor.selectedHookId = null;
+      staleHookProposals(current.editor);
+      appendMessage(current, "assistant", output.message);
+    });
+  }
+
+  selectTopic(id: string, topicId: string, expectedRevision: number, proposalSetId?: string) {
     return this.registry.runExclusive(id, "fill_body", async (job) => {
-      const document = readyDocument(job);
+      readyDocument(job);
       if (job.editor.revision !== expectedRevision) stale();
-      const topic = job.editor.topicSuggestions.find((item) => item.id === topicId);
+      const set = proposalSetId
+        ? job.editor.proposalSets.find((item) => item.id === proposalSetId && item.kind === "topic") : undefined;
+      if (proposalSetId && !set) invalid("선택한 주제 제안 묶음을 찾을 수 없습니다.");
+      const topic = set && set.kind === "topic" ? set.items.find((item) => item.id === topicId)
+        : job.editor.topicSuggestions.find((item) => item.id === topicId);
       if (!topic) invalid("선택한 주제 후보를 찾을 수 없습니다.");
-      const output = await this.turn<BodyOutput>(job, bodyFillSchema, [{ type: "text", text: bodyPrompt(job, topic) }]);
-      const expected = bodySlots(document);
-      const provided = output.slotValues.map((item) => `${item.slideId}:${item.placementId}`);
-      if (expected.length === 0 || provided.length !== expected.length ||
-        new Set(provided).size !== provided.length ||
-        provided.some((key) => !expected.includes(key)) ||
-        output.slotValues.some((item) => !item.value.trim()))
-        invalid("본문의 텍스트 슬롯을 모두 정확히 한 번씩 채워야 합니다.");
-      const next = applyEditorCommands(document, output.slotValues.map((item) => ({ type: "set_slot_value", ...item })));
-      assertImageAssets(job, next);
-      return this.registry.update(id, (current) => {
-        replaceWithReconciliation(current, document, next);
-        current.editor.selectedTopic = topic;
-        current.editor.bodyReady = true;
-        current.editor.hookSuggestions = [];
-        current.editor.selectedHookId = null;
-        appendMessage(current, "assistant", output.message);
-      });
+      return this.applyTopic(id, job, topic);
+    });
+  }
+
+  private async proposeHooks(id: string, job: ContentJobRecord, guidance = "") {
+    if (!job.editor.bodyReady) throw new ContentJobError("INVALID_STAGE", "본문을 먼저 완성해 주세요.");
+    const output = await this.turn<HookOutput>(job, hookSuggestionsSchema,
+      [{ type: "text", text: hooksPrompt(job, guidance) }]);
+    if (new Set(output.hooks.map((item) => item.id)).size !== 4 ||
+      output.hooks.some((item) => !item.text.trim())) invalid("훅 후보가 올바르지 않습니다.");
+    return this.registry.update(id, (current) => {
+      current.editor.revision += 1;
+      const messageId = appendMessage(current, "assistant", output.message);
+      addProposalSet(current.editor, "hook", output.hooks, messageId);
     });
   }
 
   suggestHooks(id: string, expectedRevision: number) {
     return this.registry.runExclusive(id, "suggest_hooks", async (job) => {
       readyDocument(job);
-      if (!job.editor.bodyReady) throw new ContentJobError("INVALID_STAGE", "본문을 먼저 완성해 주세요.");
       if (job.editor.revision !== expectedRevision) stale();
-      const output = await this.turn<HookOutput>(job, hookSuggestionsSchema, [{ type: "text", text: hooksPrompt(job) }]);
-      if (new Set(output.hooks.map((item) => item.id)).size !== 4 ||
-        output.hooks.some((item) => !item.text.trim())) invalid("훅 후보가 올바르지 않습니다.");
-      return this.registry.update(id, (current) => {
-        current.editor.hookSuggestions = output.hooks;
-        current.editor.revision += 1;
-        appendMessage(current, "assistant", output.message);
-      });
+      return this.proposeHooks(id, job);
     });
   }
 
-  selectHook(id: string, hookId: string, expectedRevision: number) {
-    const job = this.registry.getRecord(id);
-    assertRevision(job, expectedRevision);
+  private applyHook(id: string, job: ContentJobRecord, hook: EditorHook) {
     const document = readyDocument(job);
-    const hook = job.editor.hookSuggestions.find((item) => item.id === hookId);
-    if (!hook) invalid("선택한 훅 후보를 찾을 수 없습니다.");
     const placement = hookPlacement(document);
     const next = applyEditorCommands(document, [{
       type: "set_slot_value", slideId: placement.slideId, placementId: placement.placementId, value: hook.text,
     }]);
     return this.registry.update(id, (current) => {
       replaceDocument(current, next);
-      current.editor.selectedHookId = hookId;
+      current.editor.selectedHookId = hook.id;
     });
+  }
+
+  selectHook(id: string, hookId: string, expectedRevision: number, proposalSetId?: string) {
+    const job = this.registry.getRecord(id);
+    assertRevision(job, expectedRevision);
+    const set = proposalSetId
+      ? job.editor.proposalSets.find((item) => item.id === proposalSetId && item.kind === "hook") : undefined;
+    if (proposalSetId && !set) invalid("선택한 훅 제안 묶음을 찾을 수 없습니다.");
+    if (set?.stale) invalid("본문이 바뀌어 이 훅 제안은 더 이상 적용할 수 없습니다.");
+    const hook = set && set.kind === "hook" ? set.items.find((item) => item.id === hookId)
+      : job.editor.hookSuggestions.find((item) => item.id === hookId);
+    if (!hook) invalid("선택한 훅 후보를 찾을 수 없습니다.");
+    return this.applyHook(id, job, hook);
   }
 
   applyCommands(id: string, commands: unknown, expectedRevision: number) {
@@ -318,11 +384,128 @@ export class EditorWorkflowService {
       current.editor.bodyReady = previous.bodyReady;
       current.editor.hookSuggestions = previous.hookSuggestions;
       current.editor.selectedHookId = previous.selectedHookId;
+      current.editor.proposalSets = previous.proposalSets;
       current.editor.revision += 1;
     });
   }
 
-  chat(id: string, message: string, expectedRevision: number, requestedTarget?: unknown) {
+  private async executeChatRoute(id: string, job: ContentJobRecord, document: EditorDocument,
+    route: ChatRoute, guidance: string, elementTarget: EditorChatTarget | null,
+    proposalTarget: EditorProposalTarget | null) {
+    switch (route.capability) {
+      case "propose_topics":
+        return this.proposeTopics(id, job, guidance);
+      case "propose_hooks":
+        return this.proposeHooks(id, job, guidance);
+      case "revise_topic": {
+        const target = resolveProposal(job.editor, "topic", route, proposalTarget);
+        if (target.set.kind !== "topic") invalid("주제 제안을 선택해 주세요.");
+        const topic = target.set.items.find((item) => item.id === target.candidateId)!;
+        const output = await this.turn<{ message: string; topic: Omit<EditorTopic, "id"> }>(
+          job, topicRevisionSchema, [{ type: "text", text: topicRevisionPrompt(job, topic, guidance) }]);
+        if (!output.topic.title.trim() || invalidSourceUrls(output.topic.sourceUrls))
+          invalid("수정한 주제의 제목 또는 근거 URL이 올바르지 않습니다.");
+        return this.registry.update(id, (current) => {
+          current.editor.revision += 1;
+          const messageId = appendMessage(current, "assistant", output.message);
+          reviseTopic(current.editor, target, output.topic, messageId);
+        });
+      }
+      case "apply_topic": {
+        const target = resolveProposal(job.editor, "topic", route, proposalTarget);
+        if (target.set.kind !== "topic") invalid("주제 제안을 선택해 주세요.");
+        const topic = target.set.items.find((item) => item.id === target.candidateId)!;
+        return this.applyTopic(id, job, topic);
+      }
+      case "draft_topic": {
+        const output = await this.turn<{ message: string; topic: Omit<EditorTopic, "id"> }>(
+          job, topicRevisionSchema, [{ type: "text", text: directTopicPrompt(job, guidance) }]);
+        if (!output.topic.title.trim() || invalidSourceUrls(output.topic.sourceUrls))
+          invalid("작성한 주제의 제목 또는 근거 URL이 올바르지 않습니다.");
+        const topic = { ...output.topic, id: randomUUID() };
+        await this.applyTopic(id, job, topic);
+        return this.registry.update(id, (current) => {
+          const messageId = appendMessage(current, "assistant", output.message);
+          addProposalSet(current.editor, "topic", [topic], messageId);
+        });
+      }
+      case "revise_hook": {
+        const target = resolveProposal(job.editor, "hook", route, proposalTarget);
+        if (target.set.kind !== "hook") invalid("훅 제안을 선택해 주세요.");
+        const hook = target.set.items.find((item) => item.id === target.candidateId)!;
+        const output = await this.turn<{ message: string; hook: Omit<EditorHook, "id"> }>(
+          job, hookRevisionSchema, [{ type: "text", text: hookRevisionPrompt(job, hook, guidance) }]);
+        if (!output.hook.text.trim()) invalid("수정한 훅이 비어 있습니다.");
+        return this.registry.update(id, (current) => {
+          current.editor.revision += 1;
+          const messageId = appendMessage(current, "assistant", output.message);
+          reviseHook(current.editor, target, output.hook, messageId);
+        });
+      }
+      case "apply_hook": {
+        const target = resolveProposal(job.editor, "hook", route, proposalTarget);
+        if (target.set.kind !== "hook") invalid("훅 제안을 선택해 주세요.");
+        const hook = target.set.items.find((item) => item.id === target.candidateId)!;
+        return this.registry.update(id, (current) => {
+          const placement = hookPlacement(document);
+          const next = applyEditorCommands(document, [{ type: "set_slot_value",
+            slideId: placement.slideId, placementId: placement.placementId, value: hook.text }]);
+          replaceDocument(current, next);
+          current.editor.selectedHookId = hook.id;
+          appendMessage(current, "assistant", "선택한 훅을 첫 장에 적용했습니다.");
+        });
+      }
+      case "write_hook": {
+        if (!job.editor.bodyReady) invalid("본문을 먼저 완성해 주세요.");
+        const output = await this.turn<{ message: string; hook: Omit<EditorHook, "id"> }>(
+          job, hookRevisionSchema, [{ type: "text", text: directHookPrompt(job, guidance) }]);
+        if (!output.hook.text.trim()) invalid("작성한 훅이 비어 있습니다.");
+        const hook = { ...output.hook, id: randomUUID() };
+        this.applyHook(id, job, hook);
+        return this.registry.update(id, (current) => {
+          const messageId = appendMessage(current, "assistant", output.message);
+          addProposalSet(current.editor, "hook", [hook], messageId);
+        });
+      }
+      case "undo": {
+        if (job.editorHistory.length === 0) invalid("되돌릴 수정이 없습니다.");
+        return this.registry.update(id, (current) => {
+          const previous = current.editorHistory.pop()!;
+          current.editor.document = previous.document;
+          current.editor.selectedTopic = previous.selectedTopic;
+          current.editor.bodyReady = previous.bodyReady;
+          current.editor.hookSuggestions = previous.hookSuggestions;
+          current.editor.selectedHookId = previous.selectedHookId;
+          current.editor.proposalSets = previous.proposalSets;
+          current.editor.revision += 1;
+          appendMessage(current, "assistant", "마지막 문서 변경을 되돌렸습니다.");
+        });
+      }
+      case "answer": {
+        const output = await this.turn<{ reply: string }>(job, chatAnswerSchema,
+          [{ type: "text", text: answerPrompt(job, elementTarget, proposalTarget) }]);
+        return this.registry.update(id, (current) => {
+          current.editor.revision += 1;
+          appendMessage(current, "assistant", output.reply);
+        });
+      }
+      case "edit_document": {
+        const { reply, commands } = await this.generateChatEdit(job, document, elementTarget);
+        let next: EditorDocument;
+        try { next = applyEditorCommands(document, commands); }
+        catch (error) { invalid(error instanceof Error ? error.message : "AI 수정 명령이 올바르지 않습니다."); }
+        assertImageAssets(job, next);
+        return this.registry.update(id, (current) => {
+          if (commands.length > 0) replaceWithReconciliation(current, document, next);
+          else current.editor.revision += 1;
+          appendMessage(current, "assistant", reply);
+        });
+      }
+    }
+  }
+
+  chat(id: string, message: string, expectedRevision: number,
+    requestedTarget?: unknown, requestedProposalTarget?: unknown) {
     const trimmed = message.trim();
     if (!trimmed || trimmed.length > 2000) invalid("메시지는 1~2000자로 입력해 주세요.");
     return this.registry.runExclusive(id, "chat_edit", async (job) => {
@@ -333,20 +516,14 @@ export class EditorWorkflowService {
         try { target = resolveChatTarget(document, requestedTarget); }
         catch (error) { invalid(error instanceof Error ? error.message : "선택한 Element가 올바르지 않습니다."); }
       }
+      const proposalTarget = requestedProposal(job, requestedProposalTarget);
+      if (target && proposalTarget) invalid("채팅 대상은 Element 또는 제안 하나만 선택해 주세요.");
       this.registry.update(id, (current) => {
-        appendMessage(current, "user", trimmed, target ?? undefined);
+        appendMessage(current, "user", trimmed, target ?? undefined, proposalTarget ?? undefined);
         current.editor.revision += 1;
       });
-      const { reply, commands } = await this.generateChatEdit(job, document, target);
-      let next: EditorDocument;
-      try { next = applyEditorCommands(document, commands); }
-      catch (error) { invalid(error instanceof Error ? error.message : "AI 수정 명령이 올바르지 않습니다."); }
-      assertImageAssets(job, next);
-      return this.registry.update(id, (current) => {
-        if (commands.length > 0) replaceWithReconciliation(current, document, next);
-        else current.editor.revision += 1;
-        appendMessage(current, "assistant", reply);
-      });
+      const route = await this.router.route({ job, message: trimmed, elementTarget: target, proposalTarget });
+      return this.executeChatRoute(id, job, document, route, trimmed, target, proposalTarget);
     });
   }
 }

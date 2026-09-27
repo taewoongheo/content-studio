@@ -4,8 +4,9 @@ import { useState } from "react";
 import { LoaderCircle, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import type { EditorChatTarget, EditorJobState } from "@/lib/content-jobs/editor/types";
+import type { EditorChatTarget, EditorJobState, EditorProposalTarget } from "@/lib/content-jobs/editor/types";
 import type { ContentJobOperation } from "@/lib/content-jobs/domain/types";
+import { ProposalCards } from "./chat/proposal-cards";
 
 type SelectedChatTarget = { target: EditorChatTarget; name: string; scopeLabel: string };
 
@@ -31,67 +32,53 @@ export function ChatPanel({
 }) {
   const [message, setMessage] = useState("");
   const [dismissedTargetKey, setDismissedTargetKey] = useState<string | null>(null);
+  const [proposalSelection, setProposalSelection] = useState<{
+    target: EditorProposalTarget; elementKey: string | null; proposalCount: number;
+  } | null>(null);
   const targetKey = selectedTarget
     ? `${selectedTarget.target.slideId}:${selectedTarget.target.placementId}:${selectedTarget.target.elementId}:${selectedTarget.target.slideIds.join(",")}` : null;
-  const activeTarget = targetKey && targetKey !== dismissedTargetKey ? selectedTarget : null;
+  const selectedProposalSet = editor.proposalSets.find((set) => set.id === proposalSelection?.target.setId);
+  const activeProposal = proposalSelection?.elementKey === targetKey &&
+    proposalSelection.proposalCount === editor.proposalSets.length && selectedProposalSet &&
+    !selectedProposalSet.stale && selectedProposalSet.items.some((item) => item.id === proposalSelection.target.candidateId)
+    ? proposalSelection.target : null;
+  const activeTarget = !activeProposal && targetKey && targetKey !== dismissedTargetKey ? selectedTarget : null;
+  const selectedCandidate = selectedProposalSet?.items.find((item) => item.id === activeProposal?.candidateId);
 
   async function sendMessage() {
     const trimmed = message.trim();
     if (!trimmed) return;
     if (await onAction({ action: "chat_edit", message: trimmed,
+      ...(activeProposal ? { proposalTarget: activeProposal } : {}),
       ...(activeTarget ? { target: activeTarget.target } : {}) })) setMessage("");
+  }
+
+  function applyProposal(target: EditorProposalTarget) {
+    const set = editor.proposalSets.find((item) => item.id === target.setId);
+    if (!set || set.stale) return;
+    void onAction(set.kind === "topic"
+      ? { action: "select_topic", topicId: target.candidateId, proposalSetId: set.id }
+      : { action: "select_editor_hook", hookId: target.candidateId, proposalSetId: set.id });
   }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-[180px] flex-1 space-y-3 overflow-y-auto p-5" aria-live="polite">
-        {editor.messages.map((item) => (
-          <div key={item.id} className={`max-w-[95%] rounded-lg px-3 py-2 text-sm leading-6 whitespace-pre-wrap ${item.role === "user" ? "ml-auto bg-foreground text-background" : "border bg-background"}`}>
-            {item.text}
-          </div>
-        ))}
-        {editor.topicSuggestions.length > 0 && (
-          <section className="grid gap-2" aria-label="주제 후보">
-            {editor.topicSuggestions.map((topic) => (
-              <div key={topic.id} className={`rounded-lg border text-sm ${editor.selectedTopic?.id === topic.id ? "border-foreground bg-muted" : ""}`}>
-                <button
-                  type="button"
-                  disabled={disabled}
-                  className="w-full rounded-lg p-3 text-left transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-                  onClick={() => void onAction({ action: "select_topic", topicId: topic.id })}
-                >
-                  <span className="block font-semibold">{topic.title}</span>
-                  <span className="mt-1 block text-muted-foreground">{topic.angle} · {topic.rationale}</span>
-                </button>
-                {topic.sourceUrls.length > 0 && (
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 border-t px-3 py-2 text-xs">
-                    {topic.sourceUrls.map((url, index) => (
-                      <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
-                        근거 {index + 1}
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </section>
-        )}
-        {editor.hookSuggestions.length > 0 && (
-          <section className="grid gap-2" aria-label="훅 후보">
-            {editor.hookSuggestions.map((hook) => (
-              <button
-                type="button"
-                key={hook.id}
-                disabled={disabled}
-                className={`rounded-lg border p-3 text-left text-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60 ${editor.selectedHookId === hook.id ? "border-foreground bg-muted" : ""}`}
-                onClick={() => void onAction({ action: "select_editor_hook", hookId: hook.id })}
-              >
-                <span className="block font-semibold">{hook.text}</span>
-                <span className="mt-1 block text-muted-foreground">{hook.rationale}</span>
-              </button>
-            ))}
-          </section>
-        )}
+        {editor.messages.map((item) => {
+          const proposalSet = editor.proposalSets.find((set) => set.messageId === item.id);
+          return <div key={item.id} className="grid gap-2">
+            <div className={`max-w-[95%] rounded-lg px-3 py-2 text-sm leading-6 whitespace-pre-wrap ${item.role === "user" ? "ml-auto bg-foreground text-background" : "border bg-background"}`}>
+              {item.proposalLabel && <span className="mb-1 block text-xs opacity-70">{item.proposalLabel}</span>}
+              {item.text}
+            </div>
+            {proposalSet && <ProposalCards set={proposalSet} editor={editor} selected={activeProposal} disabled={disabled}
+              onSelect={(target) => {
+                setProposalSelection({ target, elementKey: targetKey,
+                  proposalCount: editor.proposalSets.length });
+                setDismissedTargetKey(targetKey);
+              }} onApply={applyProposal} />}
+          </div>;
+        })}
         {activeOperation && (
           <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
             <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
@@ -100,7 +87,17 @@ export function ChatPanel({
         )}
       </div>
       <div className="grid gap-3 border-t p-4">
-        {activeTarget ? (
+        {activeProposal && selectedCandidate ? (
+          <div className="flex min-w-0 items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-xs">
+            <span className="shrink-0 text-muted-foreground">선택된 제안</span>
+            <span className="min-w-0 flex-1 truncate font-semibold">
+              {selectedProposalSet?.kind === "topic" ? (selectedCandidate as { title: string }).title : (selectedCandidate as { text: string }).text}
+            </span>
+            <button type="button" onClick={() => setProposalSelection(null)} disabled={disabled}
+              className="rounded p-1 hover:bg-muted focus-visible:outline-2 focus-visible:outline-foreground disabled:opacity-50"
+              aria-label="제안 선택 해제" title="제안 선택 해제"><X className="size-3.5" aria-hidden="true" /></button>
+          </div>
+        ) : activeTarget ? (
           <div className="flex min-w-0 items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-xs">
             <span className="shrink-0 text-muted-foreground">선택된 Element</span>
             <span className="min-w-0 flex-1 truncate font-semibold" title={activeTarget.name}>{activeTarget.name}</span>
@@ -118,7 +115,7 @@ export function ChatPanel({
         <label className="sr-only" htmlFor="editor-message">수정 요청 또는 질문</label>
         <Textarea
           id="editor-message"
-          placeholder="예: 본문 2장의 설명을 더 짧게 바꿔줘"
+          placeholder="예: 주제를 다시 추천해줘 · 선택한 제안을 더 짧게 바꿔줘"
           className="min-h-20 resize-y"
           value={message}
           onChange={(event) => setMessage(event.target.value)}
@@ -130,11 +127,7 @@ export function ChatPanel({
             }
           }}
         />
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={disabled} onClick={() => void onAction({ action: "suggest_topics" })}>주제 제안</Button>
-            <Button variant="outline" size="sm" disabled={disabled || !editor.bodyReady} onClick={() => void onAction({ action: "suggest_hooks" })}>훅 제안</Button>
-          </div>
+        <div className="flex justify-end">
           <Button size="icon" disabled={disabled || !message.trim()} onClick={() => void sendMessage()} aria-label="메시지 보내기">
             <Send className="size-4" />
           </Button>

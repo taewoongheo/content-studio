@@ -62,6 +62,10 @@ export type EditorTopic = {
   sourceUrls: string[];
 };
 export type EditorHook = { id: string; text: string; rationale: string };
+export type EditorProposalSet =
+  | { id: string; kind: "topic"; version: number; messageId: string; stale: boolean; items: EditorTopic[] }
+  | { id: string; kind: "hook"; version: number; messageId: string; stale: boolean; items: EditorHook[] };
+export type EditorProposalTarget = { setId: string; candidateId: string };
 export type EditorChatTarget = {
   slideId: string;
   placementId: string;
@@ -73,6 +77,8 @@ export type EditorMessage = {
   role: "user" | "assistant";
   text: string;
   target?: EditorChatTarget;
+  proposalTarget?: EditorProposalTarget;
+  proposalLabel?: string;
 };
 export type EditorJobState = {
   status: "pending" | "analyzing" | "ready";
@@ -80,6 +86,7 @@ export type EditorJobState = {
   document: EditorDocument | null;
   messages: EditorMessage[];
   topicSuggestions: EditorTopic[];
+  proposalSets: EditorProposalSet[];
   selectedTopic: EditorTopic | null;
   bodyReady: boolean;
   hookSuggestions: EditorHook[];
@@ -87,7 +94,7 @@ export type EditorJobState = {
 };
 export type EditorHistoryEntry = Pick<
   EditorJobState,
-  "document" | "selectedTopic" | "bodyReady" | "hookSuggestions" | "selectedHookId"
+  "document" | "selectedTopic" | "bodyReady" | "hookSuggestions" | "selectedHookId" | "proposalSets"
 >;
 export type EditorAnalysis = {
   formatNotes: EditorDocument["formatNotes"];

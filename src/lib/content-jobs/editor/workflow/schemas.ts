@@ -52,6 +52,18 @@ export const hookSuggestionsSchema = object({
   hooks: array(object({ id: text, text, rationale: text }), 4),
 });
 
+export const topicRevisionSchema = object({
+  message: text,
+  topic: object({ title: text, angle: text, rationale: text, sourceUrls: stringArray }),
+});
+
+export const hookRevisionSchema = object({
+  message: text,
+  hook: object({ text, rationale: text }),
+});
+
+export const chatAnswerSchema = object({ reply: text });
+
 export const chatEditSchema = object({
   reply: text,
   backgroundColorAll: { oneOf: [{ type: "string", pattern: "^#[0-9a-fA-F]{6}$" }, { type: "null" }] },

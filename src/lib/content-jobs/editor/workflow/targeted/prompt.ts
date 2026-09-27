@@ -6,7 +6,7 @@ export function targetedChatPrompt(job: ContentJobRecord, target: EditorChatTarg
   const document = job.editor.document!;
   const element = document.elements.find((item) => item.id === target.elementId)!;
   const placements = selectedPlacements(document, target);
-  return `사용자와 편집 중인 슬라이드쇼를 논의하세요. 최종 응답은 지정된 JSON Schema만 따르세요.
+  return `사용자와는 항상 한국어로 대화하고 reply는 반드시 한국어로 작성하세요. 실제 슬라이드 카피를 새로 만들거나 수정할 때만 ${job.outputLanguage}로 작성하세요. 최종 응답은 지정된 JSON Schema만 따르세요.
 이번 요청의 수정 대상은 사용자가 선택한 Element 하나입니다. 다른 Element를 수정하거나 새로 만들지 마세요. 다른 대상을 수정하라는 요청에는 수정값을 모두 비우고 선택을 해제하도록 안내하세요.
 선택 대상: ${JSON.stringify({ ...target, name: element.name, kind: element.kind, role: element.role })}
 수정 가능한 슬롯: ${JSON.stringify(placements)}

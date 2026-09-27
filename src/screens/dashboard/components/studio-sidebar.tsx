@@ -1,7 +1,7 @@
 "use client";
 
 import { CodexConnection } from "./codex-connection";
-import { Package, Plus } from "lucide-react";
+import { CalendarDays, Images, Package, Plus } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -62,6 +62,22 @@ export function StudioSidebar({
           >
             <Plus aria-hidden="true" />
             <span>새 콘텐츠 만들기</span>
+          </SidebarMenuButton>
+          <SidebarMenuButton
+            className="h-11"
+            isActive={activeTab === "published"}
+            render={<TabsTrigger value="published" className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent" />}
+          >
+            <CalendarDays aria-hidden="true" />
+            <span>게시 콘텐츠</span>
+          </SidebarMenuButton>
+          <SidebarMenuButton
+            className="h-11"
+            isActive={activeTab === "assets"}
+            render={<TabsTrigger value="assets" className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent" />}
+          >
+            <Images aria-hidden="true" />
+            <span>이미지 에셋</span>
           </SidebarMenuButton>
         </TabsList>
       </SidebarContent>

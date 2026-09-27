@@ -10,6 +10,8 @@ import { getContentJob } from "@/screens/content-job/api";
 import { StudioSidebar } from "./components/studio-sidebar";
 import { ProductContextForm } from "./components/product-context-form";
 import { ContentForm } from "./components/content-form/content-form";
+import { PublishedContentPage } from "./components/published/published-content-page";
+import { AssetLibraryPage } from "./components/assets/asset-library-page";
 import { useProductContext } from "./hooks/use-product-context";
 
 export function DashboardScreen() {
@@ -130,6 +132,12 @@ export function DashboardScreen() {
               </TabsContent>
             </>
           )}
+          <TabsContent value="published" className="data-[hidden]:hidden">
+            <PublishedContentPage />
+          </TabsContent>
+          <TabsContent value="assets" className="data-[hidden]:hidden">
+            <AssetLibraryPage />
+          </TabsContent>
         </main>
       </SidebarProvider>
     </Tabs>

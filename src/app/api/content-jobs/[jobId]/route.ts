@@ -61,7 +61,8 @@ export async function POST(request: Request, context: Context) {
         case "select_topic":
           if (typeof input.topicId !== "string")
             return Response.json({ error: "주제를 선택해 주세요." }, { status: 400 });
-          running = editorWorkflow.selectTopic(jobId, input.topicId, revision);
+          running = editorWorkflow.selectTopic(jobId, input.topicId, revision,
+            typeof input.proposalSetId === "string" ? input.proposalSetId : undefined);
           break;
         case "suggest_hooks":
           running = editorWorkflow.suggestHooks(jobId, revision);
@@ -69,7 +70,7 @@ export async function POST(request: Request, context: Context) {
         default:
           if (typeof input.message !== "string")
             return Response.json({ error: "메시지를 입력해 주세요." }, { status: 400 });
-          running = editorWorkflow.chat(jobId, input.message, revision, input.target);
+          running = editorWorkflow.chat(jobId, input.message, revision, input.target, input.proposalTarget);
       }
       void running.catch(() => {});
       return Response.json(contentJobRegistry.get(jobId), {
@@ -86,7 +87,8 @@ export async function POST(request: Request, context: Context) {
         : action === "editor_undo"
           ? editorWorkflow.undo(jobId, revision)
           : typeof input.hookId === "string"
-            ? editorWorkflow.selectHook(jobId, input.hookId, revision)
+            ? editorWorkflow.selectHook(jobId, input.hookId, revision,
+              typeof input.proposalSetId === "string" ? input.proposalSetId : undefined)
             : null;
       if (!job) return Response.json({ error: "훅을 선택해 주세요." }, { status: 400 });
       return Response.json(job, { headers: { "Cache-Control": "no-store" } });

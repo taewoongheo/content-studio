@@ -4,6 +4,7 @@ import type { CodexJsonValue, CodexUserInput } from "../../../codex/transport/ty
 import type { ContentJobInput } from "../../domain/types";
 import { ContentJobRegistry, reuseContentJobRegistry } from "../../workflow/registry";
 import { BACKGROUND_ELEMENT_ID } from "../document";
+import type { ChatRoute, ChatRouter } from "./routing/router";
 import { EditorWorkflowService } from "./workflow";
 
 const input: ContentJobInput = {
@@ -48,12 +49,20 @@ class FakeCodex {
   }
 }
 
+class FakeRouter implements ChatRouter {
+  routes: ChatRoute[] = [];
+  async route() {
+    return this.routes.shift() ?? { capability: "edit_document" as const, proposalSetId: "", candidateId: "" };
+  }
+}
+
 function setup() {
   const codex = new FakeCodex();
+  const router = new FakeRouter();
   const registry = new ContentJobRegistry({ createId: () => "job-1" });
   const job = registry.add(input, "thread-1");
-  const service = new EditorWorkflowService(codex, registry);
-  return { codex, registry, job, service };
+  const service = new EditorWorkflowService(codex, registry, router);
+  return { codex, router, registry, job, service };
 }
 
 test("레퍼런스 분석으로 JSON 편집 문서를 만들고 같은 Codex thread를 재사용한다", async () => {
@@ -347,9 +356,101 @@ test("본문을 바꾸면 선택된 훅과 후보를 무효화하고 되돌리�
   }], next.editor.revision);
   assert.equal(next.editor.selectedHookId, null);
   assert.deepEqual(next.editor.hookSuggestions, []);
+  assert.equal(next.editor.proposalSets.find((set) => set.kind === "hook")?.stale, true);
   assert.equal(next.editor.document?.slides[0].placements[0].value, "");
   next = service.undo(job.id, next.editor.revision);
   assert.equal(next.editor.selectedHookId, "hook-1");
   assert.equal(next.editor.hookSuggestions.length, 4);
+  assert.equal(next.editor.proposalSets.find((set) => set.kind === "hook")?.stale, false);
   assert.equal(next.editor.document?.slides[0].placements[0].value, "훅 1");
+});
+
+test("채팅의 주제 재추천과 후보 수정은 적용 전까지 슬라이드를 바꾸지 않는다", async () => {
+  const { codex, router, job, service } = setup();
+  router.routes.push(
+    { capability: "propose_topics", proposalSetId: "", candidateId: "" },
+    { capability: "revise_topic", proposalSetId: "", candidateId: "" },
+    { capability: "apply_topic", proposalSetId: "", candidateId: "" },
+  );
+  codex.outputs.push(analysis, {
+    message: "새 주제 세 가지를 제안합니다.",
+    topics: [1, 2, 3].map((number) => ({
+      id: `topic-${number}`, title: `주제 ${number}`, angle: "운동", rationale: "이유", sourceUrls: [],
+    })),
+  }, {
+    message: "2번 주제를 수정했습니다.",
+    topic: { title: "세트 기록의 부담", angle: "기록 시간", rationale: "수정 이유", sourceUrls: [] },
+  }, {
+    message: "본문을 채웠습니다.",
+    slotValues: [2, 3, 4].map((number) => ({
+      slideId: `slide-${number}`, placementId: `placement-${number}-1`, value: `본문 ${number}`,
+    })),
+  });
+  let next = await service.initialize(job.id);
+  next = await service.chat(job.id, "세트 기록에 관한 주제를 다시 추천해줘", next.editor.revision);
+  const set = next.editor.proposalSets[0];
+  assert.equal(set.kind, "topic");
+  assert.equal(next.editor.selectedTopic, null);
+  assert.equal(next.editor.document?.slides[1].placements[0].value, "");
+  const target = { setId: set.id, candidateId: "topic-2" };
+  next = await service.chat(job.id, "이 주제를 기록 시간 쪽으로 바꿔줘", next.editor.revision, undefined, target);
+  assert.equal(next.editor.proposalSets[0].version, 2);
+  assert.equal(next.editor.topicSuggestions[1].title, "세트 기록의 부담");
+  assert.equal(next.editor.document?.slides[1].placements[0].value, "");
+  next = await service.chat(job.id, "이 주제를 적용해줘", next.editor.revision, undefined, target);
+  assert.equal(next.editor.selectedTopic?.title, "세트 기록의 부담");
+  assert.equal(next.editor.document?.slides[1].placements[0].value, "본문 2");
+});
+
+test("훅 제안을 수정해도 적용 전에는 첫 장이 유지되고, 적용 후 수정해도 자동 변경되지 않는다", async () => {
+  const { codex, router, registry, job, service } = setup();
+  router.routes.push(
+    { capability: "propose_hooks", proposalSetId: "", candidateId: "" },
+    { capability: "revise_hook", proposalSetId: "", candidateId: "" },
+    { capability: "revise_hook", proposalSetId: "", candidateId: "" },
+  );
+  codex.outputs.push(analysis, {
+    message: "훅 네 개를 제안합니다.",
+    hooks: [1, 2, 3, 4].map((number) => ({
+      id: `hook-${number}`, text: `훅 ${number}`, rationale: "본문과 연결",
+    })),
+  }, {
+    message: "2번을 짧게 바꿨습니다.", hook: { text: "짧은 훅", rationale: "짧고 명료함" },
+  }, {
+    message: "다시 바꿨습니다.", hook: { text: "새로운 훅", rationale: "다른 표현" },
+  });
+  let next = await service.initialize(job.id);
+  next = registry.update(job.id, (current) => {
+    current.editor.bodyReady = true;
+    current.editor.document!.slides[1].placements[0].value = "본문 1";
+    current.editor.document!.slides[2].placements[0].value = "본문 2";
+  });
+  next = await service.chat(job.id, "훅을 네 개 추천해줘", next.editor.revision);
+  const set = next.editor.proposalSets[0];
+  assert.equal(set.kind, "hook");
+  assert.equal(next.editor.document?.slides[0].placements[0].value, "");
+  const target = { setId: set.id, candidateId: "hook-2" };
+  next = await service.chat(job.id, "이 훅을 더 짧게", next.editor.revision, undefined, target);
+  assert.equal(next.editor.hookSuggestions[1].text, "짧은 훅");
+  assert.equal(next.editor.document?.slides[0].placements[0].value, "");
+  next = service.selectHook(job.id, target.candidateId, next.editor.revision, target.setId);
+  assert.equal(next.editor.document?.slides[0].placements[0].value, "짧은 훅");
+  next = await service.chat(job.id, "다른 표현으로 다시", next.editor.revision, undefined, target);
+  assert.equal(next.editor.hookSuggestions[1].text, "새로운 훅");
+  assert.equal(next.editor.document?.slides[0].placements[0].value, "짧은 훅");
+});
+
+test("채팅에서 훅 작성과 즉시 적용을 한 동작으로 요청할 수 있다", async () => {
+  const { codex, router, registry, job, service } = setup();
+  router.routes.push({ capability: "write_hook", proposalSetId: "", candidateId: "" });
+  codex.outputs.push(analysis, {
+    message: "훅을 작성하고 적용했습니다.",
+    hook: { text: "세트 사이가 운동을 끊나요?", rationale: "본문의 문제와 연결" },
+  });
+  let next = await service.initialize(job.id);
+  next = registry.update(job.id, (current) => { current.editor.bodyReady = true; });
+  next = await service.chat(job.id, "훅 하나를 작성해서 바로 적용해줘", next.editor.revision);
+  assert.equal(next.editor.document?.slides[0].placements[0].value, "세트 사이가 운동을 끊나요?");
+  assert.equal(next.editor.proposalSets[0].kind, "hook");
+  assert.equal(next.editor.selectedHookId, next.editor.proposalSets[0].items[0].id);
 });

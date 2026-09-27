@@ -40,6 +40,7 @@ function createEditorState(): EditorJobState {
     document: null,
     messages: [],
     topicSuggestions: [],
+    proposalSets: [],
     selectedTopic: null,
     bodyReady: false,
     hookSuggestions: [],
@@ -163,10 +164,28 @@ export class ContentJobRegistry {
     // The registry survives Next.js development reloads. Jobs created before
     // the editor was introduced can still be present in that shared instance.
     job.editor ??= createEditorState();
+    job.editor.proposalSets ??= [];
+    if (job.editor.topicSuggestions.length > 0 &&
+      !job.editor.proposalSets.some((set) => set.kind === "topic")) {
+      const messageId = randomUUID();
+      job.editor.messages.push({ id: messageId, role: "assistant", text: "이전 주제 제안" });
+      job.editor.proposalSets.push({ id: randomUUID(), kind: "topic", version: 1,
+        messageId, stale: false, items: job.editor.topicSuggestions });
+    }
+    if (job.editor.hookSuggestions.length > 0 &&
+      !job.editor.proposalSets.some((set) => set.kind === "hook")) {
+      const messageId = randomUUID();
+      job.editor.messages.push({ id: messageId, role: "assistant", text: "이전 훅 제안" });
+      job.editor.proposalSets.push({ id: randomUUID(), kind: "hook", version: 1,
+        messageId, stale: false, items: job.editor.hookSuggestions });
+    }
     job.editorHistory ??= [];
     job.assets ??= [];
     normalizeLegacySlots(job.editor.document);
-    for (const entry of job.editorHistory) normalizeLegacySlots(entry.document);
+    for (const entry of job.editorHistory) {
+      entry.proposalSets ??= [];
+      normalizeLegacySlots(entry.document);
+    }
     return job;
   }
 
