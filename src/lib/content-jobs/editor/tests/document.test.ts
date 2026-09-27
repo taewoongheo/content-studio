@@ -55,6 +55,32 @@ test("반복형 분석의 본문 Element를 여러 슬라이드에 배치한다"
   assert.deepEqual(validateEditorDocument(document), []);
 });
 
+test("반복형 본문 장을 비워 추가하거나 내용을 복제하고, 필수 장 제거는 막는다", () => {
+  const initial = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
+  const filled = applyEditorCommand(initial, { type: "set_slot_value", slideId: "slide-2",
+    placementId: "placement-2-1", value: "스쿼트" });
+  const added = applyEditorCommand(filled, { type: "add_slide", afterSlideId: "slide-2",
+    sourceSlideId: "slide-2", newSlideId: "new-body", copyContent: false });
+  assert.deepEqual(added.slides.map((slide) => slide.role), ["hook", "body", "body", "body", "cta"]);
+  assert.equal(added.slides[2].placements[0].elementId, "title");
+  assert.equal(added.slides[2].placements[0].value, "");
+  assert.equal(added.slides[2].placements.at(-1)?.elementId, BACKGROUND_ELEMENT_ID);
+  const copied = applyEditorCommand(filled, { type: "add_slide", afterSlideId: "slide-2",
+    sourceSlideId: "slide-2", newSlideId: "copied-body", copyContent: true });
+  assert.equal(copied.slides[2].placements[0].value, "스쿼트");
+  const removed = applyEditorCommand(added, { type: "remove_slide", slideId: "new-body" });
+  assert.equal(removed.slides.length, 4);
+  assert.deepEqual(validateEditorDocument(removed), []);
+  assert.throws(() => applyEditorCommand(initial, { type: "remove_slide", slideId: "slide-1" }), /훅과 CTA/);
+  assert.throws(() => applyEditorCommand(initial, { type: "remove_slide", slideId: "slide-4" }), /훅과 CTA/);
+  assert.throws(() => applyEditorCommand(initial, { type: "add_slide", afterSlideId: "slide-4",
+    sourceSlideId: "slide-2", newSlideId: "too-late", copyContent: false }), /본문 장 사이/);
+  assert.throws(() => applyEditorCommand(initial, { type: "add_slide", afterSlideId: "slide-2",
+    sourceSlideId: "slide-2", newSlideId: "", copyContent: false }), /슬라이드 ID/);
+  const three = applyEditorCommand(initial, { type: "remove_slide", slideId: "slide-2" });
+  assert.throws(() => applyEditorCommand(three, { type: "remove_slide", slideId: "slide-3" }), /필수 슬라이드/);
+});
+
 test("배경은 모든 장이 공유하는 삭제 불가 Element이며 기존 장별 색을 보존한다", () => {
   const document = createDocumentFromAnalysis({ ...analysis, slides: analysis.slides.map((slide, index) => ({
     ...slide, backgroundColor: index === 1 ? "#222222" : "#FFFFFF",

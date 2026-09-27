@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { ArrowLeft, Copy, Layers3, LoaderCircle, Trash2, Undo2 } from "lucide-react";
+import { ArrowLeft, Copy, Layers3, LoaderCircle, Plus, Trash2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
-import type { EditorCommand, ElementDefinition, ElementFrame, ElementKind } from "@/lib/content-jobs/editor/types";
+import type { EditorCommand, ElementFrame, ElementKind } from "@/lib/content-jobs/editor/types";
+import { makeElementDefinition } from "@/lib/content-jobs/editor/elements/factory";
+import { slideActionCommand } from "@/lib/content-jobs/editor/slides/commands";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, getDuplicateTargets } from "@/lib/content-jobs/editor/document";
-import { uploadEditorImage } from "@/screens/content-job/api";
+import { attachStoredEditorImage, uploadEditorImage } from "@/screens/content-job/api";
 import { useContentJob } from "@/screens/content-job/use-content-job";
 import { ChatPanel } from "./components/chat-panel";
 import { ElementInspector, type ElementInspectorHandle } from "./components/inspector/element-inspector";
@@ -16,6 +18,7 @@ import { removalCommandsForScope, selectVisualSlides, visualScopeLabel, type Sco
 import { SlideCanvas } from "./components/canvas/slide-canvas";
 import { SlideBackground } from "./components/inspector/slide-background";
 import { frameCommandsForScope } from "./components/canvas/frame-commands";
+import { ImageLibraryPicker } from "./components/library/image-library-picker";
 import { resolveEditorSelection, roleLabels } from "./editor-selection";
 
 export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobSnapshot; onNewJob: () => void }) {
@@ -25,7 +28,9 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
   const [scopeSelection, setScopeSelection] = useState<{ key: string; slideIds: string[] } | null>(null);
   const [imageError, setImageError] = useState("");
   const [showGuides, setShowGuides] = useState(true);
+  const [showImageLibrary, setShowImageLibrary] = useState(false);
   const inspectorRef = useRef<ElementInspectorHandle>(null);
+  const imageLibraryButtonRef = useRef<HTMLButtonElement>(null);
   const latestRevision = useRef(job.editor.revision);
   const commandQueue = useRef<Promise<unknown>>(Promise.resolve());
   useEffect(() => {
@@ -69,41 +74,66 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
   }
 
   async function uploadImage(file: File) {
-    if (!slide || !placement) return;
+    if (!slide || !placement) return false;
     setImageError("");
     try {
+      if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
       const updated = await uploadEditorImage(job.id, file);
       const asset = updated.assets.at(-1);
       if (!asset) throw new Error("업로드한 이미지를 찾을 수 없습니다.");
       latestRevision.current = Math.max(latestRevision.current, updated.editor.revision);
-      await saveCommands([{ type: "set_slot_value", slideId: slide.id, placementId: placement.id, value: asset.id }]);
+      return saveCommands([{ type: "set_slot_value", slideId: slide.id, placementId: placement.id, value: asset.id }]);
     } catch (error) {
       setImageError(error instanceof Error ? error.message : "이미지를 추가하지 못했습니다.");
+      return false;
     }
   }
 
-  async function addElement(kind: Exclude<ElementKind, "background">) {
-    if (!slide) return;
+  async function addElement(kind: Exclude<ElementKind, "background">, imageAssetId?: string) {
+    if (!slide) return false;
     const id = crypto.randomUUID();
     const newPlacementId = crypto.randomUUID();
     const sourceImageId = job.referenceImages.find((image) => image.role === slide.role)?.id ?? job.referenceImages[0]?.id ?? "";
-    const shapeNames = { rectangle: "사각형", circle: "원형", triangle: "삼각형" } as const;
-    const isShape = kind in shapeNames;
-    const name = isShape ? shapeNames[kind as keyof typeof shapeNames] : kind === "text" ? "새 텍스트" : "새 이미지";
-    const newElement: ElementDefinition = {
-      id,
-      name,
-      role: isShape ? "이 장의 시각적 강조" : kind === "text" ? "이 장의 추가 설명" : "이 장의 시각 자료",
-      kind,
-      frame: isShape ? { x: 0.35, y: 0.35, width: 0.3, height: 0.2 } : { x: 0.15, y: 0.4, width: 0.7, height: 0.2 },
-      style: { color: "#111111", backgroundColor: isShape ? "#111111" : "transparent", fontSize: 36, fontWeight: 700, textAlign: "center", borderRadius: 0, fontFamily: "sans-serif", imageFit: "cover" },
-      sourceImageId,
-    };
+    const newElement = makeElementDefinition({ id, kind, sourceImageId });
     const saved = await saveCommands([
       { type: "add_element", element: newElement },
       { type: "place_element", slideId: slide.id, elementId: id, placementId: newPlacementId },
+      ...(imageAssetId ? [{ type: "set_slot_value" as const, slideId: slide.id, placementId: newPlacementId, value: imageAssetId }] : []),
     ]);
     if (saved) setPlacementId(newPlacementId);
+    return saved;
+  }
+
+  async function addStoredImage(assetId: string) {
+    setImageError("");
+    try {
+      const updated = await attachStoredEditorImage(job.id, assetId);
+      latestRevision.current = Math.max(latestRevision.current, updated.editor.revision);
+      return addElement("image", assetId);
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : "저장된 이미지를 추가하지 못했습니다.");
+      return false;
+    }
+  }
+
+  async function addSlide(copyContent: boolean) {
+    if (!document || !slide) return;
+    const newSlideId = crypto.randomUUID();
+    const command = slideActionCommand(document, slide.id,
+      copyContent ? "duplicate_slide" : "add_slide", newSlideId);
+    if (await saveCommands([command])) {
+      setSlideId(newSlideId);
+      setPlacementId(null);
+    }
+  }
+
+  async function removeSlide() {
+    if (!document || !slide || !window.confirm("이 슬라이드를 제거할까요? 되돌리기로 복원할 수 있습니다.")) return;
+    const index = document.slides.findIndex((item) => item.id === slide.id);
+    if (await saveCommands([slideActionCommand(document, slide.id, "remove_slide")])) {
+      setSlideId(document.slides[index + 1]?.id ?? document.slides[index - 1].id);
+      setPlacementId(null);
+    }
   }
 
   async function duplicateElement() {
@@ -191,6 +221,8 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
                   slideId={slide.id}
                   selectedSlideIds={selectedSlideIds}
                   visualTargets={visualTargets}
+                  jobId={job.id}
+                  currentImage={job.assets.find((asset) => asset.id === placement.value) ?? null}
                   disabled={disabled}
                   onSave={saveCommands}
                   onUploadImage={uploadImage}
@@ -201,8 +233,20 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
 
           <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border bg-background shadow-sm max-lg:order-1 max-lg:min-h-[620px]" aria-label="슬라이드 편집 영역">
             <nav aria-label="페이지 선택" className="shrink-0 border-b px-4 py-3">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-sm font-semibold">페이지</h2>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <h2 className="mr-1 text-sm font-semibold">페이지</h2>
+                  <Button type="button" variant="outline" size="sm" disabled={disabled || document.slides.length >= 20}
+                    onClick={() => void addSlide(false)}><Plus className="size-3.5" aria-hidden="true" /> 추가</Button>
+                  <Button type="button" variant="outline" size="sm"
+                    disabled={disabled || document.slides.length >= 20 || (document.structure === "repeating" && slide.role !== "body")}
+                    onClick={() => void addSlide(true)}><Copy className="size-3.5" aria-hidden="true" /> 장 복제</Button>
+                  <Button type="button" variant="ghost" size="icon-sm" className="text-destructive hover:text-destructive"
+                    aria-label="현재 슬라이드 제거" title="현재 슬라이드 제거"
+                    disabled={disabled || document.slides.length <= (document.structure === "repeating" ? 3 : 2) ||
+                      (document.structure === "repeating" && slide.role !== "body")}
+                    onClick={() => void removeSlide()}><Trash2 className="size-3.5" aria-hidden="true" /></Button>
+                </div>
                 <div className="flex items-center gap-2">
                   <Button type="button" variant={showGuides ? "secondary" : "ghost"} size="sm"
                     aria-pressed={showGuides} onClick={() => setShowGuides((current) => !current)}
@@ -247,6 +291,10 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
                 onFrameChange={changeFrame} />
             </div>
             <div className="shrink-0 border-t px-4 py-3">
+              {showImageLibrary && <ImageLibraryPicker anchorRef={imageLibraryButtonRef} disabled={disabled}
+                onSelect={(asset) => addStoredImage(asset.id)}
+                onAddEmpty={() => addElement("image")}
+                onClose={() => { setShowImageLibrary(false); imageLibraryButtonRef.current?.focus(); }} />}
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <h2 className="text-sm font-semibold">Element</h2>
@@ -271,7 +319,9 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
                       title={`선택한 ${selectedSlideIds.length}장에서 제거`}><Trash2 className="size-3.5" aria-hidden="true" /></Button>
                   </div>}
                   <Button size="sm" variant="outline" disabled={disabled} onClick={() => void addElement("text")}>텍스트 추가</Button>
-                  <Button size="sm" variant="outline" disabled={disabled} onClick={() => void addElement("image")}>이미지 추가</Button>
+                  <Button ref={imageLibraryButtonRef} size="sm" variant={showImageLibrary ? "secondary" : "outline"} disabled={disabled}
+                    aria-expanded={showImageLibrary} aria-controls="editor-image-library"
+                    onClick={() => setShowImageLibrary((current) => !current)}>이미지 추가</Button>
                   <label className="sr-only" htmlFor="add-shape">도형 추가</label>
                   <select id="add-shape" defaultValue="" disabled={disabled} className="h-7 rounded-md border bg-background px-2 text-[0.8rem] font-medium" onChange={(event) => {
                     const kind = event.target.value as "rectangle" | "circle" | "triangle";
@@ -304,7 +354,7 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
             <div className="shrink-0 border-b px-4 py-3">
               <h2 className="text-sm font-semibold">AI 채팅 편집</h2>
             </div>
-            <ChatPanel editor={job.editor} activeOperation={job.activeOperation} disabled={disabled}
+            <ChatPanel jobId={job.id} editor={job.editor} activeOperation={job.activeOperation} disabled={disabled}
               selectedTarget={slide && placement && element ? {
                 target: { slideId: slide.id, placementId: placement.id, elementId: element.id, slideIds: selectedSlideIds },
                 name: element.name, scopeLabel: visualScopeLabel(selectedSlideIds.length, appliedSlides.length),

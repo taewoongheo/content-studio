@@ -49,6 +49,8 @@ export function validateEditorDocument(document: EditorDocument): string[] {
     errors.push("공통 배경 Element가 올바르지 않습니다.");
   if (document.slides.length < 2 || document.slides.length > 20)
     errors.push("슬라이드 수가 올바르지 않습니다.");
+  if (document.structure === "repeating" && document.slides.length < 3)
+    errors.push("반복형에는 본문 슬라이드가 한 장 이상 필요합니다.");
   if (document.structure === "repeating" && document.slides.some((slide, index) =>
     slide.role !== (index === 0 ? "hook" : index === document.slides.length - 1 ? "cta" : "body")))
     errors.push("반복형은 훅·본문·CTA 순서여야 합니다.");
@@ -235,6 +237,38 @@ export function applyEditorCommand(document: EditorDocument, command: EditorComm
         frameOverride: null,
         styleOverride: null,
       });
+      break;
+    }
+    case "add_slide": {
+      if (next.slides.length >= 20) throw new Error("슬라이드는 최대 20장입니다.");
+      if (!command.newSlideId.trim()) throw new Error("새 슬라이드 ID가 필요합니다.");
+      if (next.slides.some((slide) => slide.id === command.newSlideId))
+        throw new Error("이미 존재하는 슬라이드 ID입니다.");
+      const afterIndex = next.slides.findIndex((slide) => slide.id === command.afterSlideId);
+      const source = requireSlide(next, command.sourceSlideId);
+      if (afterIndex < 0) throw new Error("삽입 위치의 슬라이드를 찾을 수 없습니다.");
+      if (next.structure === "repeating" &&
+        (afterIndex === next.slides.length - 1 || source.role !== "body"))
+        throw new Error("반복형 본문 장 사이에 본문 슬라이드만 추가할 수 있습니다.");
+      const slide = structuredClone(source);
+      slide.id = command.newSlideId;
+      slide.placements = slide.placements.map((placement) => ({
+        ...placement,
+        id: placement.elementId === BACKGROUND_ELEMENT_ID ? BACKGROUND_PLACEMENT_ID
+          : `${command.newSlideId}-${placement.id}`,
+        value: command.copyContent ? placement.value : "",
+      }));
+      next.slides.splice(afterIndex + 1, 0, slide);
+      break;
+    }
+    case "remove_slide": {
+      const index = next.slides.findIndex((slide) => slide.id === command.slideId);
+      if (index < 0) throw new Error("슬라이드를 찾을 수 없습니다.");
+      if (next.structure === "repeating" && (index === 0 || index === next.slides.length - 1))
+        throw new Error("반복형의 훅과 CTA 장은 제거할 수 없습니다.");
+      if (next.slides.length <= (next.structure === "repeating" ? 3 : 2))
+        throw new Error("필수 슬라이드는 제거할 수 없습니다.");
+      next.slides.splice(index, 1);
       break;
     }
     case "remove_placement": {

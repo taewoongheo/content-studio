@@ -58,10 +58,14 @@ export function targetedMutationCommands(document: EditorDocument, target: Edito
   if (!element) throw new Error("선택한 Element를 찾을 수 없습니다.");
   const style = Object.fromEntries(Object.entries(output.style).filter(([, value]) => value !== null)) as Partial<ElementStyle>;
   if (element.id === BACKGROUND_ELEMENT_ID && (output.frame ||
-    Object.keys(style).some((key) => key !== "backgroundColor") || output.slotValues.length > 0))
+    Object.keys(style).some((key) => key !== "backgroundColor") || output.slotValues.length > 0 ||
+    output.name != null || output.role != null))
     throw new Error("배경 Element는 배경색만 변경할 수 있습니다.");
   assertSlotUpdatesInScope(document, target, output, element.kind);
   const commands: EditorCommand[] = [
+    ...(output.name != null || output.role != null ? [{ type: "update_element" as const,
+      elementId: element.id, ...(output.name != null ? { name: output.name } : {}),
+      ...(output.role != null ? { role: output.role } : {}) }] : []),
     ...visualCommands(document, target, output.frame, style),
     ...output.slotValues.map((item) => ({ type: "set_slot_value" as const, ...item })),
   ];

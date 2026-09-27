@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { AssetStore } from "@/lib/local-db/assets";
 import { openLocalDatabase } from "@/lib/local-db/database";
-import { addEditorAsset, readEditorAsset } from "../assets";
+import { addEditorAsset, attachStoredEditorAsset, readEditorAsset } from "../assets";
 import { ContentJobRegistry } from "../../workflow/registry";
 
 const pngHeader = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -29,6 +29,14 @@ test("업로드한 이미지는 작업에 묶고 브라우저 상태에는 로�
     const loaded = await readEditorAsset(registry, "job-1", asset.id, store);
     assert.deepEqual(new Uint8Array(loaded.bytes), pngHeader);
     assert.equal(store.get(asset.id)?.name, "new.png");
+    const stored = store.create({ name: "기존 이미지", description: "운동 자세", type: "image/png", bytes: pngHeader });
+    const beforeCount = store.list().length;
+    const attached = attachStoredEditorAsset(registry, "job-1", stored.id, store);
+    assert.equal(attached.assets.at(-1)?.id, stored.id);
+    assert.deepEqual(new Uint8Array((await readEditorAsset(registry, "job-1", stored.id, store)).bytes), pngHeader);
+    assert.equal(store.list().length, beforeCount);
+    assert.equal(attachStoredEditorAsset(registry, "job-1", stored.id, store).assets.length, 2);
+    assert.throws(() => attachStoredEditorAsset(registry, "job-1", "missing", store), /찾을 수 없습니다/);
     await assert.rejects(addEditorAsset(registry, "job-1", new File(["wrong"], "bad.png", { type: "image/png" }), store));
     const legacyPath = join(directory, "old.png");
     await writeFile(legacyPath, pngHeader);

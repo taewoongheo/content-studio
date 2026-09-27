@@ -5,6 +5,8 @@ type TargetedStyle = { [Key in keyof ElementStyle]: ElementStyle[Key] | null };
 export type TargetedChatOutput = {
   intent: "edit" | "answer" | "unsupported";
   reply: string;
+  name: string | null;
+  role: string | null;
   style: TargetedStyle;
   frame: ElementFrame | null;
   slotValues: Array<{ slideId: string; placementId: string; value: string }>;
@@ -20,6 +22,8 @@ const object = (properties: Record<string, unknown>) => ({
 export const targetedChatSchema = object({
   intent: { type: "string", enum: ["edit", "answer", "unsupported"] },
   reply: text,
+  name: nullable(text),
+  role: nullable(text),
   style: object({
     color: nullable(color),
     backgroundColor: nullable({ type: "string", pattern: "^(#[0-9a-fA-F]{6}|transparent)$" }),

@@ -181,6 +181,7 @@ export class ContentJobRegistry {
     }
     job.editorHistory ??= [];
     job.assets ??= [];
+    job.chatImages ??= [];
     normalizeLegacySlots(job.editor.document);
     for (const entry of job.editorHistory) {
       entry.proposalSets ??= [];

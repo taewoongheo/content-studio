@@ -25,6 +25,18 @@ export async function addEditorAsset(registry: ContentJobRegistry, jobId: string
   return registry.get(jobId);
 }
 
+export function attachStoredEditorAsset(registry: ContentJobRegistry, jobId: string, assetId: string, store?: AssetStore) {
+  const job = registry.getRecord(jobId);
+  if (job.activeOperation)
+    throw new ContentJobError("OPERATION_IN_PROGRESS", "AI 작업이 끝난 뒤 이미지를 추가해 주세요.");
+  const asset = (store ?? defaultStore()).get(assetId);
+  if (!asset) throw new ContentJobError("JOB_NOT_FOUND", "저장된 이미지를 찾을 수 없습니다.");
+  if (job.assets.some((item) => item.id === assetId)) return registry.get(jobId);
+  return registry.update(jobId, (current) => {
+    current.assets.push({ id: asset.id, name: asset.name, type: asset.type, size: asset.size });
+  });
+}
+
 export async function readEditorAsset(registry: ContentJobRegistry, jobId: string, assetId: string, store?: AssetStore) {
   const asset = registry.getRecord(jobId).assets.find((item) => item.id === assetId);
   if (!asset) throw new ContentJobError("JOB_NOT_FOUND", "이미지를 찾을 수 없습니다.");

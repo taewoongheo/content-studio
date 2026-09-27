@@ -1,15 +1,20 @@
 import { randomUUID } from "node:crypto";
+import { AssetStore, type StoredAsset } from "@/lib/local-db/assets";
+import { getLocalDatabase } from "@/lib/local-db/database";
 import type { CodexConnectionManager } from "../../../codex/connection/connection";
 import type { CodexJsonValue, CodexUserInput } from "../../../codex/transport/types";
 import type { ContentJobRecord } from "../../domain/types";
 import { ContentJobError, ContentJobRegistry } from "../../workflow/registry";
 import { applyEditorCommands, BACKGROUND_ELEMENT_ID, createDocumentFromAnalysis } from "../document";
+import { makeElementDefinition } from "../elements/factory";
+import { slideActionCommand } from "../slides/commands";
 import { editorAnalysisSchema, validateEditorAnalysis, validateEditorCommands } from "../schema";
 import type {
   EditorCommand,
   EditorChatTarget,
   EditorDocument,
   EditorHook,
+  EditorMessage,
   EditorProposalTarget,
   EditorTopic,
   ElementDefinition,
@@ -20,7 +25,11 @@ import { analysisPrompt, answerPrompt, bodyPrompt, chatPrompt, directHookPrompt,
 import { bodyFillSchema, chatAnswerSchema, chatEditSchema, hookRevisionSchema, hookSuggestionsSchema, topicRevisionSchema, topicSuggestionsSchema } from "./schemas";
 import { addProposalSet, resolveProposal, reviseHook, reviseTopic, staleHookProposals } from "./proposals/state";
 import { CodexChatRouter, type ChatRouter, type ChatRoute } from "./routing/router";
-import { resolveChatTarget, targetedMutationCommands } from "./targeted/chat";
+import { duplicateElementCommand, removeElementCommands } from "./actions/commands";
+import { elementChoicePrompt, elementChoiceSchema, type ElementChoice } from "./actions/elements";
+import { imageChoicePrompt, imageChoiceSchema, type ImageChoice } from "./actions/images";
+import { saveChatImage } from "./attachments/chat-images";
+import { resolveChatTarget, selectedPlacements, targetedMutationCommands } from "./targeted/chat";
 import { targetedChatPrompt } from "./targeted/prompt";
 import { targetedChatSchema, type TargetedChatOutput } from "./targeted/schema";
 import { validateStructuredOutput } from "../../structured-output/schemas";
@@ -71,7 +80,8 @@ function assertRevision(job: ContentJobRecord, expected: number) {
 }
 
 function appendMessage(job: ContentJobRecord, role: "user" | "assistant", text: string,
-  target?: EditorChatTarget, proposalTarget?: EditorProposalTarget) {
+  target?: EditorChatTarget, proposalTarget?: EditorProposalTarget,
+  image?: EditorMessage["image"]) {
   const id = randomUUID();
   const proposalSet = job.editor.proposalSets.find((set) => set.id === proposalTarget?.setId);
   const proposal = proposalSet?.items.find((item) => item.id === proposalTarget?.candidateId);
@@ -79,7 +89,7 @@ function appendMessage(job: ContentJobRecord, role: "user" | "assistant", text: 
     ? `${proposalSet.kind === "topic" ? "주제 제안" : "훅 제안"} · ${proposalSet.kind === "topic"
       ? (proposal as EditorTopic).title : (proposal as EditorHook).text}` : undefined;
   job.editor.messages.push({ id, role, text, ...(target ? { target } : {}),
-    ...(proposalTarget ? { proposalTarget, proposalLabel } : {}) });
+    ...(proposalTarget ? { proposalTarget, proposalLabel } : {}), ...(image ? { image } : {}) });
   if (job.editor.messages.length > 60) job.editor.messages.splice(0, job.editor.messages.length - 60);
   return id;
 }
@@ -97,6 +107,7 @@ function replaceDocument(job: ContentJobRecord, document: EditorDocument) {
     if (job.editorHistory.length > 30) job.editorHistory.shift();
   }
   job.editor.document = document;
+  job.slideCount = document.slides.length;
   job.editor.revision += 1;
 }
 
@@ -185,10 +196,15 @@ function requestedProposal(job: ContentJobRecord, value: unknown): EditorProposa
 
 export class EditorWorkflowService {
   private readonly router: ChatRouter;
+  private readonly activeChatImage = new WeakMap<ContentJobRecord, CodexUserInput>();
 
   constructor(private readonly codex: CodexClient, private readonly registry: ContentJobRegistry,
-    router?: ChatRouter) {
+    router?: ChatRouter, private readonly assetStore?: AssetStore) {
     this.router = router ?? new CodexChatRouter(codex);
+  }
+
+  private storedAssets() {
+    return this.assetStore ?? new AssetStore(getLocalDatabase());
   }
 
   get(id: string) {
@@ -196,9 +212,10 @@ export class EditorWorkflowService {
   }
 
   private async turn<Value>(job: ContentJobRecord, schema: Record<string, unknown>, input: CodexUserInput[]): Promise<Value> {
+    const image = this.activeChatImage.get(job);
     const turn = await this.codex.runStructuredTurn({
       threadId: job.threadId,
-      input,
+      input: image ? [...input, image] : input,
       outputSchema: schema as CodexJsonValue,
     });
     if (turn.status !== "completed")
@@ -218,6 +235,23 @@ export class EditorWorkflowService {
     }
     const output = await this.turn<ChatOutput>(job, chatEditSchema, [{ type: "text", text: chatPrompt(job) }]);
     return { reply: output.reply, commands: checkedChatCommands(() => mutationCommands(output)) };
+  }
+
+  private commitChatCommands(id: string, job: ContentJobRecord, document: EditorDocument,
+    commands: EditorCommand[], reply: string, asset?: StoredAsset) {
+    let next: EditorDocument;
+    try { next = applyEditorCommands(document, commands); }
+    catch (error) { invalid(error instanceof Error ? error.message : "AI 수정 명령이 올바르지 않습니다."); }
+    const availableAssets = asset && !job.assets.some((item) => item.id === asset.id)
+      ? [...job.assets, { id: asset.id, name: asset.name, type: asset.type, size: asset.size }] : job.assets;
+    assertImageAssets({ ...job, assets: availableAssets }, next);
+    return this.registry.update(id, (current) => {
+      if (asset && !current.assets.some((item) => item.id === asset.id))
+        current.assets.push({ id: asset.id, name: asset.name, type: asset.type, size: asset.size });
+      if (commands.length > 0) replaceWithReconciliation(current, document, next);
+      else current.editor.revision += 1;
+      appendMessage(current, "assistant", reply);
+    });
   }
 
   initialize(id: string) {
@@ -380,6 +414,7 @@ export class EditorWorkflowService {
     return this.registry.update(id, (current) => {
       const previous = current.editorHistory.pop()!;
       current.editor.document = previous.document;
+      current.slideCount = previous.document?.slides.length ?? current.slideCount;
       current.editor.selectedTopic = previous.selectedTopic;
       current.editor.bodyReady = previous.bodyReady;
       current.editor.hookSuggestions = previous.hookSuggestions;
@@ -467,11 +502,86 @@ export class EditorWorkflowService {
           addProposalSet(current.editor, "hook", [hook], messageId);
         });
       }
+      case "add_element": {
+        const choice = await this.turn<ElementChoice>(job, elementChoiceSchema(document),
+          [{ type: "text", text: elementChoicePrompt(job, elementTarget) }]);
+        if (!choice.name.trim() || !choice.role.trim()) invalid("새 Element의 이름과 역할이 필요합니다.");
+        const slide = document.slides.find((item) => item.id === choice.slideId)!;
+        const element = makeElementDefinition({ id: randomUUID(), kind: choice.kind,
+          name: choice.name, role: choice.role,
+          sourceImageId: job.referenceImages.find((image) => image.role === slide.role)?.id ?? job.referenceImages[0]?.id ?? "" });
+        if (choice.kind !== "text" && choice.value) invalid("도형에는 텍스트 내용을 넣을 수 없습니다.");
+        const placementId = randomUUID();
+        return this.commitChatCommands(id, job, document, [
+          { type: "add_element", element },
+          { type: "place_element", slideId: slide.id, elementId: element.id, placementId },
+          ...(choice.value ? [{ type: "set_slot_value" as const, slideId: slide.id, placementId, value: choice.value }] : []),
+        ], choice.reply);
+      }
+      case "remove_element": {
+        if (!elementTarget) invalid("제거할 Element를 화면에서 선택해 주세요.");
+        const commands = checkedChatCommands(() => removeElementCommands(document, elementTarget));
+        return this.commitChatCommands(id, job, document, commands,
+          `선택한 Element를 ${elementTarget.slideIds.length}장에서 제거했습니다.`);
+      }
+      case "duplicate_element": {
+        if (!elementTarget) invalid("복제할 Element를 화면에서 선택해 주세요.");
+        const commands = checkedChatCommands(() => [duplicateElementCommand(document, elementTarget)]);
+        return this.commitChatCommands(id, job, document, commands,
+          `선택한 Element를 ${elementTarget.slideIds.length}장에 복제했습니다.`);
+      }
+      case "add_slide":
+      case "duplicate_slide":
+      case "remove_slide": {
+        const capability = route.capability;
+        const slideId = route.slideId || elementTarget?.slideId || document.slides[0].id;
+        const command = checkedChatCommands(() => [slideActionCommand(document, slideId, capability, randomUUID())]);
+        const labels = { add_slide: "빈 슬라이드를 추가했습니다.", duplicate_slide: "슬라이드를 복제했습니다.",
+          remove_slide: "슬라이드를 제거했습니다." };
+        return this.commitChatCommands(id, job, document, command, labels[capability]);
+      }
+      case "add_image":
+      case "replace_image": {
+        const store = this.storedAssets();
+        const assets = store.list();
+        if (route.capability === "replace_image" && assets.length === 0)
+          invalid("저장된 이미지가 없습니다. 이미지를 먼저 업로드해 주세요.");
+        const choice = await this.turn<ImageChoice>(job, imageChoiceSchema(document, assets),
+          [{ type: "text", text: imageChoicePrompt(job, assets, route.capability, elementTarget) }]);
+        const asset = choice.assetId ? store.get(choice.assetId) : null;
+        if (choice.assetId && !asset) invalid("저장된 이미지를 찾을 수 없습니다.");
+        if (route.capability === "add_image") {
+          const slide = document.slides.find((item) => item.id === choice.slideId)!;
+          const element = makeElementDefinition({ id: randomUUID(), kind: "image",
+            name: asset?.name ?? "새 이미지", role: asset?.description || "이 장의 시각 자료",
+            sourceImageId: job.referenceImages.find((image) => image.role === slide.role)?.id ?? job.referenceImages[0]?.id ?? "" });
+          const placementId = randomUUID();
+          return this.commitChatCommands(id, job, document, [
+            { type: "add_element", element },
+            { type: "place_element", slideId: slide.id, elementId: element.id, placementId },
+            ...(asset ? [{ type: "set_slot_value" as const, slideId: slide.id, placementId, value: asset.id }] : []),
+          ], choice.reply, asset ?? undefined);
+        }
+        if (!asset) invalid("교체할 이미지를 저장된 이미지에서 찾지 못했습니다.");
+        if (!elementTarget || document.elements.find((item) => item.id === elementTarget.elementId)?.kind !== "image")
+          invalid("교체할 이미지 Element를 화면에서 선택해 주세요.");
+        const commands = selectedPlacements(document, elementTarget).map(({ slideId, placementId }) => ({
+          type: "set_slot_value" as const, slideId, placementId, value: asset.id,
+        }));
+        return this.commitChatCommands(id, job, document, commands, choice.reply, asset);
+      }
+      case "edit_image": {
+        if (!elementTarget || document.elements.find((item) => item.id === elementTarget.elementId)?.kind !== "image")
+          invalid("편집할 이미지 Element를 화면에서 선택해 주세요.");
+        const { reply, commands } = await this.generateChatEdit(job, document, elementTarget);
+        return this.commitChatCommands(id, job, document, commands, reply);
+      }
       case "undo": {
         if (job.editorHistory.length === 0) invalid("되돌릴 수정이 없습니다.");
         return this.registry.update(id, (current) => {
           const previous = current.editorHistory.pop()!;
           current.editor.document = previous.document;
+          current.slideCount = previous.document?.slides.length ?? current.slideCount;
           current.editor.selectedTopic = previous.selectedTopic;
           current.editor.bodyReady = previous.bodyReady;
           current.editor.hookSuggestions = previous.hookSuggestions;
@@ -491,23 +601,15 @@ export class EditorWorkflowService {
       }
       case "edit_document": {
         const { reply, commands } = await this.generateChatEdit(job, document, elementTarget);
-        let next: EditorDocument;
-        try { next = applyEditorCommands(document, commands); }
-        catch (error) { invalid(error instanceof Error ? error.message : "AI 수정 명령이 올바르지 않습니다."); }
-        assertImageAssets(job, next);
-        return this.registry.update(id, (current) => {
-          if (commands.length > 0) replaceWithReconciliation(current, document, next);
-          else current.editor.revision += 1;
-          appendMessage(current, "assistant", reply);
-        });
+        return this.commitChatCommands(id, job, document, commands, reply);
       }
     }
   }
 
   chat(id: string, message: string, expectedRevision: number,
-    requestedTarget?: unknown, requestedProposalTarget?: unknown) {
+    requestedTarget?: unknown, requestedProposalTarget?: unknown, imageFile?: File) {
     const trimmed = message.trim();
-    if (!trimmed || trimmed.length > 2000) invalid("메시지는 1~2000자로 입력해 주세요.");
+    if ((!trimmed && !imageFile) || trimmed.length > 2000) invalid("메시지는 1~2000자로 입력해 주세요.");
     return this.registry.runExclusive(id, "chat_edit", async (job) => {
       const document = readyDocument(job);
       if (job.editor.revision !== expectedRevision) stale();
@@ -518,12 +620,22 @@ export class EditorWorkflowService {
       }
       const proposalTarget = requestedProposal(job, requestedProposalTarget);
       if (target && proposalTarget) invalid("채팅 대상은 Element 또는 제안 하나만 선택해 주세요.");
+      const image = imageFile ? await saveChatImage(job, imageFile) : null;
+      const prompt = trimmed || "첨부한 이미지를 보고 설명해 주세요.";
       this.registry.update(id, (current) => {
-        appendMessage(current, "user", trimmed, target ?? undefined, proposalTarget ?? undefined);
+        appendMessage(current, "user", prompt, target ?? undefined, proposalTarget ?? undefined,
+          image ? { id: image.id, name: image.name, type: image.type } : undefined);
         current.editor.revision += 1;
       });
-      const route = await this.router.route({ job, message: trimmed, elementTarget: target, proposalTarget });
-      return this.executeChatRoute(id, job, document, route, trimmed, target, proposalTarget);
+      const imageInput: CodexUserInput | undefined = image
+        ? { type: "localImage", path: image.path, detail: "high" } : undefined;
+      if (imageInput) this.activeChatImage.set(job, imageInput);
+      try {
+        const route = await this.router.route({ job, message: prompt, elementTarget: target, proposalTarget });
+        return await this.executeChatRoute(id, job, document, route, prompt, target, proposalTarget);
+      } finally {
+        this.activeChatImage.delete(job);
+      }
     });
   }
 }

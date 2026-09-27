@@ -56,6 +56,7 @@ export type ContentJobRecord = ContentJobInput & {
   editor: EditorJobState;
   editorHistory: EditorHistoryEntry[];
   assets: EditorAsset[];
+  chatImages?: Array<{ id: string; name: string; type: EditorAsset["type"]; path: string }>;
   activeOperation: ContentJobOperation | null;
   lastError: string | null;
   createdAt: string;
@@ -64,7 +65,7 @@ export type ContentJobRecord = ContentJobInput & {
 
 export type ContentJobSnapshot = Omit<
   ContentJobRecord,
-  "threadId" | "referenceImages" | "editorHistory" | "assets"
+  "threadId" | "referenceImages" | "editorHistory" | "assets" | "chatImages"
 > & {
   referenceImages: Array<Omit<ReferenceImageInput, "path">>;
   assets: EditorAsset[];

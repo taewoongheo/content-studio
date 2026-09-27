@@ -1,5 +1,6 @@
 import { contentJobEvents } from "@/lib/content-jobs/http/events";
 import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
+import { ContentJobInputError } from "@/lib/content-jobs/http/upload";
 import {
   contentJobRegistry,
   contentWorkflow,
@@ -16,6 +17,12 @@ type RegenerationInput = {
   guidance: string;
   draft: unknown;
 };
+
+function parseOptionalJson(value: FormDataEntryValue | null) {
+  if (typeof value !== "string") return undefined;
+  try { return JSON.parse(value) as unknown; }
+  catch { throw new ContentJobInputError("채팅 대상을 읽을 수 없습니다."); }
+}
 
 export async function GET(request: Request, context: Context) {
   if (!isLocalRequest(request)) return new Response(null, { status: 403 });
@@ -36,11 +43,23 @@ export async function POST(request: Request, context: Context) {
     return new Response(null, { status: 403 });
   try {
     const { jobId } = await context.params;
-    const body: unknown = await request.json();
+    const isChatImage = request.headers.get("content-type")?.includes("multipart/form-data");
+    const form = isChatImage ? await request.formData() : null;
+    const body: unknown = form ? {
+      action: form.get("action"),
+      expectedRevision: typeof form.get("expectedRevision") === "string"
+        ? Number(form.get("expectedRevision")) : Number.NaN,
+      message: form.get("message"),
+      target: parseOptionalJson(form.get("target")),
+      proposalTarget: parseOptionalJson(form.get("proposalTarget")),
+      image: form.get("image"),
+    } : await request.json();
     if (typeof body !== "object" || body === null)
       return Response.json({ error: "잘못된 요청입니다." }, { status: 400 });
     const input = body as Record<string, unknown>;
     const action = input.action;
+    if (form && (action !== "chat_edit" || !(input.image instanceof File)))
+      return Response.json({ error: "채팅 이미지 요청이 올바르지 않습니다." }, { status: 400 });
     if (action === "initialize_editor") {
       const running = editorWorkflow.initialize(jobId);
       void running.catch(() => {});
@@ -70,7 +89,8 @@ export async function POST(request: Request, context: Context) {
         default:
           if (typeof input.message !== "string")
             return Response.json({ error: "메시지를 입력해 주세요." }, { status: 400 });
-          running = editorWorkflow.chat(jobId, input.message, revision, input.target, input.proposalTarget);
+          running = editorWorkflow.chat(jobId, input.message, revision, input.target, input.proposalTarget,
+            input.image instanceof File ? input.image : undefined);
       }
       void running.catch(() => {});
       return Response.json(contentJobRegistry.get(jobId), {

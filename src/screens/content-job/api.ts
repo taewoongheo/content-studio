@@ -54,6 +54,18 @@ export async function postContentJobAction(
   jobId: string,
   body: Record<string, unknown>,
 ) {
+  if (body.action === "chat_edit" && body.image instanceof File) {
+    const form = new FormData();
+    form.set("action", "chat_edit");
+    form.set("expectedRevision", String(body.expectedRevision));
+    form.set("message", String(body.message));
+    if (body.target) form.set("target", JSON.stringify(body.target));
+    if (body.proposalTarget) form.set("proposalTarget", JSON.stringify(body.proposalTarget));
+    form.set("image", body.image);
+    return readResponse(await fetch(`/api/content-jobs/${encodeURIComponent(jobId)}`, {
+      method: "POST", body: form,
+    }));
+  }
   return readResponse(
     await fetch(`/api/content-jobs/${encodeURIComponent(jobId)}`, {
       method: "POST",
@@ -78,5 +90,13 @@ export async function uploadEditorImage(jobId: string, image: File) {
   return readResponse(await fetch(`/api/content-jobs/${encodeURIComponent(jobId)}/assets`, {
     method: "POST",
     body: form,
+  }));
+}
+
+export async function attachStoredEditorImage(jobId: string, assetId: string) {
+  return readResponse(await fetch(`/api/content-jobs/${encodeURIComponent(jobId)}/assets`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ assetId }),
   }));
 }

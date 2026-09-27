@@ -76,6 +76,7 @@ export type EditorMessage = {
   id: string;
   role: "user" | "assistant";
   text: string;
+  image?: { id: string; name: string; type: "image/jpeg" | "image/png" | "image/webp" };
   target?: EditorChatTarget;
   proposalTarget?: EditorProposalTarget;
   proposalLabel?: string;
@@ -115,6 +116,8 @@ export type EditorCommand =
   | { type: "update_element"; elementId: string; name?: string; role?: string }
   | { type: "add_element"; element: ElementDefinition }
   | { type: "place_element"; slideId: string; elementId: string; placementId: string }
+  | { type: "add_slide"; afterSlideId: string; sourceSlideId: string; newSlideId: string; copyContent: boolean }
+  | { type: "remove_slide"; slideId: string }
   | { type: "remove_placement"; slideId: string; placementId: string }
   | { type: "duplicate_placement"; sourceSlideId: string; sourcePlacementId: string;
       newElementId: string; placements: Array<{ slideId: string; sourcePlacementId: string; newPlacementId: string }> };

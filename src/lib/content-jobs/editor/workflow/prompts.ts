@@ -98,7 +98,7 @@ export function answerPrompt(job: ContentJobRecord, elementTarget: EditorChatTar
   return `${rules}
 
 사용자의 마지막 질문에 한국어로 간결하게 답하세요. 문서는 수정하지 않습니다.
-현재 채팅은 주제·훅 제안과 적용, 슬라이드 카피·Element 수정, 되돌리기를 실행할 수 있습니다. 이미지 생성과 로컬 이미지 풀 검색·자동 삽입은 아직 연결되지 않았습니다. 실행하지 않은 작업을 완료했다고 말하지 마세요.
+현재 채팅은 주제·훅 제안과 적용, 슬라이드 카피·Element 수정, 저장된 이미지 검색·삽입과 되돌리기를 실행할 수 있습니다. 이미지 생성은 아직 연결되지 않았습니다. 실행하지 않은 작업을 완료했다고 말하지 마세요.
 선택한 Element: ${json(elementTarget)}
 선택한 제안: ${json(proposal ?? null)}
 제품 정보: ${json(job.productContext)}

@@ -1,11 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { CodexJsonValue, CodexUserInput } from "../../../codex/transport/types";
 import type { ContentJobInput } from "../../domain/types";
 import { ContentJobRegistry, reuseContentJobRegistry } from "../../workflow/registry";
 import { BACKGROUND_ELEMENT_ID } from "../document";
+import { AssetStore } from "@/lib/local-db/assets";
+import { openLocalDatabase } from "@/lib/local-db/database";
 import type { ChatRoute, ChatRouter } from "./routing/router";
 import { EditorWorkflowService } from "./workflow";
+import { readChatImage } from "./attachments/chat-images";
 
 const input: ContentJobInput = {
   model: "gpt-6-luna",
@@ -64,6 +70,131 @@ function setup() {
   const service = new EditorWorkflowService(codex, registry, router);
   return { codex, router, registry, job, service };
 }
+
+test("첨부 이미지는 답변 Codex 턴에 한 번 전달되고 채팅 기록에 남는다", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "content-studio-chat-test-"));
+  try {
+    const { codex, router, registry, job, service } = setup();
+    registry.getRecord(job.id).referenceImages[0].path = join(directory, "reference.png");
+    codex.outputs.push(analysis, { reply: "첨부 이미지를 확인했습니다." });
+    const ready = await service.initialize(job.id);
+    router.routes.push({ capability: "answer", proposalSetId: "", candidateId: "" });
+    const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+      "sample.png", { type: "image/png" });
+    const next = await service.chat(job.id, "이 이미지 설명해줘", ready.editor.revision, undefined, undefined, file);
+    const image = next.editor.messages.at(-2)?.image;
+    assert.equal(image?.name, "sample.png");
+    assert.deepEqual(codex.inputs.at(-1)?.[1], { type: "localImage",
+      path: registry.getRecord(job.id).chatImages?.[0].path, detail: "high" });
+    assert.equal((await readChatImage(registry.getRecord(job.id), image!.id)).type, "image/png");
+    assert.equal("chatImages" in next, false);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("확장자만 이미지인 첨부는 Codex에 전달하지 않는다", async () => {
+  const { codex, job, service } = setup();
+  codex.outputs.push(analysis);
+  const ready = await service.initialize(job.id);
+  const invalid = new File(["not an image"], "fake.png", { type: "image/png" });
+  await assert.rejects(service.chat(job.id, "이걸 봐줘", ready.editor.revision,
+    undefined, undefined, invalid), /이미지 파일 형식/);
+  assert.equal(codex.inputs.length, 1);
+});
+
+test("채팅으로 본문 장을 추가·복제·제거하고 되돌리면 장 수가 동기화된다", async () => {
+  const { codex, router, job, service } = setup();
+  codex.outputs.push(analysis);
+  let next = await service.initialize(job.id);
+  next = service.applyCommands(job.id, [{ type: "set_slot_value", slideId: "slide-2",
+    placementId: "placement-2-1", value: "스쿼트" }], next.editor.revision);
+  router.routes.push({ capability: "add_slide", slideId: "slide-2", proposalSetId: "", candidateId: "" });
+  next = await service.chat(job.id, "2장 뒤에 본문 장 추가", next.editor.revision);
+  assert.equal(next.slideCount, 5);
+  assert.equal(next.editor.document?.slides[2].placements[0].value, "");
+  const addedId = next.editor.document!.slides[2].id;
+  router.routes.push({ capability: "duplicate_slide", slideId: "slide-2", proposalSetId: "", candidateId: "" });
+  next = await service.chat(job.id, "2장 복제", next.editor.revision);
+  assert.equal(next.slideCount, 6);
+  assert.equal(next.editor.document?.slides[2].placements[0].value, "스쿼트");
+  router.routes.push({ capability: "remove_slide", slideId: addedId, proposalSetId: "", candidateId: "" });
+  next = await service.chat(job.id, "추가한 장 삭제", next.editor.revision);
+  assert.equal(next.slideCount, 5);
+  next = service.undo(job.id, next.editor.revision);
+  assert.equal(next.slideCount, 6);
+  assert.equal(next.editor.document?.slides.some((slide) => slide.id === addedId), true);
+});
+
+test("채팅에서 선택 범위의 Element를 복제하고 제거한다", async () => {
+  const { codex, router, job, service } = setup();
+  codex.outputs.push(analysis);
+  let next = await service.initialize(job.id);
+  const target = { slideId: "slide-2", placementId: "placement-2-1", elementId: "body-title",
+    slideIds: ["slide-2", "slide-3"] };
+  router.routes.push({ capability: "duplicate_element", proposalSetId: "", candidateId: "" });
+  next = await service.chat(job.id, "이 Element 복제", next.editor.revision, target);
+  assert.equal(next.editor.document?.slides[1].placements.length, 3);
+  assert.equal(next.editor.document?.slides[2].placements.length, 3);
+  router.routes.push({ capability: "remove_element", proposalSetId: "", candidateId: "" });
+  next = await service.chat(job.id, "원본 제거", next.editor.revision, target);
+  assert.equal(next.editor.document?.slides[1].placements.some((item) => item.elementId === "body-title"), false);
+  assert.equal(next.editor.document?.slides[2].placements.some((item) => item.elementId === "body-title"), false);
+  assert.equal(next.editor.document?.slides[1].placements.length, 2);
+});
+
+test("채팅에서 새 텍스트 Element와 내용을 함께 추가한다", async () => {
+  const { codex, router, job, service } = setup();
+  codex.outputs.push(analysis, { reply: "설명 문구를 추가했습니다.", kind: "text", slideId: "slide-2",
+    name: "보조 설명", role: "운동 과정 설명", value: "첫 세트를 기록하세요" });
+  const ready = await service.initialize(job.id);
+  router.routes.push({ capability: "add_element", proposalSetId: "", candidateId: "" });
+  const next = await service.chat(job.id, "2장에 첫 세트를 기록하세요 문구 추가", ready.editor.revision);
+  const element = next.editor.document!.elements.find((item) => item.name === "보조 설명")!;
+  assert.equal(element.role, "운동 과정 설명");
+  assert.equal(next.editor.document!.slides[1].placements.find((item) => item.elementId === element.id)?.value,
+    "첫 세트를 기록하세요");
+});
+
+test("AI는 저장된 이미지 메타데이터를 골라 삽입·교체하고 기존 BLOB을 재사용한다", async () => {
+  const database = openLocalDatabase(":memory:");
+  try {
+    const store = new AssetStore(database);
+    const first = store.create({ name: "스쿼트 포즈", description: "정면 운동 자세",
+      type: "image/png", bytes: new Uint8Array([1, 2, 3]) });
+    const second = store.create({ name: "데드리프트 포즈", description: "측면 운동 자세",
+      type: "image/png", bytes: new Uint8Array([4, 5, 6]) });
+    const { codex, router, registry, job } = setup();
+    const service = new EditorWorkflowService(codex, registry, router, store);
+    codex.outputs.push(analysis, { reply: "스쿼트 이미지를 넣었습니다.", assetId: first.id, slideId: "slide-2" });
+    let next = await service.initialize(job.id);
+    router.routes.push({ capability: "add_image", proposalSetId: "", candidateId: "" });
+    next = await service.chat(job.id, "스쿼트 이미지 추가", next.editor.revision);
+    const image = next.editor.document!.elements.find((item) => item.kind === "image")!;
+    const placement = next.editor.document!.slides[1].placements.find((item) => item.elementId === image.id)!;
+    assert.equal(placement.value, first.id);
+    assert.equal(next.assets.some((item) => item.id === first.id), true);
+    assert.equal(store.list().length, 2);
+    assert.match(codex.inputs[1][0].type === "text" ? codex.inputs[1][0].text : "", /정면 운동 자세/);
+    codex.outputs.push({ reply: "데드리프트 이미지로 바꿨습니다.", assetId: second.id, slideId: "slide-2" });
+    router.routes.push({ capability: "replace_image", proposalSetId: "", candidateId: "" });
+    next = await service.chat(job.id, "선택한 이미지 교체", next.editor.revision, {
+      slideId: "slide-2", placementId: placement.id, elementId: image.id, slideIds: ["slide-2"],
+    });
+    assert.equal(next.editor.document?.slides[1].placements.find((item) => item.id === placement.id)?.value, second.id);
+    assert.equal(next.assets.some((item) => item.id === second.id), true);
+    assert.equal(store.list().length, 2);
+    codex.outputs.push({ intent: "edit", reply: "이미지 맞춤을 변경했습니다.", name: null, role: null,
+      style: { ...unchangedStyle, imageFit: "contain" }, frame: null, slotValues: [] });
+    router.routes.push({ capability: "edit_image", proposalSetId: "", candidateId: "" });
+    next = await service.chat(job.id, "이미지 전체가 보이게", next.editor.revision, {
+      slideId: "slide-2", placementId: placement.id, elementId: image.id, slideIds: ["slide-2"],
+    });
+    assert.equal(next.editor.document?.elements.find((item) => item.id === image.id)?.style.imageFit, "contain");
+  } finally {
+    database.close();
+  }
+});
 
 test("레퍼런스 분석으로 JSON 편집 문서를 만들고 같은 Codex thread를 재사용한다", async () => {
   const { codex, job, service } = setup();
@@ -156,6 +287,7 @@ test("선택한 Element의 스타일 속성 하나만 모든 적용 장에 수�
   const { codex, job, service } = setup();
   codex.outputs.push(analysis, {
     intent: "edit",
+    name: null, role: null,
     reply: "본문 제목의 배경만 바꿨습니다.",
     style: { ...unchangedStyle, backgroundColor: "#FF0000" }, frame: null, slotValues: [],
   });
@@ -171,10 +303,23 @@ test("선택한 Element의 스타일 속성 하나만 모든 적용 장에 수�
   assert.match(codex.inputs[1].find((item) => item.type === "text")?.text ?? "", /"elementId":"body-title"/);
 });
 
+test("선택한 Element의 이름과 역할을 원본에 수정한다", async () => {
+  const { codex, job, service } = setup();
+  codex.outputs.push(analysis, { intent: "edit", reply: "이름과 역할을 바꿨습니다.",
+    name: "반복 제목", role: "각 본문 장의 동작명을 표시", style: unchangedStyle, frame: null, slotValues: [] });
+  const ready = await service.initialize(job.id);
+  const next = await service.chat(job.id, "이 Element 역할 바꿔줘", ready.editor.revision, {
+    slideId: "slide-2", placementId: "placement-2-1", elementId: "body-title", slideIds: ["slide-2"],
+  });
+  assert.equal(next.editor.document?.elements.find((item) => item.id === "body-title")?.name, "반복 제목");
+  assert.equal(next.editor.document?.elements.find((item) => item.id === "body-title")?.role, "각 본문 장의 동작명을 표시");
+});
+
 test("일부 장만 선택하면 같은 Element의 다른 장은 유지한다", async () => {
   const { codex, job, service } = setup();
   codex.outputs.push(analysis, {
     intent: "edit",
+    name: null, role: null,
     reply: "2장만 변경했습니다.", style: { ...unchangedStyle, color: "#FF0000" },
     frame: null, slotValues: [],
   });
@@ -191,10 +336,12 @@ test("선택한 텍스트 슬롯만 채우고 질문에는 문서를 수정하�
   const { codex, job, service } = setup();
   codex.outputs.push(analysis, {
     intent: "edit",
+    name: null, role: null,
     reply: "첫 본문 제목을 바꿨습니다.", style: unchangedStyle, frame: null,
     slotValues: [{ slideId: "slide-2", placementId: "placement-2-1", value: "새 제목" }],
   }, {
     intent: "answer",
+    name: null, role: null,
     reply: "현재 제목은 새 제목입니다.", style: unchangedStyle, frame: null, slotValues: [],
   });
   const ready = await service.initialize(job.id);
@@ -211,6 +358,7 @@ test("선택 범위 밖의 수정과 잘못된 선택 정보는 거부한다", a
   const { codex, job, service } = setup();
   codex.outputs.push(analysis, {
     intent: "edit",
+    name: null, role: null,
     reply: "바꿨습니다.", style: unchangedStyle, frame: null,
     slotValues: [{ slideId: "slide-1", placementId: "placement-1-1", value: "잘못된 대상" }],
   });
@@ -229,7 +377,7 @@ test("선택 범위 밖의 수정과 잘못된 선택 정보는 거부한다", a
 test("수정했다고 답하면서 변경 명령이 없으면 적용하지 않는다", async () => {
   const { codex, job, service } = setup();
   codex.outputs.push(analysis, {
-    intent: "edit", reply: "배경을 바꿨습니다.", style: unchangedStyle, frame: null, slotValues: [],
+    intent: "edit", name: null, role: null, reply: "배경을 바꿨습니다.", style: unchangedStyle, frame: null, slotValues: [],
   });
   const ready = await service.initialize(job.id);
   await assert.rejects(service.chat(job.id, "배경을 빨갛게", ready.editor.revision, {
@@ -242,10 +390,12 @@ test("선택한 배경은 범위 내 배경색만 바꾸고 다른 스타일 수
   const { codex, job, service } = setup();
   codex.outputs.push(analysis, {
     intent: "edit",
+    name: null, role: null,
     reply: "배경을 바꿨습니다.", style: { ...unchangedStyle, backgroundColor: "#BB0000" },
     frame: null, slotValues: [],
   }, {
     intent: "edit",
+    name: null, role: null,
     reply: "변경했습니다.", style: { ...unchangedStyle, color: "#BB0000" },
     frame: null, slotValues: [],
   });

@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
+import Image from "next/image";
+import { ImageUploadField } from "@/components/media/image-upload-field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import type { EditorCommand, ElementDefinition, ElementFrame, ElementStyle, PlacedElement } from "@/lib/content-jobs/editor/types";
 import { commandsFromDraft, makeElementDraft, validElementDraft, type VisualTarget } from "./element-draft";
 import { useAutosave } from "./use-autosave";
@@ -14,15 +17,19 @@ type Props = {
   slideId: string;
   selectedSlideIds: string[];
   visualTargets: VisualTarget[];
+  jobId: string;
+  currentImage: ContentJobSnapshot["assets"][number] | null;
   disabled: boolean;
   onSave: (commands: EditorCommand[]) => Promise<boolean>;
-  onUploadImage: (file: File) => Promise<void>;
+  onUploadImage: (file: File) => Promise<boolean>;
 };
 
 export type ElementInspectorHandle = { flushPending: () => Promise<boolean> };
 
-export function ElementInspector({ ref, element, placement, slideId, selectedSlideIds, visualTargets, disabled, onSave, onUploadImage }: Props) {
+export function ElementInspector({ ref, element, placement, slideId, selectedSlideIds, visualTargets, jobId, currentImage, disabled, onSave, onUploadImage }: Props) {
   const [draft, setDraft] = useState(() => makeElementDraft(element, placement));
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const previous = useRef({ element, placement });
   const commands = commandsFromDraft(draft, element, placement, slideId, visualTargets, selectedSlideIds);
   const valid = validElementDraft(draft);
@@ -62,14 +69,24 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
         {element.kind === "text" ? (
           <label className="grid gap-1.5 text-sm"><span className="font-medium">내용</span><Textarea value={draft.value} onChange={(event) => setDraft((current) => ({ ...current, value: event.target.value }))} /></label>
         ) : element.kind === "image" ? (
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium">이 슬라이드의 이미지</span>
-            <Input type="file" accept="image/png,image/jpeg,image/webp" disabled={disabled} onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void onUploadImage(file);
-              event.target.value = "";
-            }} />
-          </label>
+          <div className="grid gap-3">
+            {currentImage && <div className="grid gap-1.5 text-sm">
+              <span className="font-medium">현재 이미지</span>
+              <div className="relative h-40 overflow-hidden rounded-lg border bg-muted/30">
+                <Image src={`/api/content-jobs/${encodeURIComponent(jobId)}/assets/${encodeURIComponent(currentImage.id)}`}
+                  alt={currentImage.name} fill unoptimized sizes="300px" className="object-contain" />
+              </div>
+              <span className="truncate text-xs text-muted-foreground">{currentImage.name}</span>
+            </div>}
+            <ImageUploadField id={`editor-image-${placement.id}`} label="이미지 업로드" file={uploadedFile}
+              disabled={disabled || uploading} onFileChange={(file) => {
+                if (!file) return;
+                setUploading(true);
+                void onUploadImage(file).then((saved) => {
+                  if (saved) setUploadedFile(file);
+                }).finally(() => setUploading(false));
+              }} />
+          </div>
         ) : null}
       </div>
 

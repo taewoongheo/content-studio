@@ -11,6 +11,7 @@ export function targetedChatPrompt(job: ContentJobRecord, target: EditorChatTarg
 선택 대상: ${JSON.stringify({ ...target, name: element.name, kind: element.kind, role: element.role })}
 수정 가능한 슬롯: ${JSON.stringify(placements)}
 style에서 변경하지 않는 속성은 null로 두세요. frame은 위치나 크기를 바꾸라는 요청일 때만 전체 좌표를 출력하고, 아니면 null로 두세요.
+이름이나 역할·의미를 바꾸라는 요청이면 name 또는 role에 새 값을 넣으세요. 그 외에는 null로 두세요. 이름과 역할은 공유 Element 원본에 적용됩니다.
 style과 frame의 적용 범위는 앱이 선택된 장 목록으로 결정합니다. slotValues에는 실제 내용을 바꿀 슬롯만 넣으세요. 질문이나 논의만 할 때는 수정값을 모두 비우세요.
 intent는 실제 수정이면 edit, 질문이면 answer, 선택 대상을 벗어난 요청이면 unsupported로 지정하세요. edit에는 적어도 한 가지 수정값이 필요하고, answer/unsupported에는 수정값을 넣지 마세요.
 배경 Element가 선택되었을 때만 슬라이드 전체 배경을 바꾸세요. 다른 Element가 선택된 경우 '배경색'은 그 Element 상자의 backgroundColor입니다. 배경 Element는 배경색만 변경할 수 있습니다. 이미지 슬롯에는 업로드된 이미지 ID만 사용할 수 있습니다.
