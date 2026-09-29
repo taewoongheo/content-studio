@@ -3,13 +3,14 @@ import test from "node:test";
 import {
   applyEditorCommand,
   applyEditorCommands,
-  createDocumentFromAnalysis,
+  createDocumentFromAnalysis as buildDocument,
   ensureSharedBackground,
   BACKGROUND_ELEMENT_ID,
   BACKGROUND_PLACEMENT_ID,
   validateEditorDocument,
 } from "../document";
-import type { EditorAnalysis } from "../types";
+import type { SlideshowStructure } from "../../domain/types";
+import type { EditorAnalysis, EditorDocument } from "../types";
 
 const analysis: EditorAnalysis = {
   elements: [
@@ -34,13 +35,22 @@ const analysis: EditorAnalysis = {
   ],
   formatNotes: { visualRules: "상단 제목", writingStyle: "짧은 문장", hookPattern: "문제 제기", bodyProgression: "동작별 반복" },
   slides: [
-    { imageId: "image-1", role: "hook", backgroundColor: "#FFFFFF", elementIds: [] },
-    { imageId: "image-2", role: "body", backgroundColor: "#FFFFFF", elementIds: ["title"] },
-    { imageId: "image-3", role: "cta", backgroundColor: "#FFFFFF", elementIds: [] },
+    { imageId: "image-1", role: "hook", backgroundColor: "#FFFFFF", elementIds: [], visuals: [] },
+    { imageId: "image-2", role: "body", backgroundColor: "#FFFFFF", elementIds: ["title"], visuals: [] },
+    { imageId: "image-3", role: "cta", backgroundColor: "#FFFFFF", elementIds: [], visuals: [] },
   ],
 };
 
-test("반복형 분석의 본문 Element를 여러 슬라이드에 배치한다", () => {
+function createDocumentFromAnalysis(source: EditorAnalysis, structure: SlideshowStructure,
+  slideCount: number, aspectRatio: EditorDocument["aspectRatio"]) {
+  const slides = source.slides.length === slideCount ? source.slides : Array.from({ length: slideCount }, (_, index) => ({
+    ...source.slides[index === 0 ? 0 : index === slideCount - 1 ? 2 : 1],
+    imageId: `image-${index + 1}`,
+  }));
+  return buildDocument({ ...source, slides }, structure, slideCount, aspectRatio);
+}
+
+test("반복형 분석의 공통 Element를 각 본문 슬라이드에 배치한다", () => {
   const document = createDocumentFromAnalysis(analysis, "repeating", 5, "9:16");
   assert.deepEqual(document.slides.map((slide) => slide.role), ["hook", "body", "body", "body", "cta"]);
   assert.equal(document.elements.length, 2);
@@ -53,6 +63,26 @@ test("반복형 분석의 본문 Element를 여러 슬라이드에 배치한다"
   assert.equal(document.slides[3].placements[0].elementId, "title");
   assert.notEqual(document.slides[1].placements[0].id, document.slides[3].placements[0].id);
   assert.deepEqual(validateEditorDocument(document), []);
+});
+
+test("모든 레퍼런스 장을 그대로 만들면서 반복 Element ID를 공유한다", () => {
+  const source: EditorAnalysis = {
+    ...analysis,
+    elements: [...analysis.elements, { ...analysis.elements[0], id: "detail", sourceImageId: "image-3" }],
+    slides: [analysis.slides[0], analysis.slides[1],
+      { imageId: "image-3", role: "body", backgroundColor: "#222222", elementIds: ["title", "detail"],
+        visuals: [{ elementId: "title", frame: { x: 0.2, y: 0.2, width: 0.7, height: 0.12 },
+          style: { ...analysis.elements[0].style, color: "#FF0000" } }] },
+      { ...analysis.slides[2], imageId: "image-4" }],
+  };
+  const document = buildDocument(source, "repeating", 4, "9:16");
+  assert.equal(document.slides[2].backgroundColor, "#222222");
+  assert.deepEqual(document.slides[1].placements.map((item) => item.elementId), ["title", BACKGROUND_ELEMENT_ID]);
+  assert.deepEqual(document.slides[2].placements.map((item) => item.elementId), ["title", "detail", BACKGROUND_ELEMENT_ID]);
+  assert.notEqual(document.slides[1].placements[0].id, document.slides[2].placements[0].id);
+  assert.equal(document.slides[1].placements[0].frameOverride, null);
+  assert.equal(document.slides[2].placements[0].frameOverride?.x, 0.2);
+  assert.equal(document.slides[2].placements[0].styleOverride?.color, "#FF0000");
 });
 
 test("반복형 본문 장을 비워 추가하거나 내용을 복제하고, 필수 장 제거는 막는다", () => {

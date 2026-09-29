@@ -42,9 +42,10 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
     resolveEditorSelection(document, slideId, placementId, scopeSelection);
   const disabled = submitting || Boolean(job.activeOperation);
   const issue = clientError || imageError || job.lastError;
-  const referenceImage = job.structure === "repeating"
-    ? job.referenceImages.find((image) => image.role === slide?.role)
-    : job.referenceImages[document?.slides.findIndex((item) => item.id === slide?.id) ?? -1];
+  const originalSlideNumber = /^slide-(\d+)$/.exec(slide?.id ?? "");
+  const referenceImage = originalSlideNumber
+    ? job.referenceImages[Number(originalSlideNumber[1]) - 1]
+    : undefined;
 
   async function action(body: Record<string, unknown>) {
     try {
@@ -93,7 +94,9 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
     if (!slide) return false;
     const id = crypto.randomUUID();
     const newPlacementId = crypto.randomUUID();
-    const sourceImageId = job.referenceImages.find((image) => image.role === slide.role)?.id ?? job.referenceImages[0]?.id ?? "";
+    const sourceImageId = referenceImage?.id ??
+      document?.elements.find((item) => slide.placements.some((placed) => placed.elementId === item.id))?.sourceImageId ??
+      job.referenceImages[0]?.id ?? "";
     const newElement = makeElementDefinition({ id, kind, sourceImageId });
     const saved = await saveCommands([
       { type: "add_element", element: newElement },
@@ -198,8 +201,8 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
           </div>
         </main>
       ) : slide ? (
-        <main className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden bg-muted/30 p-3 lg:grid-cols-[minmax(260px,300px)_minmax(0,1fr)_minmax(300px,360px)] lg:gap-4 lg:p-4 2xl:grid-cols-[minmax(300px,340px)_minmax(0,1fr)_minmax(340px,400px)] max-lg:overflow-visible">
-          <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border bg-background shadow-sm max-lg:order-2 max-lg:min-h-[360px]" aria-label="선택 항목 편집">
+        <main className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden bg-background lg:grid-cols-[minmax(260px,300px)_minmax(0,1fr)_minmax(300px,360px)] 2xl:grid-cols-[minmax(300px,340px)_minmax(0,1fr)_minmax(340px,400px)] max-lg:overflow-visible">
+          <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden border-r px-4 py-4 max-lg:order-2 max-lg:min-h-[360px] max-lg:border-r-0 max-lg:border-t" aria-label="선택 항목 편집">
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {element?.kind === "background" && placement ? (
                 <SlideBackground
@@ -231,7 +234,7 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
             </div>
           </aside>
 
-          <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border bg-background shadow-sm max-lg:order-1 max-lg:min-h-[620px]" aria-label="슬라이드 편집 영역">
+          <section className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-background max-lg:order-1 max-lg:min-h-[620px] max-lg:border-b" aria-label="슬라이드 편집 영역">
             <nav aria-label="페이지 선택" className="shrink-0 border-b px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -350,7 +353,7 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
             </div>
           </section>
 
-          <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border bg-background shadow-sm max-lg:order-3 max-lg:min-h-[460px]" aria-label="AI 채팅 편집">
+          <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden border-l bg-background max-lg:order-3 max-lg:min-h-[460px] max-lg:border-l-0 max-lg:border-t" aria-label="AI 채팅 편집">
             <div className="shrink-0 border-b px-4 py-3">
               <h2 className="text-sm font-semibold">AI 채팅 편집</h2>
             </div>

@@ -20,7 +20,7 @@ const input: ContentJobInput = {
   aspectRatio: "9:16",
   slideCount: 4,
   outputLanguage: "한국어",
-  referenceImages: (["hook", "body", "cta"] as const).map((role, index) => ({
+  referenceImages: (["hook", "body", "body", "cta"] as const).map((role, index) => ({
     id: `image-${index + 1}`, name: `${role}.png`, path: `/tmp/${role}.png`, type: "image/png", size: 10, role,
   })),
 };
@@ -36,9 +36,9 @@ function element(id: string, imageId: string) {
 
 const analysis = {
   formatNotes: { visualRules: "상단 제목", writingStyle: "짧은 문장", hookPattern: "대조형", bodyProgression: "본문 반복" },
-  elements: [element("hook-title", "image-1"), element("body-title", "image-2"), element("cta-title", "image-3")],
-  slides: (["hook", "body", "cta"] as const).map((role, index) => ({
-    imageId: `image-${index + 1}`, role, backgroundColor: "#FFFFFF", elementIds: [`${role}-title`],
+  elements: [element("hook-title", "image-1"), element("body-title", "image-2"), element("cta-title", "image-4")],
+  slides: (["hook", "body", "body", "cta"] as const).map((role, index) => ({
+    imageId: `image-${index + 1}`, role, backgroundColor: "#FFFFFF", elementIds: [`${role}-title`], visuals: [],
   })),
 };
 
@@ -210,7 +210,7 @@ test("레퍼런스 분석으로 JSON 편집 문서를 만들고 같은 Codex thr
   next = await service.suggestTopics(job.id, next.editor.revision);
   assert.equal(next.editor.topicSuggestions.length, 3);
   assert.deepEqual(codex.threads, ["thread-1", "thread-1"]);
-  assert.equal(codex.inputs[0].filter((item) => item.type === "localImage").length, 3);
+  assert.equal(codex.inputs[0].filter((item) => item.type === "localImage").length, 4);
   const analysisInstructions = codex.inputs[0].find((item) => item.type === "text")?.text ?? "";
   assert.equal(analysisInstructions.includes("LiftCode"), false);
   assert.match(analysisInstructions, /카피를 작성하지 마세요/);

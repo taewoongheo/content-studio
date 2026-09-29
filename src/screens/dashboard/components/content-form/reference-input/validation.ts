@@ -1,4 +1,4 @@
-import { REFERENCE_ROLES, type ReferenceRole } from "@/lib/content-jobs/domain/types";
+import type { SlideshowStructure } from "@/lib/content-jobs/domain/types";
 
 export const MAX_REFERENCE_IMAGES = 20;
 export const MAX_REFERENCE_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -22,23 +22,11 @@ export function validateReferenceImages(
   return "";
 }
 
-export function validateReference(files: File[], slideCount?: number) {
+export function validateReference(files: File[], structure: SlideshowStructure) {
   if (files.length === 0) return "레퍼런스 슬라이드를 순서대로 추가해 주세요.";
-  if (slideCount !== undefined && files.length !== slideCount)
-    return `장면별 구성은 ${slideCount}장의 레퍼런스 이미지를 추가해 주세요.`;
+  if (structure === "repeating" && files.length < 3)
+    return "반복형은 훅·본문·CTA를 포함해 최소 3장을 추가해 주세요.";
+  if (structure === "sequential" && files.length < 2)
+    return "장면별 구성은 최소 2장을 추가해 주세요.";
   return "";
-}
-
-export function validateRepeatingReference(
-  images: readonly { role: ReferenceRole }[],
-) {
-  const roles = images.map((image) => image.role);
-  if (
-    roles.length === REFERENCE_ROLES.length &&
-    REFERENCE_ROLES.every((role) => roles.includes(role))
-  )
-    return "";
-  if (REFERENCE_ROLES.some((role) => !roles.includes(role)))
-    return "훅, 반복 본문, CTA 이미지를 모두 추가해 주세요.";
-  return "훅, 반복 본문, CTA 이미지를 하나씩만 추가해 주세요.";
 }

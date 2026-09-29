@@ -48,12 +48,13 @@ function object(properties: Record<string, unknown>, required = Object.keys(prop
 
 export const editorAnalysisSchema = object({
   formatNotes: formatNotesSchema,
-  elements: { type: "array", items: editorElementSchema, maxItems: 80 },
+  elements: { type: "array", items: editorElementSchema, maxItems: 200 },
   slides: { type: "array", items: object({
     imageId: text,
     role: { type: "string", enum: ["hook", "body", "cta"] },
     backgroundColor: color,
     elementIds: { type: "array", items: text },
+    visuals: { type: "array", items: object({ elementId: text, frame, style }) },
   }), minItems: 1, maxItems: 20 },
 });
 
@@ -90,12 +91,11 @@ export function validateEditorAnalysis(
   const output = result.value;
   if (Object.values(output.formatNotes).some((value) => !value.trim()))
     errors.push("포맷 규칙을 모두 작성해야 합니다.");
-  const expected = structure === "repeating" ? 3 : slideCount;
-  if (output.slides.length !== expected ||
+  if (output.slides.length !== slideCount || imageIds.length !== slideCount ||
     output.slides.some((slide, index) => slide.imageId !== imageIds[index]))
     errors.push("슬라이드와 입력 이미지의 순서가 일치하지 않습니다.");
   if (structure === "repeating" && output.slides.some((slide, index) =>
-    slide.role !== (["hook", "body", "cta"] as const)[index]))
+    slide.role !== (index === 0 ? "hook" : index === slideCount - 1 ? "cta" : "body")))
     errors.push("반복형은 훅·본문·CTA 역할 순서여야 합니다.");
   const elementIds = output.elements.map((element) => element.id);
   if (new Set(elementIds).size !== elementIds.length)
@@ -111,9 +111,28 @@ export function validateEditorAnalysis(
   }
   if (output.slides.some((slide) => slide.elementIds.some((id) => !knownElements.has(id))))
     errors.push("슬라이드가 존재하지 않는 Element를 참조합니다.");
+  for (const slide of output.slides) {
+    if (new Set(slide.elementIds).size !== slide.elementIds.length)
+      errors.push(`${slide.imageId}에 같은 Element가 중복 배치되었습니다.`);
+    if (new Set(slide.visuals.map((visual) => visual.elementId)).size !== slide.visuals.length ||
+      slide.visuals.some((visual) => !slide.elementIds.includes(visual.elementId) ||
+        visual.frame.x + visual.frame.width > 1 || visual.frame.y + visual.frame.height > 1))
+      errors.push(`${slide.imageId}의 개별 시각 배치가 올바르지 않습니다.`);
+  }
   const kinds = new Map(output.elements.map((element) => [element.id, element.kind]));
   if (output.slides.some((slide) => !slide.elementIds.some((id) => kinds.get(id) === "text")))
     errors.push("각 레퍼런스 장면에는 텍스트 Element가 하나 이상 필요합니다.");
+  if (structure === "repeating" && slideCount > 3) {
+    const bodySlides = output.slides.slice(1, -1);
+    for (const kind of ["text", "image"] as const) {
+      const smallestCount = Math.min(...bodySlides.map((slide) =>
+        slide.elementIds.filter((id) => kinds.get(id) === kind).length));
+      const sharedCount = bodySlides[0].elementIds.filter((id) =>
+        kinds.get(id) === kind && bodySlides.every((slide) => slide.elementIds.includes(id))).length;
+      if (sharedCount < smallestCount || (kind === "text" && sharedCount === 0))
+        errors.push(`반복형 본문에서 같은 역할의 ${kind === "text" ? "텍스트" : "이미지"}는 공통 Element ID로 공유해야 합니다.`);
+    }
+  }
   return errors.length > 0 ? { ok: false as const, errors } : result;
 }
 

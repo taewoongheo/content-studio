@@ -7,12 +7,10 @@ import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import { createContentJob } from "@/screens/content-job/api";
 import type { ProductContext } from "../../hooks/use-product-context";
 import { ContentReviewDialog } from "./content-review-dialog";
-import { ReferenceRoleImages } from "./reference-input/repeating/reference-role-images";
-import { ReferenceImages } from "./reference-input/sequential/reference-images";
+import { ReferenceImages } from "./reference-input/reference-images";
 import { ChoiceSection } from "./selection/choice-section";
 import { contentTypes, creationMethods, slideshowStructures } from "./selection/model";
 import { ContentSettings } from "./settings/content-settings";
-import { slideCount } from "./settings/model";
 import { useContentForm } from "./use-content-form";
 import { WorkflowPlaceholder } from "./workflow-placeholder";
 
@@ -56,10 +54,9 @@ export function ContentForm({
       const job = await createContentJob({
         model: codexModel,
         context: productContext,
-        referenceInputs: form.referenceInputs,
+        referenceImages: form.files,
         structure: form.structure,
         aspectRatio: form.settings.ratio,
-        slideCount: slideCount(form.settings),
         outputLanguage: form.settings.language,
       });
       form.setReviewOpen(false);
@@ -104,26 +101,16 @@ export function ContentForm({
         />
         {form.canCreate ? (
           <>
-            {form.structure === "repeating" ? (
-              <ReferenceRoleImages
-                images={form.roleImages}
-                error={form.error || form.fileError}
-                onAddFile={form.setRoleImage}
-                onRemoveImage={form.removeRoleImage}
-              />
-            ) : (
-              <ReferenceImages
-                images={form.referenceImages}
-                error={form.error || form.fileError}
-                inputRef={form.referenceInput}
-                onAddFiles={form.addFiles}
-                onRemoveImage={form.removeImage}
-                onReorderImages={form.reorderImages}
-              />
-            )}
+            <ReferenceImages
+              images={form.referenceImages}
+              error={form.error || form.fileError}
+              inputRef={form.referenceInput}
+              onAddFiles={form.addFiles}
+              onRemoveImage={form.removeImage}
+              onReorderImages={form.reorderImages}
+            />
             <ContentSettings
               value={form.settings}
-              structure={form.structure}
               onChange={form.changeSettings}
             />
             <div className="flex flex-wrap items-center justify-between gap-4 border-t pt-6">

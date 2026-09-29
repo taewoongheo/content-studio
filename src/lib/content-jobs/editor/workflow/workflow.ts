@@ -72,6 +72,17 @@ function readyDocument(job: ContentJobRecord): EditorDocument {
   return job.editor.document;
 }
 
+function sourceImageIdForSlide(job: ContentJobRecord, document: EditorDocument, slideId: string) {
+  const originalSlideNumber = /^slide-(\d+)$/.exec(slideId);
+  if (originalSlideNumber) {
+    const image = job.referenceImages[Number(originalSlideNumber[1]) - 1];
+    if (image) return image.id;
+  }
+  const slide = document.slides.find((item) => item.id === slideId);
+  return document.elements.find((element) => slide?.placements.some((placement) =>
+    placement.elementId === element.id))?.sourceImageId ?? job.referenceImages[0]?.id ?? "";
+}
+
 function assertRevision(job: ContentJobRecord, expected: number) {
   if (job.editor.revision !== expected)
     throw new ContentJobError("INVALID_STAGE", "편집 문서가 변경되었습니다. 최신 결과를 확인해 주세요.");
@@ -509,7 +520,7 @@ export class EditorWorkflowService {
         const slide = document.slides.find((item) => item.id === choice.slideId)!;
         const element = makeElementDefinition({ id: randomUUID(), kind: choice.kind,
           name: choice.name, role: choice.role,
-          sourceImageId: job.referenceImages.find((image) => image.role === slide.role)?.id ?? job.referenceImages[0]?.id ?? "" });
+          sourceImageId: sourceImageIdForSlide(job, document, slide.id) });
         if (choice.kind !== "text" && choice.value) invalid("도형에는 텍스트 내용을 넣을 수 없습니다.");
         const placementId = randomUUID();
         return this.commitChatCommands(id, job, document, [
@@ -554,7 +565,7 @@ export class EditorWorkflowService {
           const slide = document.slides.find((item) => item.id === choice.slideId)!;
           const element = makeElementDefinition({ id: randomUUID(), kind: "image",
             name: asset?.name ?? "새 이미지", role: asset?.description || "이 장의 시각 자료",
-            sourceImageId: job.referenceImages.find((image) => image.role === slide.role)?.id ?? job.referenceImages[0]?.id ?? "" });
+            sourceImageId: sourceImageIdForSlide(job, document, slide.id) });
           const placementId = randomUUID();
           return this.commitChatCommands(id, job, document, [
             { type: "add_element", element },

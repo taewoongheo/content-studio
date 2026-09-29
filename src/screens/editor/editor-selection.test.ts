@@ -13,9 +13,10 @@ const analysis: EditorAnalysis = {
   }],
   formatNotes: { visualRules: "상단 제목", writingStyle: "짧게", hookPattern: "질문", bodyProgression: "반복" },
   slides: [
-    { imageId: "image-1", role: "hook", backgroundColor: "#FFFFFF", elementIds: [] },
-    { imageId: "image-2", role: "body", backgroundColor: "#FFFFFF", elementIds: ["title"] },
-    { imageId: "image-3", role: "cta", backgroundColor: "#FFFFFF", elementIds: [] },
+    { imageId: "image-1", role: "hook", backgroundColor: "#FFFFFF", elementIds: [], visuals: [] },
+    { imageId: "image-2", role: "body", backgroundColor: "#FFFFFF", elementIds: ["title"], visuals: [] },
+    { imageId: "image-3", role: "body", backgroundColor: "#FFFFFF", elementIds: ["title"], visuals: [] },
+    { imageId: "image-4", role: "cta", backgroundColor: "#FFFFFF", elementIds: [], visuals: [] },
   ],
 };
 

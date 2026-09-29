@@ -8,7 +8,7 @@ function json(value: unknown) {
 const rules = `최종 응답은 지정된 JSON Schema만 따르세요. 확신할 수 없는 것을 꾸며내지 마세요. 레퍼런스의 문구를 그대로 복사하는 대신 시각적 구조와 표현 규칙을 추출하세요.`;
 
 export function analysisPrompt(job: ContentJobRecord) {
-  const roles = job.referenceImages.map((image) => `${image.id}: ${image.role ?? "장면별 구성"}`).join(", ");
+  const roles = job.referenceImages.map((image, index) => `${index + 1}장 ${image.id}: ${image.role ?? "장면별 구성"}`).join(", ");
   return `${rules}
 
 이미지 레퍼런스로부터 편집 가능한 TikTok 슬라이드쇼의 첫 초안을 만드세요.
@@ -16,9 +16,11 @@ export function analysisPrompt(job: ContentJobRecord) {
 Element는 시각적 레이어와 나중에 내용을 채울 빈 슬롯을 함께 가진 재사용 단위입니다. 지금은 콘텐츠를 기획하거나 카피를 작성하지 마세요. 각 Element의 name은 '훅 제목', '본문 설명 A', 'CTA 문구'처럼 짧은 역할명으로, role은 그 자리에 들어갈 내용의 목적과 조건으로 작성하세요. 제품·운동·주제에 관한 실제 문장, 예시 문구, CTA 카피는 만들지 마세요. 정규화 좌표(0~1), 스타일, 근거 이미지 ID를 정의하세요. 필요하면 rectangle, circle, triangle 도형 Element도 사용하세요.
 텍스트가 배경 위에 직접 얹혀 있으면 Element의 backgroundColor를 "transparent"로 지정하세요.
 이미지에 가려진 배경이나 원본 사진은 복원할 수 없으므로 새 이미지 Element의 빈 슬롯으로 표현하세요. 원본 스크린샷 전체를 새 슬라이드의 배경으로 사용하지 마세요.
-배경 Element는 앱이 모든 장에 자동으로 공유 배치합니다. elements나 elementIds에 배경을 만들거나 넣지 말고 각 대표 장면의 backgroundColor만 분석하세요.
+배경 Element는 앱이 모든 장에 자동으로 공유 배치합니다. elements나 elementIds에 배경을 만들거나 넣지 말고 각 장면의 backgroundColor만 분석하세요.
 formatNotes에는 레퍼런스의 시각 규칙, 문체, 훅 패턴, 본문 전개 규칙을 구체적으로 요약하세요. 글꼴은 정확한 서체를 단정하지 말고 가까운 계열을 선택하세요.
-반복형이면 slides에는 훅·본문·CTA 대표 장면을 하나씩만 넣고, 본문 Element는 앱이 나머지 본문 장에 복제합니다. 장면별 구성이면 slides는 입력 이미지 수 및 요청 슬라이드 수와 같아야 합니다.
+모든 레퍼런스 이미지를 순서대로 분석하고 slides에 이미지마다 한 장씩 넣으세요. 반복형이면 첫 장은 hook, 마지막 장은 cta, 가운데 장은 모두 body입니다. 장면별 구성은 각 장의 역할을 분석해 지정하세요.
+시각적 형태와 콘텐츠상 역할이 반복되는 단위는 새 Element를 장마다 만들지 말고 elements에 한 번만 정의한 뒤 해당 모든 장의 elementIds에 같은 ID를 사용하세요. 반복형 본문에서 각 장에 같은 종류의 텍스트·이미지 슬롯이 있다면 같은 ID를 모든 본문 장에 재사용하세요. 도형도 같은 역할과 시각적 포맷을 반복한다면 같은 ID를 재사용하세요. 장마다 다른 내용은 지금 채우지 않으며 앱이 별도 빈 슬롯으로 관리합니다. 반복되지 않는 단위는 별도 Element로 정의하세요.
+각 장의 visuals에는 공유 Element의 위치나 스타일이 기본 정의와 다른 경우만 넣으세요. 같은 Element라도 장마다 위치·색·크기가 다르면 해당 장의 frame과 style 전체를 visuals에 넣어 원본 차이를 보존하세요. 차이가 없으면 visuals는 빈 배열입니다.
 각 장에는 적어도 하나의 텍스트 Element를 포함하세요.
 결과 언어: ${job.outputLanguage}.`;
 }

@@ -8,7 +8,6 @@ import type {
   ElementFrame,
   ElementStyle,
   PlacedElement,
-  SlideRole,
 } from "./types";
 
 const colorPattern = /^#[0-9a-fA-F]{6}$/;
@@ -92,11 +91,10 @@ export function createDocumentFromAnalysis(
   slideCount: number,
   aspectRatio: EditorDocument["aspectRatio"],
 ): EditorDocument {
-  const expectedImages = structure === "repeating" ? 3 : slideCount;
-  if (analysis.slides.length !== expectedImages)
+  if (analysis.slides.length !== slideCount)
     throw new Error("레퍼런스 분석의 슬라이드 수가 입력과 일치하지 않습니다.");
   if (structure === "repeating" && analysis.slides.some((slide, index) =>
-    slide.role !== (["hook", "body", "cta"] as SlideRole[])[index]))
+    slide.role !== (index === 0 ? "hook" : index === slideCount - 1 ? "cta" : "body")))
     throw new Error("반복형 레퍼런스의 역할 순서가 올바르지 않습니다.");
   const knownElements = new Set(analysis.elements.map((element) => element.id));
   if (analysis.slides.some((slide) => slide.elementIds.some((id) => !knownElements.has(id))))
@@ -106,20 +104,18 @@ export function createDocumentFromAnalysis(
     id: `slide-${index + 1}`,
     role: source.role,
     backgroundColor: source.backgroundColor,
-    placements: source.elementIds.map((elementId, placementIndex): PlacedElement => ({
-      id: `placement-${index + 1}-${placementIndex + 1}`,
-      elementId,
-      value: "",
-      frameOverride: null,
-      styleOverride: null,
-    })),
+    placements: source.elementIds.map((elementId, placementIndex): PlacedElement => {
+      const visual = source.visuals.find((item) => item.elementId === elementId);
+      return {
+        id: `placement-${index + 1}-${placementIndex + 1}`,
+        elementId,
+        value: "",
+        frameOverride: visual?.frame ?? null,
+        styleOverride: visual?.style ?? null,
+      };
+    }),
   });
-  const slides = structure === "repeating"
-    ? Array.from({ length: slideCount }, (_, index) => makeSlide(
-        analysis.slides[index === 0 ? 0 : index === slideCount - 1 ? 2 : 1],
-        index,
-      ))
-    : analysis.slides.map(makeSlide);
+  const slides = analysis.slides.map(makeSlide);
   const document: EditorDocument = {
     version: 1,
     structure,

@@ -105,6 +105,7 @@ export type EditorAnalysis = {
     role: SlideRole;
     backgroundColor: string;
     elementIds: string[];
+    visuals: Array<{ elementId: string; frame: ElementFrame; style: ElementStyle }>;
   }>;
 };
 

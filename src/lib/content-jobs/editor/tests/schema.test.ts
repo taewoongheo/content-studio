@@ -26,25 +26,31 @@ test("AI 분석은 입력 이미지, 역할, Element 참조를 검증한다", ()
     elements: [
       element,
       { ...element, id: "body", sourceImageId: "image-2" },
-      { ...element, id: "cta", sourceImageId: "image-3" },
+      { ...element, id: "cta", sourceImageId: "image-4" },
     ],
     formatNotes: { visualRules: "상단 제목", writingStyle: "짧음", hookPattern: "질문형", bodyProgression: "반복" },
     slides: [
-      { imageId: "image-1", role: "hook", backgroundColor: "#FFFFFF", elementIds: ["heading"] },
-      { imageId: "image-2", role: "body", backgroundColor: "#FFFFFF", elementIds: ["body"] },
-      { imageId: "image-3", role: "cta", backgroundColor: "#FFFFFF", elementIds: ["cta"] },
+      { imageId: "image-1", role: "hook", backgroundColor: "#FFFFFF", elementIds: ["heading"], visuals: [] },
+      { imageId: "image-2", role: "body", backgroundColor: "#FFFFFF", elementIds: ["body"], visuals: [] },
+      { imageId: "image-3", role: "body", backgroundColor: "#FFFFFF", elementIds: ["body"], visuals: [] },
+      { imageId: "image-4", role: "cta", backgroundColor: "#FFFFFF", elementIds: ["cta"], visuals: [] },
     ],
   };
-  assert.equal(validateEditorAnalysis(valid, ["image-1", "image-2", "image-3"], "repeating", 5).ok, true);
+  const imageIds = ["image-1", "image-2", "image-3", "image-4"];
+  assert.equal(validateEditorAnalysis(valid, imageIds, "repeating", 4).ok, true);
   assert.equal(validateEditorAnalysis({ ...valid, elements: [
     { ...element, slot: { placeholder: "완성된 문구" } }, ...valid.elements.slice(1),
-  ] }, ["image-1", "image-2", "image-3"], "repeating", 5).ok, false);
+  ] }, imageIds, "repeating", 4).ok, false);
   assert.equal(validateEditorAnalysis({ ...valid, slides: [
     { ...valid.slides[0], elementIds: ["missing"] }, ...valid.slides.slice(1),
-  ] }, ["image-1", "image-2", "image-3"], "repeating", 5).ok, false);
+  ] }, imageIds, "repeating", 4).ok, false);
   assert.equal(validateEditorAnalysis({ ...valid, slides: [
     { ...valid.slides[0], role: "body" }, ...valid.slides.slice(1),
-  ] }, ["image-1", "image-2", "image-3"], "repeating", 5).ok, false);
+  ] }, imageIds, "repeating", 4).ok, false);
+  assert.equal(validateEditorAnalysis({ ...valid, slides: [
+    valid.slides[0], valid.slides[1], { ...valid.slides[2], elementIds: ["heading"] }, valid.slides[3],
+  ] }, imageIds, "repeating", 4).ok, false);
+  assert.equal(validateEditorAnalysis(valid, imageIds.slice(0, 3), "repeating", 4).ok, false);
 });
 
 test("AI 수정 명령은 허용된 종류와 필드만 받는다", () => {
