@@ -35,7 +35,7 @@ export function ChatPanel({
   onAction: (body: Record<string, unknown>) => Promise<boolean>;
 }) {
   const [message, setMessage] = useState("");
-  const { attachment, error: imageError, dragging, fileInputRef, receive, clear, dragHandlers } =
+  const { attachments, error: imageError, dragging, fileInputRef, receive, clear, remove, dragHandlers } =
     useChatAttachment(disabled);
   const [dismissedTargetKey, setDismissedTargetKey] = useState<string | null>(null);
   const [proposalSelection, setProposalSelection] = useState<{
@@ -53,9 +53,9 @@ export function ChatPanel({
 
   async function sendMessage() {
     const trimmed = message.trim();
-    if (!trimmed && !attachment) return;
+    if (!trimmed && attachments.length === 0) return;
     if (await onAction({ action: "chat_edit", message: trimmed,
-      ...(attachment ? { image: attachment.file } : {}),
+      ...(attachments.length ? { images: attachments.map((item) => item.file) } : {}),
       ...(activeProposal ? { proposalTarget: activeProposal } : {}),
       ...(activeTarget ? { target: activeTarget.target } : {}) })) {
       setMessage("");
@@ -80,9 +80,13 @@ export function ChatPanel({
           return <div key={item.id} className="grid gap-2">
             <div className={`max-w-[95%] rounded-lg px-3 py-2 text-sm leading-6 whitespace-pre-wrap ${item.role === "user" ? "ml-auto bg-foreground text-background" : "border bg-background"}`}>
               {item.proposalLabel && <span className="mb-1 block text-xs opacity-70">{item.proposalLabel}</span>}
-              {item.image && <Image src={`/api/content-jobs/${encodeURIComponent(jobId)}/chat-images/${encodeURIComponent(item.image.id)}`}
-                alt={item.image.name} width={180} height={120} unoptimized
-                className="mb-2 max-h-40 w-auto max-w-full rounded-md object-contain" />}
+              {(item.images ?? (item.image ? [item.image] : [])).length > 0 &&
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {(item.images ?? (item.image ? [item.image] : [])).map((image) =>
+                    <Image key={image.id} src={`/api/content-jobs/${encodeURIComponent(jobId)}/chat-images/${encodeURIComponent(image.id)}`}
+                      alt={image.name} width={180} height={120} unoptimized
+                      className="max-h-40 w-auto max-w-full rounded-md object-contain" />)}
+                </div>}
               {item.text}
             </div>
             {proposalSet && <ProposalCards set={proposalSet} editor={editor} selected={activeProposal} disabled={disabled}
@@ -126,13 +130,15 @@ export function ChatPanel({
             선택한 Element를 채팅 대상으로 사용
           </button>
         ) : null}
-        {attachment && <div className="flex items-start gap-2 rounded-lg border bg-muted/30 p-2">
-          <Image src={attachment.url} alt={attachment.file.name} width={72} height={72} unoptimized
-            className="size-16 rounded-md object-cover" />
-          <span className="min-w-0 flex-1 truncate pt-1 text-xs">{attachment.file.name}</span>
-          <Button type="button" size="icon-sm" variant="ghost" disabled={disabled}
-            onClick={clear}
-            aria-label="첨부 이미지 제거"><X className="size-4" /></Button>
+        {attachments.length > 0 && <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto" aria-label="첨부 이미지">
+          {attachments.map((attachment) => <div key={attachment.url} className="flex max-w-full items-center gap-2 rounded-lg border bg-muted/30 p-2">
+            <Image src={attachment.url} alt={attachment.file.name} width={48} height={48} unoptimized
+              className="size-12 rounded-md object-cover" />
+            <span className="max-w-28 truncate text-xs" title={attachment.file.name}>{attachment.file.name}</span>
+            <Button type="button" size="icon-sm" variant="ghost" disabled={disabled}
+              onClick={() => remove(attachment.url)}
+              aria-label={`${attachment.file.name} 첨부 제거`}><X className="size-4" /></Button>
+          </div>)}
         </div>}
         {imageError && <p role="alert" className="text-xs text-destructive">{imageError}</p>}
         <label className="sr-only" htmlFor="editor-message">수정 요청 또는 질문</label>
@@ -150,13 +156,13 @@ export function ChatPanel({
           }}
         />
         <div className="flex items-center justify-between">
-          <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="sr-only"
+          <input ref={fileInputRef} type="file" multiple accept="image/png,image/jpeg,image/webp" className="sr-only"
             aria-label="채팅 이미지 선택" onChange={(event) => receive(event.target.files)} />
           <Button type="button" size="icon" variant="ghost" disabled={disabled}
             onClick={() => fileInputRef.current?.click()} aria-label="이미지 첨부" title="이미지 첨부">
             <ImagePlus className="size-4" />
           </Button>
-          <Button size="icon" disabled={disabled || (!message.trim() && !attachment)} onClick={() => void sendMessage()} aria-label="메시지 보내기">
+          <Button size="icon" disabled={disabled || (!message.trim() && attachments.length === 0)} onClick={() => void sendMessage()} aria-label="메시지 보내기">
             <Send className="size-4" />
           </Button>
         </div>

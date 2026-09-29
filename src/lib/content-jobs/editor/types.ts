@@ -76,6 +76,7 @@ export type EditorMessage = {
   id: string;
   role: "user" | "assistant";
   text: string;
+  images?: Array<{ id: string; name: string; type: "image/jpeg" | "image/png" | "image/webp" }>;
   image?: { id: string; name: string; type: "image/jpeg" | "image/png" | "image/webp" };
   target?: EditorChatTarget;
   proposalTarget?: EditorProposalTarget;

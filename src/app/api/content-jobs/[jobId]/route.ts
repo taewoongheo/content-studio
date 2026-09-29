@@ -7,6 +7,7 @@ import {
   editorWorkflow,
 } from "@/lib/content-jobs/workflow/service";
 import { isLocalRequest } from "@/lib/http/local-request";
+import { MAX_CHAT_IMAGES } from "@/lib/image-upload";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,13 +53,15 @@ export async function POST(request: Request, context: Context) {
       message: form.get("message"),
       target: parseOptionalJson(form.get("target")),
       proposalTarget: parseOptionalJson(form.get("proposalTarget")),
-      image: form.get("image"),
+      images: form.getAll("images"),
     } : await request.json();
     if (typeof body !== "object" || body === null)
       return Response.json({ error: "잘못된 요청입니다." }, { status: 400 });
     const input = body as Record<string, unknown>;
     const action = input.action;
-    if (form && (action !== "chat_edit" || !(input.image instanceof File)))
+    if (form && (action !== "chat_edit" || !Array.isArray(input.images) ||
+      input.images.length === 0 || input.images.length > MAX_CHAT_IMAGES ||
+      !input.images.every((image) => image instanceof File)))
       return Response.json({ error: "채팅 이미지 요청이 올바르지 않습니다." }, { status: 400 });
     if (action === "initialize_editor") {
       const running = editorWorkflow.initialize(jobId);
@@ -90,7 +93,7 @@ export async function POST(request: Request, context: Context) {
           if (typeof input.message !== "string")
             return Response.json({ error: "메시지를 입력해 주세요." }, { status: 400 });
           running = editorWorkflow.chat(jobId, input.message, revision, input.target, input.proposalTarget,
-            input.image instanceof File ? input.image : undefined);
+            Array.isArray(input.images) ? input.images as File[] : []);
       }
       void running.catch(() => {});
       return Response.json(contentJobRegistry.get(jobId), {

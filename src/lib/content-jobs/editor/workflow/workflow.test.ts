@@ -71,7 +71,7 @@ function setup() {
   return { codex, router, registry, job, service };
 }
 
-test("첨부 이미지는 답변 Codex 턴에 한 번 전달되고 채팅 기록에 남는다", async () => {
+test("첨부 이미지 여러 장은 답변 Codex 턴에 모두 전달되고 채팅 기록에 남는다", async () => {
   const directory = await mkdtemp(join(tmpdir(), "content-studio-chat-test-"));
   try {
     const { codex, router, registry, job, service } = setup();
@@ -79,14 +79,15 @@ test("첨부 이미지는 답변 Codex 턴에 한 번 전달되고 채팅 기록
     codex.outputs.push(analysis, { reply: "첨부 이미지를 확인했습니다." });
     const ready = await service.initialize(job.id);
     router.routes.push({ capability: "answer", proposalSetId: "", candidateId: "" });
-    const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
-      "sample.png", { type: "image/png" });
-    const next = await service.chat(job.id, "이 이미지 설명해줘", ready.editor.revision, undefined, undefined, file);
-    const image = next.editor.messages.at(-2)?.image;
-    assert.equal(image?.name, "sample.png");
-    assert.deepEqual(codex.inputs.at(-1)?.[1], { type: "localImage",
-      path: registry.getRecord(job.id).chatImages?.[0].path, detail: "high" });
-    assert.equal((await readChatImage(registry.getRecord(job.id), image!.id)).type, "image/png");
+    const files = ["first.png", "second.png"].map((name) => new File(
+      [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])], name, { type: "image/png" }));
+    const next = await service.chat(job.id, "이 이미지들 설명해줘", ready.editor.revision, undefined, undefined, files);
+    const images = next.editor.messages.at(-2)?.images;
+    assert.deepEqual(images?.map((image) => image.name), ["first.png", "second.png"]);
+    assert.deepEqual(codex.inputs.at(-1)?.slice(1), registry.getRecord(job.id).chatImages?.map((image) =>
+      ({ type: "localImage", path: image.path, detail: "high" })));
+    assert.equal((await readChatImage(registry.getRecord(job.id), images![0].id)).type, "image/png");
+    assert.equal((await readChatImage(registry.getRecord(job.id), images![1].id)).type, "image/png");
     assert.equal("chatImages" in next, false);
   } finally {
     await rm(directory, { recursive: true, force: true });
@@ -94,13 +95,20 @@ test("첨부 이미지는 답변 Codex 턴에 한 번 전달되고 채팅 기록
 });
 
 test("확장자만 이미지인 첨부는 Codex에 전달하지 않는다", async () => {
-  const { codex, job, service } = setup();
+  const { codex, registry, job, service } = setup();
   codex.outputs.push(analysis);
   const ready = await service.initialize(job.id);
   const invalid = new File(["not an image"], "fake.png", { type: "image/png" });
+  const valid = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+    "valid.png", { type: "image/png" });
   await assert.rejects(service.chat(job.id, "이걸 봐줘", ready.editor.revision,
-    undefined, undefined, invalid), /이미지 파일 형식/);
+    undefined, undefined, [valid, invalid]), /이미지 파일 형식/);
   assert.equal(codex.inputs.length, 1);
+  assert.equal(job.editor.messages.length, 0);
+  assert.equal(service.get(job.id).editor.messages.length, 0);
+  assert.equal(service.get(job.id).lastError?.includes("이미지 파일 형식"), true);
+  assert.equal(service.get(job.id).activeOperation, null);
+  assert.equal(registry.getRecord(job.id).chatImages?.length, 0);
 });
 
 test("채팅으로 본문 장을 추가·복제·제거하고 되돌리면 장 수가 동기화된다", async () => {

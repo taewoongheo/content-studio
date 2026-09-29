@@ -50,14 +50,14 @@ export async function postContentJobAction(
   jobId: string,
   body: Record<string, unknown>,
 ) {
-  if (body.action === "chat_edit" && body.image instanceof File) {
+  if (body.action === "chat_edit" && Array.isArray(body.images) && body.images.length > 0) {
     const form = new FormData();
     form.set("action", "chat_edit");
     form.set("expectedRevision", String(body.expectedRevision));
     form.set("message", String(body.message));
     if (body.target) form.set("target", JSON.stringify(body.target));
     if (body.proposalTarget) form.set("proposalTarget", JSON.stringify(body.proposalTarget));
-    form.set("image", body.image);
+    for (const image of body.images) form.append("images", image);
     return readResponse(await fetch(`/api/content-jobs/${encodeURIComponent(jobId)}`, {
       method: "POST", body: form,
     }));
