@@ -144,7 +144,7 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
   }
 
   async function removeSlide() {
-    if (!document || !slide || !window.confirm("이 슬라이드를 제거할까요? 되돌리기로 복원할 수 있습니다.")) return;
+    if (!document || !slide) return;
     const index = document.slides.findIndex((item) => item.id === slide.id);
     if (await saveCommands([slideActionCommand(document, slide.id, "remove_slide")])) {
       setSlideId(document.slides[index + 1]?.id ?? document.slides[index - 1].id);
@@ -167,7 +167,6 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
     if (!placement || element?.kind === "background") return;
     const commands = removalCommandsForScope(visualTargets, selectedSlideIds);
     if (commands.length === 0) return;
-    if (commands.length > 1 && !window.confirm(`선택한 ${selectedSlideIds.length}장에서 ${element?.name ?? "Element"}를 제거할까요?\n되돌리기로 복원할 수 있습니다.`)) return;
     const saved = await saveCommands(commands);
     if (saved) setPlacementId(null);
   }
