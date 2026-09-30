@@ -16,7 +16,7 @@ import {
   type CreationMethod,
   type SlideshowStructure,
 } from "./selection/model";
-import type { ContentSettings } from "./settings/model";
+import { DEFAULT_CONTENT_SETTINGS, type ContentSettings } from "./settings/model";
 
 export function useContentForm(context: ProductContext | null) {
   const [type, setType] = useState<ContentType>("slideshow");
@@ -25,10 +25,7 @@ export function useContentForm(context: ProductContext | null) {
   const [referenceImages, setReferenceImages] = useState<
     ReferenceImageDraft[]
   >([]);
-  const [settings, setSettings] = useState<ContentSettings>({
-    ratio: "9:16",
-    language: "한국어",
-  });
+  const [settings, setSettings] = useState<ContentSettings>(DEFAULT_CONTENT_SETTINGS);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [error, setError] = useState("");
   const [fileError, setFileError] = useState("");
