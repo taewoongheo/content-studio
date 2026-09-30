@@ -63,6 +63,21 @@ export class AssetStore {
     return rows.map(toAsset);
   }
 
+  /** Bounded metadata-only lookup. Never load image BLOBs for a search. */
+  search(query: string, limit = 12): StoredAsset[] {
+    const terms = [...new Set(query.trim().split(/\s+/).filter(Boolean))].slice(0, 12);
+    if (!terms.length) return [];
+    const patterns = terms.map((term) => `%${term.replace(/[\\%_]/g, "\\$&")}%`);
+    const predicate = "(name LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\')";
+    const args = patterns.flatMap((pattern) => [pattern, pattern]);
+    const rows = this.database.prepare(`SELECT ${ASSET_COLUMNS} FROM assets
+      WHERE ${terms.map(() => predicate).join(" OR ")}
+      ORDER BY (${terms.map(() => `CASE WHEN ${predicate} THEN 1 ELSE 0 END`).join(" + ")}) DESC,
+        created_at DESC, id DESC LIMIT ?`)
+      .all(...args, ...args, Math.min(30, Math.max(1, Math.floor(limit)))) as AssetRow[];
+    return rows.map(toAsset);
+  }
+
   readImage(id: string): { bytes: Buffer; type: ImageMimeType } | null {
     const row = this.database.prepare("SELECT data, mime_type FROM assets WHERE id = ?")
       .get(id) as { data: Buffer; mime_type: ImageMimeType } | undefined;

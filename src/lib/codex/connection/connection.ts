@@ -202,7 +202,7 @@ export class CodexConnectionManager {
       {
         ...params,
         approvalPolicy: "never",
-        sandbox: "workspace-write",
+        sandbox: "read-only",
         ephemeral: true,
       },
     );

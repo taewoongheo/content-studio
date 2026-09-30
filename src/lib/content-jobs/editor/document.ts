@@ -161,6 +161,22 @@ function offsetFrame(frame: ElementFrame): ElementFrame {
 export function applyEditorCommand(document: EditorDocument, command: EditorCommand): EditorDocument {
   const next = ensureSharedBackground(structuredClone(document));
   switch (command.type) {
+    case "reorder_slides": {
+      if (!unique(command.slideIds) || command.slideIds.length !== next.slides.length ||
+        command.slideIds.some((id) => !next.slides.some((slide) => slide.id === id)))
+        throw new Error("전체 슬라이드 ID를 정확히 한 번씩 지정해 주세요.");
+      next.slides = command.slideIds.map((id) => requireSlide(next, id));
+      break;
+    }
+    case "reorder_layers": {
+      const slide = requireSlide(next, command.slideId);
+      if (!unique(command.placementIds) || command.placementIds.length !== slide.placements.length ||
+        command.placementIds.some((id) => !slide.placements.some((item) => item.id === id)) ||
+        command.placementIds.at(-1) !== BACKGROUND_PLACEMENT_ID)
+        throw new Error("배경을 맨 뒤에 두고 모든 배치 ID를 정확히 한 번씩 지정해 주세요.");
+      slide.placements = command.placementIds.map((id) => requirePlacement(slide, id));
+      break;
+    }
     case "set_slide_background": {
       const slide = requireSlide(next, command.slideId);
       const placement = requirePlacement(slide, BACKGROUND_PLACEMENT_ID);

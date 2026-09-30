@@ -552,10 +552,12 @@ test("채팅의 주제 재추천과 후보 수정은 적용 전까지 슬라이�
   assert.equal(next.editor.document?.slides[1].placements[0].value, "");
   const target = { setId: set.id, candidateId: "topic-2" };
   next = await service.chat(job.id, "이 주제를 기록 시간 쪽으로 바꿔줘", next.editor.revision, undefined, target);
-  assert.equal(next.editor.proposalSets[0].version, 2);
+  assert.equal(next.editor.proposalSets[0].version, 1);
+  assert.equal(next.editor.proposalSets.at(-1)?.version, 2);
   assert.equal(next.editor.topicSuggestions[1].title, "세트 기록의 부담");
   assert.equal(next.editor.document?.slides[1].placements[0].value, "");
-  next = await service.chat(job.id, "이 주제를 적용해줘", next.editor.revision, undefined, target);
+  next = await service.chat(job.id, "이 주제를 적용해줘", next.editor.revision, undefined,
+    { ...target, setId: next.editor.proposalSets.at(-1)!.id });
   assert.equal(next.editor.selectedTopic?.title, "세트 기록의 부담");
   assert.equal(next.editor.document?.slides[1].placements[0].value, "본문 2");
 });
@@ -591,6 +593,7 @@ test("훅 제안을 수정해도 적용 전에는 첫 장이 유지되고, 적�
   next = await service.chat(job.id, "이 훅을 더 짧게", next.editor.revision, undefined, target);
   assert.equal(next.editor.hookSuggestions[1].text, "짧은 훅");
   assert.equal(next.editor.document?.slides[0].placements[0].value, "");
+  target.setId = next.editor.proposalSets.at(-1)!.id;
   next = service.selectHook(job.id, target.candidateId, next.editor.revision, target.setId);
   assert.equal(next.editor.document?.slides[0].placements[0].value, "짧은 훅");
   next = await service.chat(job.id, "다른 표현으로 다시", next.editor.revision, undefined, target);

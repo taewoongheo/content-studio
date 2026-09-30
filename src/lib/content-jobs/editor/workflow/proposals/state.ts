@@ -34,21 +34,19 @@ export function resolveProposal(
 export function reviseTopic(editor: EditorJobState, target: { set: EditorProposalSet; candidateId: string },
   revision: Omit<EditorTopic, "id">, messageId: string) {
   if (target.set.kind !== "topic") throw new Error("주제 제안을 선택해 주세요.");
-  target.set.items = target.set.items.map((item) => item.id === target.candidateId
+  const items = target.set.items.map((item) => item.id === target.candidateId
     ? { ...revision, id: item.id } : item);
-  target.set.version += 1;
-  target.set.messageId = messageId;
-  editor.topicSuggestions = target.set.items;
+  const next = addProposalSet(editor, "topic", items, messageId);
+  next.version = target.set.version + 1;
 }
 
 export function reviseHook(editor: EditorJobState, target: { set: EditorProposalSet; candidateId: string },
   revision: Omit<EditorHook, "id">, messageId: string) {
   if (target.set.kind !== "hook") throw new Error("훅 제안을 선택해 주세요.");
-  target.set.items = target.set.items.map((item) => item.id === target.candidateId
+  const items = target.set.items.map((item) => item.id === target.candidateId
     ? { ...revision, id: item.id } : item);
-  target.set.version += 1;
-  target.set.messageId = messageId;
-  editor.hookSuggestions = target.set.items;
+  const next = addProposalSet(editor, "hook", items, messageId);
+  next.version = target.set.version + 1;
 }
 
 export function staleHookProposals(editor: EditorJobState) {

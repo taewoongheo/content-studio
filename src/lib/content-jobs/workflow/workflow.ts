@@ -1,3 +1,6 @@
+import { mkdir } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { CodexConnectionManager } from "../../codex/connection/connection";
 import type { CodexJsonValue, CodexUserInput } from "../../codex/transport/types";
 import {
@@ -79,13 +82,15 @@ function applyHookToFirstSlide(copy: CopyOutput, text: string): CopyOutput {
 
 export class ContentWorkflowService {
   private readonly cwd: string;
+  private readonly prepareCwd: boolean;
 
   constructor(
     private readonly codex: CodexWorkflowClient,
     readonly registry: ContentJobRegistry,
     options: WorkflowOptions = {},
   ) {
-    this.cwd = options.cwd ?? process.cwd();
+    this.cwd = options.cwd ?? join(tmpdir(), "content-studio-codex");
+    this.prepareCwd = options.cwd === undefined;
   }
 
   async createJob(input: ContentJobInput) {
@@ -96,6 +101,7 @@ export class ContentWorkflowService {
         "Codex에 연결한 뒤 다시 시도해 주세요.",
       );
     }
+    if (this.prepareCwd) await mkdir(this.cwd, { recursive: true });
     const { threadId } = await this.codex.startThread({
       cwd: this.cwd,
       model: input.model,

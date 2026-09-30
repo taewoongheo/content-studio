@@ -42,7 +42,7 @@ export const editorElementSchema = object({
   sourceImageId: text,
 });
 
-function object(properties: Record<string, unknown>, required = Object.keys(properties)) {
+function object<Properties extends Record<string, unknown>>(properties: Properties, required = Object.keys(properties)) {
   return { type: "object", properties, required, additionalProperties: false };
 }
 
@@ -59,6 +59,8 @@ export const editorAnalysisSchema = object({
 });
 
 const commandVariants = [
+  object({ type: { const: "reorder_slides" }, slideIds: { type: "array", items: text } }),
+  object({ type: { const: "reorder_layers" }, slideId: text, placementIds: { type: "array", items: text } }),
   object({ type: { const: "set_slide_background" }, slideId: text, color }),
   object({ type: { const: "set_slot_value" }, slideId: text, placementId: text, value: text }),
   object({ type: { const: "update_visual" }, scope: { const: "common" }, elementId: text, frame, style: stylePatch }, ["type", "scope", "elementId"]),
@@ -76,7 +78,7 @@ const commandVariants = [
 ];
 
 export const editorCommandsSchema = object({
-  commands: { type: "array", items: { oneOf: commandVariants }, maxItems: 40 },
+  commands: { type: "array", items: { oneOf: commandVariants }, maxItems: 200 },
 });
 
 export function validateEditorAnalysis(

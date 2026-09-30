@@ -63,8 +63,13 @@ export type EditorTopic = {
 };
 export type EditorHook = { id: string; text: string; rationale: string };
 export type EditorProposalSet =
-  | { id: string; kind: "topic"; version: number; messageId: string; stale: boolean; items: EditorTopic[] }
-  | { id: string; kind: "hook"; version: number; messageId: string; stale: boolean; items: EditorHook[] };
+  | { id: string; kind: "topic"; version: number; messageId: string; stale: boolean; consumed?: boolean; items: EditorTopic[] }
+  | { id: string; kind: "hook"; version: number; messageId: string; stale: boolean; consumed?: boolean; items: EditorHook[] };
+export type EditorExecutionStep = {
+  id: string;
+  label: string;
+  status: "pending" | "running" | "completed" | "failed" | "skipped";
+};
 export type EditorProposalTarget = { setId: string; candidateId: string };
 export type EditorChatTarget = {
   slideId: string;
@@ -81,6 +86,7 @@ export type EditorMessage = {
   target?: EditorChatTarget;
   proposalTarget?: EditorProposalTarget;
   proposalLabel?: string;
+  execution?: { steps: EditorExecutionStep[]; error?: string };
 };
 export type EditorJobState = {
   status: "pending" | "analyzing" | "ready";
@@ -111,6 +117,8 @@ export type EditorAnalysis = {
 };
 
 export type EditorCommand =
+  | { type: "reorder_slides"; slideIds: string[] }
+  | { type: "reorder_layers"; slideId: string; placementIds: string[] }
   | { type: "set_slide_background"; slideId: string; color: string }
   | { type: "set_slot_value"; slideId: string; placementId: string; value: string }
   | { type: "update_visual"; scope: "common"; elementId: string; frame?: ElementFrame; style?: Partial<ElementStyle> }

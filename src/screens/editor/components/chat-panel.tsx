@@ -9,6 +9,8 @@ import type { EditorChatTarget, EditorJobState, EditorProposalTarget } from "@/l
 import type { ContentJobOperation } from "@/lib/content-jobs/domain/types";
 import { ProposalCards } from "./chat/proposal-cards";
 import { useChatAttachment } from "./chat/use-chat-attachment";
+import { isProposalInteractive } from "@/lib/content-jobs/editor/workflow/proposals/lifecycle";
+import { ExecutionProgress } from "./chat/execution-progress";
 
 type SelectedChatTarget = { target: EditorChatTarget; name: string; scopeLabel: string };
 
@@ -46,7 +48,7 @@ export function ChatPanel({
   const selectedProposalSet = editor.proposalSets.find((set) => set.id === proposalSelection?.target.setId);
   const activeProposal = proposalSelection?.elementKey === targetKey &&
     proposalSelection.proposalCount === editor.proposalSets.length && selectedProposalSet &&
-    !selectedProposalSet.stale && selectedProposalSet.items.some((item) => item.id === proposalSelection.target.candidateId)
+    isProposalInteractive(editor, selectedProposalSet) && selectedProposalSet.items.some((item) => item.id === proposalSelection.target.candidateId)
     ? proposalSelection.target : null;
   const activeTarget = !activeProposal && targetKey && targetKey !== dismissedTargetKey ? selectedTarget : null;
   const selectedCandidate = selectedProposalSet?.items.find((item) => item.id === activeProposal?.candidateId);
@@ -65,7 +67,7 @@ export function ChatPanel({
 
   function applyProposal(target: EditorProposalTarget) {
     const set = editor.proposalSets.find((item) => item.id === target.setId);
-    if (!set || set.stale) return;
+    if (!set || !isProposalInteractive(editor, set)) return;
     void onAction(set.kind === "topic"
       ? { action: "select_topic", topicId: target.candidateId, proposalSetId: set.id }
       : { action: "select_editor_hook", hookId: target.candidateId, proposalSetId: set.id });
@@ -76,7 +78,8 @@ export function ChatPanel({
       {dragging && <div className="pointer-events-none absolute inset-2 z-20 grid place-items-center rounded-lg border-2 border-dashed border-foreground bg-background/95 text-sm font-medium">이미지를 놓아 채팅에 첨부</div>}
       <div className="min-h-[180px] flex-1 space-y-3 overflow-y-auto p-5" aria-live="polite">
         {editor.messages.map((item) => {
-          const proposalSet = editor.proposalSets.find((set) => set.messageId === item.id);
+          if (item.execution) return <ExecutionProgress key={item.id} execution={item.execution} />;
+          const proposalSets = editor.proposalSets.filter((set) => set.messageId === item.id);
           return <div key={item.id} className="grid gap-2">
             <div className={`max-w-[95%] rounded-lg px-3 py-2 text-sm leading-6 whitespace-pre-wrap ${item.role === "user" ? "ml-auto bg-foreground text-background" : "border bg-background"}`}>
               {item.proposalLabel && <span className="mb-1 block text-xs opacity-70">{item.proposalLabel}</span>}
@@ -89,15 +92,16 @@ export function ChatPanel({
                 </div>}
               {item.text}
             </div>
-            {proposalSet && <ProposalCards set={proposalSet} editor={editor} selected={activeProposal} disabled={disabled}
+            {proposalSets.map((proposalSet) => <ProposalCards key={proposalSet.id} set={proposalSet} editor={editor} selected={activeProposal}
+              disabled={disabled || !isProposalInteractive(editor, proposalSet)}
               onSelect={(target) => {
                 setProposalSelection({ target, elementKey: targetKey,
                   proposalCount: editor.proposalSets.length });
                 setDismissedTargetKey(targetKey);
-              }} onApply={applyProposal} />}
+              }} onApply={applyProposal} />)}
           </div>;
         })}
-        {activeOperation && (
+        {activeOperation && !editor.messages.some((item) => item.execution?.steps.some((step) => step.status === "running")) && (
           <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
             <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
             {operationLabels[activeOperation] ?? "작업 중…"}
