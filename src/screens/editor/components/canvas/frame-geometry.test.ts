@@ -47,3 +47,18 @@ test("소수점 프레임을 끝까지 이동하거나 늘려도 경계를 넘�
     assert.ok(result.y + result.height <= 1);
   }
 });
+
+test("비율 잠금 크기 조절은 어느 모서리에서도 원래 비율을 유지한다", () => {
+  const southeast = moveOrResizeFrame(frame, "se", 0.2, 0.01, true, true);
+  const northwest = moveOrResizeFrame(frame, "nw", 0.1, 0.01, true, true);
+  assert.ok(Math.abs(southeast.width / southeast.height - 1.5) < 0.001);
+  assert.ok(Math.abs(northwest.width / northwest.height - 1.5) < 0.001);
+  assert.deepEqual({ x: southeast.x, y: southeast.y }, { x: frame.x, y: frame.y });
+  assert.equal(Number((northwest.x + northwest.width).toFixed(4)), frame.x + frame.width);
+  assert.equal(Number((northwest.y + northwest.height).toFixed(4)), frame.y + frame.height);
+});
+
+test("비율 잠금을 끄면 너비와 높이를 독립적으로 조절한다", () => {
+  assert.deepEqual(moveOrResizeFrame(frame, "se", 0.2, 0.01, false, false),
+    { x: 0.2, y: 0.2, width: 0.5, height: 0.21 });
+});

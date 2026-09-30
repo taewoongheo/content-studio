@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import type { EditorCommand, ElementDefinition, ElementFrame, ElementStyle, PlacedElement } from "@/lib/content-jobs/editor/types";
-import { commandsFromDraft, makeElementDraft, validElementDraft, type VisualTarget } from "./element-draft";
+import { commandsFromDraft, draftWithFontSize, frameWithLockedDimension, makeElementDraft, validElementDraft, type VisualTarget } from "./element-draft";
 import { useAutosave } from "./use-autosave";
 
 type Props = {
@@ -19,14 +19,17 @@ type Props = {
   visualTargets: VisualTarget[];
   jobId: string;
   currentImage: ContentJobSnapshot["assets"][number] | null;
+  imageAspectRatioLocked: boolean;
   disabled: boolean;
   onSave: (commands: EditorCommand[]) => Promise<boolean>;
   onUploadImage: (file: File) => Promise<boolean>;
+  onImageAspectRatioLockedChange: (locked: boolean) => void;
 };
 
 export type ElementInspectorHandle = { flushPending: () => Promise<boolean> };
 
-export function ElementInspector({ ref, element, placement, slideId, selectedSlideIds, visualTargets, jobId, currentImage, disabled, onSave, onUploadImage }: Props) {
+export function ElementInspector({ ref, element, placement, slideId, selectedSlideIds, visualTargets, jobId,
+  currentImage, imageAspectRatioLocked, disabled, onSave, onUploadImage, onImageAspectRatioLockedChange }: Props) {
   const [draft, setDraft] = useState(() => makeElementDraft(element, placement));
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -49,7 +52,10 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
   }), [commands, valid, onSave]);
 
   function updateFrame(key: keyof ElementFrame, percent: number) {
-    setDraft((current) => ({ ...current, frame: { ...current.frame, [key]: percent / 100 } }));
+    setDraft((current) => ({ ...current, frame: element.kind === "image" && imageAspectRatioLocked &&
+      (key === "width" || key === "height")
+      ? frameWithLockedDimension(current.frame, key, percent / 100)
+      : { ...current.frame, [key]: percent / 100 } }));
   }
 
   function updateStyle<Key extends keyof ElementStyle>(key: Key, value: ElementStyle[Key]) {
@@ -97,6 +103,11 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
           <NumberField label="Y (%)" value={draft.frame.y * 100} onChange={(value) => updateFrame("y", value)} />
           <NumberField label="너비 (%)" value={draft.frame.width * 100} onChange={(value) => updateFrame("width", value)} />
           <NumberField label="높이 (%)" value={draft.frame.height * 100} onChange={(value) => updateFrame("height", value)} />
+          {element.kind === "image" && <label className="col-span-2 flex items-center gap-2 text-xs font-medium">
+            <input type="checkbox" checked={imageAspectRatioLocked}
+              onChange={(event) => onImageAspectRatioLockedChange(event.target.checked)} />
+            너비·높이 비율 유지
+          </label>}
         </fieldset>
         <fieldset disabled={disabled} className="grid min-w-0 grid-cols-2 gap-3 [&>*]:min-w-0">
           {element.kind === "text" && (
@@ -108,7 +119,8 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
           {!isShape && <label className="col-span-2 flex items-center gap-2 text-xs font-medium"><input type="checkbox" checked={draft.style.backgroundColor === "transparent"} onChange={(event) => updateStyle("backgroundColor", event.target.checked ? "transparent" : "#FFFFFF")} />투명 배경</label>}
           {element.kind === "text" && (
             <>
-              <NumberField label="글자 크기" value={draft.style.fontSize} onChange={(value) => updateStyle("fontSize", value)} />
+              <NumberField label="글자 크기" value={draft.style.fontSize}
+                onChange={(value) => setDraft((current) => draftWithFontSize(current, value))} />
               <NumberField label="글자 굵기" value={draft.style.fontWeight} onChange={(value) => updateStyle("fontWeight", value)} />
               <label className="grid gap-1.5 text-xs font-medium">글꼴 계열
                 <select className="h-10 rounded-md border bg-background px-2 text-sm" value={draft.style.fontFamily} onChange={(event) => updateStyle("fontFamily", event.target.value as ElementStyle["fontFamily"])}>

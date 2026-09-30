@@ -9,6 +9,64 @@ export type ElementDraft = {
   style: ElementStyle;
 };
 
+const MIN_FRAME_SIZE = 0.04;
+
+function clamp(value: number, minimum: number, maximum: number) {
+  return Math.min(Math.max(value, minimum), maximum);
+}
+
+function round(value: number) {
+  return Math.round(value * 10_000) / 10_000;
+}
+
+export function frameForFontSize(
+  frame: ElementFrame,
+  currentFontSize: number,
+  nextFontSize: number,
+  textAlign: ElementStyle["textAlign"],
+): ElementFrame {
+  if (currentFontSize < 8 || nextFontSize < 8 || currentFontSize === nextFontSize) return frame;
+  const scale = nextFontSize / currentFontSize;
+  const anchor = textAlign === "left" ? frame.x
+    : textAlign === "right" ? frame.x + frame.width
+      : frame.x + frame.width / 2;
+  const maximumWidth = textAlign === "left" ? 1 - anchor
+    : textAlign === "right" ? anchor
+      : 2 * Math.min(anchor, 1 - anchor);
+  const width = clamp(frame.width * scale, Math.min(MIN_FRAME_SIZE, maximumWidth), maximumWidth);
+  const height = clamp(frame.height * scale, Math.min(MIN_FRAME_SIZE, 1 - frame.y), 1 - frame.y);
+  const x = textAlign === "left" ? anchor
+    : textAlign === "right" ? anchor - width
+      : anchor - width / 2;
+  return {
+    ...frame,
+    x: round(clamp(x, 0, 1 - width)),
+    width: round(width),
+    height: round(height),
+  };
+}
+
+export function draftWithFontSize(draft: ElementDraft, fontSize: number): ElementDraft {
+  return {
+    ...draft,
+    frame: frameForFontSize(draft.frame, draft.style.fontSize, fontSize, draft.style.textAlign),
+    style: { ...draft.style, fontSize },
+  };
+}
+
+export function frameWithLockedDimension(
+  frame: ElementFrame,
+  dimension: "width" | "height",
+  value: number,
+): ElementFrame {
+  const currentSize = frame[dimension];
+  if (currentSize <= 0 || value <= 0) return { ...frame, [dimension]: value };
+  const minimumScale = Math.max(MIN_FRAME_SIZE / frame.width, MIN_FRAME_SIZE / frame.height);
+  const maximumScale = Math.min((1 - frame.x) / frame.width, (1 - frame.y) / frame.height);
+  const scale = clamp(value / currentSize, minimumScale, maximumScale);
+  return { ...frame, width: round(frame.width * scale), height: round(frame.height * scale) };
+}
+
 export function makeElementDraft(element: ElementDefinition, placement: PlacedElement, visualPlacement = placement): ElementDraft {
   return {
     name: element.name,

@@ -29,6 +29,7 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
   const [imageError, setImageError] = useState("");
   const [showGuides, setShowGuides] = useState(true);
   const [showImageLibrary, setShowImageLibrary] = useState(false);
+  const [unlockedImageRatios, setUnlockedImageRatios] = useState<Set<string>>(() => new Set());
   const inspectorRef = useRef<ElementInspectorHandle>(null);
   const imageLibraryButtonRef = useRef<HTMLButtonElement>(null);
   const latestRevision = useRef(job.editor.revision);
@@ -46,6 +47,18 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
   const referenceImage = originalSlideNumber
     ? job.referenceImages[Number(originalSlideNumber[1]) - 1]
     : undefined;
+  const imageRatioKey = element?.kind === "image" ? element.id : "";
+  const imageAspectRatioLocked = Boolean(imageRatioKey) && !unlockedImageRatios.has(imageRatioKey);
+
+  function changeImageAspectRatioLocked(locked: boolean) {
+    if (!imageRatioKey) return;
+    setUnlockedImageRatios((current) => {
+      const next = new Set(current);
+      if (locked) next.delete(imageRatioKey);
+      else next.add(imageRatioKey);
+      return next;
+    });
+  }
 
   async function action(body: Record<string, unknown>) {
     try {
@@ -226,9 +239,11 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
                   visualTargets={visualTargets}
                   jobId={job.id}
                   currentImage={job.assets.find((asset) => asset.id === placement.value) ?? null}
+                  imageAspectRatioLocked={imageAspectRatioLocked}
                   disabled={disabled}
                   onSave={saveCommands}
                   onUploadImage={uploadImage}
+                  onImageAspectRatioLockedChange={changeImageAspectRatioLocked}
                 />
               ) : null}
             </div>
@@ -290,6 +305,7 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
             <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted/20 p-5 sm:p-6">
               <SlideCanvas key={slide.id} document={document} slide={slide} jobId={job.id}
                 selectedPlacementId={placement?.id ?? null} disabled={disabled} showGuides={showGuides}
+                lockImageAspectRatio={imageAspectRatioLocked}
                 onSelect={setPlacementId} onSelectBackground={() => setPlacementId(BACKGROUND_PLACEMENT_ID)}
                 onFrameChange={changeFrame} />
             </div>

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { ElementDefinition, PlacedElement } from "@/lib/content-jobs/editor/types";
-import { commandsFromDraft, makeElementDraft, validElementDraft } from "./element-draft";
+import { commandsFromDraft, draftWithFontSize, frameForFontSize, frameWithLockedDimension, makeElementDraft, validElementDraft } from "./element-draft";
 
 const element: ElementDefinition = {
   id: "title", name: "제목", role: "훅", kind: "text",
@@ -79,4 +79,32 @@ test("현재 장을 제외하면 선택한 장의 시각 값으로 편집한다"
     element, placement, "slide-1", all, ["slide-2"], second), [
     { type: "update_visual", scope: "local", slideId: "slide-2", placementId: "placed-2", style: { color: "#FFFF00" } },
   ]);
+});
+
+test("글자 크기에 맞춰 텍스트 프레임을 정렬 기준으로 함께 조절한다", () => {
+  const frame = { x: 0.3, y: 0.2, width: 0.4, height: 0.1 };
+  assert.deepEqual(frameForFontSize(frame, 40, 60, "left"),
+    { x: 0.3, y: 0.2, width: 0.6, height: 0.15 });
+  assert.deepEqual(frameForFontSize(frame, 40, 60, "center"),
+    { x: 0.2, y: 0.2, width: 0.6, height: 0.15 });
+  assert.deepEqual(frameForFontSize(frame, 40, 20, "right"),
+    { x: 0.5, y: 0.2, width: 0.2, height: 0.05 });
+});
+
+test("글자 크기 수정은 스타일과 프레임을 하나의 시각 변경으로 저장한다", () => {
+  const draft = draftWithFontSize(makeElementDraft(element, placement), 72);
+  assert.deepEqual(commandsFromDraft(draft, element, placement, "slide-1", targets, ["slide-1"]), [
+    { type: "update_visual", scope: "common", elementId: "title",
+      frame: { x: 0, y: 0.1, width: 1, height: 0.4 }, style: { fontSize: 72 } },
+  ]);
+});
+
+test("이미지 크기의 한 축을 바꾸면 잠긴 비율대로 다른 축도 바뀐다", () => {
+  const frame = { x: 0.1, y: 0.2, width: 0.4, height: 0.2 };
+  assert.deepEqual(frameWithLockedDimension(frame, "width", 0.6),
+    { x: 0.1, y: 0.2, width: 0.6, height: 0.3 });
+  assert.deepEqual(frameWithLockedDimension(frame, "height", 0.1),
+    { x: 0.1, y: 0.2, width: 0.2, height: 0.1 });
+  assert.deepEqual(frameWithLockedDimension(frame, "width", 2),
+    { x: 0.1, y: 0.2, width: 0.9, height: 0.45 });
 });

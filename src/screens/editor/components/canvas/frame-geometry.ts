@@ -20,7 +20,7 @@ function round(value: number) {
 }
 
 export function moveOrResizeFrame(frame: ElementFrame, mode: DragMode, deltaX: number, deltaY: number,
-  guidesEnabled = true): ElementFrame {
+  guidesEnabled = true, lockAspectRatio = false): ElementFrame {
   if (mode === "move") {
     let x = clamp(frame.x + deltaX, 0, 1 - frame.width);
     let y = clamp(frame.y + deltaY, 0, 1 - frame.height);
@@ -30,6 +30,47 @@ export function moveOrResizeFrame(frame: ElementFrame, mode: DragMode, deltaX: n
     }
     return { ...frame, x: Math.min(round(clamp(x, 0, 1 - frame.width)), 1 - frame.width),
       y: Math.min(round(clamp(y, 0, 1 - frame.height)), 1 - frame.height) };
+  }
+
+  if (lockAspectRatio) {
+    const horizontalSize = mode.includes("w") ? frame.width - deltaX : frame.width + deltaX;
+    const verticalSize = mode.includes("n") ? frame.height - deltaY : frame.height + deltaY;
+    const horizontalScale = horizontalSize / frame.width;
+    const verticalScale = verticalSize / frame.height;
+    const requestedScale = Math.abs(horizontalScale - 1) >= Math.abs(verticalScale - 1)
+      ? horizontalScale : verticalScale;
+    const maximumWidth = mode.includes("w") ? frame.x + frame.width : 1 - frame.x;
+    const maximumHeight = mode.includes("n") ? frame.y + frame.height : 1 - frame.y;
+    const minimumScale = Math.max(MIN_FRAME_SIZE / frame.width, MIN_FRAME_SIZE / frame.height);
+    const maximumScale = Math.min(maximumWidth / frame.width, maximumHeight / frame.height);
+    let scale = clamp(requestedScale, minimumScale, maximumScale);
+
+    if (guidesEnabled) {
+      const horizontalEdge = mode.includes("w")
+        ? frame.x + frame.width - frame.width * scale : frame.x + frame.width * scale;
+      const verticalEdge = mode.includes("n")
+        ? frame.y + frame.height - frame.height * scale : frame.y + frame.height * scale;
+      const snapScales = [
+        Math.abs(horizontalEdge - 0.5) <= SNAP_DISTANCE
+          ? (mode.includes("w") ? frame.x + frame.width - 0.5 : 0.5 - frame.x) / frame.width : null,
+        Math.abs(verticalEdge - 0.5) <= SNAP_DISTANCE
+          ? (mode.includes("n") ? frame.y + frame.height - 0.5 : 0.5 - frame.y) / frame.height : null,
+      ].filter((value): value is number => value !== null);
+      if (snapScales.length > 0) {
+        const nearest = snapScales.reduce((best, value) =>
+          Math.abs(value - scale) < Math.abs(best - scale) ? value : best);
+        scale = clamp(nearest, minimumScale, maximumScale);
+      }
+    }
+
+    const width = round(frame.width * scale);
+    const height = round(frame.height * scale);
+    return {
+      x: round(mode.includes("w") ? frame.x + frame.width - width : frame.x),
+      y: round(mode.includes("n") ? frame.y + frame.height - height : frame.y),
+      width,
+      height,
+    };
   }
 
   let left = frame.x;

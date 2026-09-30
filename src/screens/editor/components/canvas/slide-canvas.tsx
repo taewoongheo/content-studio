@@ -7,7 +7,7 @@ import { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID } from "@/lib/content-jo
 import { moveOrResizeFrame, type DragMode } from "./frame-geometry";
 
 type Gesture = { pointerId: number; placementId: string; mode: DragMode; startX: number; startY: number;
-  canvasWidth: number; canvasHeight: number; frame: ElementFrame };
+  canvasWidth: number; canvasHeight: number; frame: ElementFrame; lockAspectRatio: boolean };
 const handles = ["nw", "ne", "sw", "se"] as const;
 const handlePositions = { nw: "-left-1.5 -top-1.5 cursor-nwse-resize", ne: "-right-1.5 -top-1.5 cursor-nesw-resize",
   sw: "-bottom-1.5 -left-1.5 cursor-nesw-resize", se: "-bottom-1.5 -right-1.5 cursor-nwse-resize" } as const;
@@ -19,6 +19,7 @@ export function SlideCanvas({
   selectedPlacementId,
   disabled,
   showGuides,
+  lockImageAspectRatio,
   onSelect,
   onSelectBackground,
   onFrameChange,
@@ -29,6 +30,7 @@ export function SlideCanvas({
   selectedPlacementId: string | null;
   disabled: boolean;
   showGuides: boolean;
+  lockImageAspectRatio: boolean;
   onSelect: (placementId: string) => void;
   onSelectBackground: () => void;
   onFrameChange: (placementId: string, frame: ElementFrame) => Promise<boolean>;
@@ -38,7 +40,8 @@ export function SlideCanvas({
   const [preview, setPreview] = useState<{ placementId: string; frame: ElementFrame } | null>(null);
   const elements = new Map(document.elements.map((element) => [element.id, element]));
 
-  function beginGesture(event: PointerEvent<HTMLButtonElement>, placementId: string, frame: ElementFrame, mode: DragMode) {
+  function beginGesture(event: PointerEvent<HTMLButtonElement>, placementId: string, frame: ElementFrame, mode: DragMode,
+    lockAspectRatio = false) {
     event.stopPropagation();
     if (disabled) return;
     if (selectedPlacementId !== placementId) {
@@ -50,7 +53,7 @@ export function SlideCanvas({
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     gesture.current = { pointerId: event.pointerId, placementId, mode, startX: event.clientX, startY: event.clientY,
-      canvasWidth: bounds.width, canvasHeight: bounds.height, frame };
+      canvasWidth: bounds.width, canvasHeight: bounds.height, frame, lockAspectRatio };
   }
 
   function frameAtPointer(event: PointerEvent<HTMLButtonElement>) {
@@ -58,7 +61,7 @@ export function SlideCanvas({
     if (!active || active.pointerId !== event.pointerId) return null;
     return { placementId: active.placementId, frame: moveOrResizeFrame(active.frame, active.mode,
       (event.clientX - active.startX) / active.canvasWidth, (event.clientY - active.startY) / active.canvasHeight,
-      showGuides) };
+      showGuides, active.lockAspectRatio) };
   }
 
   function moveGesture(event: PointerEvent<HTMLButtonElement>) {
@@ -165,7 +168,8 @@ export function SlideCanvas({
           {selected && handles.map((handle) => (
             <button key={handle} type="button" disabled={disabled} aria-label={`${element.name} ${handle} 크기 조절`}
               className={`absolute z-10 size-3 rounded-[2px] border border-primary bg-background shadow-sm touch-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${handlePositions[handle]}`}
-              onPointerDown={(event) => beginGesture(event, placement.id, frame, handle)}
+              onPointerDown={(event) => beginGesture(event, placement.id, frame, handle,
+                element.kind === "image" && lockImageAspectRatio)}
               onPointerMove={moveGesture} onPointerUp={(event) => void finishGesture(event)} onPointerCancel={cancelGesture} />
           ))}
           </div>
