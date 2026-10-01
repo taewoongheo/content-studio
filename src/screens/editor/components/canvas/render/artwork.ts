@@ -67,12 +67,14 @@ export async function renderArtwork(options: Options) {
             group.add(new Konva.Text({ ...bounds, text: element.name, fontSize: 32, fill: "#777", align: "center", verticalAlign: "middle" }));
           }
         } else if (element.kind === "text" && (placement.value || showPlaceholders)) {
-          // Height controls selection, not a destructive crop of glyphs or wrapped lines.
-          group.add(new Konva.Text({ x: 10.8, y: 0, width: Math.max(1, frame.width - 21.6),
+          // Measure the wrapped block before centering; a fixed Text height would crop excess lines.
+          const text = new Konva.Text({ x: 10.8, width: Math.max(1, frame.width - 21.6),
             text: placement.value || element.name, fontSize: style.fontSize,
             fontFamily: style.fontFamily, fontStyle: String(style.fontWeight),
             lineHeight: style.lineHeight, align: style.textAlign, verticalAlign: "top", padding: 0,
-            fill: placement.value ? style.color : "#999", wrap: "word" }));
+            fill: placement.value ? style.color : "#999", wrap: "word" });
+          text.y((frame.height - text.height()) / 2);
+          group.add(text);
         }
       }
     }
