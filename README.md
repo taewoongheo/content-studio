@@ -24,7 +24,7 @@ Select product context
 → Edit slides directly or ask AI to edit them
 ```
 
-This is the implemented reference-based slideshow flow. Slides, Element styles and positions, and slot values are stored as a JSON editing document in server memory. Uploaded editor images and their metadata are stored together in local SQLite. The editor renders a browser preview but does not yet export finished image files. Other content types and creation methods remain visible as product choices but are not implemented as generation flows.
+This is the implemented reference-based slideshow flow. Slides, Element styles and positions, and slot values are stored as a JSON editing document in server memory. Uploaded editor images and their metadata are stored together in local SQLite. The editor exports every finished slide at its publishing resolution as PNG files in one ZIP archive. Other content types and creation methods remain visible as product choices but are not implemented as generation flows.
 
 The dashboard also has a **Published Content** page with a calendar and bounded, scrollable list in one view. It reads published records from local SQLite without manual entry; removing a record deletes only the local DB entry, not the post on TikTok or another platform. A future publishing flow must write the record for it to appear here. The **Image Assets** page manages reusable images and characters. Creating a character requires a description and one turnaround image, stored together in SQLite. Other uploads are general images; the character's turnaround is identified by its asset ID without a separate image category. Both pages read from local SQLite on entry and refresh after changes.
 
@@ -53,7 +53,7 @@ Element의 역할만 맞는다고 슬라이드 전체가 완성되는 것은 아
 
 화면은 처음부터 편집기지만 내용 생성의 의존성은 유지한다. 주제를 확정하고, 본문 전체의 흐름과 내용을 구성한 다음, 그 내용을 뒷받침하는 훅을 고른다. AI는 확정된 내용을 각 슬라이드의 Element 역할에 맞춰 채운다. 한 장의 내용이나 스타일만 다시 제안받을 수도 있고, 본문 전체의 흐름을 다시 논의할 수도 있다.
 
-이 편집 방식의 첫 버전은 **레퍼런스 기반 슬라이드쇼에 구현되었다.** 레퍼런스 이미지는 읽기 전용으로 비교할 수 있고, AI가 복원할 수 없는 사진·배경은 비어 있는 이미지 슬롯으로 남겨 사용자가 교체한다. 현재 작업 문서와 레퍼런스 이미지는 로컬 서버 실행 중에만 유지된다. 편집기에 업로드한 이미지는 SQLite에 보존되지만, 작업 문서는 아직 재시작 후 복구할 수 없다. 이미지 생성·파일 내보내기·영상 편집도 아직 지원하지 않는다. 이후 템플릿 기반·처음부터 생성 방식은 편집기를 초기화하는 방법만 달리한다. 영상은 같은 슬라이드·Element 구분을 출발점으로 삼되 시간, 전환, 오디오를 표현하는 편집 기능이 추가로 필요하다.
+이 편집 방식의 첫 버전은 **레퍼런스 기반 슬라이드쇼에 구현되었다.** 레퍼런스 이미지는 읽기 전용으로 비교할 수 있고, AI가 복원할 수 없는 사진·배경은 비어 있는 이미지 슬롯으로 남겨 사용자가 교체한다. 현재 작업 문서와 레퍼런스 이미지는 로컬 서버 실행 중에만 유지된다. 편집기에 업로드한 이미지는 SQLite에 보존되며, 완성된 각 장은 게시 해상도의 PNG로 렌더링해 하나의 ZIP으로 내보낼 수 있다. 이미지 생성·영상 편집은 아직 지원하지 않는다. 이후 템플릿 기반·처음부터 생성 방식은 편집기를 초기화하는 방법만 달리한다. 영상은 같은 슬라이드·Element 구분을 출발점으로 삼되 시간, 전환, 오디오를 표현하는 편집 기능이 추가로 필요하다.
 
 ## Product requirements
 

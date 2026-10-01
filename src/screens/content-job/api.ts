@@ -96,3 +96,16 @@ export async function attachStoredEditorImage(jobId: string, assetId: string) {
     body: JSON.stringify({ assetId }),
   }));
 }
+
+export async function downloadEditorArchive(jobId: string) {
+  const response = await fetch(`/api/content-jobs/${encodeURIComponent(jobId)}/export`, { cache: "no-store" });
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null);
+    throw new Error(typeof body === "object" && body !== null && typeof (body as Record<string, unknown>).error === "string"
+      ? String((body as Record<string, unknown>).error)
+      : "ZIP 파일을 만들지 못했습니다.");
+  }
+  const disposition = response.headers.get("content-disposition") ?? "";
+  const filename = /filename="([^"]+)"/.exec(disposition)?.[1] ?? "content-studio-slides.zip";
+  return { blob: await response.blob(), filename };
+}
