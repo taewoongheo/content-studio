@@ -2,25 +2,26 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { ArrowLeft, Copy, Download, Layers3, LoaderCircle, Plus, Trash2, Undo2 } from "lucide-react";
+import { ArrowLeft, Copy, Layers3, LoaderCircle, Plus, Trash2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import type { EditorCommand, ElementFrame, ElementKind } from "@/lib/content-jobs/editor/types";
 import { makeElementDefinition } from "@/lib/content-jobs/editor/elements/factory";
 import { slideActionCommand } from "@/lib/content-jobs/editor/slides/commands";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, getDuplicateTargets } from "@/lib/content-jobs/editor/document";
-import { attachStoredEditorImage, downloadEditorArchive, uploadEditorImage } from "@/screens/content-job/api";
+import { attachStoredEditorImage, uploadEditorImage } from "@/screens/content-job/api";
 import { useContentJob } from "@/screens/content-job/use-content-job";
 import { ChatPanel } from "./components/chat-panel";
 import { ElementInspector, type ElementInspectorHandle } from "./components/inspector/element-inspector";
 import { ElementScopePicker } from "./components/element-scope-picker";
 import { removalCommandsForScope, selectVisualSlides, visualScopeLabel, type ScopeChoice } from "./components/element-scope";
 import { SlideCanvas } from "./components/canvas/slide-canvas";
-import { frameForDroppedImage } from "./components/canvas/frame-geometry";
+import { frameForDroppedImage } from "./components/canvas/frame/geometry";
 import { SlideBackground } from "./components/inspector/slide-background";
-import { frameCommandsForScope } from "./components/canvas/frame-commands";
+import { frameCommandsForScope } from "./components/canvas/frame/commands";
 import { ImageLibraryPicker } from "./components/library/image-library-picker";
 import { ProjectSaveControl } from "./components/projects/project-save-control";
+import { ExportControl } from "./components/export/export-control";
 import { resolveEditorSelection, roleLabels } from "./editor-selection";
 
 async function readImageAspectRatio(file: File) {
@@ -51,7 +52,6 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   const [imageError, setImageError] = useState("");
   const [showGuides, setShowGuides] = useState(true);
   const [showImageLibrary, setShowImageLibrary] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const [unlockedImageRatios, setUnlockedImageRatios] = useState<Set<string>>(() => new Set());
   const inspectorRef = useRef<ElementInspectorHandle>(null);
   const imageLibraryButtonRef = useRef<HTMLButtonElement>(null);
@@ -231,24 +231,10 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
     return commands.length === 0 || saveCommands(commands);
   }
 
-  async function exportSlides() {
-    setImageError("");
-    setExporting(true);
-    try {
-      if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return;
-      await commandQueue.current;
-      const { blob, filename } = await downloadEditorArchive(job.id);
-      const url = URL.createObjectURL(blob);
-      const link = window.document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      link.click();
-      window.setTimeout(() => URL.revokeObjectURL(url), 0);
-    } catch (error) {
-      setImageError(error instanceof Error ? error.message : "ZIP 파일을 만들지 못했습니다.");
-    } finally {
-      setExporting(false);
-    }
+  async function prepareExport() {
+    if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
+    await commandQueue.current;
+    return true;
   }
 
   return (
@@ -264,11 +250,8 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
             defaultName={job.editor.selectedTopic?.title || `${job.productContext.name} 콘텐츠`}
             initialProjectName={initialProjectName} disabled={disabled || !document}
             onBeforeSave={() => inspectorRef.current?.flushPending() ?? Promise.resolve(true)} />
-          <Button size="sm" disabled={disabled || exporting || !document} onClick={() => void exportSlides()}>
-            {exporting ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
-              : <Download className="size-4" aria-hidden="true" />}
-            ZIP 내보내기
-          </Button>
+          {document && <ExportControl document={document} jobId={job.id} disabled={disabled}
+            onBeforeExport={prepareExport} onError={setImageError} />}
           <Button variant="outline" size="sm" disabled={disabled || !document} onClick={() => void action({ action: "editor_undo" })}>
             <Undo2 className="size-4" aria-hidden="true" /> 되돌리기
           </Button>

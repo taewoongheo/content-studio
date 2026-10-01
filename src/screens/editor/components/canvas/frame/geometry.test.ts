@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CANVAS_SAFE_AREA, frameForDroppedImage, moveOrResizeFrame } from "./frame-geometry";
+import { CANVAS_SAFE_AREA, frameForDroppedImage, moveOrResizeFrame } from "./geometry";
 
 const frame = { x: 0.2, y: 0.2, width: 0.3, height: 0.2 };
 

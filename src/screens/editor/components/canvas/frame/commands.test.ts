@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { frameCommandsForScope } from "./frame-commands";
+import { frameCommandsForScope } from "./commands";
 
 const frame = { x: 0.1, y: 0.2, width: 0.5, height: 0.4 };
 const placement = (id: string) => ({ id, elementId: "title", value: "", frameOverride: null, styleOverride: null });

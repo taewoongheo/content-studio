@@ -190,6 +190,9 @@ importers:
       cn:
         specifier: ^0.3.0
         version: 0.3.0
+      html-to-image:
+        specifier: ^1.11.13
+        version: 1.11.13
       jszip:
         specifier: ^3.10.2
         version: 3.10.2
@@ -208,9 +211,6 @@ importers:
       shadcn:
         specifier: ^4.21.0
         version: 4.21.0(supports-color@7.2.0)(typescript@5.9.3)
-      sharp:
-        specifier: ^0.35.5
-        version: 0.35.5(@types/node@20.19.43)
       tw-animate-css:
         specifier: ^1.4.0
         version: 1.4.0
@@ -2114,6 +2114,9 @@ packages:
     resolution: {integrity: sha512-/Gng7NfoykZl2pjukW5Z6+8Yxm3BPRf86GTbQnt0SbySkvax4fyL4H3HhY1cCpBGmiW9XDRFzRV+CXK2W8QudQ==}
     engines: {node: '>=16.9.0'}
 
+  html-to-image@1.11.13:
+    resolution: {integrity: sha512-cuOPoI7WApyhBElTTb9oqsawRvZ0rHhaHwghRLlTuffoD1B2aDemlCruLeZrUIIdvG7gs9xeELEPm6PhuASqrg==}
+
   http-errors@2.0.1:
     resolution: {integrity: sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==}
     engines: {node: '>= 0.8'}
@@ -3819,7 +3822,8 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@img/colour@1.1.0': {}
+  '@img/colour@1.1.0':
+    optional: true
 
   '@img/sharp-darwin-arm64@0.35.5':
     optionalDependencies:
@@ -5331,6 +5335,8 @@ snapshots:
 
   hono@4.13.8: {}
 
+  html-to-image@1.11.13: {}
+
   http-errors@2.0.1:
     dependencies:
       depd: 2.0.0
@@ -6266,6 +6272,7 @@ snapshots:
       '@img/sharp-win32-ia32': 0.35.5
       '@img/sharp-win32-x64': 0.35.5
       '@types/node': 20.19.43
+    optional: true
 
   shebang-command@2.0.0:
     dependencies:

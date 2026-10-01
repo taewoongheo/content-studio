@@ -1,10 +1,10 @@
 "use client";
 
 import { useRef, useState, type DragEvent, type PointerEvent } from "react";
-import Image from "next/image";
 import type { EditorDocument, EditorSlide, ElementFrame } from "@/lib/content-jobs/editor/types";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID } from "@/lib/content-jobs/editor/document";
-import { CANVAS_SAFE_AREA, moveOrResizeFrame, type DragMode } from "./frame-geometry";
+import { CANVAS_SAFE_AREA, moveOrResizeFrame, type DragMode } from "./frame/geometry";
+import { SlideArtwork } from "./slide-artwork";
 
 type Gesture = { pointerId: number; placementId: string; mode: DragMode; startX: number; startY: number;
   canvasWidth: number; canvasHeight: number; frame: ElementFrame; lockAspectRatio: boolean };
@@ -143,45 +143,42 @@ export function SlideCanvas({
     <div
       ref={canvasRef}
       className={`relative mx-auto h-full w-auto max-h-full max-w-full overflow-visible border bg-white shadow-sm ${selectedPlacementId === BACKGROUND_PLACEMENT_ID ? "ring-2 ring-foreground/70 ring-offset-2" : ""}`}
-      style={{ aspectRatio: document.aspectRatio.replace(":", "/"), backgroundColor: slide.backgroundColor, containerType: "inline-size" }}
+      style={{ aspectRatio: document.aspectRatio.replace(":", "/"), containerType: "inline-size" }}
       aria-label={`${slide.role} 슬라이드 미리보기`}
       onDragOver={dragImageOver}
       onDragLeave={leaveImageDrag}
       onDrop={dropImageOnCanvas}
     >
-      <button type="button" className="absolute inset-0 size-full cursor-default border-0 bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-foreground" onClick={onSelectBackground} aria-label="슬라이드 배경 선택" aria-pressed={selectedPlacementId === BACKGROUND_PLACEMENT_ID} />
+      <SlideArtwork
+        document={document}
+        slide={slide}
+        jobId={jobId}
+        framePreview={preview}
+        className="absolute inset-0 size-full"
+        aria-hidden="true"
+      />
+      <button type="button" className="absolute inset-0 z-20 size-full cursor-default border-0 bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-foreground" onClick={onSelectBackground} aria-label="슬라이드 배경 선택" aria-pressed={selectedPlacementId === BACKGROUND_PLACEMENT_ID} />
       {slide.placements.map((placement, index) => {
         if (placement.elementId === BACKGROUND_ELEMENT_ID) return null;
         const element = elements.get(placement.elementId);
         if (!element) return null;
         const frame = preview?.placementId === placement.id ? preview.frame : placement.frameOverride ?? element.frame;
-        const style = { ...element.style, ...placement.styleOverride };
         const selected = selectedPlacementId === placement.id;
         return (
           <div
             key={placement.id}
-            className={`absolute ${selected ? "ring-2 ring-primary" : ""}`}
+            className={`absolute z-30 ${selected ? "ring-2 ring-primary" : ""}`}
             style={{
               left: `${frame.x * 100}%`,
               top: `${frame.y * 100}%`,
               width: `${frame.width * 100}%`,
               height: `${frame.height * 100}%`,
-              zIndex: selected ? slide.placements.length + 2 : index + 1,
+              zIndex: index + 30,
             }}
           >
           <button
             type="button"
-            className={`relative size-full touch-none cursor-move overflow-hidden text-left outline-none focus-visible:ring-2 focus-visible:ring-primary ${selected ? "" : "hover:ring-1 hover:ring-foreground/50"}`}
-            style={{
-              backgroundColor: element.kind === "text" || element.kind === "image" ? style.backgroundColor : "transparent",
-              color: style.color,
-              fontSize: `${style.fontSize / 10.8}cqw`,
-              lineHeight: style.lineHeight,
-              fontWeight: style.fontWeight,
-              textAlign: style.textAlign,
-              fontFamily: style.fontFamily,
-              borderRadius: element.kind === "circle" ? "50%" : `${style.borderRadius / 10.8}cqw`,
-            }}
+            className={`relative size-full touch-none cursor-move bg-transparent text-left outline-none focus-visible:ring-2 focus-visible:ring-primary ${selected ? "" : "hover:ring-1 hover:ring-foreground/50"}`}
             onClick={() => onSelect(placement.id)}
             onPointerDown={(event) => beginGesture(event, placement.id, frame, "move")}
             onPointerMove={moveGesture}
@@ -190,30 +187,6 @@ export function SlideCanvas({
             aria-label={`${element.name} Element 선택`}
             aria-pressed={selected}
           >
-            {element.kind === "rectangle" || element.kind === "circle" || element.kind === "triangle" ? (
-              <span className="block size-full" style={{ backgroundColor: style.backgroundColor,
-                borderRadius: element.kind === "circle" ? "50%" : `${style.borderRadius / 10.8}cqw`,
-                clipPath: element.kind === "triangle" ? "polygon(50% 0, 0 100%, 100% 100%)" : undefined }} />
-            ) : element.kind === "image" ? (
-              placement.value ? (
-                <Image
-                  src={`/api/content-jobs/${encodeURIComponent(jobId)}/assets/${encodeURIComponent(placement.value)}`}
-                  alt={element.name}
-                  fill
-                  unoptimized
-                  sizes="380px"
-                  style={{ objectFit: style.imageFit }}
-                />
-              ) : (
-                <span className="grid size-full place-items-center border border-dashed border-muted-foreground/40 bg-muted/40 p-2 text-center text-xs font-medium text-muted-foreground">
-                  {element.name}
-                </span>
-              )
-            ) : (
-              <span className={`block w-full whitespace-pre-wrap break-words px-[1cqw] py-[0.5cqw] ${placement.value ? "" : "text-muted-foreground/70"}`}>
-                {placement.value || element.name}
-              </span>
-            )}
           </button>
           {selected && handles.map((handle) => (
             <button key={handle} type="button" disabled={disabled} aria-label={`${element.name} ${handle} 크기 조절`}
