@@ -58,14 +58,13 @@ function snapMovedAxis(start: number, size: number, startGuide: number, endGuide
 export function moveOrResizeFrame(frame: ElementFrame, mode: DragMode, deltaX: number, deltaY: number,
   guidesEnabled = true, lockAspectRatio = false): ElementFrame {
   if (mode === "move") {
-    let x = clamp(frame.x + deltaX, 0, 1 - frame.width);
-    let y = clamp(frame.y + deltaY, 0, 1 - frame.height);
+    let x = frame.x + deltaX;
+    let y = frame.y + deltaY;
     if (guidesEnabled) {
       x = snapMovedAxis(x, frame.width, CANVAS_SAFE_AREA.left, 1 - CANVAS_SAFE_AREA.right);
       y = snapMovedAxis(y, frame.height, CANVAS_SAFE_AREA.top, 1 - CANVAS_SAFE_AREA.bottom);
     }
-    return { ...frame, x: Math.min(round(clamp(x, 0, 1 - frame.width)), 1 - frame.width),
-      y: Math.min(round(clamp(y, 0, 1 - frame.height)), 1 - frame.height) };
+    return { ...frame, x: round(x), y: round(y) };
   }
 
   if (lockAspectRatio) {
@@ -75,11 +74,8 @@ export function moveOrResizeFrame(frame: ElementFrame, mode: DragMode, deltaX: n
     const verticalScale = verticalSize / frame.height;
     const requestedScale = Math.abs(horizontalScale - 1) >= Math.abs(verticalScale - 1)
       ? horizontalScale : verticalScale;
-    const maximumWidth = mode.includes("w") ? frame.x + frame.width : 1 - frame.x;
-    const maximumHeight = mode.includes("n") ? frame.y + frame.height : 1 - frame.y;
     const minimumScale = Math.max(MIN_FRAME_SIZE / frame.width, MIN_FRAME_SIZE / frame.height);
-    const maximumScale = Math.min(maximumWidth / frame.width, maximumHeight / frame.height);
-    let scale = clamp(requestedScale, minimumScale, maximumScale);
+    let scale = Math.max(requestedScale, minimumScale);
 
     if (guidesEnabled) {
       const horizontalEdge = mode.includes("w")
@@ -95,7 +91,7 @@ export function moveOrResizeFrame(frame: ElementFrame, mode: DragMode, deltaX: n
       if (snapScales.length > 0) {
         const nearest = snapScales.reduce((best, value) =>
           Math.abs(value - scale) < Math.abs(best - scale) ? value : best);
-        scale = clamp(nearest, minimumScale, maximumScale);
+        scale = Math.max(nearest, minimumScale);
       }
     }
 
@@ -113,18 +109,17 @@ export function moveOrResizeFrame(frame: ElementFrame, mode: DragMode, deltaX: n
   let top = frame.y;
   let right = frame.x + frame.width;
   let bottom = frame.y + frame.height;
-  if (mode.includes("w")) left = clamp(left + deltaX, 0, right - MIN_FRAME_SIZE);
-  if (mode.includes("e")) right = clamp(right + deltaX, left + MIN_FRAME_SIZE, 1);
-  if (mode.includes("n")) top = clamp(top + deltaY, 0, bottom - MIN_FRAME_SIZE);
-  if (mode.includes("s")) bottom = clamp(bottom + deltaY, top + MIN_FRAME_SIZE, 1);
+  if (mode.includes("w")) left = Math.min(left + deltaX, right - MIN_FRAME_SIZE);
+  if (mode.includes("e")) right = Math.max(right + deltaX, left + MIN_FRAME_SIZE);
+  if (mode.includes("n")) top = Math.min(top + deltaY, bottom - MIN_FRAME_SIZE);
+  if (mode.includes("s")) bottom = Math.max(bottom + deltaY, top + MIN_FRAME_SIZE);
   if (guidesEnabled) {
-    if (mode.includes("w")) left = clamp(snap(left, HORIZONTAL_GUIDES), 0, right - MIN_FRAME_SIZE);
-    if (mode.includes("e")) right = clamp(snap(right, HORIZONTAL_GUIDES), left + MIN_FRAME_SIZE, 1);
-    if (mode.includes("n")) top = clamp(snap(top, VERTICAL_GUIDES), 0, bottom - MIN_FRAME_SIZE);
-    if (mode.includes("s")) bottom = clamp(snap(bottom, VERTICAL_GUIDES), top + MIN_FRAME_SIZE, 1);
+    if (mode.includes("w")) left = Math.min(snap(left, HORIZONTAL_GUIDES), right - MIN_FRAME_SIZE);
+    if (mode.includes("e")) right = Math.max(snap(right, HORIZONTAL_GUIDES), left + MIN_FRAME_SIZE);
+    if (mode.includes("n")) top = Math.min(snap(top, VERTICAL_GUIDES), bottom - MIN_FRAME_SIZE);
+    if (mode.includes("s")) bottom = Math.max(snap(bottom, VERTICAL_GUIDES), top + MIN_FRAME_SIZE);
   }
   left = round(left);
   top = round(top);
-  return { x: left, y: top, width: Math.min(round(right - left), 1 - left),
-    height: Math.min(round(bottom - top), 1 - top) };
+  return { x: left, y: top, width: round(right - left), height: round(bottom - top) };
 }

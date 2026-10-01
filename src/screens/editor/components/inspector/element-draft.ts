@@ -11,10 +11,6 @@ export type ElementDraft = {
 
 const MIN_FRAME_SIZE = 0.04;
 
-function clamp(value: number, minimum: number, maximum: number) {
-  return Math.min(Math.max(value, minimum), maximum);
-}
-
 function round(value: number) {
   return Math.round(value * 10_000) / 10_000;
 }
@@ -34,8 +30,7 @@ export function frameWithLockedDimension(
   const currentSize = frame[dimension];
   if (currentSize <= 0 || value <= 0) return { ...frame, [dimension]: value };
   const minimumScale = Math.max(MIN_FRAME_SIZE / frame.width, MIN_FRAME_SIZE / frame.height);
-  const maximumScale = Math.min((1 - frame.x) / frame.width, (1 - frame.y) / frame.height);
-  const scale = clamp(value / currentSize, minimumScale, maximumScale);
+  const scale = Math.max(value / currentSize, minimumScale);
   return { ...frame, width: round(frame.width * scale), height: round(frame.height * scale) };
 }
 
@@ -52,8 +47,8 @@ export function makeElementDraft(element: ElementDefinition, placement: PlacedEl
 export function validElementDraft(draft: ElementDraft) {
   const { x, y, width, height } = draft.frame;
   return Boolean(draft.name.trim() && draft.role.trim()) &&
-    [x, y, width, height].every(Number.isFinite) && x >= 0 && y >= 0 && width > 0 && height > 0 &&
-    x + width <= 1 && y + height <= 1 && draft.style.fontSize >= 8 && draft.style.fontSize <= 200 &&
+    [x, y, width, height].every(Number.isFinite) && width > 0 && height > 0 &&
+    draft.style.fontSize >= 8 && draft.style.fontSize <= 200 &&
     draft.style.lineHeight >= 0.8 && draft.style.lineHeight <= 3 &&
     Number.isInteger(draft.style.fontWeight) && draft.style.fontWeight >= 100 && draft.style.fontWeight <= 900 &&
     draft.style.borderRadius >= 0 && draft.style.borderRadius <= 100;

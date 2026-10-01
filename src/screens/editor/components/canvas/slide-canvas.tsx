@@ -142,7 +142,7 @@ export function SlideCanvas({
   return (
     <div
       ref={canvasRef}
-      className={`relative mx-auto h-full w-auto max-h-full max-w-full overflow-hidden border bg-white shadow-sm ${selectedPlacementId === BACKGROUND_PLACEMENT_ID ? "ring-2 ring-foreground/70 ring-offset-2" : ""}`}
+      className={`relative mx-auto h-full w-auto max-h-full max-w-full overflow-visible border bg-white shadow-sm ${selectedPlacementId === BACKGROUND_PLACEMENT_ID ? "ring-2 ring-foreground/70 ring-offset-2" : ""}`}
       style={{ aspectRatio: document.aspectRatio.replace(":", "/"), backgroundColor: slide.backgroundColor, containerType: "inline-size" }}
       aria-label={`${slide.role} 슬라이드 미리보기`}
       onDragOver={dragImageOver}

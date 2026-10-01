@@ -36,10 +36,10 @@ export const targetedChatSchema = object({
     imageFit: nullable({ type: "string", enum: ["cover", "contain"] }),
   }),
   frame: nullable(object({
-    x: { type: "number", minimum: 0, maximum: 1 },
-    y: { type: "number", minimum: 0, maximum: 1 },
-    width: { type: "number", exclusiveMinimum: 0, maximum: 1 },
-    height: { type: "number", exclusiveMinimum: 0, maximum: 1 },
+    x: { type: "number" },
+    y: { type: "number" },
+    width: { type: "number", exclusiveMinimum: 0 },
+    height: { type: "number", exclusiveMinimum: 0 },
   })),
   slotValues: { type: "array", items: object({ slideId: text, placementId: text, value: text }), maxItems: 40 },
 });

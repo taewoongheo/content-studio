@@ -40,6 +40,9 @@ test("AI 분석은 입력 이미지, 역할, Element 참조를 검증한다", ()
   const imageIds = ["image-1", "image-2", "image-3", "image-4"];
   assert.equal(validateEditorAnalysis(valid, imageIds, "repeating", 4).ok, true);
   assert.equal(validateEditorAnalysis({ ...valid, elements: [
+    { ...element, frame: { x: -0.2, y: 0.9, width: 1.4, height: 0.3 } }, ...valid.elements.slice(1),
+  ] }, imageIds, "repeating", 4).ok, true);
+  assert.equal(validateEditorAnalysis({ ...valid, elements: [
     { ...element, slot: { placeholder: "완성된 문구" } }, ...valid.elements.slice(1),
   ] }, imageIds, "repeating", 4).ok, false);
   assert.equal(validateEditorAnalysis({ ...valid, slides: [
@@ -62,6 +65,9 @@ test("AI 수정 명령은 허용된 종류와 필드만 받는다", () => {
   assert.equal(validateEditorCommands({ commands: [{ type: "duplicate_placement",
     sourceSlideId: "slide-2", sourcePlacementId: "placement-2-1", newElementId: "copy",
     placements: [{ slideId: "slide-2", sourcePlacementId: "placement-2-1", newPlacementId: "new-placement" }],
+  }] }).ok, true);
+  assert.equal(validateEditorCommands({ commands: [{ type: "update_visual", scope: "common",
+    elementId: "heading", frame: { x: -0.25, y: 1.1, width: 1.5, height: 0.2 },
   }] }).ok, true);
   assert.equal(validateEditorCommands({ commands: [{
     type: "set_slot_value", slideId: "slide-1", placementId: "placement-1-1", value: "새 제목", extra: true,

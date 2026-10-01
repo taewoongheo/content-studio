@@ -13,7 +13,7 @@ export function analysisPrompt(job: ContentJobRecord) {
 
 이미지 레퍼런스로부터 편집 가능한 TikTok 슬라이드쇼의 첫 초안을 만드세요.
 구성: ${job.structure}, 총 장수: ${job.slideCount}, 화면 비율: ${job.aspectRatio}, 이미지 역할: ${roles}.
-Element는 시각적 레이어와 나중에 내용을 채울 빈 슬롯을 함께 가진 재사용 단위입니다. 지금은 콘텐츠를 기획하거나 카피를 작성하지 마세요. 각 Element의 name은 '훅 제목', '본문 설명 A', 'CTA 문구'처럼 짧은 역할명으로, role은 그 자리에 들어갈 내용의 목적과 조건으로 작성하세요. 제품·운동·주제에 관한 실제 문장, 예시 문구, CTA 카피는 만들지 마세요. 정규화 좌표(0~1), 스타일, 근거 이미지 ID를 정의하세요. 필요하면 rectangle, circle, triangle 도형 Element도 사용하세요.
+Element는 시각적 레이어와 나중에 내용을 채울 빈 슬롯을 함께 가진 재사용 단위입니다. 지금은 콘텐츠를 기획하거나 카피를 작성하지 마세요. 각 Element의 name은 '훅 제목', '본문 설명 A', 'CTA 문구'처럼 짧은 역할명으로, role은 그 자리에 들어갈 내용의 목적과 조건으로 작성하세요. 제품·운동·주제에 관한 실제 문장, 예시 문구, CTA 카피는 만들지 마세요. 슬라이드 너비·높이를 1로 보는 정규화 좌표, 스타일, 근거 이미지 ID를 정의하세요. 원본에서 일부가 잘린 요소는 음수 위치나 1을 초과하는 크기로 표현할 수 있습니다. 필요하면 rectangle, circle, triangle 도형 Element도 사용하세요.
 텍스트 style의 lineHeight는 글자 크기에 대한 배수이며 0.8~3 사이로 지정하세요.
 텍스트가 배경 위에 직접 얹혀 있으면 Element의 backgroundColor를 "transparent"로 지정하세요.
 이미지에 가려진 배경이나 원본 사진은 복원할 수 없으므로 새 이미지 Element의 빈 슬롯으로 표현하세요. 원본 스크린샷 전체를 새 슬라이드의 배경으로 사용하지 마세요.

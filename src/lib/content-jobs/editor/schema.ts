@@ -5,10 +5,10 @@ import type { EditorAnalysis, EditorCommand } from "./types";
 const text = { type: "string" };
 const color = { type: "string", pattern: "^#[0-9a-fA-F]{6}$" };
 const frame = object({
-  x: { type: "number", minimum: 0, maximum: 1 },
-  y: { type: "number", minimum: 0, maximum: 1 },
-  width: { type: "number", exclusiveMinimum: 0, maximum: 1 },
-  height: { type: "number", exclusiveMinimum: 0, maximum: 1 },
+  x: { type: "number" },
+  y: { type: "number" },
+  width: { type: "number", exclusiveMinimum: 0 },
+  height: { type: "number", exclusiveMinimum: 0 },
 });
 const style = object({
   color,
@@ -107,9 +107,7 @@ export function validateEditorAnalysis(
   const knownImages = new Set(imageIds);
   for (const element of output.elements) {
     if (!knownImages.has(element.sourceImageId) || !element.role.trim() ||
-      !element.name.trim() ||
-      element.frame.x + element.frame.width > 1 ||
-      element.frame.y + element.frame.height > 1)
+      !element.name.trim())
       errors.push(`Element ${element.id}의 근거 또는 정의가 올바르지 않습니다.`);
   }
   if (output.slides.some((slide) => slide.elementIds.some((id) => !knownElements.has(id))))
@@ -118,8 +116,7 @@ export function validateEditorAnalysis(
     if (new Set(slide.elementIds).size !== slide.elementIds.length)
       errors.push(`${slide.imageId}에 같은 Element가 중복 배치되었습니다.`);
     if (new Set(slide.visuals.map((visual) => visual.elementId)).size !== slide.visuals.length ||
-      slide.visuals.some((visual) => !slide.elementIds.includes(visual.elementId) ||
-        visual.frame.x + visual.frame.width > 1 || visual.frame.y + visual.frame.height > 1))
+      slide.visuals.some((visual) => !slide.elementIds.includes(visual.elementId)))
       errors.push(`${slide.imageId}의 개별 시각 배치가 올바르지 않습니다.`);
   }
   const kinds = new Map(output.elements.map((element) => [element.id, element.kind]));

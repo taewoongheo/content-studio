@@ -15,8 +15,7 @@ export { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID, ensureSharedBackground 
 
 function validFrame(frame: ElementFrame) {
   return Object.values(frame).every((value) => Number.isFinite(value)) &&
-    frame.x >= 0 && frame.y >= 0 && frame.width > 0 && frame.height > 0 &&
-    frame.x + frame.width <= 1 && frame.y + frame.height <= 1;
+    frame.width > 0 && frame.height > 0;
 }
 
 function validStyle(style: ElementStyle) {

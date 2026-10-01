@@ -66,6 +66,15 @@ test("반복형 분석의 공통 Element를 각 본문 슬라이드에 배치한
   assert.deepEqual(validateEditorDocument(document), []);
 });
 
+test("Element와 개별 배치는 슬라이드 바깥 프레임을 허용한다", () => {
+  const document = createDocumentFromAnalysis(analysis, "repeating", 3, "4:5");
+  const title = document.elements.find((element) => element.id === "title");
+  assert.ok(title);
+  title.frame = { x: -0.2, y: 0.9, width: 1.4, height: 0.3 };
+  document.slides[1].placements[0].frameOverride = { x: 1.1, y: -0.2, width: 0.4, height: 0.5 };
+  assert.deepEqual(validateEditorDocument(document), []);
+});
+
 test("모든 레퍼런스 장을 그대로 만들면서 반복 Element ID를 공유한다", () => {
   const source: EditorAnalysis = {
     ...analysis,
@@ -197,7 +206,7 @@ test("같은 Element는 서로 다른 색을 가진 뒤 전체 색 변경으로 
   assert.equal(unified.slides[2].placements[0].styleOverride, null);
 });
 
-test("존재하지 않는 Element와 유효하지 않은 화면 좌표는 거부한다", () => {
+test("존재하지 않는 Element와 양수가 아닌 크기는 거부한다", () => {
   const document = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
   assert.throws(() => applyEditorCommand(document, {
     type: "place_element",
@@ -209,7 +218,7 @@ test("존재하지 않는 Element와 유효하지 않은 화면 좌표는 거부
     type: "update_visual",
     scope: "common",
     elementId: "title",
-    frame: { x: 0.9, y: 0.1, width: 0.8, height: 0.1 },
+    frame: { x: 0.9, y: 0.1, width: 0, height: 0.1 },
   }));
 });
 

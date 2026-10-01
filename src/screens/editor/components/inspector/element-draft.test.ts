@@ -35,12 +35,13 @@ test("빈 텍스트 슬롯은 내용 입력칸도 비워 둔다", () => {
   ]);
 });
 
-test("공통 수정은 Element 원본에만 쓰며 유효하지 않은 위치는 저장하지 않는다", () => {
+test("공통 수정은 Element 원본에만 쓰며 캔버스 밖 위치도 저장한다", () => {
   const draft = makeElementDraft(element, placement);
   assert.deepEqual(commandsFromDraft({ ...draft, frame: { ...draft.frame, x: 0.12 } }, element, placement, "slide-1", targets, ["slide-1"]), [
     { type: "update_visual", scope: "common", elementId: "title", frame: { ...draft.frame, x: 0.12 } },
   ]);
-  assert.equal(validElementDraft({ ...draft, frame: { ...draft.frame, x: 0.9 } }), false);
+  assert.equal(validElementDraft({ ...draft, frame: { ...draft.frame, x: 0.9 } }), true);
+  assert.equal(validElementDraft({ ...draft, frame: { ...draft.frame, x: -0.5, y: 1.2 } }), true);
 });
 
 test("선택한 슬라이드만 같은 Element의 스타일 분기로 갱신한다", () => {
@@ -95,5 +96,5 @@ test("이미지 크기의 한 축을 바꾸면 잠긴 비율대로 다른 축도
   assert.deepEqual(frameWithLockedDimension(frame, "height", 0.1),
     { x: 0.1, y: 0.2, width: 0.2, height: 0.1 });
   assert.deepEqual(frameWithLockedDimension(frame, "width", 2),
-    { x: 0.1, y: 0.2, width: 0.9, height: 0.45 });
+    { x: 0.1, y: 0.2, width: 2, height: 1 });
 });

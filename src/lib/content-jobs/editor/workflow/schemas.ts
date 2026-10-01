@@ -14,10 +14,10 @@ const array = (items: unknown, count?: number) => ({
   ...(count === undefined ? {} : { minItems: count, maxItems: count }),
 });
 const frame = object({
-  x: { type: "number", minimum: 0, maximum: 1 },
-  y: { type: "number", minimum: 0, maximum: 1 },
-  width: { type: "number", exclusiveMinimum: 0, maximum: 1 },
-  height: { type: "number", exclusiveMinimum: 0, maximum: 1 },
+  x: { type: "number" },
+  y: { type: "number" },
+  width: { type: "number", exclusiveMinimum: 0 },
+  height: { type: "number", exclusiveMinimum: 0 },
 });
 const style = object({
   color: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
