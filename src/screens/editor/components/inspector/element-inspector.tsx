@@ -101,8 +101,10 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
         <fieldset disabled={disabled} className="grid min-w-0 grid-cols-2 gap-3 [&>*]:min-w-0">
           <NumberField label="X (%)" value={draft.frame.x * 100} onChange={(value) => updateFrame("x", value)} />
           <NumberField label="Y (%)" value={draft.frame.y * 100} onChange={(value) => updateFrame("y", value)} />
-          <NumberField label="너비 (%)" value={draft.frame.width * 100} onChange={(value) => updateFrame("width", value)} />
-          <NumberField label="높이 (%)" value={draft.frame.height * 100} onChange={(value) => updateFrame("height", value)} />
+          <NumberField label={element.kind === "text" ? "최대 너비 (%)" : "너비 (%)"}
+            value={draft.frame.width * 100} onChange={(value) => updateFrame("width", value)} />
+          {element.kind !== "text" &&
+            <NumberField label="높이 (%)" value={draft.frame.height * 100} onChange={(value) => updateFrame("height", value)} />}
           {element.kind === "image" && <label className="col-span-2 flex items-center gap-2 text-xs font-medium">
             <input type="checkbox" checked={imageAspectRatioLocked}
               onChange={(event) => onImageAspectRatioLockedChange(event.target.checked)} />

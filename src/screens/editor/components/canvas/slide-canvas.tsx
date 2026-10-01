@@ -50,10 +50,17 @@ export function SlideCanvas({
     }
     const bounds = canvasRef.current?.getBoundingClientRect();
     if (!bounds) return;
+    const renderedBounds = event.currentTarget.parentElement?.getBoundingClientRect();
+    const renderedFrame = renderedBounds ? {
+      x: (renderedBounds.left - bounds.left) / bounds.width,
+      y: (renderedBounds.top - bounds.top) / bounds.height,
+      width: renderedBounds.width / bounds.width,
+      height: renderedBounds.height / bounds.height,
+    } : frame;
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     gesture.current = { pointerId: event.pointerId, placementId, mode, startX: event.clientX, startY: event.clientY,
-      canvasWidth: bounds.width, canvasHeight: bounds.height, frame, lockAspectRatio };
+      canvasWidth: bounds.width, canvasHeight: bounds.height, frame: renderedFrame, lockAspectRatio };
   }
 
   function frameAtPointer(event: PointerEvent<HTMLButtonElement>) {
@@ -108,6 +115,7 @@ export function SlideCanvas({
         const frame = preview?.placementId === placement.id ? preview.frame : placement.frameOverride ?? element.frame;
         const style = { ...element.style, ...placement.styleOverride };
         const selected = selectedPlacementId === placement.id;
+        const isText = element.kind === "text";
         return (
           <div
             key={placement.id}
@@ -115,15 +123,16 @@ export function SlideCanvas({
             style={{
               left: `${frame.x * 100}%`,
               top: `${frame.y * 100}%`,
-              width: `${frame.width * 100}%`,
-              height: `${frame.height * 100}%`,
+              width: isText ? "max-content" : `${frame.width * 100}%`,
+              maxWidth: isText ? `${Math.min(frame.width, 1 - frame.x) * 100}%` : undefined,
+              height: isText ? "auto" : `${frame.height * 100}%`,
               zIndex: selected ? slide.placements.length + 2 : index + 1,
             }}
           >
           <button
             type="button"
             disabled={disabled}
-            className={`relative size-full touch-none cursor-move overflow-hidden text-left outline-none focus-visible:ring-2 focus-visible:ring-primary ${selected ? "" : "hover:ring-1 hover:ring-foreground/50"}`}
+            className={`relative touch-none cursor-move text-left outline-none focus-visible:ring-2 focus-visible:ring-primary ${isText ? "inline-flex max-w-full overflow-visible" : "size-full overflow-hidden"} ${selected ? "" : "hover:ring-1 hover:ring-foreground/50"}`}
             style={{
               backgroundColor: element.kind === "text" || element.kind === "image" ? style.backgroundColor : "transparent",
               color: style.color,
@@ -160,7 +169,7 @@ export function SlideCanvas({
                 </span>
               )
             ) : (
-              <span className={`flex size-full items-center justify-center whitespace-pre-wrap break-words p-[2%] leading-tight ${placement.value ? "" : "text-muted-foreground/70"}`}>
+              <span className={`inline-block max-w-full whitespace-pre-wrap break-words px-[1cqw] py-[0.5cqw] leading-tight ${placement.value ? "" : "text-muted-foreground/70"}`}>
                 {placement.value || element.name}
               </span>
             )}
