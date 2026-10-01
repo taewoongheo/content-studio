@@ -14,6 +14,7 @@ const style = object({
   color,
   backgroundColor: { type: "string", pattern: "^(#[0-9a-fA-F]{6}|transparent)$" },
   fontSize: { type: "number", minimum: 8, maximum: 200 },
+  lineHeight: { type: "number", minimum: 0.8, maximum: 3 },
   fontWeight: { type: "integer", minimum: 100, maximum: 900 },
   textAlign: { type: "string", enum: ["left", "center", "right"] },
   borderRadius: { type: "number", minimum: 0, maximum: 100 },

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { ArrowLeft, Copy, Layers3, LoaderCircle, Plus, Trash2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
-import type { EditorCommand, ElementFrame, ElementKind } from "@/lib/content-jobs/editor/types";
+import type { EditorCommand, ElementFrame, ElementKind, ElementStyle } from "@/lib/content-jobs/editor/types";
 import { makeElementDefinition } from "@/lib/content-jobs/editor/elements/factory";
 import { slideActionCommand } from "@/lib/content-jobs/editor/slides/commands";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, getDuplicateTargets } from "@/lib/content-jobs/editor/document";
@@ -17,7 +17,7 @@ import { ElementScopePicker } from "./components/element-scope-picker";
 import { removalCommandsForScope, selectVisualSlides, visualScopeLabel, type ScopeChoice } from "./components/element-scope";
 import { SlideCanvas } from "./components/canvas/slide-canvas";
 import { SlideBackground } from "./components/inspector/slide-background";
-import { frameCommandsForScope } from "./components/canvas/frame-commands";
+import { visualCommandsForScope } from "./components/canvas/frame-commands";
 import { ImageLibraryPicker } from "./components/library/image-library-picker";
 import { resolveEditorSelection, roleLabels } from "./editor-selection";
 
@@ -179,10 +179,10 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
     setScopeSelection({ key: scopeKey, slideIds: next });
   }
 
-  async function changeFrame(targetPlacementId: string, frame: ElementFrame) {
+  async function changeVisual(targetPlacementId: string, frame: ElementFrame, style?: Partial<ElementStyle>) {
     if (!slide || !placement || !element || placement.id !== targetPlacementId || element.kind === "background") return false;
     if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
-    const commands = frameCommandsForScope(element.id, frame, visualTargets, selectedSlideIds);
+    const commands = visualCommandsForScope(element.id, frame, style, visualTargets, selectedSlideIds);
     return commands.length === 0 || saveCommands(commands);
   }
 
@@ -267,7 +267,7 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
                 <div className="flex items-center gap-2">
                   <Button type="button" variant={showGuides ? "secondary" : "ghost"} size="sm"
                     aria-pressed={showGuides} onClick={() => setShowGuides((current) => !current)}
-                    title="중앙 가로·세로선에 Element가 맞춰집니다.">
+                    title="중앙선과 어두운 안전 영역 경계에 Element가 맞춰집니다.">
                     가이드 {showGuides ? "켜짐" : "꺼짐"}
                   </Button>
                   {referenceImage && (
@@ -306,7 +306,7 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
                 selectedPlacementId={placement?.id ?? null} disabled={disabled} showGuides={showGuides}
                 lockImageAspectRatio={imageAspectRatioLocked}
                 onSelect={setPlacementId} onSelectBackground={() => setPlacementId(BACKGROUND_PLACEMENT_ID)}
-                onFrameChange={changeFrame} />
+                onVisualChange={changeVisual} />
             </div>
             <div className="shrink-0 border-t px-4 py-3">
               {showImageLibrary && <ImageLibraryPicker anchorRef={imageLibraryButtonRef} disabled={disabled}

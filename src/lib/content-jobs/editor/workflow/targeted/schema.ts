@@ -28,6 +28,7 @@ export const targetedChatSchema = object({
     color: nullable(color),
     backgroundColor: nullable({ type: "string", pattern: "^(#[0-9a-fA-F]{6}|transparent)$" }),
     fontSize: nullable({ type: "number", minimum: 8, maximum: 200 }),
+    lineHeight: nullable({ type: "number", minimum: 0.8, maximum: 3 }),
     fontWeight: nullable({ type: "integer", minimum: 100, maximum: 900 }),
     textAlign: nullable({ type: "string", enum: ["left", "center", "right"] }),
     borderRadius: nullable({ type: "number", minimum: 0, maximum: 100 }),

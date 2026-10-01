@@ -12,6 +12,7 @@ const element = {
     color: "#111111",
     backgroundColor: "#FFFFFF",
     fontSize: 36,
+    lineHeight: 1.2,
     fontWeight: 700,
     textAlign: "center",
     borderRadius: 0,

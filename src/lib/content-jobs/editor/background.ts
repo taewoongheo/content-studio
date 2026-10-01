@@ -8,13 +8,14 @@ function makeBackgroundElement(color: string, sourceImageId: string): ElementDef
   return {
     id: BACKGROUND_ELEMENT_ID, name: "배경", role: "슬라이드 전체의 바탕색", kind: "background",
     frame: { ...BACKGROUND_FRAME }, sourceImageId,
-    style: { color: "#111111", backgroundColor: color, fontSize: 36, fontWeight: 400,
+    style: { color: "#111111", backgroundColor: color, fontSize: 36, lineHeight: 1.2, fontWeight: 400,
       textAlign: "center", borderRadius: 0, fontFamily: "sans-serif", imageFit: "cover" },
   };
 }
 
 export function ensureSharedBackground(document: EditorDocument): EditorDocument {
   if (document.slides.length === 0) return document;
+  for (const element of document.elements) element.style.lineHeight ??= 1.2;
   let background = document.elements.find((element) => element.id === BACKGROUND_ELEMENT_ID);
   if (background && background.kind !== "background") throw new Error("배경 Element ID가 다른 Element에 사용 중입니다.");
   if (!background) {

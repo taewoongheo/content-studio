@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { moveOrResizeFrame } from "./frame-geometry";
+import { CANVAS_SAFE_AREA, fontSizeForFrameResize, moveOrResizeFrame } from "./frame-geometry";
 
 const frame = { x: 0.2, y: 0.2, width: 0.3, height: 0.2 };
 
@@ -13,8 +13,15 @@ test("중앙선에 가까우면 맞춰 붙고 다른 위치에는 스냅되지 �
   assert.deepEqual(moveOrResizeFrame(frame, "move", 0.145, 0.19), { x: 0.35, y: 0.4, width: 0.3, height: 0.2 });
   assert.deepEqual(moveOrResizeFrame(frame, "move", 0.164, 0), { x: 0.35, y: 0.2, width: 0.3, height: 0.2 });
   assert.deepEqual(moveOrResizeFrame(frame, "move", 0.168, 0), { x: 0.368, y: 0.2, width: 0.3, height: 0.2 });
-  assert.deepEqual(moveOrResizeFrame(frame, "move", -0.09, -0.07),
-    { x: 0.11, y: 0.13, width: 0.3, height: 0.2 });
+  assert.deepEqual(moveOrResizeFrame(frame, "move", -0.09, -0.065),
+    { x: 0.11, y: 0.135, width: 0.3, height: 0.2 });
+});
+
+test("이동할 때 Element의 네 변이 안전 영역 경계에 맞춰 붙는다", () => {
+  assert.deepEqual(moveOrResizeFrame(frame, "move", -0.125, -0.085),
+    { x: CANVAS_SAFE_AREA.left, y: CANVAS_SAFE_AREA.top, width: 0.3, height: 0.2 });
+  assert.deepEqual(moveOrResizeFrame(frame, "move", 0.42, 0.425),
+    { x: 0.633, y: 0.624, width: 0.3, height: 0.2 });
 });
 
 test("가이드를 끄면 중앙선에 맞춰 붙지 않는다", () => {
@@ -28,6 +35,13 @@ test("크기 조절도 중앙선에 맞춰 붙는다", () => {
     { x: 0.2, y: 0.2, width: 0.3, height: 0.2 });
   assert.deepEqual(moveOrResizeFrame(frame, "se", 0.018, 0),
     { x: 0.2, y: 0.2, width: 0.318, height: 0.2 });
+});
+
+test("크기 조절 시 각 모서리가 안전 영역 경계에 맞춰 붙는다", () => {
+  assert.deepEqual(moveOrResizeFrame(frame, "nw", -0.125, -0.085),
+    { x: CANVAS_SAFE_AREA.left, y: CANVAS_SAFE_AREA.top, width: 0.433, height: 0.285 });
+  assert.deepEqual(moveOrResizeFrame(frame, "se", 0.42, 0.425),
+    { x: 0.2, y: 0.2, width: 0.733, height: 0.624 });
 });
 
 test("모서리 크기 조절은 반대쪽 모서리를 고정하고 최소 크기를 보장한다", () => {
@@ -61,4 +75,10 @@ test("비율 잠금 크기 조절은 어느 모서리에서도 원래 비율을 
 test("비율 잠금을 끄면 너비와 높이를 독립적으로 조절한다", () => {
   assert.deepEqual(moveOrResizeFrame(frame, "se", 0.2, 0.01, false, false),
     { x: 0.2, y: 0.2, width: 0.5, height: 0.21 });
+});
+
+test("텍스트 프레임 크기 조절은 같은 비율로 글자 크기를 조절한다", () => {
+  assert.equal(fontSizeForFrameResize(40, frame, { ...frame, width: 0.45, height: 0.3 }), 60);
+  assert.equal(fontSizeForFrameResize(40, frame, { ...frame, width: 0.03, height: 0.02 }), 8);
+  assert.equal(fontSizeForFrameResize(160, frame, { ...frame, width: 0.6, height: 0.4 }), 200);
 });

@@ -24,6 +24,7 @@ const analysis: EditorAnalysis = {
         color: "#111111",
         backgroundColor: "#FFFFFF",
         fontSize: 42,
+        lineHeight: 1.2,
         fontWeight: 700,
         textAlign: "center",
         borderRadius: 0,
@@ -132,12 +133,14 @@ test("배경은 모든 장이 공유하는 삭제 불가 Element이며 기존 �
 test("기존 문서에 배경 Element를 추가해도 장별 색과 텍스트 배치 순서를 유지한다", () => {
   const current = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
   const legacy = structuredClone(current);
+  delete (legacy.elements[0].style as Partial<typeof legacy.elements[0]["style"]>).lineHeight;
   legacy.elements = legacy.elements.filter((element) => element.id !== BACKGROUND_ELEMENT_ID);
   for (const slide of legacy.slides) slide.placements = slide.placements.filter((placement) => placement.elementId !== BACKGROUND_ELEMENT_ID);
   legacy.slides[2].backgroundColor = "#0000FF";
   ensureSharedBackground(legacy);
   ensureSharedBackground(legacy);
   assert.deepEqual(validateEditorDocument(legacy), []);
+  assert.equal(legacy.elements[0].style.lineHeight, 1.2);
   assert.equal(legacy.slides[1].placements[0].elementId, "title");
   assert.equal(legacy.slides[2].placements.at(-1)?.styleOverride?.backgroundColor, "#0000FF");
   assert.equal(legacy.slides.every((slide) => slide.placements.filter((placement) => placement.elementId === BACKGROUND_ELEMENT_ID).length === 1), true);

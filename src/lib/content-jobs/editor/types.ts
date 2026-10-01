@@ -12,6 +12,7 @@ export type ElementStyle = {
   color: string;
   backgroundColor: string;
   fontSize: number;
+  lineHeight: number;
   fontWeight: number;
   textAlign: "left" | "center" | "right";
   borderRadius: number;

@@ -4,7 +4,7 @@ import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
-import type { ContentSettings as Settings } from "./model";
+import { CONTENT_SIZE_PRESETS, type ContentSettings as Settings } from "./model";
 
 function Setting({
   id,
@@ -37,6 +37,22 @@ function Setting({
   );
 }
 
+function RatioSetting({ value, onChange }: { value: Settings["ratio"]; onChange: (value: Settings["ratio"]) => void }) {
+  return (
+    <FormField>
+      <Label htmlFor="ratio">화면 크기</Label>
+      <NativeSelect id="ratio" value={value}
+        onChange={(event) => onChange(event.target.value as Settings["ratio"])}>
+        {CONTENT_SIZE_PRESETS.map((preset) => (
+          <NativeSelectOption key={preset.ratio} value={preset.ratio}>
+            {preset.label}
+          </NativeSelectOption>
+        ))}
+      </NativeSelect>
+    </FormField>
+  );
+}
+
 export function ContentSettings({
   value,
   onChange,
@@ -55,13 +71,7 @@ export function ContentSettings({
         </p>
       </div>
       <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
-        <Setting
-          id="ratio"
-          label="화면 비율"
-          value={value.ratio}
-          onChange={(ratio) => onChange({ ratio: ratio as Settings["ratio"] })}
-          options={["9:16", "4:5", "1:1"]}
-        />
+        <RatioSetting value={value.ratio} onChange={(ratio) => onChange({ ratio })} />
         <Setting
           id="language"
           label="결과 언어"

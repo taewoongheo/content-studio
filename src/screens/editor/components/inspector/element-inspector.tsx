@@ -2,6 +2,7 @@
 
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import Image from "next/image";
+import { AlignCenter, AlignLeft, AlignRight } from "lucide-react";
 import { ImageUploadField } from "@/components/media/image-upload-field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,6 +28,12 @@ type Props = {
 };
 
 export type ElementInspectorHandle = { flushPending: () => Promise<boolean> };
+
+const textAlignmentOptions = [
+  { value: "left", label: "왼쪽 정렬", Icon: AlignLeft },
+  { value: "center", label: "가운데 정렬", Icon: AlignCenter },
+  { value: "right", label: "오른쪽 정렬", Icon: AlignRight },
+] as const;
 
 export function ElementInspector({ ref, element, placement, slideId, selectedSlideIds, visualTargets, jobId,
   currentImage, imageAspectRatioLocked, disabled, onSave, onUploadImage, onImageAspectRatioLockedChange }: Props) {
@@ -123,17 +130,26 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
             <>
               <NumberField label="글자 크기" value={draft.style.fontSize}
                 onChange={(value) => setDraft((current) => draftWithFontSize(current, value))} />
+              <NumberField label="줄 높이" value={draft.style.lineHeight} step={0.1} min={0.8} max={3}
+                onChange={(value) => updateStyle("lineHeight", value)} />
               <NumberField label="글자 굵기" value={draft.style.fontWeight} onChange={(value) => updateStyle("fontWeight", value)} />
               <label className="grid gap-1.5 text-xs font-medium">글꼴 계열
                 <select className="h-10 rounded-md border bg-background px-2 text-sm" value={draft.style.fontFamily} onChange={(event) => updateStyle("fontFamily", event.target.value as ElementStyle["fontFamily"])}>
                   <option value="sans-serif">고딕</option><option value="serif">명조</option><option value="monospace">고정폭</option>
                 </select>
               </label>
-              <label className="grid gap-1.5 text-xs font-medium">정렬
-                <select className="h-10 rounded-md border bg-background px-2 text-sm" value={draft.style.textAlign} onChange={(event) => updateStyle("textAlign", event.target.value as ElementStyle["textAlign"])}>
-                  <option value="left">왼쪽</option><option value="center">가운데</option><option value="right">오른쪽</option>
-                </select>
-              </label>
+              <div className="grid gap-1.5 text-xs font-medium">
+                <span>정렬</span>
+                <div className="grid h-10 grid-cols-3 overflow-hidden rounded-md border bg-background" role="group" aria-label="텍스트 정렬">
+                  {textAlignmentOptions.map(({ value, label, Icon }) => (
+                    <button key={value} type="button" aria-label={label} aria-pressed={draft.style.textAlign === value}
+                      title={label} onClick={() => updateStyle("textAlign", value)}
+                      className={`grid place-items-center border-r last:border-r-0 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-foreground ${draft.style.textAlign === value ? "bg-foreground text-background" : "hover:bg-muted"}`}>
+                      <Icon className="size-4" aria-hidden="true" />
+                    </button>
+                  ))}
+                </div>
+              </div>
             </>
           )}
           {element.kind === "image" && <label className="grid gap-1.5 text-xs font-medium">이미지 맞춤
@@ -150,6 +166,8 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
   );
 }
 
-function NumberField({ label, value, onChange, disabled = false }: { label: string; value: number; onChange: (value: number) => void; disabled?: boolean }) {
-  return <label className="grid gap-1.5 text-xs font-medium">{label}<Input type="number" step="1" value={Number(value.toFixed(1))} disabled={disabled} onChange={(event) => onChange(Number(event.target.value))} /></label>;
+function NumberField({ label, value, onChange, disabled = false, step = 1, min, max }: { label: string; value: number;
+  onChange: (value: number) => void; disabled?: boolean; step?: number; min?: number; max?: number }) {
+  return <label className="grid gap-1.5 text-xs font-medium">{label}<Input type="number" step={step} min={min} max={max}
+    value={Number(value.toFixed(1))} disabled={disabled} onChange={(event) => onChange(Number(event.target.value))} /></label>;
 }

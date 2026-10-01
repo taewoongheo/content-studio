@@ -2,12 +2,12 @@
 
 import { useRef, useState, type PointerEvent } from "react";
 import Image from "next/image";
-import type { EditorDocument, EditorSlide, ElementFrame } from "@/lib/content-jobs/editor/types";
+import type { EditorDocument, EditorSlide, ElementFrame, ElementStyle } from "@/lib/content-jobs/editor/types";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID } from "@/lib/content-jobs/editor/document";
-import { moveOrResizeFrame, type DragMode } from "./frame-geometry";
+import { CANVAS_SAFE_AREA, fontSizeForFrameResize, moveOrResizeFrame, type DragMode } from "./frame-geometry";
 
 type Gesture = { pointerId: number; placementId: string; mode: DragMode; startX: number; startY: number;
-  canvasWidth: number; canvasHeight: number; frame: ElementFrame; lockAspectRatio: boolean };
+  canvasWidth: number; canvasHeight: number; frame: ElementFrame; lockAspectRatio: boolean; fontSize?: number };
 const handles = ["nw", "ne", "sw", "se"] as const;
 const handlePositions = { nw: "-left-1.5 -top-1.5 cursor-nwse-resize", ne: "-right-1.5 -top-1.5 cursor-nesw-resize",
   sw: "-bottom-1.5 -left-1.5 cursor-nesw-resize", se: "-bottom-1.5 -right-1.5 cursor-nwse-resize" } as const;
@@ -22,7 +22,7 @@ export function SlideCanvas({
   lockImageAspectRatio,
   onSelect,
   onSelectBackground,
-  onFrameChange,
+  onVisualChange,
 }: {
   document: EditorDocument;
   slide: EditorSlide;
@@ -33,15 +33,15 @@ export function SlideCanvas({
   lockImageAspectRatio: boolean;
   onSelect: (placementId: string) => void;
   onSelectBackground: () => void;
-  onFrameChange: (placementId: string, frame: ElementFrame) => Promise<boolean>;
+  onVisualChange: (placementId: string, frame: ElementFrame, style?: Partial<ElementStyle>) => Promise<boolean>;
 }) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const gesture = useRef<Gesture | null>(null);
-  const [preview, setPreview] = useState<{ placementId: string; frame: ElementFrame } | null>(null);
+  const [preview, setPreview] = useState<{ placementId: string; frame: ElementFrame; fontSize?: number } | null>(null);
   const elements = new Map(document.elements.map((element) => [element.id, element]));
 
   function beginGesture(event: PointerEvent<HTMLButtonElement>, placementId: string, frame: ElementFrame, mode: DragMode,
-    lockAspectRatio = false) {
+    lockAspectRatio = false, fontSize?: number) {
     event.stopPropagation();
     if (selectedPlacementId !== placementId) {
       onSelect(placementId);
@@ -60,15 +60,18 @@ export function SlideCanvas({
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     gesture.current = { pointerId: event.pointerId, placementId, mode, startX: event.clientX, startY: event.clientY,
-      canvasWidth: bounds.width, canvasHeight: bounds.height, frame: renderedFrame, lockAspectRatio };
+      canvasWidth: bounds.width, canvasHeight: bounds.height, frame: renderedFrame, lockAspectRatio, fontSize };
   }
 
   function frameAtPointer(event: PointerEvent<HTMLButtonElement>) {
     const active = gesture.current;
     if (!active || active.pointerId !== event.pointerId) return null;
-    return { placementId: active.placementId, frame: moveOrResizeFrame(active.frame, active.mode,
+    const frame = moveOrResizeFrame(active.frame, active.mode,
       (event.clientX - active.startX) / active.canvasWidth, (event.clientY - active.startY) / active.canvasHeight,
-      showGuides, active.lockAspectRatio) };
+      showGuides, active.lockAspectRatio);
+    return { placementId: active.placementId, frame,
+      ...(active.fontSize !== undefined && active.mode !== "move"
+        ? { fontSize: fontSizeForFrameResize(active.fontSize, active.frame, frame) } : {}) };
   }
 
   function moveGesture(event: PointerEvent<HTMLButtonElement>) {
@@ -88,7 +91,8 @@ export function SlideCanvas({
     }
     setPreview(next);
     try {
-      await onFrameChange(next.placementId, next.frame);
+      await onVisualChange(next.placementId, next.frame,
+        next.fontSize === undefined ? undefined : { fontSize: next.fontSize });
     } finally {
       setPreview(null);
     }
@@ -116,6 +120,7 @@ export function SlideCanvas({
         const style = { ...element.style, ...placement.styleOverride };
         const selected = selectedPlacementId === placement.id;
         const isText = element.kind === "text";
+        const previewFontSize = preview?.placementId === placement.id ? preview.fontSize : undefined;
         return (
           <div
             key={placement.id}
@@ -135,7 +140,8 @@ export function SlideCanvas({
             style={{
               backgroundColor: element.kind === "text" || element.kind === "image" ? style.backgroundColor : "transparent",
               color: style.color,
-              fontSize: `${style.fontSize / 10.8}cqw`,
+              fontSize: `${(previewFontSize ?? style.fontSize) / 10.8}cqw`,
+              lineHeight: style.lineHeight,
               fontWeight: style.fontWeight,
               textAlign: style.textAlign,
               fontFamily: style.fontFamily,
@@ -169,7 +175,7 @@ export function SlideCanvas({
                 </span>
               )
             ) : (
-              <span className={`inline-block max-w-full whitespace-pre-wrap break-words px-[1cqw] py-[0.5cqw] leading-tight ${placement.value ? "" : "text-muted-foreground/70"}`}>
+              <span className={`inline-block max-w-full whitespace-pre-wrap break-words px-[1cqw] py-[0.5cqw] ${placement.value ? "" : "text-muted-foreground/70"}`}>
                 {placement.value || element.name}
               </span>
             )}
@@ -178,15 +184,22 @@ export function SlideCanvas({
             <button key={handle} type="button" disabled={disabled} aria-label={`${element.name} ${handle} 크기 조절`}
               className={`absolute z-10 size-3 rounded-[2px] border border-primary bg-background shadow-sm touch-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${handlePositions[handle]}`}
               onPointerDown={(event) => beginGesture(event, placement.id, frame, handle,
-                element.kind === "image" && lockImageAspectRatio)}
+                (element.kind === "image" && lockImageAspectRatio) || isText, isText ? style.fontSize : undefined)}
               onPointerMove={moveGesture} onPointerUp={(event) => void finishGesture(event)} onPointerCancel={cancelGesture} />
           ))}
           </div>
         );
       })}
       {showGuides && <div className="pointer-events-none absolute inset-0 z-50" aria-hidden="true">
-        <div className="absolute inset-y-0 left-1/2 w-px bg-blue-600" />
-        <div className="absolute inset-x-0 top-1/2 h-px bg-blue-600" />
+        <div className="absolute inset-x-0 top-0 bg-black/15"
+          style={{ height: `${CANVAS_SAFE_AREA.top * 100}%` }} />
+        <div className="absolute inset-x-0 bottom-0 bg-black/15"
+          style={{ height: `${CANVAS_SAFE_AREA.bottom * 100}%` }} />
+        <div className="absolute border border-dashed border-emerald-400/80"
+          style={{ left: `${CANVAS_SAFE_AREA.left * 100}%`, right: `${CANVAS_SAFE_AREA.right * 100}%`,
+            top: `${CANVAS_SAFE_AREA.top * 100}%`, bottom: `${CANVAS_SAFE_AREA.bottom * 100}%` }} />
+        <div className="absolute inset-y-0 left-1/2 border-l border-dashed border-emerald-300/25" />
+        <div className="absolute inset-x-0 top-1/2 border-t border-dashed border-emerald-300/25" />
       </div>}
     </div>
   );

@@ -166,6 +166,6 @@ test("조회하지 않은 에셋 ID를 문서에 삽입할 수 없다", async ()
 function jobElement() {
   return { id: "template", name: "이미지", role: "시각 자료", kind: "image" as const, sourceImageId: "image-2",
     frame: { x: 0.1, y: 0.3, width: 0.8, height: 0.5 }, style: { color: "#111111", backgroundColor: "transparent",
-      fontSize: 36, fontWeight: 700, textAlign: "center" as const, borderRadius: 0,
+      fontSize: 36, lineHeight: 1.2, fontWeight: 700, textAlign: "center" as const, borderRadius: 0,
       fontFamily: "sans-serif" as const, imageFit: "contain" as const } };
 }

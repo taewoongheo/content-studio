@@ -29,7 +29,7 @@ function element(id: string, imageId: string) {
   return {
     id, name: id, role: `${id} 문장`, kind: "text",
     frame: { x: 0.1, y: 0.1, width: 0.8, height: 0.2 },
-    style: { color: "#111111", backgroundColor: "#FFFFFF", fontSize: 36, fontWeight: 700, textAlign: "center", borderRadius: 0, fontFamily: "sans-serif", imageFit: "cover" },
+    style: { color: "#111111", backgroundColor: "#FFFFFF", fontSize: 36, lineHeight: 1.2, fontWeight: 700, textAlign: "center", borderRadius: 0, fontFamily: "sans-serif", imageFit: "cover" },
     sourceImageId: imageId,
   };
 }
@@ -287,7 +287,7 @@ test("AI가 전체 배경색을 바꾸면 공유 배경 Element를 수정한다"
 });
 
 const unchangedStyle = {
-  color: null, backgroundColor: null, fontSize: null, fontWeight: null,
+  color: null, backgroundColor: null, fontSize: null, lineHeight: null, fontWeight: null,
   textAlign: null, borderRadius: null, fontFamily: null, imageFit: null,
 };
 

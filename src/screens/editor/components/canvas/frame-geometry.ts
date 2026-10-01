@@ -6,17 +6,37 @@ const MIN_FRAME_SIZE = 0.04;
 const SNAP_DISTANCE = 0.016;
 const PRECISION = 10_000;
 
+export const CANVAS_SAFE_AREA = { left: 0.067, right: 0.067, top: 0.115, bottom: 0.176 } as const;
+const HORIZONTAL_GUIDES = [CANVAS_SAFE_AREA.left, 0.5, 1 - CANVAS_SAFE_AREA.right] as const;
+const VERTICAL_GUIDES = [CANVAS_SAFE_AREA.top, 0.5, 1 - CANVAS_SAFE_AREA.bottom] as const;
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
 function snap(value: number, guides: readonly number[]) {
-  const nearest = guides.find((guide) => Math.abs(value - guide) <= SNAP_DISTANCE);
-  return nearest ?? value;
+  const nearest = guides.reduce((best, guide) =>
+    Math.abs(value - guide) < Math.abs(value - best) ? guide : best, guides[0]);
+  return Math.abs(value - nearest) <= SNAP_DISTANCE ? nearest : value;
 }
 
 function round(value: number) {
   return Math.round(value * PRECISION) / PRECISION;
+}
+
+function snapMovedAxis(start: number, size: number, startGuide: number, endGuide: number) {
+  const candidates = [
+    { distance: Math.abs(start - startGuide), start: startGuide },
+    { distance: Math.abs(start + size / 2 - 0.5), start: 0.5 - size / 2 },
+    { distance: Math.abs(start + size - endGuide), start: endGuide - size },
+  ];
+  const nearest = candidates.reduce((best, candidate) => candidate.distance < best.distance ? candidate : best);
+  return nearest.distance <= SNAP_DISTANCE ? nearest.start : start;
+}
+
+export function fontSizeForFrameResize(fontSize: number, initialFrame: ElementFrame, resizedFrame: ElementFrame) {
+  if (initialFrame.width <= 0) return fontSize;
+  return round(clamp(fontSize * (resizedFrame.width / initialFrame.width), 8, 200));
 }
 
 export function moveOrResizeFrame(frame: ElementFrame, mode: DragMode, deltaX: number, deltaY: number,
@@ -25,8 +45,8 @@ export function moveOrResizeFrame(frame: ElementFrame, mode: DragMode, deltaX: n
     let x = clamp(frame.x + deltaX, 0, 1 - frame.width);
     let y = clamp(frame.y + deltaY, 0, 1 - frame.height);
     if (guidesEnabled) {
-      x = snap(x + frame.width / 2, [0.5]) - frame.width / 2;
-      y = snap(y + frame.height / 2, [0.5]) - frame.height / 2;
+      x = snapMovedAxis(x, frame.width, CANVAS_SAFE_AREA.left, 1 - CANVAS_SAFE_AREA.right);
+      y = snapMovedAxis(y, frame.height, CANVAS_SAFE_AREA.top, 1 - CANVAS_SAFE_AREA.bottom);
     }
     return { ...frame, x: Math.min(round(clamp(x, 0, 1 - frame.width)), 1 - frame.width),
       y: Math.min(round(clamp(y, 0, 1 - frame.height)), 1 - frame.height) };
@@ -51,11 +71,11 @@ export function moveOrResizeFrame(frame: ElementFrame, mode: DragMode, deltaX: n
       const verticalEdge = mode.includes("n")
         ? frame.y + frame.height - frame.height * scale : frame.y + frame.height * scale;
       const snapScales = [
-        Math.abs(horizontalEdge - 0.5) <= SNAP_DISTANCE
-          ? (mode.includes("w") ? frame.x + frame.width - 0.5 : 0.5 - frame.x) / frame.width : null,
-        Math.abs(verticalEdge - 0.5) <= SNAP_DISTANCE
-          ? (mode.includes("n") ? frame.y + frame.height - 0.5 : 0.5 - frame.y) / frame.height : null,
-      ].filter((value): value is number => value !== null);
+        ...HORIZONTAL_GUIDES.filter((guide) => Math.abs(horizontalEdge - guide) <= SNAP_DISTANCE)
+          .map((guide) => (mode.includes("w") ? frame.x + frame.width - guide : guide - frame.x) / frame.width),
+        ...VERTICAL_GUIDES.filter((guide) => Math.abs(verticalEdge - guide) <= SNAP_DISTANCE)
+          .map((guide) => (mode.includes("n") ? frame.y + frame.height - guide : guide - frame.y) / frame.height),
+      ];
       if (snapScales.length > 0) {
         const nearest = snapScales.reduce((best, value) =>
           Math.abs(value - scale) < Math.abs(best - scale) ? value : best);
@@ -82,10 +102,10 @@ export function moveOrResizeFrame(frame: ElementFrame, mode: DragMode, deltaX: n
   if (mode.includes("n")) top = clamp(top + deltaY, 0, bottom - MIN_FRAME_SIZE);
   if (mode.includes("s")) bottom = clamp(bottom + deltaY, top + MIN_FRAME_SIZE, 1);
   if (guidesEnabled) {
-    if (mode.includes("w")) left = clamp(snap(left, [0.5]), 0, right - MIN_FRAME_SIZE);
-    if (mode.includes("e")) right = clamp(snap(right, [0.5]), left + MIN_FRAME_SIZE, 1);
-    if (mode.includes("n")) top = clamp(snap(top, [0.5]), 0, bottom - MIN_FRAME_SIZE);
-    if (mode.includes("s")) bottom = clamp(snap(bottom, [0.5]), top + MIN_FRAME_SIZE, 1);
+    if (mode.includes("w")) left = clamp(snap(left, HORIZONTAL_GUIDES), 0, right - MIN_FRAME_SIZE);
+    if (mode.includes("e")) right = clamp(snap(right, HORIZONTAL_GUIDES), left + MIN_FRAME_SIZE, 1);
+    if (mode.includes("n")) top = clamp(snap(top, VERTICAL_GUIDES), 0, bottom - MIN_FRAME_SIZE);
+    if (mode.includes("s")) bottom = clamp(snap(bottom, VERTICAL_GUIDES), top + MIN_FRAME_SIZE, 1);
   }
   left = round(left);
   top = round(top);
