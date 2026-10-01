@@ -54,23 +54,31 @@ async function renderText(width: number, height: number, value: string, style: E
   const background = transparentOrColor(style.backgroundColor);
   const base = sharp({ create: { width, height, channels: 4, background } });
   if (!value) return base.png().toBuffer();
-  const horizontalPadding = 11;
-  const verticalPadding = 5;
+  const horizontalPadding = Math.min(11, Math.max(0, Math.floor((width - 1) / 2)));
+  const verticalPadding = Math.min(5, Math.max(0, height - 1));
   const textWidth = Math.max(1, width - horizontalPadding * 2);
   const fontFamily = style.fontFamily === "serif" ? "serif" : style.fontFamily === "monospace" ? "monospace" : "sans-serif";
-  return base.composite([{
-    input: {
-      text: {
-        text: `<span foreground="${style.color}" weight="${style.fontWeight}">${escapeMarkup(value)}</span>`,
-        font: `${fontFamily} ${style.fontSize}`,
-        width: textWidth,
-        align: style.textAlign,
-        spacing: Math.round(style.fontSize * style.lineHeight),
-        wrap: "word-char",
-        rgba: true,
-        dpi: 72,
-      },
+  const rendered = await sharp({
+    text: {
+      text: `<span foreground="${style.color}" weight="${style.fontWeight}">${escapeMarkup(value)}</span>`,
+      font: `${fontFamily} ${style.fontSize}`,
+      width: textWidth,
+      align: style.textAlign,
+      spacing: Math.round(style.fontSize * style.lineHeight),
+      wrap: "word-char",
+      rgba: true,
+      dpi: 72,
     },
+  }).png().toBuffer();
+  const metadata = await sharp(rendered).metadata();
+  const visibleWidth = Math.min(metadata.width ?? 0, width - horizontalPadding);
+  const visibleHeight = Math.min(metadata.height ?? 0, height - verticalPadding);
+  if (visibleWidth <= 0 || visibleHeight <= 0) return base.png().toBuffer();
+  const clipped = visibleWidth === metadata.width && visibleHeight === metadata.height
+    ? rendered
+    : await sharp(rendered).extract({ left: 0, top: 0, width: visibleWidth, height: visibleHeight }).png().toBuffer();
+  return base.composite([{
+    input: clipped,
     left: horizontalPadding,
     top: verticalPadding,
   }]).png().toBuffer();

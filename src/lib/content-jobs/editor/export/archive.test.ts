@@ -28,6 +28,8 @@ function documentFixture() {
     elements: [
       { id: "empty-text", name: "내보내면 안 되는 슬롯명", role: "빈 텍스트", kind: "text",
         frame: { x: 0.1, y: 0.1, width: 0.8, height: 0.2 }, style, sourceImageId: "reference-1" },
+      { id: "tiny-text", name: "작은 텍스트", role: "프레임보다 긴 문구", kind: "text",
+        frame: { x: 0.1, y: 0.4, width: 0.8, height: 0.01 }, style, sourceImageId: "reference-2" },
       { id: "image", name: "이미지", role: "이미지", kind: "image",
         frame: { x: 0.25, y: 0.25, width: 0.5, height: 0.4 }, style, sourceImageId: "reference-1" },
       { id: "outside", name: "밖의 도형", role: "가장자리 장식", kind: "rectangle",
@@ -41,6 +43,8 @@ function documentFixture() {
       ] },
       { id: "slide-2", role: "cta", backgroundColor: "#FFFFFF", placements: [
         { id: "text-2", elementId: "empty-text", value: "내보내기 제목", frameOverride: null, styleOverride: null },
+        { id: "tiny-text-2", elementId: "tiny-text", value: "Element 높이보다 훨씬 긴 여러 줄 텍스트도 안전하게 잘라냅니다.",
+          frameOverride: null, styleOverride: null },
         { id: "outside-1", elementId: "outside", value: "", frameOverride: null, styleOverride: null },
       ] },
     ],
