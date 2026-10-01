@@ -93,7 +93,7 @@ export class ContentWorkflowService {
     this.prepareCwd = options.cwd === undefined;
   }
 
-  async createJob(input: ContentJobInput) {
+  async createJob(input: ContentJobInput, id?: string) {
     const connection = await this.codex.connect();
     if (connection.status !== "connected") {
       throw new ContentJobError(
@@ -106,7 +106,7 @@ export class ContentWorkflowService {
       cwd: this.cwd,
       model: input.model,
     });
-    return this.registry.add(input, threadId);
+    return this.registry.add(input, threadId, id);
   }
 
   analyzeReference(id: string, regeneration?: RegenerationRequest) {

@@ -75,11 +75,11 @@ export class ContentJobRegistry {
     this.now = options.now ?? (() => new Date());
   }
 
-  add(input: ContentJobInput, threadId: string) {
+  add(input: ContentJobInput, threadId: string, id = this.createId()) {
     const timestamp = this.now().toISOString();
     const job: ContentJobRecord = {
       ...structuredClone(input),
-      id: this.createId(),
+      id,
       threadId,
       state: createContentJobState(),
       editor: createEditorState(),

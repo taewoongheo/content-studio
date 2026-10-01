@@ -12,28 +12,49 @@ import { ProductContextForm } from "./components/product-context-form";
 import { ContentForm } from "./components/content-form/content-form";
 import { PublishedContentPage } from "./components/published/published-content-page";
 import { AssetLibraryPage } from "./components/assets/asset-library-page";
+import { SavedProjectsPage } from "./components/projects/saved-projects-page";
 import { useProductContext } from "./hooks/use-product-context";
+import { listContentProjects, loadContentProject } from "@/screens/projects/api";
 
 export function DashboardScreen() {
   const [tab, setTab] = useState("create");
   const [job, setJob] = useState<ContentJobSnapshot | null>(null);
+  const [projectName, setProjectName] = useState<string | undefined>();
   const codex = useCodexConnection();
   const { context, loaded, storageError, saveContext } = useProductContext();
 
   useEffect(() => {
     const jobId = new URL(window.location.href).searchParams.get("job");
-    if (!jobId) return;
-    void getContentJob(jobId)
-      .then(setJob)
-      .catch(() => {
+    if (!jobId || !codex.selectedModel) return;
+    const currentJob = getContentJob(jobId);
+    const projects = listContentProjects();
+    void Promise.allSettled([currentJob, projects]).then(async ([jobResult, projectsResult]) => {
+      const saved = projectsResult.status === "fulfilled"
+        ? projectsResult.value.find((project) => project.id === jobId)
+        : undefined;
+      if (jobResult.status === "fulfilled") {
+        setJob(jobResult.value);
+        setProjectName(saved?.name);
+        return;
+      }
+      if (saved) {
+        try {
+          setJob(await loadContentProject(saved.id, codex.selectedModel));
+          setProjectName(saved.name);
+          return;
+        } catch { /* Remove an unavailable project URL below. */ }
+      }
+      {
         const url = new URL(window.location.href);
         url.searchParams.delete("job");
         window.history.replaceState(null, "", url);
-      });
-  }, []);
+      }
+    });
+  }, [codex.selectedModel]);
 
-  function showJob(nextJob: ContentJobSnapshot) {
+  function showJob(nextJob: ContentJobSnapshot, savedName?: string) {
     setJob(nextJob);
+    setProjectName(savedName);
     setTab("create");
     const url = new URL(window.location.href);
     url.searchParams.set("job", nextJob.id);
@@ -42,11 +63,12 @@ export function DashboardScreen() {
 
   function startNewJob() {
     setJob(null);
+    setProjectName(undefined);
     const url = new URL(window.location.href);
     url.searchParams.delete("job");
     window.history.replaceState(null, "", url);
   }
-  if (job) return <EditorScreen initialJob={job} onNewJob={startNewJob} />;
+  if (job) return <EditorScreen initialJob={job} initialProjectName={projectName} onNewJob={startNewJob} />;
   return (
     <Tabs
       orientation="vertical"
@@ -134,6 +156,9 @@ export function DashboardScreen() {
           )}
           <TabsContent value="published" className="data-[hidden]:hidden">
             <PublishedContentPage />
+          </TabsContent>
+          <TabsContent value="projects" className="data-[hidden]:hidden">
+            <SavedProjectsPage codexModel={codex.selectedModel} onOpen={showJob} />
           </TabsContent>
           <TabsContent value="assets" className="data-[hidden]:hidden">
             <AssetLibraryPage />

@@ -1,7 +1,7 @@
 "use client";
 
 import { CodexConnection } from "./codex-connection";
-import { CalendarDays, Images, Package, Plus } from "lucide-react";
+import { CalendarDays, FolderOpen, Images, Package, Plus } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -70,6 +70,14 @@ export function StudioSidebar({
           >
             <CalendarDays aria-hidden="true" />
             <span>게시 콘텐츠</span>
+          </SidebarMenuButton>
+          <SidebarMenuButton
+            className="h-11"
+            isActive={activeTab === "projects"}
+            render={<TabsTrigger value="projects" className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent" />}
+          >
+            <FolderOpen aria-hidden="true" />
+            <span>저장된 프로젝트</span>
           </SidebarMenuButton>
           <SidebarMenuButton
             className="h-11"

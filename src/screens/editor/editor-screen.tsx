@@ -19,9 +19,14 @@ import { SlideCanvas } from "./components/canvas/slide-canvas";
 import { SlideBackground } from "./components/inspector/slide-background";
 import { visualCommandsForScope } from "./components/canvas/frame-commands";
 import { ImageLibraryPicker } from "./components/library/image-library-picker";
+import { ProjectSaveControl } from "./components/projects/project-save-control";
 import { resolveEditorSelection, roleLabels } from "./editor-selection";
 
-export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobSnapshot; onNewJob: () => void }) {
+export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
+  initialJob: ContentJobSnapshot;
+  initialProjectName?: string;
+  onNewJob: () => void;
+}) {
   const { job, submitting, clientError, send } = useContentJob(initialJob);
   const [slideId, setSlideId] = useState("slide-1");
   const [placementId, setPlacementId] = useState<string | null>(null);
@@ -195,6 +200,10 @@ export function EditorScreen({ initialJob, onNewJob }: { initialJob: ContentJobS
         </div>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <p className="hidden text-xs text-muted-foreground sm:block">{job.structure === "repeating" ? "반복형" : "장면별 구성"} · {job.slideCount}장 · {job.outputLanguage}</p>
+          <ProjectSaveControl jobId={job.id} revision={job.editor.revision}
+            defaultName={job.editor.selectedTopic?.title || `${job.productContext.name} 콘텐츠`}
+            initialProjectName={initialProjectName} disabled={disabled || !document}
+            onBeforeSave={() => inspectorRef.current?.flushPending() ?? Promise.resolve(true)} />
           <Button variant="outline" size="sm" disabled={disabled || !document} onClick={() => void action({ action: "editor_undo" })}>
             <Undo2 className="size-4" aria-hidden="true" /> 되돌리기
           </Button>
