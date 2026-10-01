@@ -43,11 +43,11 @@ export function SlideCanvas({
   function beginGesture(event: PointerEvent<HTMLButtonElement>, placementId: string, frame: ElementFrame, mode: DragMode,
     lockAspectRatio = false) {
     event.stopPropagation();
-    if (disabled) return;
     if (selectedPlacementId !== placementId) {
       onSelect(placementId);
       return;
     }
+    if (disabled) return;
     const bounds = canvasRef.current?.getBoundingClientRect();
     if (!bounds) return;
     const renderedBounds = event.currentTarget.parentElement?.getBoundingClientRect();
@@ -131,7 +131,6 @@ export function SlideCanvas({
           >
           <button
             type="button"
-            disabled={disabled}
             className={`relative touch-none cursor-move text-left outline-none focus-visible:ring-2 focus-visible:ring-primary ${isText ? "inline-flex max-w-full overflow-visible" : "size-full overflow-hidden"} ${selected ? "" : "hover:ring-1 hover:ring-foreground/50"}`}
             style={{
               backgroundColor: element.kind === "text" || element.kind === "image" ? style.backgroundColor : "transparent",
@@ -148,6 +147,7 @@ export function SlideCanvas({
             onPointerUp={(event) => void finishGesture(event)}
             onPointerCancel={cancelGesture}
             aria-label={`${element.name} Element 선택`}
+            aria-pressed={selected}
           >
             {element.kind === "rectangle" || element.kind === "circle" || element.kind === "triangle" ? (
               <span className="block size-full" style={{ backgroundColor: style.backgroundColor,
