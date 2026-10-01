@@ -68,10 +68,10 @@ export async function renderArtwork(options: Options) {
           }
         } else if (element.kind === "text" && (placement.value || showPlaceholders)) {
           // Height controls selection, not a destructive crop of glyphs or wrapped lines.
-          group.add(new Konva.Text({ x: 10.8, y: 5.4, width: Math.max(1, frame.width - 21.6),
+          group.add(new Konva.Text({ x: 10.8, y: 0, width: Math.max(1, frame.width - 21.6),
             text: placement.value || element.name, fontSize: style.fontSize,
             fontFamily: style.fontFamily, fontStyle: String(style.fontWeight),
-            lineHeight: style.lineHeight, align: style.textAlign,
+            lineHeight: style.lineHeight, align: style.textAlign, verticalAlign: "top", padding: 0,
             fill: placement.value ? style.color : "#999", wrap: "word" }));
         }
       }
