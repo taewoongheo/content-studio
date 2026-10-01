@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useImperativeHandle, useState, type Ref } from "react";
 import { LoaderCircle, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,9 +15,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { saveContentProject } from "@/screens/projects/api";
 
-export function ProjectSaveControl({ jobId, revision, defaultName, initialProjectName, disabled, onBeforeSave }: {
+export type ProjectSaveHandle = { saveAutomatically: () => Promise<boolean> };
+
+export function ProjectSaveControl({ ref, jobId, revision, getRevision, defaultName, initialProjectName, disabled, onBeforeSave }: {
+  ref?: Ref<ProjectSaveHandle>;
   jobId: string;
   revision: number;
+  getRevision: () => number;
   defaultName: string;
   initialProjectName?: string;
   disabled: boolean;
@@ -34,19 +38,25 @@ export function ProjectSaveControl({ jobId, revision, defaultName, initialProjec
     setSaving(true);
     setError("");
     try {
-      if (!(await onBeforeSave())) return;
+      if (!(await onBeforeSave())) return false;
       const project = await saveContentProject(jobId, name);
       setProjectName(project.name);
       setDraftName(project.name);
-      setSavedRevision(revision);
+      setSavedRevision(getRevision());
       setOpen(false);
+      return true;
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "프로젝트를 저장하지 못했습니다.");
       setOpen(true);
+      return false;
     } finally {
       setSaving(false);
     }
   }
+
+  useImperativeHandle(ref, () => ({
+    saveAutomatically: () => save(projectName || defaultName.trim().slice(0, 120) || "새 콘텐츠"),
+  }));
 
   function requestSave() {
     if (projectName) void save(projectName);

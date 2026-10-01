@@ -7,11 +7,10 @@ import type { EditorDocument } from "@/lib/content-jobs/editor/types";
 import { createArtworkImageLoader } from "../canvas/render/assets";
 import { createSlideArchive, pngDataUrlBytes } from "./archive";
 
-export function ExportControl({ document, jobId, disabled, onBeforeExport, onError }: {
-  document: EditorDocument;
+export function ExportControl({ jobId, disabled, onBeforeExport, onError }: {
   jobId: string;
   disabled: boolean;
-  onBeforeExport: () => Promise<boolean>;
+  onBeforeExport: () => Promise<EditorDocument | null>;
   onError: (message: string) => void;
 }) {
   const [exporting, setExporting] = useState(false);
@@ -19,7 +18,8 @@ export function ExportControl({ document, jobId, disabled, onBeforeExport, onErr
     onError("");
     setExporting(true);
     try {
-      if (!(await onBeforeExport())) return;
+      const document = await onBeforeExport();
+      if (!document) return;
       const { renderArtwork } = await import("../canvas/render/artwork");
       const loadImage = createArtworkImageLoader();
       const images: Uint8Array[] = [];

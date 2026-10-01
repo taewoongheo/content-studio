@@ -26,6 +26,7 @@ export function SlideCanvas({
   slide,
   jobId,
   selectedPlacementId,
+  selectionAppliesToAll,
   disabled,
   showGuides,
   lockImageAspectRatio,
@@ -38,6 +39,7 @@ export function SlideCanvas({
   slide: EditorSlide;
   jobId: string;
   selectedPlacementId: string | null;
+  selectionAppliesToAll: boolean;
   disabled: boolean;
   showGuides: boolean;
   lockImageAspectRatio: boolean;
@@ -51,6 +53,8 @@ export function SlideCanvas({
   const [preview, setPreview] = useState<{ placementId: string; frame: ElementFrame } | null>(null);
   const [imageDragActive, setImageDragActive] = useState(false);
   const elements = new Map(document.elements.map((element) => [element.id, element]));
+  const selectionRing = selectionAppliesToAll ? "ring-sky-400" : "ring-primary";
+  const selectionHandle = selectionAppliesToAll ? "border-sky-400 bg-sky-50" : "border-primary bg-background";
 
   function beginGesture(event: PointerEvent<HTMLButtonElement>, placementId: string, frame: ElementFrame, mode: DragMode,
     lockAspectRatio = false) {
@@ -142,7 +146,7 @@ export function SlideCanvas({
   return (
     <div
       ref={canvasRef}
-      className={`relative mx-auto h-full w-auto max-h-full max-w-full overflow-visible border bg-white shadow-sm ${selectedPlacementId === BACKGROUND_PLACEMENT_ID ? "ring-2 ring-foreground/70 ring-offset-2" : ""}`}
+      className={`relative mx-auto h-full w-auto max-h-full max-w-full overflow-visible border bg-white shadow-sm ${selectedPlacementId === BACKGROUND_PLACEMENT_ID ? `ring-2 ${selectionRing} ring-offset-2` : ""}`}
       style={{ aspectRatio: document.aspectRatio.replace(":", "/"), containerType: "inline-size" }}
       aria-label={`${slide.role} 슬라이드 미리보기`}
       onDragOver={dragImageOver}
@@ -167,7 +171,7 @@ export function SlideCanvas({
         return (
           <div
             key={placement.id}
-            className={`absolute z-30 ${selected ? "ring-2 ring-primary" : ""}`}
+            className={`absolute z-30 ${selected ? `ring-2 ${selectionRing}` : ""}`}
             style={{
               left: `${frame.x * 100}%`,
               top: `${frame.y * 100}%`,
@@ -190,7 +194,7 @@ export function SlideCanvas({
           </button>
           {selected && handles.map((handle) => (
             <button key={handle} type="button" disabled={disabled} aria-label={`${element.name} ${handle} 크기 조절`}
-              className={`absolute z-10 size-3 rounded-[2px] border border-primary bg-background shadow-sm touch-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${handlePositions[handle]}`}
+              className={`absolute z-10 size-3 rounded-[2px] border ${selectionHandle} shadow-sm touch-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${handlePositions[handle]}`}
               onPointerDown={(event) => beginGesture(event, placement.id, frame, handle,
                 element.kind === "image" && lockImageAspectRatio)}
               onPointerMove={moveGesture} onPointerUp={(event) => void finishGesture(event)} onPointerCancel={cancelGesture} />

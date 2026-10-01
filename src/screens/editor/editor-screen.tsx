@@ -9,7 +9,7 @@ import type { EditorCommand, ElementFrame, ElementKind } from "@/lib/content-job
 import { makeElementDefinition } from "@/lib/content-jobs/editor/elements/factory";
 import { slideActionCommand } from "@/lib/content-jobs/editor/slides/commands";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, getDuplicateTargets } from "@/lib/content-jobs/editor/document";
-import { attachStoredEditorImage, uploadEditorImage } from "@/screens/content-job/api";
+import { attachStoredEditorImage, getContentJob, uploadEditorImage } from "@/screens/content-job/api";
 import { useContentJob } from "@/screens/content-job/use-content-job";
 import { ChatPanel } from "./components/chat-panel";
 import { ElementInspector, type ElementInspectorHandle } from "./components/inspector/element-inspector";
@@ -20,7 +20,7 @@ import { frameForDroppedImage } from "./components/canvas/frame/geometry";
 import { SlideBackground } from "./components/inspector/slide-background";
 import { frameCommandsForScope } from "./components/canvas/frame/commands";
 import { ImageLibraryPicker } from "./components/library/image-library-picker";
-import { ProjectSaveControl } from "./components/projects/project-save-control";
+import { ProjectSaveControl, type ProjectSaveHandle } from "./components/projects/project-save-control";
 import { ExportControl } from "./components/export/export-control";
 import { resolveEditorSelection, roleLabels } from "./editor-selection";
 
@@ -54,6 +54,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   const [showImageLibrary, setShowImageLibrary] = useState(false);
   const [unlockedImageRatios, setUnlockedImageRatios] = useState<Set<string>>(() => new Set());
   const inspectorRef = useRef<ElementInspectorHandle>(null);
+  const projectSaveRef = useRef<ProjectSaveHandle>(null);
   const imageLibraryButtonRef = useRef<HTMLButtonElement>(null);
   const latestRevision = useRef(job.editor.revision);
   const commandQueue = useRef<Promise<unknown>>(Promise.resolve());
@@ -232,9 +233,8 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   }
 
   async function prepareExport() {
-    if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
-    await commandQueue.current;
-    return true;
+    if (!(await projectSaveRef.current?.saveAutomatically())) return null;
+    return (await getContentJob(job.id)).editor.document;
   }
 
   return (
@@ -246,11 +246,16 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
         </div>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <p className="hidden text-xs text-muted-foreground sm:block">{job.structure === "repeating" ? "반복형" : "장면별 구성"} · {job.slideCount}장 · {job.outputLanguage}</p>
-          <ProjectSaveControl jobId={job.id} revision={job.editor.revision}
+          <ProjectSaveControl ref={projectSaveRef} jobId={job.id} revision={job.editor.revision}
+            getRevision={() => latestRevision.current}
             defaultName={job.editor.selectedTopic?.title || `${job.productContext.name} 콘텐츠`}
             initialProjectName={initialProjectName} disabled={disabled || !document}
-            onBeforeSave={() => inspectorRef.current?.flushPending() ?? Promise.resolve(true)} />
-          {document && <ExportControl document={document} jobId={job.id} disabled={disabled}
+            onBeforeSave={async () => {
+              if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
+              await commandQueue.current;
+              return true;
+            }} />
+          {document && <ExportControl jobId={job.id} disabled={disabled}
             onBeforeExport={prepareExport} onError={setImageError} />}
           <Button variant="outline" size="sm" disabled={disabled || !document} onClick={() => void action({ action: "editor_undo" })}>
             <Undo2 className="size-4" aria-hidden="true" /> 되돌리기
@@ -361,6 +366,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
             <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted/20 p-5 sm:p-6">
               <SlideCanvas key={slide.id} document={document} slide={slide} jobId={job.id}
                 selectedPlacementId={placement?.id ?? null} disabled={disabled} showGuides={showGuides}
+                selectionAppliesToAll={appliedSlides.length > 1 && selectedSlideIds.length === appliedSlides.length}
                 lockImageAspectRatio={imageAspectRatioLocked}
                 onSelect={setPlacementId} onSelectBackground={() => setPlacementId(BACKGROUND_PLACEMENT_ID)}
                 onFrameChange={changeFrame} onDropImage={addDroppedImage} />
