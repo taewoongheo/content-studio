@@ -2,12 +2,12 @@
 
 import { useRef, useState, type PointerEvent } from "react";
 import Image from "next/image";
-import type { EditorDocument, EditorSlide, ElementFrame, ElementStyle } from "@/lib/content-jobs/editor/types";
+import type { EditorDocument, EditorSlide, ElementFrame } from "@/lib/content-jobs/editor/types";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID } from "@/lib/content-jobs/editor/document";
-import { CANVAS_SAFE_AREA, fontSizeForFrameResize, moveOrResizeFrame, type DragMode } from "./frame-geometry";
+import { CANVAS_SAFE_AREA, moveOrResizeFrame, type DragMode } from "./frame-geometry";
 
 type Gesture = { pointerId: number; placementId: string; mode: DragMode; startX: number; startY: number;
-  canvasWidth: number; canvasHeight: number; frame: ElementFrame; lockAspectRatio: boolean; fontSize?: number };
+  canvasWidth: number; canvasHeight: number; frame: ElementFrame; lockAspectRatio: boolean };
 const handles = ["nw", "ne", "sw", "se"] as const;
 const handlePositions = { nw: "-left-1.5 -top-1.5 cursor-nwse-resize", ne: "-right-1.5 -top-1.5 cursor-nesw-resize",
   sw: "-bottom-1.5 -left-1.5 cursor-nesw-resize", se: "-bottom-1.5 -right-1.5 cursor-nwse-resize" } as const;
@@ -22,7 +22,7 @@ export function SlideCanvas({
   lockImageAspectRatio,
   onSelect,
   onSelectBackground,
-  onVisualChange,
+  onFrameChange,
 }: {
   document: EditorDocument;
   slide: EditorSlide;
@@ -33,15 +33,15 @@ export function SlideCanvas({
   lockImageAspectRatio: boolean;
   onSelect: (placementId: string) => void;
   onSelectBackground: () => void;
-  onVisualChange: (placementId: string, frame: ElementFrame, style?: Partial<ElementStyle>) => Promise<boolean>;
+  onFrameChange: (placementId: string, frame: ElementFrame) => Promise<boolean>;
 }) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const gesture = useRef<Gesture | null>(null);
-  const [preview, setPreview] = useState<{ placementId: string; frame: ElementFrame; fontSize?: number } | null>(null);
+  const [preview, setPreview] = useState<{ placementId: string; frame: ElementFrame } | null>(null);
   const elements = new Map(document.elements.map((element) => [element.id, element]));
 
   function beginGesture(event: PointerEvent<HTMLButtonElement>, placementId: string, frame: ElementFrame, mode: DragMode,
-    lockAspectRatio = false, fontSize?: number) {
+    lockAspectRatio = false) {
     event.stopPropagation();
     if (selectedPlacementId !== placementId) {
       onSelect(placementId);
@@ -60,7 +60,7 @@ export function SlideCanvas({
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     gesture.current = { pointerId: event.pointerId, placementId, mode, startX: event.clientX, startY: event.clientY,
-      canvasWidth: bounds.width, canvasHeight: bounds.height, frame: renderedFrame, lockAspectRatio, fontSize };
+      canvasWidth: bounds.width, canvasHeight: bounds.height, frame: renderedFrame, lockAspectRatio };
   }
 
   function frameAtPointer(event: PointerEvent<HTMLButtonElement>) {
@@ -69,9 +69,7 @@ export function SlideCanvas({
     const frame = moveOrResizeFrame(active.frame, active.mode,
       (event.clientX - active.startX) / active.canvasWidth, (event.clientY - active.startY) / active.canvasHeight,
       showGuides, active.lockAspectRatio);
-    return { placementId: active.placementId, frame,
-      ...(active.fontSize !== undefined && active.mode !== "move"
-        ? { fontSize: fontSizeForFrameResize(active.fontSize, active.frame, frame) } : {}) };
+    return { placementId: active.placementId, frame };
   }
 
   function moveGesture(event: PointerEvent<HTMLButtonElement>) {
@@ -91,8 +89,7 @@ export function SlideCanvas({
     }
     setPreview(next);
     try {
-      await onVisualChange(next.placementId, next.frame,
-        next.fontSize === undefined ? undefined : { fontSize: next.fontSize });
+      await onFrameChange(next.placementId, next.frame);
     } finally {
       setPreview(null);
     }
@@ -119,8 +116,6 @@ export function SlideCanvas({
         const frame = preview?.placementId === placement.id ? preview.frame : placement.frameOverride ?? element.frame;
         const style = { ...element.style, ...placement.styleOverride };
         const selected = selectedPlacementId === placement.id;
-        const isText = element.kind === "text";
-        const previewFontSize = preview?.placementId === placement.id ? preview.fontSize : undefined;
         return (
           <div
             key={placement.id}
@@ -128,19 +123,18 @@ export function SlideCanvas({
             style={{
               left: `${frame.x * 100}%`,
               top: `${frame.y * 100}%`,
-              width: isText ? "max-content" : `${frame.width * 100}%`,
-              maxWidth: isText ? `${Math.min(frame.width, 1 - frame.x) * 100}%` : undefined,
-              height: isText ? "auto" : `${frame.height * 100}%`,
+              width: `${frame.width * 100}%`,
+              height: `${frame.height * 100}%`,
               zIndex: selected ? slide.placements.length + 2 : index + 1,
             }}
           >
           <button
             type="button"
-            className={`relative touch-none cursor-move text-left outline-none focus-visible:ring-2 focus-visible:ring-primary ${isText ? "inline-flex max-w-full overflow-visible" : "size-full overflow-hidden"} ${selected ? "" : "hover:ring-1 hover:ring-foreground/50"}`}
+            className={`relative size-full touch-none cursor-move overflow-hidden text-left outline-none focus-visible:ring-2 focus-visible:ring-primary ${selected ? "" : "hover:ring-1 hover:ring-foreground/50"}`}
             style={{
               backgroundColor: element.kind === "text" || element.kind === "image" ? style.backgroundColor : "transparent",
               color: style.color,
-              fontSize: `${(previewFontSize ?? style.fontSize) / 10.8}cqw`,
+              fontSize: `${style.fontSize / 10.8}cqw`,
               lineHeight: style.lineHeight,
               fontWeight: style.fontWeight,
               textAlign: style.textAlign,
@@ -175,7 +169,7 @@ export function SlideCanvas({
                 </span>
               )
             ) : (
-              <span className={`inline-block max-w-full whitespace-pre-wrap break-words px-[1cqw] py-[0.5cqw] ${placement.value ? "" : "text-muted-foreground/70"}`}>
+              <span className={`block w-full whitespace-pre-wrap break-words px-[1cqw] py-[0.5cqw] ${placement.value ? "" : "text-muted-foreground/70"}`}>
                 {placement.value || element.name}
               </span>
             )}
@@ -184,7 +178,7 @@ export function SlideCanvas({
             <button key={handle} type="button" disabled={disabled} aria-label={`${element.name} ${handle} 크기 조절`}
               className={`absolute z-10 size-3 rounded-[2px] border border-primary bg-background shadow-sm touch-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${handlePositions[handle]}`}
               onPointerDown={(event) => beginGesture(event, placement.id, frame, handle,
-                (element.kind === "image" && lockImageAspectRatio) || isText, isText ? style.fontSize : undefined)}
+                element.kind === "image" && lockImageAspectRatio)}
               onPointerMove={moveGesture} onPointerUp={(event) => void finishGesture(event)} onPointerCancel={cancelGesture} />
           ))}
           </div>

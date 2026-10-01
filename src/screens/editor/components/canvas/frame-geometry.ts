@@ -34,11 +34,6 @@ function snapMovedAxis(start: number, size: number, startGuide: number, endGuide
   return nearest.distance <= SNAP_DISTANCE ? nearest.start : start;
 }
 
-export function fontSizeForFrameResize(fontSize: number, initialFrame: ElementFrame, resizedFrame: ElementFrame) {
-  if (initialFrame.width <= 0) return fontSize;
-  return round(clamp(fontSize * (resizedFrame.width / initialFrame.width), 8, 200));
-}
-
 export function moveOrResizeFrame(frame: ElementFrame, mode: DragMode, deltaX: number, deltaY: number,
   guidesEnabled = true, lockAspectRatio = false): ElementFrame {
   if (mode === "move") {
