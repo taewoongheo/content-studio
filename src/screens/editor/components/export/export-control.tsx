@@ -8,15 +8,34 @@ import type { EditorDocument } from "@/lib/content-jobs/editor/types";
 import { SlideArtwork } from "../canvas/slide-artwork";
 import { createSlideArchive, exportDimensions, pngDataUrlBytes } from "./archive";
 
+const IMAGE_LOAD_TIMEOUT_MS = 15_000;
+
+function waitForImage(image: HTMLImageElement) {
+  if (image.complete) {
+    if (image.naturalWidth === 0) return Promise.reject(new Error("내보낼 이미지를 불러오지 못했습니다."));
+    return image.decode().catch(() => undefined);
+  }
+  return new Promise<void>((resolve, reject) => {
+    const finish = (result: "load" | "error" | "timeout") => {
+      window.clearTimeout(timeout);
+      image.removeEventListener("load", handleLoad);
+      image.removeEventListener("error", handleError);
+      if (result === "load") void image.decode().catch(() => undefined).then(() => resolve());
+      else reject(new Error(result === "timeout"
+        ? "이미지 로딩 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요."
+        : "내보낼 이미지를 불러오지 못했습니다."));
+    };
+    const handleLoad = () => finish("load");
+    const handleError = () => finish("error");
+    const timeout = window.setTimeout(() => finish("timeout"), IMAGE_LOAD_TIMEOUT_MS);
+    image.addEventListener("load", handleLoad, { once: true });
+    image.addEventListener("error", handleError, { once: true });
+  });
+}
+
 async function waitForArtwork(node: HTMLElement) {
   await window.document.fonts?.ready;
-  await Promise.all(Array.from(node.querySelectorAll("img"), async (image) => {
-    if (!image.complete) await new Promise<void>((resolve) => {
-      image.addEventListener("load", () => resolve(), { once: true });
-      image.addEventListener("error", () => resolve(), { once: true });
-    });
-    await image.decode().catch(() => undefined);
-  }));
+  await Promise.all(Array.from(node.querySelectorAll("img"), waitForImage));
 }
 
 function nextPaint() {
@@ -92,6 +111,7 @@ export function ExportControl({
             jobId={jobId}
             showPlaceholders={false}
             clipContent
+            loadImagesEagerly
             style={{ width: dimensions.width, height: dimensions.height }}
           />
         ))}

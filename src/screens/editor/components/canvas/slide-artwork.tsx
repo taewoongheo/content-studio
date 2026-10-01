@@ -14,6 +14,7 @@ type SlideArtworkProps = Omit<HTMLAttributes<HTMLDivElement>, "children"> & {
   framePreview?: FramePreview;
   showPlaceholders?: boolean;
   clipContent?: boolean;
+  loadImagesEagerly?: boolean;
 };
 
 export const SlideArtwork = forwardRef<HTMLDivElement, SlideArtworkProps>(function SlideArtwork({
@@ -23,6 +24,7 @@ export const SlideArtwork = forwardRef<HTMLDivElement, SlideArtworkProps>(functi
   framePreview = null,
   showPlaceholders = true,
   clipContent = false,
+  loadImagesEagerly = false,
   className = "",
   style: rootStyle,
   ...props
@@ -89,6 +91,7 @@ export const SlideArtwork = forwardRef<HTMLDivElement, SlideArtworkProps>(functi
                   alt={element.name}
                   fill
                   unoptimized
+                  loading={loadImagesEagerly ? "eager" : "lazy"}
                   sizes="1080px"
                   style={{ objectFit: elementStyle.imageFit }}
                 />
