@@ -1,113 +1,43 @@
 "use client";
 
-import { forwardRef, type HTMLAttributes } from "react";
-import Image from "next/image";
+import { useEffect, useRef, useState, type HTMLAttributes } from "react";
 import type { EditorDocument, EditorSlide, ElementFrame } from "@/lib/content-jobs/editor/types";
-import { BACKGROUND_ELEMENT_ID } from "@/lib/content-jobs/editor/document";
+import { createArtworkImageLoader } from "./render/assets";
 
 export type FramePreview = { placementId: string; frame: ElementFrame } | null;
-
 type SlideArtworkProps = Omit<HTMLAttributes<HTMLDivElement>, "children"> & {
   document: EditorDocument;
   slide: EditorSlide;
   jobId: string;
   framePreview?: FramePreview;
-  showPlaceholders?: boolean;
-  clipContent?: boolean;
-  loadImagesEagerly?: boolean;
 };
 
-export const SlideArtwork = forwardRef<HTMLDivElement, SlideArtworkProps>(function SlideArtwork({
-  document,
-  slide,
-  jobId,
-  framePreview = null,
-  showPlaceholders = true,
-  clipContent = false,
-  loadImagesEagerly = false,
-  className = "",
-  style: rootStyle,
-  ...props
-}, ref) {
-  const elements = new Map(document.elements.map((element) => [element.id, element]));
+export function SlideArtwork({ document, slide, jobId, framePreview = null,
+  className = "", style, ...props }: SlideArtworkProps) {
+  const host = useRef<HTMLDivElement>(null);
+  const [loadImage] = useState(createArtworkImageLoader);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let cancelled = false;
+    void import("./render/artwork").then(({ renderArtwork }) => renderArtwork({
+      document, slide, jobId, framePreview, loadImage, showPlaceholders: true, allowOverflow: true,
+    })).then(({ canvas, x, y, width, height, size }) => {
+      if (cancelled || !host.current) return;
+      canvas.style.position = "absolute";
+      canvas.style.left = `${x / size.width * 100}%`;
+      canvas.style.top = `${y / size.height * 100}%`;
+      canvas.style.width = `${width / size.width * 100}%`;
+      canvas.style.height = `${height / size.height * 100}%`;
+      host.current.replaceChildren(canvas);
+      setError("");
+    }).catch((cause) => {
+      if (!cancelled) setError(cause instanceof Error ? cause.message : "슬라이드를 그리지 못했습니다.");
+    });
+    return () => { cancelled = true; };
+  }, [document, slide, jobId, framePreview, loadImage]);
 
-  return (
-    <div
-      ref={ref}
-      className={`relative bg-white ${clipContent ? "overflow-hidden" : "overflow-visible"} ${className}`}
-      style={{
-        aspectRatio: document.aspectRatio.replace(":", "/"),
-        backgroundColor: slide.backgroundColor,
-        containerType: "inline-size",
-        ...rootStyle,
-      }}
-      {...props}
-    >
-      {slide.placements.map((placement, index) => {
-        if (placement.elementId === BACKGROUND_ELEMENT_ID) return null;
-        const element = elements.get(placement.elementId);
-        if (!element) return null;
-        const frame = framePreview?.placementId === placement.id
-          ? framePreview.frame
-          : placement.frameOverride ?? element.frame;
-        const elementStyle = { ...element.style, ...placement.styleOverride };
-
-        return (
-          <div
-            key={placement.id}
-            data-placement-id={placement.id}
-            className="absolute overflow-hidden"
-            style={{
-              left: `${frame.x * 100}%`,
-              top: `${frame.y * 100}%`,
-              width: `${frame.width * 100}%`,
-              height: `${frame.height * 100}%`,
-              zIndex: index + 1,
-              backgroundColor: element.kind === "text" || element.kind === "image"
-                ? elementStyle.backgroundColor
-                : "transparent",
-              color: elementStyle.color,
-              fontSize: `${elementStyle.fontSize / 10.8}cqw`,
-              lineHeight: elementStyle.lineHeight,
-              fontWeight: elementStyle.fontWeight,
-              textAlign: elementStyle.textAlign,
-              fontFamily: elementStyle.fontFamily,
-              borderRadius: element.kind === "circle" ? "50%" : `${elementStyle.borderRadius / 10.8}cqw`,
-            }}
-          >
-            {element.kind === "rectangle" || element.kind === "circle" || element.kind === "triangle" ? (
-              <span
-                className="block size-full"
-                style={{
-                  backgroundColor: elementStyle.backgroundColor,
-                  borderRadius: element.kind === "circle" ? "50%" : `${elementStyle.borderRadius / 10.8}cqw`,
-                  clipPath: element.kind === "triangle" ? "polygon(50% 0, 0 100%, 100% 100%)" : undefined,
-                }}
-              />
-            ) : element.kind === "image" ? (
-              placement.value ? (
-                <Image
-                  src={`/api/content-jobs/${encodeURIComponent(jobId)}/assets/${encodeURIComponent(placement.value)}`}
-                  alt={element.name}
-                  fill
-                  unoptimized
-                  loading={loadImagesEagerly ? "eager" : "lazy"}
-                  sizes="1080px"
-                  style={{ objectFit: elementStyle.imageFit }}
-                />
-              ) : showPlaceholders ? (
-                <span className="grid size-full place-items-center border border-dashed border-muted-foreground/40 bg-muted/40 p-2 text-center text-xs font-medium text-muted-foreground">
-                  {element.name}
-                </span>
-              ) : null
-            ) : placement.value || showPlaceholders ? (
-              <span className={`block w-full whitespace-pre-wrap break-words px-[1cqw] py-[0.5cqw] ${placement.value ? "" : "text-muted-foreground/70"}`}>
-                {placement.value || element.name}
-              </span>
-            ) : null}
-          </div>
-        );
-      })}
-    </div>
-  );
-});
+  return <div className={`relative ${className}`} style={{ aspectRatio: document.aspectRatio.replace(":", "/"), ...style }} {...props}>
+    <div ref={host} className="absolute inset-0" />
+    {error && <p role="alert" className="absolute inset-x-0 top-0 bg-background p-2 text-xs text-destructive">{error}</p>}
+  </div>;
+}

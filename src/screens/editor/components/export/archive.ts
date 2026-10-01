@@ -1,17 +1,5 @@
 import JSZip from "jszip";
-import type { EditorDocument } from "@/lib/content-jobs/editor/types";
-
-export type ExportDimensions = { width: number; height: number };
-
-const dimensionsByAspectRatio: Record<EditorDocument["aspectRatio"], ExportDimensions> = {
-  "4:5": { width: 1080, height: 1350 },
-  "1:1": { width: 1080, height: 1080 },
-  "9:16": { width: 1080, height: 1920 },
-};
-
-export function exportDimensions(aspectRatio: EditorDocument["aspectRatio"]) {
-  return dimensionsByAspectRatio[aspectRatio];
-}
+export { artworkSize as exportDimensions } from "../canvas/render/layout";
 
 export function slideFilename(index: number, slideCount: number) {
   const digits = Math.max(2, String(slideCount).length);
