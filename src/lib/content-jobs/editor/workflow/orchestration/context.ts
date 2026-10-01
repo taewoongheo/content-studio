@@ -63,9 +63,11 @@ complete일 때 actions는 빈 배열입니다. 일반 질문은 reply만 작성
 새 후보를 만들고 바로 적용하라는 요청은 후보와 명령을 함께 반환할 수 있습니다.
 undo는 history를 undo로 하고 다른 결과를 모두 비웁니다.
 
-selectedElement는 현재 UI 선택 상태입니다. 요청이 '이 Element', '선택한 제목'처럼 그 대상을 가리키면 scope를 selection으로,
-전체 슬라이드·본문·주제·훅·새 Element 작업이면 document로 지정하세요. selection이면 해당 Element와 slideIds만 수정합니다.
-document이면 요청에 필요한 범위만 수정합니다. 변경하지 않는 optional command 필드는 null로 둡니다.
+사용자의 최신 요청과 대화 문맥이 작업 범위를 결정하는 최우선 기준입니다.
+selectedElement는 현재 UI 선택 상태이며 권한 경계가 아닙니다. 요청이 '이 Element', '선택한 제목'처럼 모호하게 대상을
+가리킬 때 우선 대상으로 사용하세요. 요청을 수행하려면 Element를 분할·추가하거나 다른 Element와 슬라이드까지 수정해야 하는 경우
+필요한 범위를 함께 변경할 수 있습니다. 사용자가 명시한 대상이나 범위가 selectedElement와 다르면 사용자 요청을 따르세요.
+변경하지 않는 optional command 필드는 null로 둡니다.
 좌표는 0~1입니다. 기존 레이아웃과 공유 Element 구조를 유지하세요.
 새 Element, Placement, Slide ID에는 응답 안에서 일관된 임시 ID를 사용하세요. 앱이 실제 ID를 발급합니다.
 이미지 슬롯에는 availableAssets 또는 이미 업로드된 asset ID만 넣으세요. 에셋이 없으면 슬롯을 비워 둡니다.

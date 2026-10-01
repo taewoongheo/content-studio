@@ -9,7 +9,6 @@ export type AgentReadAction =
 export type AgentOutput = {
   status: "actions" | "complete" | "ask_user";
   reply: string;
-  scope: "selection" | "document";
   actions: AgentReadAction[];
   topics: EditorTopic[];
   hooks: EditorHook[];
@@ -74,7 +73,6 @@ const hookItems = hookSuggestionsSchema.properties.hooks as Record<string, unkno
 export const agentOutputSchema = objectSchema({
   status: { type: "string", enum: ["actions", "complete", "ask_user"] },
   reply: text,
-  scope: { type: "string", enum: ["selection", "document"] },
   actions: { type: "array", items: readActionSchema, maxItems: 8 },
   topics: { ...topicItems, minItems: 0, maxItems: 8 },
   hooks: { ...hookItems, minItems: 0, maxItems: 8 },

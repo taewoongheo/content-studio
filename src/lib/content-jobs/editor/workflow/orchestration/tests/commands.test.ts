@@ -30,7 +30,7 @@ test("레이어 순서는 모든 배치 ID를 보존하고 배경 예약 배치�
 });
 
 test("에이전트 응답은 상태·조회·최종 명령을 하나의 고정 계약으로 제한한다", () => {
-  const valid = { status: "complete", reply: "답변", scope: "document", actions: [], topics: [], hooks: [],
+  const valid = { status: "complete", reply: "답변", actions: [], topics: [], hooks: [],
     appliedProposalId: "", history: "none", commands: [] };
   assert.equal(validateStructuredOutput(agentOutputSchema, valid).ok, true);
   assert.equal(validateStructuredOutput(agentOutputSchema, { ...valid, unknown: true }).ok, false);

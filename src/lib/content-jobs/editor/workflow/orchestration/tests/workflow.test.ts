@@ -15,7 +15,7 @@ import { readyJob } from "./fixtures";
 const topic = { id: "topic", title: "Sets", angle: "Tracking", rationale: "이유", sourceUrls: [] };
 const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const complete = (value: Partial<AgentOutput> = {}): AgentOutput => ({
-  status: "complete", reply: "완료했습니다.", scope: "document", actions: [], topics: [], hooks: [],
+  status: "complete", reply: "완료했습니다.", actions: [], topics: [], hooks: [],
   appliedProposalId: "", history: "none", commands: [], ...value,
 });
 
@@ -55,7 +55,7 @@ test("일반 편집은 Codex 한 번과 앱의 원자적 commit으로 끝난다"
 });
 
 test("편집 명령의 사용자 문구가 비어도 앱이 완료 문구를 보완한다", async () => {
-  const { service, job } = setup([complete({ reply: "", scope: "selection", commands: [
+  const { service, job } = setup([complete({ reply: "", commands: [
     { type: "set_slot_value", slideId: "slide-1", placementId: "placement-1-1", value: "Updated" },
   ] })]);
   const result = await service.chat(job.id, "이 제목을 바꿔줘", 0,
@@ -99,12 +99,20 @@ test("잘못된 명령이 하나라도 있으면 문서와 undo 이력을 전혀
     .find((step) => step.id === "plan-0")!.status, "completed");
 });
 
-test("선택 범위 밖의 유효한 JSON 명령도 실행하지 않는다", async () => {
-  const { service } = setup([complete({ scope: "selection", commands: [
-    { type: "set_slot_value", slideId: "slide-3", placementId: "placement-3-1", value: "범위 밖" },
+test("선택한 Element는 우선 문맥일 뿐이며 요청에 따라 새 Element로 분할할 수 있다", async () => {
+  const template = readyJob().job.editor.document!.elements.find((element) => element.id === "title")!;
+  const { service } = setup([complete({ commands: [
+    { type: "set_slot_value", slideId: "slide-2", placementId: "placement-2-1", value: "Main point" },
+    { type: "add_element", element: { ...template, id: "split-detail", name: "상세 설명", role: "핵심 내용을 보충" } },
+    { type: "place_element", slideId: "slide-2", elementId: "split-detail", placementId: "split-placement" },
+    { type: "set_slot_value", slideId: "slide-2", placementId: "split-placement", value: "Supporting detail" },
   ] })]);
-  await assert.rejects(service.chat("job", "이 제목만 수정", 0,
-    { slideId: "slide-2", placementId: "placement-2-1", elementId: "title", slideIds: ["slide-2"] }), /범위 밖/);
+  const result = await service.chat("job", "선택한 제목을 제목과 설명 두 Element로 분할해줘", 0,
+    { slideId: "slide-2", placementId: "placement-2-1", elementId: "title", slideIds: ["slide-2"] });
+  const document = result.editor.document!;
+  const detail = document.elements.find((element) => element.name === "상세 설명")!;
+  assert.equal(document.slides[1].placements.find((placement) => placement.elementId === detail.id)?.value,
+    "Supporting detail");
 });
 
 test("에셋 검색이 필요할 때만 결과를 같은 thread의 다음 Codex 호출로 전달한다", async () => {

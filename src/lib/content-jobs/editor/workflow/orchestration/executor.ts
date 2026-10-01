@@ -9,7 +9,6 @@ import { applyEditorCommands } from "../../document";
 import { validateEditorCommands } from "../../schema";
 import type { EditorChatTarget, EditorCommand, EditorDocument } from "../../types";
 import { proposalForTarget, type SelectedProposal } from "../proposals/lifecycle";
-import { selectedPlacements } from "../targeted/chat";
 import { agentContinuationPrompt, agentPrompt } from "./context";
 import {
   agentOutputSchema,
@@ -89,31 +88,6 @@ function assertProposals(output: AgentOutput, selected: SelectedProposal) {
   return applied;
 }
 
-/** Selection is server state. A model-declared selection scope cannot escape it. */
-export function assertCommandScope(job: ContentJobRecord, target: EditorChatTarget | null, commands: EditorCommand[]) {
-  if (!target) throw new Error("수정할 Element를 선택하거나 문서 전체 범위를 사용해 주세요.");
-  const document = job.editor.document!;
-  const placements = new Set(selectedPlacements(document, target).map(({ slideId, placementId }) => `${slideId}:${placementId}`));
-  const allPlacements = document.slides.flatMap((slide) => slide.placements
-    .filter((placement) => placement.elementId === target.elementId).map((placement) => `${slide.id}:${placement.id}`));
-  for (const command of commands) {
-    let allowed = false;
-    switch (command.type) {
-      case "set_slot_value":
-      case "remove_placement": allowed = placements.has(`${command.slideId}:${command.placementId}`); break;
-      case "update_visual": allowed = command.scope === "local"
-        ? placements.has(`${command.slideId}:${command.placementId}`)
-        : command.elementId === target.elementId && allPlacements.every((key) => placements.has(key)); break;
-      case "update_element": allowed = command.elementId === target.elementId; break;
-      case "set_slide_background": allowed = document.elements.find((e) => e.id === target.elementId)?.kind === "background" &&
-        target.slideIds.includes(command.slideId); break;
-      case "duplicate_placement": allowed = placements.has(`${command.sourceSlideId}:${command.sourcePlacementId}`) &&
-        command.placements.every((item) => placements.has(`${item.slideId}:${item.sourcePlacementId}`)); break;
-    }
-    if (!allowed) throw new Error("선택한 Element의 적용 범위 밖의 변경은 실행할 수 없습니다.");
-  }
-}
-
 export function assignServerIds(commands: EditorCommand[], createId: () => string = randomUUID): EditorCommand[] {
   const slideIds = new Map<string, string>();
   const elementIds = new Map<string, string>();
@@ -167,13 +141,12 @@ export function assignServerIds(commands: EditorCommand[], createId: () => strin
   });
 }
 
-function validateFinalOutput(job: ContentJobRecord, target: EditorChatTarget | null, selected: SelectedProposal,
+function validateFinalOutput(job: ContentJobRecord, selected: SelectedProposal,
   output: AgentOutput, assets: StoredAsset[]) {
   const appliedProposal = assertProposals(output, selected);
   const checked = validateEditorCommands({ commands: stripNullPatches(output.commands) });
   if (!checked.ok) throw new Error(checked.errors.join(" "));
   const commands = assignServerIds(checked.value.commands);
-  if (output.scope === "selection" && commands.length) assertCommandScope(job, target, commands);
   const document = applyEditorCommands(job.editor.document!, commands);
   const knownAssetIds = new Set([...job.assets, ...assets].map((asset) => asset.id));
   const imageElements = new Set(document.elements.filter((element) => element.kind === "image").map((element) => element.id));
@@ -245,7 +218,7 @@ export async function executeAgent({ job, target, proposalTarget, turn, store, p
       if (output.status === "ask_user") return { output, document: job.editor.document!, commands: [],
         assets: [...knownAssets.values()], appliedProposal: null };
       if (output.commands.length) progress("validate", "running", "편집 명령 검증");
-      const validated = validateFinalOutput(job, target, selectedProposal, output, [...knownAssets.values()]);
+      const validated = validateFinalOutput(job, selectedProposal, output, [...knownAssets.values()]);
       if (output.commands.length) progress("validate", "completed");
       return { output, assets: [...knownAssets.values()], ...validated };
     }
@@ -303,7 +276,7 @@ export async function executeAgent({ job, target, proposalTarget, turn, store, p
         if (output.status === "ask_user") return { output, document: job.editor.document!, commands: [],
           assets: [...knownAssets.values()], appliedProposal: null };
         if (output.commands.length) progress("validate", "running", "편집 명령 검증");
-        const validated = validateFinalOutput(job, target, selectedProposal, output, [...knownAssets.values()]);
+        const validated = validateFinalOutput(job, selectedProposal, output, [...knownAssets.values()]);
         if (output.commands.length) progress("validate", "completed");
         return { output, assets: [...knownAssets.values()], ...validated };
       }
