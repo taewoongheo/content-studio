@@ -16,11 +16,28 @@ import { ElementInspector, type ElementInspectorHandle } from "./components/insp
 import { ElementScopePicker } from "./components/element-scope-picker";
 import { removalCommandsForScope, selectVisualSlides, visualScopeLabel, type ScopeChoice } from "./components/element-scope";
 import { SlideCanvas } from "./components/canvas/slide-canvas";
+import { frameForDroppedImage } from "./components/canvas/frame-geometry";
 import { SlideBackground } from "./components/inspector/slide-background";
 import { frameCommandsForScope } from "./components/canvas/frame-commands";
 import { ImageLibraryPicker } from "./components/library/image-library-picker";
 import { ProjectSaveControl } from "./components/projects/project-save-control";
 import { resolveEditorSelection, roleLabels } from "./editor-selection";
+
+async function readImageAspectRatio(file: File) {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const ratio = bitmap.width / bitmap.height;
+    bitmap.close();
+    return Number.isFinite(ratio) && ratio > 0 ? ratio : 1;
+  } catch {
+    return 1;
+  }
+}
+
+function aspectRatioNumber(value: "4:5" | "1:1" | "9:16") {
+  const [width, height] = value.split(":").map(Number);
+  return width / height;
+}
 
 export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   initialJob: ContentJobSnapshot;
@@ -108,14 +125,15 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
     }
   }
 
-  async function addElement(kind: Exclude<ElementKind, "background">, imageAssetId?: string) {
+  async function addElement(kind: Exclude<ElementKind, "background">, imageAssetId?: string, initialFrame?: ElementFrame) {
     if (!slide) return false;
     const id = crypto.randomUUID();
     const newPlacementId = crypto.randomUUID();
     const sourceImageId = referenceImage?.id ??
       document?.elements.find((item) => slide.placements.some((placed) => placed.elementId === item.id))?.sourceImageId ??
       job.referenceImages[0]?.id ?? "";
-    const newElement = makeElementDefinition({ id, kind, sourceImageId });
+    const createdElement = makeElementDefinition({ id, kind, sourceImageId });
+    const newElement = initialFrame ? { ...createdElement, frame: initialFrame } : createdElement;
     const saved = await saveCommands([
       { type: "add_element", element: newElement },
       { type: "place_element", slideId: slide.id, elementId: id, placementId: newPlacementId },
@@ -133,6 +151,27 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
       return addElement("image", assetId);
     } catch (error) {
       setImageError(error instanceof Error ? error.message : "저장된 이미지를 추가하지 못했습니다.");
+      return false;
+    }
+  }
+
+  async function addDroppedImage(file: File, center: { x: number; y: number }) {
+    if (!document || !slide) return false;
+    setImageError("");
+    try {
+      if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
+      const existingAssetIds = new Set(job.assets.map((asset) => asset.id));
+      const [updated, imageAspectRatio] = await Promise.all([
+        uploadEditorImage(job.id, file),
+        readImageAspectRatio(file),
+      ]);
+      const asset = updated.assets.find((candidate) => !existingAssetIds.has(candidate.id));
+      if (!asset) throw new Error("업로드한 이미지를 찾을 수 없습니다.");
+      latestRevision.current = Math.max(latestRevision.current, updated.editor.revision);
+      const frame = frameForDroppedImage(center, imageAspectRatio, aspectRatioNumber(document.aspectRatio));
+      return addElement("image", asset.id, frame);
+    } catch (error) {
+      setImageError(error instanceof Error ? error.message : "이미지를 추가하지 못했습니다.");
       return false;
     }
   }
@@ -315,7 +354,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
                 selectedPlacementId={placement?.id ?? null} disabled={disabled} showGuides={showGuides}
                 lockImageAspectRatio={imageAspectRatioLocked}
                 onSelect={setPlacementId} onSelectBackground={() => setPlacementId(BACKGROUND_PLACEMENT_ID)}
-                onFrameChange={changeFrame} />
+                onFrameChange={changeFrame} onDropImage={addDroppedImage} />
             </div>
             <div className="shrink-0 border-t px-4 py-3">
               {showImageLibrary && <ImageLibraryPicker anchorRef={imageLibraryButtonRef} disabled={disabled}

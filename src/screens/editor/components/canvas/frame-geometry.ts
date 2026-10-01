@@ -5,6 +5,7 @@ export type DragMode = "move" | "nw" | "ne" | "sw" | "se";
 const MIN_FRAME_SIZE = 0.04;
 const SNAP_DISTANCE = 0.016;
 const PRECISION = 10_000;
+const DROPPED_IMAGE_LONG_SIDE = 0.5;
 
 export const CANVAS_SAFE_AREA = { left: 0.067, right: 0.067, top: 0.115, bottom: 0.176 } as const;
 const HORIZONTAL_GUIDES = [CANVAS_SAFE_AREA.left, 0.5, 1 - CANVAS_SAFE_AREA.right] as const;
@@ -22,6 +23,26 @@ function snap(value: number, guides: readonly number[]) {
 
 function round(value: number) {
   return Math.round(value * PRECISION) / PRECISION;
+}
+
+export function frameForDroppedImage(
+  center: { x: number; y: number },
+  imageAspectRatio: number,
+  canvasAspectRatio: number,
+): ElementFrame {
+  const relativeAspectRatio = imageAspectRatio / canvasAspectRatio;
+  const width = relativeAspectRatio >= 1
+    ? DROPPED_IMAGE_LONG_SIDE
+    : DROPPED_IMAGE_LONG_SIDE * relativeAspectRatio;
+  const height = relativeAspectRatio >= 1
+    ? DROPPED_IMAGE_LONG_SIDE / relativeAspectRatio
+    : DROPPED_IMAGE_LONG_SIDE;
+  return {
+    x: round(clamp(center.x - width / 2, 0, 1 - width)),
+    y: round(clamp(center.y - height / 2, 0, 1 - height)),
+    width: round(width),
+    height: round(height),
+  };
 }
 
 function snapMovedAxis(start: number, size: number, startGuide: number, endGuide: number) {

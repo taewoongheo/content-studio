@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CANVAS_SAFE_AREA, moveOrResizeFrame } from "./frame-geometry";
+import { CANVAS_SAFE_AREA, frameForDroppedImage, moveOrResizeFrame } from "./frame-geometry";
 
 const frame = { x: 0.2, y: 0.2, width: 0.3, height: 0.2 };
 
@@ -75,4 +75,16 @@ test("비율 잠금 크기 조절은 어느 모서리에서도 원래 비율을 
 test("비율 잠금을 끄면 너비와 높이를 독립적으로 조절한다", () => {
   assert.deepEqual(moveOrResizeFrame(frame, "se", 0.2, 0.01, false, false),
     { x: 0.2, y: 0.2, width: 0.5, height: 0.21 });
+});
+
+test("드롭한 이미지는 원본 비율을 유지하며 포인터를 중심으로 배치한다", () => {
+  const dropped = frameForDroppedImage({ x: 0.5, y: 0.5 }, 1, 4 / 5);
+  assert.deepEqual(dropped, { x: 0.25, y: 0.3, width: 0.5, height: 0.4 });
+  assert.equal(Number(((dropped.width * (4 / 5)) / dropped.height).toFixed(4)), 1);
+});
+
+test("가장자리에 드롭한 이미지도 슬라이드 영역 안에 배치한다", () => {
+  const dropped = frameForDroppedImage({ x: 0.98, y: 0.98 }, 16 / 9, 4 / 5);
+  assert.equal(dropped.x + dropped.width, 1);
+  assert.equal(dropped.y + dropped.height, 1);
 });
