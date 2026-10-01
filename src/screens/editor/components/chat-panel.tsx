@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { ImagePlus, LoaderCircle, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ export function ChatPanel({
   onAction: (body: Record<string, unknown>) => Promise<boolean>;
 }) {
   const [message, setMessage] = useState("");
+  const messagesViewportRef = useRef<HTMLDivElement>(null);
   const { attachments, error: imageError, dragging, fileInputRef, receive, clear, remove, dragHandlers } =
     useChatAttachment(disabled);
   const [dismissedTargetKey, setDismissedTargetKey] = useState<string | null>(null);
@@ -52,6 +53,12 @@ export function ChatPanel({
     ? proposalSelection.target : null;
   const activeTarget = !activeProposal && targetKey && targetKey !== dismissedTargetKey ? selectedTarget : null;
   const selectedCandidate = selectedProposalSet?.items.find((item) => item.id === activeProposal?.candidateId);
+  const latestMessage = editor.messages.at(-1);
+
+  useLayoutEffect(() => {
+    const viewport = messagesViewportRef.current;
+    if (viewport) viewport.scrollTo({ top: viewport.scrollHeight, behavior: "smooth" });
+  }, [latestMessage, activeOperation]);
 
   async function sendMessage() {
     const trimmed = message.trim();
@@ -76,7 +83,7 @@ export function ChatPanel({
   return (
     <div className="relative flex min-h-0 flex-1 flex-col" {...dragHandlers}>
       {dragging && <div className="pointer-events-none absolute inset-2 z-20 grid place-items-center rounded-lg border-2 border-dashed border-foreground bg-background/95 text-sm font-medium">이미지를 놓아 채팅에 첨부</div>}
-      <div className="min-h-[180px] flex-1 space-y-3 overflow-y-auto p-5" aria-live="polite">
+      <div ref={messagesViewportRef} className="min-h-[180px] flex-1 space-y-3 overflow-y-auto p-5" aria-live="polite">
         {editor.messages.map((item) => {
           if (item.execution) return <ExecutionProgress key={item.id} execution={item.execution} />;
           const proposalSets = editor.proposalSets.filter((set) => set.messageId === item.id);
