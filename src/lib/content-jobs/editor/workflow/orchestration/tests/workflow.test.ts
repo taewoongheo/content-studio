@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { openLocalDatabase } from "@/lib/local-db/database";
 import { AssetStore } from "@/lib/local-db/assets";
 import type { CodexJsonValue, CodexUserInput } from "@/lib/codex/transport/types";
@@ -117,6 +117,7 @@ test("선택한 Element는 우선 문맥일 뿐이며 요청에 따라 새 Eleme
 
 test("에셋 검색이 필요할 때만 결과를 같은 thread의 다음 Codex 호출로 전달한다", async () => {
   const directory = await mkdtemp(join(tmpdir(), "content-studio-agent-assets-"));
+  const chatDirectories = new Set<string>();
   const database = openLocalDatabase(join(directory, "test.sqlite"));
   try {
     const store = new AssetStore(database);
@@ -128,10 +129,10 @@ test("에셋 검색이 필요할 때만 결과를 같은 thread의 다음 Codex 
     const { service, job, calls } = setup([search, complete({ reply: "수정했습니다.", commands: [
       { type: "set_slot_value", slideId: "slide-2", placementId: "placement-2-1", value: "Squat" },
     ] })], store);
-    job.referenceImages = [{ id: "ref", name: "ref.png", type: "image/png", size: 8,
-      role: null, path: join(directory, "ref.png") }];
+    job.referenceImages = [];
     await service.chat(job.id, "첨부 운동으로 채워. 이미지는 풀에서", 0, undefined, undefined,
       [new File([png], "one.png", { type: "image/png" })]);
+    job.chatImages?.forEach((image) => chatDirectories.add(dirname(image.path)));
     assert.deepEqual(calls.map((call) => call.threadId), ["thread-1", "thread-1"]);
     assert.deepEqual(calls.map((call) => call.input.filter((item) => item.type === "localImage").length), [1, 0]);
     const prompt = calls[1].input[0];
@@ -140,7 +141,10 @@ test("에셋 검색이 필요할 때만 결과를 같은 thread의 다음 Codex 
       assert.match(prompt.text, new RegExp(relevant.id));
       assert.doesNotMatch(prompt.text, /irrelevant/);
     }
-  } finally { database.close(); await rm(directory, { recursive: true, force: true }); }
+  } finally {
+    database.close();
+    await Promise.all([...chatDirectories, directory].map((path) => rm(path, { recursive: true, force: true })));
+  }
 });
 
 test("사용자만 답할 수 있는 정보는 문서를 바꾸지 않고 질문으로 끝낸다", async () => {

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import { ArrowLeft, Copy, LoaderCircle, Plus, Trash2, Undo2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
@@ -22,7 +21,7 @@ import { frameCommandsForScope } from "./components/canvas/frame/commands";
 import { ImageLibraryPicker } from "./components/library/image-library-picker";
 import { ProjectSaveControl, type ProjectSaveHandle } from "./components/projects/project-save-control";
 import { ExportControl } from "./components/export/export-control";
-import { resolveEditorSelection, roleLabels } from "./editor-selection";
+import { resolveEditorSelection } from "./editor-selection";
 import { SlideTabs } from "./components/slides/slide-tabs";
 import { ElementLayers } from "./components/layers/element-layers";
 import { createClipboardQueue, copyElement, pasteElement, type ElementClipboard } from "./components/clipboard/element-clipboard";
@@ -76,10 +75,6 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
     resolveEditorSelection(document, slideId, placementId, scopeSelection);
   const disabled = submitting || Boolean(job.activeOperation);
   const issue = clientError || imageError || job.lastError;
-  const originalSlideNumber = /^slide-(\d+)$/.exec(slide?.id ?? "");
-  const referenceImage = originalSlideNumber
-    ? job.referenceImages[Number(originalSlideNumber[1]) - 1]
-    : undefined;
   const imageRatioKey = element?.kind === "image" ? element.id : "";
   const imageAspectRatioLocked = Boolean(imageRatioKey) && !unlockedImageRatios.has(imageRatioKey);
 
@@ -144,10 +139,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
     if (!slide) return false;
     const id = crypto.randomUUID();
     const newPlacementId = crypto.randomUUID();
-    const sourceImageId = referenceImage?.id ??
-      document?.elements.find((item) => slide.placements.some((placed) => placed.elementId === item.id))?.sourceImageId ??
-      job.referenceImages[0]?.id ?? "";
-    const createdElement = makeElementDefinition({ id, kind, sourceImageId });
+    const createdElement = makeElementDefinition({ id, kind, sourceImageId: "" });
     const newElement = initialFrame ? { ...createdElement, frame: initialFrame } : createdElement;
     const saved = await saveCommands([
       { type: "add_element", element: newElement },
@@ -433,21 +425,6 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
                     title="중앙선과 어두운 안전 영역 경계에 Element가 맞춰집니다.">
                     가이드 {showGuides ? "켜짐" : "꺼짐"}
                   </Button>
-                  {referenceImage && (
-                  <details className="relative text-xs">
-                    <summary className="cursor-pointer rounded-md px-2 py-1 font-medium text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-foreground">레퍼런스 보기</summary>
-                    <div className="absolute top-full right-0 z-20 mt-2 rounded-lg border bg-background p-2 shadow-lg">
-                      <Image
-                        src={`/api/content-jobs/${encodeURIComponent(job.id)}/references/${encodeURIComponent(referenceImage.id)}`}
-                        alt={`${roleLabels[slide.role]} 레퍼런스`}
-                        width={240}
-                        height={400}
-                        unoptimized
-                        className="max-h-72 w-auto max-w-[min(240px,70vw)] object-contain"
-                      />
-                    </div>
-                  </details>
-                  )}
                 </div>
               </div>
               <SlideTabs document={document} selectedSlideId={slide.id} disabled={disabled}

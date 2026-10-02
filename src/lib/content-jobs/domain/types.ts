@@ -67,7 +67,6 @@ export type ContentJobSnapshot = Omit<
   ContentJobRecord,
   "threadId" | "referenceImages" | "editorHistory" | "assets" | "chatImages"
 > & {
-  referenceImages: Array<Omit<ReferenceImageInput, "path">>;
   assets: EditorAsset[];
 };
 

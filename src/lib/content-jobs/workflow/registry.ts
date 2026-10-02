@@ -206,13 +206,6 @@ export class ContentJobRegistry {
       lastError: value.lastError,
       createdAt: value.createdAt,
       updatedAt: value.updatedAt,
-      referenceImages: value.referenceImages.map((image) => ({
-        id: image.id,
-        name: image.name,
-        type: image.type,
-        size: image.size,
-        role: image.role,
-      })),
       assets: value.assets.map(({ id, name, type, size }) => ({ id, name, type, size })),
     };
   }

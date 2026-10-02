@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { access, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { CodexJsonValue, CodexUserInput } from "../../../codex/transport/types";
 import type { ContentJobInput } from "../../domain/types";
 import { ContentJobRegistry, reuseContentJobRegistry } from "../../workflow/registry";
@@ -72,16 +72,18 @@ function setup() {
 }
 
 test("첨부 이미지 여러 장은 답변 Codex 턴에 모두 전달되고 채팅 기록에 남는다", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "content-studio-chat-test-"));
+  const directories = new Set<string>();
   try {
     const { codex, router, registry, job, service } = setup();
-    registry.getRecord(job.id).referenceImages[0].path = join(directory, "reference.png");
     codex.outputs.push(analysis, { reply: "첨부 이미지를 확인했습니다." });
     const ready = await service.initialize(job.id);
+    assert.deepEqual(registry.getRecord(job.id).referenceImages, []);
+    assert.equal("referenceImages" in ready, false);
     router.routes.push({ capability: "answer", proposalSetId: "", candidateId: "" });
     const files = ["first.png", "second.png"].map((name) => new File(
       [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])], name, { type: "image/png" }));
     const next = await service.chat(job.id, "이 이미지들 설명해줘", ready.editor.revision, undefined, undefined, files);
+    for (const image of registry.getRecord(job.id).chatImages ?? []) directories.add(dirname(image.path));
     const images = next.editor.messages.at(-2)?.images;
     assert.deepEqual(images?.map((image) => image.name), ["first.png", "second.png"]);
     assert.deepEqual(codex.inputs.at(-1)?.slice(1), registry.getRecord(job.id).chatImages?.map((image) =>
@@ -90,8 +92,44 @@ test("첨부 이미지 여러 장은 답변 Codex 턴에 모두 전달되고 채
     assert.equal((await readChatImage(registry.getRecord(job.id), images![1].id)).type, "image/png");
     assert.equal("chatImages" in next, false);
   } finally {
-    await rm(directory, { recursive: true, force: true });
+    await Promise.all([...directories].map((directory) => rm(directory, { recursive: true, force: true })));
   }
+});
+
+test("분석이 성공하면 업로드한 원본 파일과 경로를 해제한다", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "content-studio-job-"));
+  try {
+    const { codex, registry, job, service } = setup();
+    const references = registry.getRecord(job.id).referenceImages;
+    for (const image of references) {
+      image.path = join(directory, `${image.id}.png`);
+      await writeFile(image.path, "temporary analysis image");
+    }
+    codex.outputs.push(analysis);
+    const ready = await service.initialize(job.id);
+    assert.equal(ready.editor.status, "ready");
+    assert.equal("referenceImages" in ready, false);
+    assert.deepEqual(registry.getRecord(job.id).referenceImages, []);
+    await assert.rejects(access(directory));
+    assert.equal(codex.inputs[0].filter((item) => item.type === "localImage").length, 4);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test("분석 실패 시 재시도용 원본은 지우지 않는다", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "content-studio-job-"));
+  try {
+    const { codex, registry, job, service } = setup();
+    const references = registry.getRecord(job.id).referenceImages;
+    for (const image of references) {
+      image.path = join(directory, `${image.id}.png`);
+      await writeFile(image.path, "temporary analysis image");
+    }
+    codex.outputs.push({});
+    await assert.rejects(service.initialize(job.id));
+    assert.equal(registry.getRecord(job.id).editor.status, "pending");
+    assert.equal(registry.getRecord(job.id).referenceImages.length, 4);
+    await access(references[0].path);
+  } finally { await rm(directory, { recursive: true, force: true }); }
 });
 
 test("확장자만 이미지인 첨부는 Codex에 전달하지 않는다", async () => {

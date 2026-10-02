@@ -53,7 +53,7 @@ Element의 역할만 맞는다고 슬라이드 전체가 완성되는 것은 아
 
 화면은 처음부터 편집기지만 내용 생성의 의존성은 유지한다. 주제를 확정하고, 본문 전체의 흐름과 내용을 구성한 다음, 그 내용을 뒷받침하는 훅을 고른다. AI는 확정된 내용을 각 슬라이드의 Element 역할에 맞춰 채운다. 한 장의 내용이나 스타일만 다시 제안받을 수도 있고, 본문 전체의 흐름을 다시 논의할 수도 있다.
 
-이 편집 방식의 첫 버전은 **레퍼런스 기반 슬라이드쇼에 구현되었다.** 레퍼런스 이미지는 읽기 전용으로 비교할 수 있고, AI가 복원할 수 없는 사진·배경은 비어 있는 이미지 슬롯으로 남겨 사용자가 교체한다. 현재 작업 문서와 레퍼런스 이미지는 로컬 서버 실행 중에만 유지된다. 편집기에 업로드한 이미지는 SQLite에 보존되며, 완성된 각 장은 게시 해상도의 PNG로 렌더링해 하나의 ZIP으로 내보낼 수 있다. 이미지 생성·영상 편집은 아직 지원하지 않는다. 이후 템플릿 기반·처음부터 생성 방식은 편집기를 초기화하는 방법만 달리한다. 영상은 같은 슬라이드·Element 구분을 출발점으로 삼되 시간, 전환, 오디오를 표현하는 편집 기능이 추가로 필요하다.
+이 편집 방식의 첫 버전은 **레퍼런스 기반 슬라이드쇼에 구현되었다.** 레퍼런스 이미지는 최초 시각 분석에만 임시로 사용하고, 분석이 성공하면 임시 파일과 작업의 원본 참조를 제거한다. 실패 시에는 재시도를 위해 유지한다. 편집기에서 원본을 다시 표시하거나 채팅에 재첨부하지 않는다. AI가 복원할 수 없는 사진·배경은 비어 있는 이미지 슬롯으로 남겨 사용자가 교체한다. 현재 작업은 메모리에 유지되며, 저장한 프로젝트의 시각적 상태와 편집기에 업로드한 이미지는 SQLite에 보존된다. 채팅 첨부는 레퍼런스와 독립된 임시 폴더에 저장한다. 완성된 각 장은 게시 해상도의 PNG로 렌더링해 하나의 ZIP으로 내보낼 수 있다. 이미지 생성·영상 편집은 아직 지원하지 않는다. 이후 템플릿 기반·처음부터 생성 방식은 편집기를 초기화하는 방법만 달리한다. 영상은 같은 슬라이드·Element 구분을 출발점으로 삼되 시간, 전환, 오디오를 표현하는 편집 기능이 추가로 필요하다.
 
 ## Product requirements
 
@@ -71,7 +71,7 @@ Browser: production UI, previews, and conversation
     ↕
 Next.js server: route handlers, local data, and agent requests
     ↕                         ↕
-In-memory jobs/temp references + SQLite image assets  Codex app-server
+In-memory jobs/analysis-only uploads + SQLite image assets  Codex app-server
                             agent work and tools
 ```
 
@@ -80,13 +80,13 @@ In-memory jobs/temp references + SQLite image assets  Codex app-server
 | Web framework | Next.js App Router and TypeScript |
 | Runtime | Personal local execution; the server can access local files and Codex |
 | AI connection | ChatGPT-authenticated local Codex through `codex app-server` |
-| Database | SQLite stores editor image bytes, metadata, and character records; jobs remain in memory and reference uploads remain temporary |
+| Database | SQLite stores visual projects, editor image bytes, metadata, and character records; jobs remain in memory and reference uploads are removed after successful analysis |
 | Workflow | JSON editor document, validated edit commands, and one reusable Codex thread per job |
 | UI | shadcn components with Tailwind CSS |
 
 ### Local image storage
 
-SQLite stores the original image bytes (`BLOB`) and the image's name, description, type, size, and optional character link in the same database. Character records, reference images, and published-post records share the database. The dashboard can add and delete these records; AI auto-selection from the asset library is not implemented yet. Image listing queries exclude the binary column, and previews fetch bytes by asset ID only when displayed.
+SQLite stores the original image bytes (`BLOB`) and the image's name, description, type, size, and optional character link in the same database. Character turnaround images, reusable image assets, and published-post records share the database. The dashboard can add and delete these records. Image listing queries exclude the binary column, and previews fetch bytes by asset ID only when displayed.
 
 The default database location is `content-studio.sqlite` beside the repository, in the parent `content-studio-workspace/` directory. The repository itself remains a separate Git root, so the database is not tracked by that repository. Set `CONTENT_STUDIO_DB_PATH` to use a different path. SQLite uses WAL sidecar files while the server runs, so back up a live database with SQLite's backup mechanism rather than copying only the main file. The database is created lazily when an editor image is first uploaded. Existing images in temporary job folders are not migrated automatically.
 

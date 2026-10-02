@@ -26,6 +26,7 @@ import { bodyFillSchema, chatAnswerSchema, chatEditSchema, hookRevisionSchema, h
 import { addProposalSet, resolveProposal, reviseHook, reviseTopic, staleHookProposals } from "./proposals/state";
 import { type ChatRouter, type ChatRoute } from "./routing/router";
 import { executeAgent } from "./orchestration/executor";
+import { releaseReferenceImages } from "./attachments/reference-images";
 import { isProposalInteractive } from "./proposals/lifecycle";
 import { duplicateElementCommand, removeElementCommands } from "./actions/commands";
 import { elementChoicePrompt, elementChoiceSchema, type ElementChoice } from "./actions/elements";
@@ -72,17 +73,6 @@ function readyDocument(job: ContentJobRecord): EditorDocument {
   if (job.editor.status !== "ready" || !job.editor.document)
     throw new ContentJobError("INVALID_STAGE", "레퍼런스 분석이 끝난 뒤 이용할 수 있습니다.");
   return job.editor.document;
-}
-
-function sourceImageIdForSlide(job: ContentJobRecord, document: EditorDocument, slideId: string) {
-  const originalSlideNumber = /^slide-(\d+)$/.exec(slideId);
-  if (originalSlideNumber) {
-    const image = job.referenceImages[Number(originalSlideNumber[1]) - 1];
-    if (image) return image.id;
-  }
-  const slide = document.slides.find((item) => item.id === slideId);
-  return document.elements.find((element) => slide?.placements.some((placement) =>
-    placement.elementId === element.id))?.sourceImageId ?? job.referenceImages[0]?.id ?? "";
 }
 
 function assertRevision(job: ContentJobRecord, expected: number) {
@@ -289,10 +279,12 @@ export class EditorWorkflowService {
         } catch (error) {
           invalid(error instanceof Error ? error.message : "분석 초안이 올바르지 않습니다.");
         }
+        await releaseReferenceImages(job.referenceImages);
         return this.registry.update(id, (current) => {
           current.editor.status = "ready";
           current.editor.document = document;
           current.editor.revision += 1;
+          current.referenceImages = [];
         });
       } catch (error) {
         this.registry.update(id, (current) => { current.editor.status = "pending"; });
@@ -526,7 +518,7 @@ export class EditorWorkflowService {
         const slide = document.slides.find((item) => item.id === choice.slideId)!;
         const element = makeElementDefinition({ id: randomUUID(), kind: choice.kind,
           name: choice.name, role: choice.role,
-          sourceImageId: sourceImageIdForSlide(job, document, slide.id) });
+          sourceImageId: "" });
         if (choice.kind !== "text" && choice.value) invalid("도형에는 텍스트 내용을 넣을 수 없습니다.");
         const placementId = randomUUID();
         return this.commitChatCommands(id, job, document, [
@@ -571,7 +563,7 @@ export class EditorWorkflowService {
           const slide = document.slides.find((item) => item.id === choice.slideId)!;
           const element = makeElementDefinition({ id: randomUUID(), kind: "image",
             name: asset?.name ?? "새 이미지", role: asset?.description || "이 장의 시각 자료",
-            sourceImageId: sourceImageIdForSlide(job, document, slide.id) });
+            sourceImageId: "" });
           const placementId = randomUUID();
           return this.commitChatCommands(id, job, document, [
             { type: "add_element", element },

@@ -101,7 +101,7 @@ export function ContentJobScreen({
             <h1 className="text-xl font-semibold">{running[0]}</h1>
             <p className="text-sm leading-6 text-muted-foreground">{running[1]}</p>
             <p className="text-xs text-muted-foreground">
-              {job.structure === "repeating" ? "반복형" : "장면별 구성"} · {job.referenceImages.length}개 레퍼런스 · {job.aspectRatio} · {job.slideCount}장 · {job.outputLanguage}
+              {job.structure === "repeating" ? "반복형" : "장면별 구성"} · {job.aspectRatio} · {job.slideCount}장 · {job.outputLanguage}
             </p>
           </div>
         </section>
