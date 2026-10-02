@@ -1,4 +1,5 @@
 import type { EditorCommand, ElementDefinition, ElementFrame, ElementStyle, PlacedElement } from "@/lib/content-jobs/editor/types";
+import { validBorder, withBorderDefaults } from "@/lib/content-jobs/editor/elements/style";
 
 export type VisualTarget = { slideId: string; placement: PlacedElement };
 export type ElementDraft = {
@@ -9,23 +10,49 @@ export type ElementDraft = {
   style: ElementStyle;
 };
 
+const MIN_FRAME_SIZE = 0.04;
+
+function round(value: number) {
+  return Math.round(value * 10_000) / 10_000;
+}
+
+export function draftWithFontSize(draft: ElementDraft, fontSize: number): ElementDraft {
+  return {
+    ...draft,
+    style: { ...draft.style, fontSize },
+  };
+}
+
+export function frameWithLockedDimension(
+  frame: ElementFrame,
+  dimension: "width" | "height",
+  value: number,
+): ElementFrame {
+  const currentSize = frame[dimension];
+  if (currentSize <= 0 || value <= 0) return { ...frame, [dimension]: value };
+  const minimumScale = Math.max(MIN_FRAME_SIZE / frame.width, MIN_FRAME_SIZE / frame.height);
+  const scale = Math.max(value / currentSize, minimumScale);
+  return { ...frame, width: round(frame.width * scale), height: round(frame.height * scale) };
+}
+
 export function makeElementDraft(element: ElementDefinition, placement: PlacedElement, visualPlacement = placement): ElementDraft {
   return {
     name: element.name,
     role: element.role,
     value: placement.value,
     frame: visualPlacement.frameOverride ?? element.frame,
-    style: { ...element.style, ...visualPlacement.styleOverride },
+    style: withBorderDefaults({ ...element.style, ...visualPlacement.styleOverride }),
   };
 }
 
 export function validElementDraft(draft: ElementDraft) {
   const { x, y, width, height } = draft.frame;
   return Boolean(draft.name.trim() && draft.role.trim()) &&
-    [x, y, width, height].every(Number.isFinite) && x >= 0 && y >= 0 && width > 0 && height > 0 &&
-    x + width <= 1 && y + height <= 1 && draft.style.fontSize >= 8 && draft.style.fontSize <= 200 &&
+    [x, y, width, height].every(Number.isFinite) && width > 0 && height > 0 &&
+    draft.style.fontSize >= 8 && draft.style.fontSize <= 200 &&
+    draft.style.lineHeight >= 0.8 && draft.style.lineHeight <= 3 &&
     Number.isInteger(draft.style.fontWeight) && draft.style.fontWeight >= 100 && draft.style.fontWeight <= 900 &&
-    draft.style.borderRadius >= 0 && draft.style.borderRadius <= 100;
+    draft.style.borderRadius >= 0 && draft.style.borderRadius <= 100 && validBorder(draft.style);
 }
 
 export function commandsFromDraft(
@@ -44,7 +71,7 @@ export function commandsFromDraft(
     commands.push({ type: "set_slot_value", slideId, placementId: placement.id, value: draft.value });
 
   const baseFrame = visualPlacement.frameOverride ?? element.frame;
-  const baseStyle = { ...element.style, ...visualPlacement.styleOverride };
+  const baseStyle = withBorderDefaults({ ...element.style, ...visualPlacement.styleOverride });
   const changedFrameKeys = (Object.keys(baseFrame) as Array<keyof ElementFrame>)
     .filter((key) => draft.frame[key] !== baseFrame[key]);
   const changedStyle = Object.fromEntries((Object.keys(baseStyle) as Array<keyof ElementStyle>)

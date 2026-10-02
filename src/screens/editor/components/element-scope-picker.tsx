@@ -8,7 +8,7 @@ import { type ScopeChoice, visualScopeLabel } from "./element-scope";
 
 type Props = {
   currentSlideId: string;
-  slides: Array<{ slideId: string; label: string }>;
+  slides: Array<{ slideId: string; label: string; hasElement: boolean }>;
   selectedSlideIds: string[];
   isBackground: boolean;
   disabled: boolean;
@@ -37,12 +37,12 @@ export function ElementScopePicker({ currentSlideId, slides, selectedSlideIds, i
             <Popover.Title className="text-sm font-semibold">적용 대상 슬라이드</Popover.Title>
             <Popover.Description className="mt-1 text-xs leading-5 text-muted-foreground">{isBackground
               ? "선택한 장의 배경색이 바뀝니다."
-              : "이 Element가 있는 장 중 위치·스타일 변경과 복제·제거할 대상을 고릅니다. 내용은 현재 장에서만 바뀝니다."}</Popover.Description>
+              : "변경·삭제는 Element가 있는 장에만 적용됩니다. 복제는 없는 장에도 추가합니다. 내용은 현재 장에서만 바뀝니다."}</Popover.Description>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <Button variant={selectedSlideIds.length === 1 ? "secondary" : "outline"} size="sm" disabled={disabled || busy} onClick={() => void choose("current")}>현재 장</Button>
               <Button variant={allSelected ? "secondary" : "outline"} size="sm" disabled={disabled || busy} onClick={() => void choose("all")}>전체 장</Button>
             </div>
-            {slides.length > 1 && <div className="mt-3 max-h-44 space-y-0.5 overflow-y-auto border-t pt-2">
+            {slides.length > 1 && <div className="mt-3 space-y-0.5 border-t pt-2">
               {slides.map((slide) => {
                 const isCurrent = slide.slideId === currentSlideId;
                 return <label key={slide.slideId} className="flex min-h-8 items-center gap-2 rounded-md px-2 text-sm hover:bg-muted">
@@ -50,6 +50,7 @@ export function ElementScopePicker({ currentSlideId, slides, selectedSlideIds, i
                     onChange={(event) => void choose({ slideId: slide.slideId, checked: event.target.checked })} />
                   <span className="flex-1">{slide.label}</span>
                   {isCurrent && <span className="text-xs text-muted-foreground">현재</span>}
+                  {!slide.hasElement && <span className="text-xs text-muted-foreground">Element 없음 · 복제 가능</span>}
                 </label>;
               })}
             </div>}

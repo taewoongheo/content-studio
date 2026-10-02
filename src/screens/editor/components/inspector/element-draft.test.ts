@@ -1,15 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { ElementDefinition, PlacedElement } from "@/lib/content-jobs/editor/types";
-import { commandsFromDraft, makeElementDraft, validElementDraft } from "./element-draft";
+import { commandsFromDraft, draftWithFontSize, frameWithLockedDimension, makeElementDraft, validElementDraft } from "./element-draft";
 
 const element: ElementDefinition = {
   id: "title", name: "제목", role: "훅", kind: "text",
   frame: { x: 0.1, y: 0.1, width: 0.8, height: 0.2 },
-  style: { color: "#111111", backgroundColor: "transparent", fontSize: 36,
+  style: { color: "#111111", backgroundColor: "transparent", fontSize: 36, lineHeight: 1.2,
     fontWeight: 700, textAlign: "center", borderRadius: 0, fontFamily: "sans-serif", imageFit: "cover" },
-  sourceImageId: "image-1",
-};
+  };
 const placement: PlacedElement = { id: "placed-title", elementId: "title", value: "현재 제목",
   frameOverride: null, styleOverride: null };
 const targets = [{ slideId: "slide-1", placement }];
@@ -25,6 +24,24 @@ test("입력 초안은 바뀐 필드만 개별 수정 명령으로 만든다", (
   ]);
 });
 
+test("기존 스타일에도 테두리 기본값을 표시하고 선택한 장 또는 전체 범위에 저장한다", () => {
+  const draft = makeElementDraft(element, placement);
+  assert.equal(draft.style.borderEnabled, false);
+  assert.equal(draft.style.borderWidth, 2);
+  const patch = { borderEnabled: true, borderColor: "#FF0000", borderWidth: 8, borderRadius: 12 };
+  const changed = { ...draft, style: { ...draft.style, ...patch } };
+  const all = [...targets, { slideId: "slide-2", placement: { ...placement, id: "p2" } }];
+  assert.deepEqual(commandsFromDraft(changed, element, placement, "slide-1", all, ["slide-1"]), [
+    { type: "update_visual", scope: "local", slideId: "slide-1", placementId: placement.id, style: patch },
+  ]);
+  assert.deepEqual(commandsFromDraft(changed, element, placement, "slide-1", all, ["slide-1", "slide-2"]), [
+    { type: "update_visual", scope: "common", elementId: element.id, style: patch },
+  ]);
+  assert.equal(validElementDraft(changed), true);
+  assert.equal(validElementDraft({ ...changed, style: { ...changed.style, borderWidth: -1 } }), false);
+  assert.equal(validElementDraft({ ...changed, style: { ...changed.style, borderColor: "invalid" } }), false);
+});
+
 test("빈 텍스트 슬롯은 내용 입력칸도 비워 둔다", () => {
   const emptyPlacement = { ...placement, value: "" };
   const draft = makeElementDraft(element, emptyPlacement);
@@ -35,12 +52,13 @@ test("빈 텍스트 슬롯은 내용 입력칸도 비워 둔다", () => {
   ]);
 });
 
-test("공통 수정은 Element 원본에만 쓰며 유효하지 않은 위치는 저장하지 않는다", () => {
+test("공통 수정은 Element 원본에만 쓰며 캔버스 밖 위치도 저장한다", () => {
   const draft = makeElementDraft(element, placement);
   assert.deepEqual(commandsFromDraft({ ...draft, frame: { ...draft.frame, x: 0.12 } }, element, placement, "slide-1", targets, ["slide-1"]), [
     { type: "update_visual", scope: "common", elementId: "title", frame: { ...draft.frame, x: 0.12 } },
   ]);
-  assert.equal(validElementDraft({ ...draft, frame: { ...draft.frame, x: 0.9 } }), false);
+  assert.equal(validElementDraft({ ...draft, frame: { ...draft.frame, x: 0.9 } }), true);
+  assert.equal(validElementDraft({ ...draft, frame: { ...draft.frame, x: -0.5, y: 1.2 } }), true);
 });
 
 test("선택한 슬라이드만 같은 Element의 스타일 분기로 갱신한다", () => {
@@ -79,4 +97,21 @@ test("현재 장을 제외하면 선택한 장의 시각 값으로 편집한다"
     element, placement, "slide-1", all, ["slide-2"], second), [
     { type: "update_visual", scope: "local", slideId: "slide-2", placementId: "placed-2", style: { color: "#FFFF00" } },
   ]);
+});
+
+test("글자 크기 수정은 프레임을 왜곡하지 않고 스타일만 저장한다", () => {
+  const draft = draftWithFontSize(makeElementDraft(element, placement), 72);
+  assert.deepEqual(commandsFromDraft(draft, element, placement, "slide-1", targets, ["slide-1"]), [
+    { type: "update_visual", scope: "common", elementId: "title", style: { fontSize: 72 } },
+  ]);
+});
+
+test("이미지 크기의 한 축을 바꾸면 잠긴 비율대로 다른 축도 바뀐다", () => {
+  const frame = { x: 0.1, y: 0.2, width: 0.4, height: 0.2 };
+  assert.deepEqual(frameWithLockedDimension(frame, "width", 0.6),
+    { x: 0.1, y: 0.2, width: 0.6, height: 0.3 });
+  assert.deepEqual(frameWithLockedDimension(frame, "height", 0.1),
+    { x: 0.1, y: 0.2, width: 0.2, height: 0.1 });
+  assert.deepEqual(frameWithLockedDimension(frame, "width", 2),
+    { x: 0.1, y: 0.2, width: 2, height: 1 });
 });

@@ -3,7 +3,6 @@ import type { ElementDefinition, ElementKind } from "../types";
 export function makeElementDefinition(input: {
   id: string;
   kind: Exclude<ElementKind, "background">;
-  sourceImageId: string;
   name?: string;
   role?: string;
 }): ElementDefinition {
@@ -19,8 +18,8 @@ export function makeElementDefinition(input: {
     frame: isShape ? { x: 0.35, y: 0.35, width: 0.3, height: 0.2 }
       : { x: 0.15, y: 0.4, width: 0.7, height: 0.2 },
     style: { color: "#111111", backgroundColor: isShape ? "#111111" : "transparent",
-      fontSize: 36, fontWeight: 700, textAlign: "center", borderRadius: 0,
+      fontSize: 36, lineHeight: 1.2, fontWeight: 700, textAlign: "center", borderRadius: 0,
+      borderEnabled: isShape, borderColor: "#111111", borderWidth: 2,
       fontFamily: "sans-serif", imageFit: "cover" },
-    sourceImageId: input.sourceImageId,
   };
 }

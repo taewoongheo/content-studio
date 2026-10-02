@@ -1,13 +1,12 @@
 import type { SlideshowStructure } from "../domain/types";
+import { validBorder } from "./elements/style";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_FRAME, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, syncBackgroundColors } from "./background";
 import type {
-  EditorAnalysis,
   EditorCommand,
   EditorDocument,
   EditorSlide,
   ElementFrame,
   ElementStyle,
-  PlacedElement,
 } from "./types";
 
 const colorPattern = /^#[0-9a-fA-F]{6}$/;
@@ -15,14 +14,14 @@ export { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID, ensureSharedBackground 
 
 function validFrame(frame: ElementFrame) {
   return Object.values(frame).every((value) => Number.isFinite(value)) &&
-    frame.x >= 0 && frame.y >= 0 && frame.width > 0 && frame.height > 0 &&
-    frame.x + frame.width <= 1 && frame.y + frame.height <= 1;
+    frame.width > 0 && frame.height > 0;
 }
 
 function validStyle(style: ElementStyle) {
-  return colorPattern.test(style.color) &&
+  return validBorder(style) && colorPattern.test(style.color) &&
     (colorPattern.test(style.backgroundColor) || style.backgroundColor === "transparent") &&
     Number.isFinite(style.fontSize) && style.fontSize >= 8 && style.fontSize <= 200 &&
+    Number.isFinite(style.lineHeight) && style.lineHeight >= 0.8 && style.lineHeight <= 3 &&
     Number.isInteger(style.fontWeight) && style.fontWeight >= 100 && style.fontWeight <= 900 &&
     ["left", "center", "right"].includes(style.textAlign) &&
     Number.isFinite(style.borderRadius) && style.borderRadius >= 0 && style.borderRadius <= 100 &&
@@ -36,8 +35,7 @@ function unique(values: string[]) {
 
 export function validateEditorDocument(document: EditorDocument): string[] {
   const errors: string[] = [];
-  if (Object.values(document.formatNotes).some((value) => !value.trim()))
-    errors.push("포맷 규칙을 모두 작성해 주세요.");
+  if (!["4:5", "1:1", "9:16"].includes(document.aspectRatio)) errors.push("화면 비율이 올바르지 않습니다.");
   const elementIds = document.elements.map((element) => element.id);
   const slideIds = document.slides.map((slide) => slide.id);
   if (!unique(elementIds) || !unique(slideIds)) errors.push("Element와 슬라이드 ID는 고유해야 합니다.");
@@ -50,9 +48,10 @@ export function validateEditorDocument(document: EditorDocument): string[] {
     errors.push("슬라이드 수가 올바르지 않습니다.");
   if (document.structure === "repeating" && document.slides.length < 3)
     errors.push("반복형에는 본문 슬라이드가 한 장 이상 필요합니다.");
-  if (document.structure === "repeating" && document.slides.some((slide, index) =>
-    slide.role !== (index === 0 ? "hook" : index === document.slides.length - 1 ? "cta" : "body")))
-    errors.push("반복형은 훅·본문·CTA 순서여야 합니다.");
+  if (document.structure === "repeating" &&
+    (document.slides.filter((slide) => slide.role === "hook").length !== 1 ||
+      document.slides.filter((slide) => slide.role === "cta").length !== 1))
+    errors.push("반복형에는 훅과 CTA가 한 장씩 필요합니다.");
   for (const element of document.elements) {
     if (!element.id || !element.name.trim() || !element.role.trim() ||
       !["background", "text", "image", "rectangle", "circle", "triangle"].includes(element.kind) ||
@@ -61,6 +60,8 @@ export function validateEditorDocument(document: EditorDocument): string[] {
   }
   const knownElements = new Set(elementIds);
   for (const slide of document.slides) {
+    if (slide.name !== undefined && (typeof slide.name !== "string" || !slide.name.trim() || slide.name.length > 120))
+      errors.push(`${slide.id}의 이름은 1~120자여야 합니다.`);
     if (!colorPattern.test(slide.backgroundColor)) errors.push(`${slide.id}의 배경색이 올바르지 않습니다.`);
     const backgroundPlacements = slide.placements.filter((placement) => placement.elementId === BACKGROUND_ELEMENT_ID);
     const backgroundPlacement = backgroundPlacements[0];
@@ -85,48 +86,22 @@ export function validateEditorDocument(document: EditorDocument): string[] {
   return errors;
 }
 
-export function createDocumentFromAnalysis(
-  analysis: EditorAnalysis,
-  structure: SlideshowStructure,
-  slideCount: number,
-  aspectRatio: EditorDocument["aspectRatio"],
-): EditorDocument {
-  if (analysis.slides.length !== slideCount)
-    throw new Error("레퍼런스 분석의 슬라이드 수가 입력과 일치하지 않습니다.");
-  if (structure === "repeating" && analysis.slides.some((slide, index) =>
-    slide.role !== (index === 0 ? "hook" : index === slideCount - 1 ? "cta" : "body")))
-    throw new Error("반복형 레퍼런스의 역할 순서가 올바르지 않습니다.");
-  const knownElements = new Set(analysis.elements.map((element) => element.id));
-  if (analysis.slides.some((slide) => slide.elementIds.some((id) => !knownElements.has(id))))
-    throw new Error("존재하지 않는 Element를 참조합니다.");
-  if (knownElements.has(BACKGROUND_ELEMENT_ID)) throw new Error("예약된 배경 Element ID입니다.");
-  const makeSlide = (source: EditorAnalysis["slides"][number], index: number): EditorSlide => ({
-    id: `slide-${index + 1}`,
-    role: source.role,
-    backgroundColor: source.backgroundColor,
-    placements: source.elementIds.map((elementId, placementIndex): PlacedElement => {
-      const visual = source.visuals.find((item) => item.elementId === elementId);
-      return {
-        id: `placement-${index + 1}-${placementIndex + 1}`,
-        elementId,
-        value: "",
-        frameOverride: visual?.frame ?? null,
-        styleOverride: visual?.style ?? null,
-      };
-    }),
-  });
-  const slides = analysis.slides.map(makeSlide);
+export function createBlankDocument(input: {
+  structure: SlideshowStructure;
+  slideCount: number;
+  aspectRatio: EditorDocument["aspectRatio"];
+}): EditorDocument {
   const document: EditorDocument = {
-    version: 1,
-    structure,
-    aspectRatio,
-    formatNotes: structuredClone(analysis.formatNotes),
-    elements: structuredClone(analysis.elements),
-    slides,
+    version: 1, structure: input.structure, aspectRatio: input.aspectRatio, elements: [],
+    slides: Array.from({ length: input.slideCount }, (_, index) => ({
+      id: `slide-${index + 1}`,
+      role: index === 0 ? "hook" : index === input.slideCount - 1 ? "cta" : "body",
+      backgroundColor: "#FFFFFF", placements: [],
+    })),
   };
   ensureSharedBackground(document);
   const errors = validateEditorDocument(document);
-  if (errors.length > 0) throw new Error(errors.join(" "));
+  if (errors.length) throw new Error(errors.join(" "));
   return document;
 }
 
@@ -147,9 +122,12 @@ export function getDuplicateTargets(document: EditorDocument, slideId: string, p
   if (source.elementId === BACKGROUND_ELEMENT_ID) throw new Error("배경 Element는 복제할 수 없습니다.");
   const selected = new Set(selectedSlideIds);
   if (!selected.has(slideId)) throw new Error("현재 장을 복제 범위에 포함해 주세요.");
-  return document.slides.filter((slide) => selected.has(slide.id)).flatMap((slide) => slide.placements
-    .filter((placement) => placement.elementId === source.elementId)
-    .map((placement) => ({ slideId: slide.id, sourcePlacementId: placement.id })));
+  for (const id of selected) requireSlide(document, id);
+  return document.slides.filter((slide) => selected.has(slide.id)).flatMap((slide) => {
+    const placements = slide.placements.filter((placement) => placement.elementId === source.elementId);
+    return (placements.length ? placements : [source])
+      .map((placement) => ({ slideId: slide.id, sourcePlacementId: placement.id }));
+  });
 }
 
 function offsetFrame(frame: ElementFrame): ElementFrame {
@@ -161,6 +139,32 @@ function offsetFrame(frame: ElementFrame): ElementFrame {
 export function applyEditorCommand(document: EditorDocument, command: EditorCommand): EditorDocument {
   const next = ensureSharedBackground(structuredClone(document));
   switch (command.type) {
+    case "set_aspect_ratio": {
+      next.aspectRatio = command.aspectRatio;
+      break;
+    }
+    case "rename_slide": {
+      const name = command.name.trim();
+      if (!name || name.length > 120) throw new Error("슬라이드 이름은 1~120자로 입력해 주세요.");
+      requireSlide(next, command.slideId).name = name;
+      break;
+    }
+    case "reorder_slides": {
+      if (!unique(command.slideIds) || command.slideIds.length !== next.slides.length ||
+        command.slideIds.some((id) => !next.slides.some((slide) => slide.id === id)))
+        throw new Error("전체 슬라이드 ID를 정확히 한 번씩 지정해 주세요.");
+      next.slides = command.slideIds.map((id) => requireSlide(next, id));
+      break;
+    }
+    case "reorder_layers": {
+      const slide = requireSlide(next, command.slideId);
+      if (!unique(command.placementIds) || command.placementIds.length !== slide.placements.length ||
+        command.placementIds.some((id) => !slide.placements.some((item) => item.id === id)) ||
+        command.placementIds.at(-1) !== BACKGROUND_PLACEMENT_ID)
+        throw new Error("배경을 맨 뒤에 두고 모든 배치 ID를 정확히 한 번씩 지정해 주세요.");
+      slide.placements = command.placementIds.map((id) => requirePlacement(slide, id));
+      break;
+    }
     case "set_slide_background": {
       const slide = requireSlide(next, command.slideId);
       const placement = requirePlacement(slide, BACKGROUND_PLACEMENT_ID);
@@ -243,9 +247,8 @@ export function applyEditorCommand(document: EditorDocument, command: EditorComm
       const afterIndex = next.slides.findIndex((slide) => slide.id === command.afterSlideId);
       const source = requireSlide(next, command.sourceSlideId);
       if (afterIndex < 0) throw new Error("삽입 위치의 슬라이드를 찾을 수 없습니다.");
-      if (next.structure === "repeating" &&
-        (afterIndex === next.slides.length - 1 || source.role !== "body"))
-        throw new Error("반복형 본문 장 사이에 본문 슬라이드만 추가할 수 있습니다.");
+      if (next.structure === "repeating" && source.role !== "body")
+        throw new Error("반복형에서는 본문 슬라이드만 추가할 수 있습니다.");
       const slide = structuredClone(source);
       slide.id = command.newSlideId;
       slide.placements = slide.placements.map((placement) => ({
@@ -260,7 +263,7 @@ export function applyEditorCommand(document: EditorDocument, command: EditorComm
     case "remove_slide": {
       const index = next.slides.findIndex((slide) => slide.id === command.slideId);
       if (index < 0) throw new Error("슬라이드를 찾을 수 없습니다.");
-      if (next.structure === "repeating" && (index === 0 || index === next.slides.length - 1))
+      if (next.structure === "repeating" && next.slides[index].role !== "body")
         throw new Error("반복형의 훅과 CTA 장은 제거할 수 없습니다.");
       if (next.slides.length <= (next.structure === "repeating" ? 3 : 2))
         throw new Error("필수 슬라이드는 제거할 수 없습니다.");
@@ -292,12 +295,15 @@ export function applyEditorCommand(document: EditorDocument, command: EditorComm
         name: `${sourceElement.name} 복사본`, frame: offsetFrame(sourceElement.frame) });
       for (const target of command.placements) {
         const slide = requireSlide(next, target.slideId);
-        const original = requirePlacement(slide, target.sourcePlacementId);
+        const original = slide.placements.find((placement) => placement.id === target.sourcePlacementId && placement.elementId === source.elementId)
+          ?? source;
         if (slide.placements.some((placement) => placement.id === target.newPlacementId))
           throw new Error("이미 존재하는 배치 ID입니다.");
         const duplicate = { ...structuredClone(original), id: target.newPlacementId, elementId: command.newElementId,
           frameOverride: original.frameOverride ? offsetFrame(original.frameOverride) : null };
-        slide.placements.splice(slide.placements.indexOf(original) + 1, 0, duplicate);
+        const sourceIndex = slide.placements.indexOf(original);
+        if (sourceIndex < 0) slide.placements.push(duplicate);
+        else slide.placements.splice(sourceIndex + 1, 0, duplicate);
       }
       break;
     }

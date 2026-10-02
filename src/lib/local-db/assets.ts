@@ -53,6 +53,27 @@ export class AssetStore {
     return this.get(id)!;
   }
 
+  restore(input: {
+    id: string;
+    name: string;
+    description?: string;
+    type: ImageMimeType;
+    bytes: Uint8Array;
+  }): StoredAsset {
+    const existing = this.get(input.id);
+    if (existing) return existing;
+    if (!input.id.trim() || !input.name.trim() || input.bytes.byteLength === 0)
+      throw new Error("복원할 이미지가 올바르지 않습니다.");
+    const now = new Date().toISOString();
+    this.database.prepare(`
+      INSERT INTO assets (id, name, description, mime_type, byte_size, data, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(input.id, input.name.trim(), input.description?.trim() ?? "", input.type,
+      input.bytes.byteLength,
+      Buffer.from(input.bytes.buffer, input.bytes.byteOffset, input.bytes.byteLength), now, now);
+    return this.get(input.id)!;
+  }
+
   get(id: string): StoredAsset | null {
     const row = this.database.prepare(`SELECT ${ASSET_COLUMNS} FROM assets WHERE id = ?`).get(id) as AssetRow | undefined;
     return row ? toAsset(row) : null;
@@ -60,6 +81,21 @@ export class AssetStore {
 
   list(): StoredAsset[] {
     const rows = this.database.prepare(`SELECT ${ASSET_COLUMNS} FROM assets ORDER BY created_at DESC, id DESC`).all() as AssetRow[];
+    return rows.map(toAsset);
+  }
+
+  /** Bounded metadata-only lookup. Never load image BLOBs for a search. */
+  search(query: string, limit = 12): StoredAsset[] {
+    const terms = [...new Set(query.trim().split(/\s+/).filter(Boolean))].slice(0, 12);
+    if (!terms.length) return [];
+    const patterns = terms.map((term) => `%${term.replace(/[\\%_]/g, "\\$&")}%`);
+    const predicate = "(name LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\')";
+    const args = patterns.flatMap((pattern) => [pattern, pattern]);
+    const rows = this.database.prepare(`SELECT ${ASSET_COLUMNS} FROM assets
+      WHERE ${terms.map(() => predicate).join(" OR ")}
+      ORDER BY (${terms.map(() => `CASE WHEN ${predicate} THEN 1 ELSE 0 END`).join(" + ")}) DESC,
+        created_at DESC, id DESC LIMIT ?`)
+      .all(...args, ...args, Math.min(30, Math.max(1, Math.floor(limit)))) as AssetRow[];
     return rows.map(toAsset);
   }
 

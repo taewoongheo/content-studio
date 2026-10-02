@@ -1,23 +1,22 @@
 "use client";
 
-import { CodexConnection } from "./codex-connection";
-import { CalendarDays, Images, Package, Plus } from "lucide-react";
+import { CalendarDays, FolderOpen, Images, Plus } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
-  SidebarFooter,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { CodexConnectionController } from "@/lib/codex/use-codex-connection";
 
 export function StudioSidebar({
   activeTab,
-  codex,
+  onOpenEditor,
+  opening,
 }: {
   activeTab: string;
-  codex: CodexConnectionController;
+  onOpenEditor: () => void;
+  opening: boolean;
 }) {
   return (
     <Sidebar
@@ -39,29 +38,11 @@ export function StudioSidebar({
         >
           <SidebarMenuButton
             className="h-11"
-            isActive={activeTab === "products"}
-            render={
-              <TabsTrigger
-                value="products"
-                className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent"
-              />
-            }
-          >
-            <Package aria-hidden="true" />
-            <span>제품 컨텍스트</span>
-          </SidebarMenuButton>
-          <SidebarMenuButton
-            className="h-11"
-            isActive={activeTab === "create"}
-            render={
-              <TabsTrigger
-                value="create"
-                className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent"
-              />
-            }
+            onClick={onOpenEditor}
+            disabled={opening}
           >
             <Plus aria-hidden="true" />
-            <span>새 콘텐츠 만들기</span>
+            <span>편집기 열기</span>
           </SidebarMenuButton>
           <SidebarMenuButton
             className="h-11"
@@ -73,6 +54,14 @@ export function StudioSidebar({
           </SidebarMenuButton>
           <SidebarMenuButton
             className="h-11"
+            isActive={activeTab === "projects"}
+            render={<TabsTrigger value="projects" className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent" />}
+          >
+            <FolderOpen aria-hidden="true" />
+            <span>저장된 프로젝트</span>
+          </SidebarMenuButton>
+          <SidebarMenuButton
+            className="h-11"
             isActive={activeTab === "assets"}
             render={<TabsTrigger value="assets" className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent" />}
           >
@@ -81,9 +70,6 @@ export function StudioSidebar({
           </SidebarMenuButton>
         </TabsList>
       </SidebarContent>
-      <SidebarFooter className="p-3">
-        <CodexConnection controller={codex} />
-      </SidebarFooter>
     </Sidebar>
   );
 }
