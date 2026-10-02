@@ -183,7 +183,7 @@ export function SlideCanvas({
           >
           <button
             type="button"
-            className={`relative size-full touch-none cursor-move bg-transparent text-left outline-none focus-visible:ring-2 focus-visible:ring-primary ${selected ? "" : "hover:ring-1 hover:ring-foreground/50"}`}
+            className={`relative size-full touch-none ${disabled ? "cursor-pointer" : "cursor-move"} bg-transparent text-left outline-none focus-visible:ring-2 focus-visible:ring-primary ${selected ? "" : "hover:ring-1 hover:ring-foreground/50"}`}
             onClick={() => onSelect(placement.id)}
             onPointerDown={(event) => beginGesture(event, placement.id, frame, "move")}
             onPointerMove={moveGesture}

@@ -26,7 +26,7 @@ function SlideTab({ slide, index, selected, movable, disabled, onSelect, onComma
   const { setNodeRef, transform, transition, isDragging, attributes, listeners } =
     useSortable({ id: slide.id, disabled: disabled || saving || editing || !movable });
   async function commitName() {
-    if (committing.current || cancelled.current) return;
+    if (disabled || committing.current || cancelled.current) return;
     const trimmed = name.trim();
     if (!trimmed || trimmed === (slide.name || roleLabels[slide.role])) { setEditing(false); return; }
     committing.current = true;
@@ -48,9 +48,10 @@ function SlideTab({ slide, index, selected, movable, disabled, onSelect, onComma
           if (event.key === "Enter") { event.preventDefault(); void commitName(); }
           if (event.key === "Escape") { cancelled.current = true; setEditing(false); }
         }} className="m-1 w-36 min-w-0 rounded border border-border bg-background px-2 py-2 outline-none focus-visible:ring-2 focus-visible:ring-foreground" />
-        : <button type="button" {...attributes} {...listeners} disabled={disabled} onClick={() => onSelect(slide.id)}
+        : <button type="button" {...attributes} {...(disabled ? {} : listeners)} aria-disabled={undefined}
+          onClick={() => onSelect(slide.id)}
           aria-label={`${slideLabel(slide, index)} 선택 및 순서 이동`}
-          aria-current={selected ? "page" : undefined} className="max-w-52 cursor-grab truncate px-3 py-3 hover:bg-muted focus-visible:outline-2 active:cursor-grabbing">
+          aria-current={selected ? "page" : undefined} className={`max-w-52 truncate px-3 py-3 hover:bg-muted focus-visible:outline-2 ${disabled ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"}`}>
           {slideLabel(slide, index)}
         </button>}
       <button type="button" disabled={disabled || editing || saving} aria-label={`${slideLabel(slide, index)} 이름 변경`}

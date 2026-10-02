@@ -220,7 +220,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
 
   async function handleClipboard(action: "copy" | "paste") {
     if (!slide || !placement) return;
-    if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return;
+    if (!disabled && inspectorRef.current && !(await inspectorRef.current.flushPending())) return;
     await commandQueue.current;
     const current = latestDocument.current;
     if (!current) return;
@@ -234,7 +234,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   }
 
   useEditorShortcuts((shortcut) => {
-    if (disabled || !document) return false;
+    if (!document || (disabled && shortcut !== "copy")) return false;
     if (shortcut === "undo") {
       void action({ action: "editor_undo" });
       return true;
@@ -259,10 +259,10 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   }
 
   async function changeVisualScope(choice: ScopeChoice) {
-    if (!slide || !placement || disabled) return;
+    if (!slide || !placement) return;
     const next = selectVisualSlides(slide.id, scopeSlides.map((item) => item.slideId), selectedSlideIds, choice);
     if (next.join() === selectedSlideIds.join()) return;
-    if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return;
+    if (!disabled && inspectorRef.current && !(await inspectorRef.current.flushPending())) return;
     setScopeSelection({ key: scopeKey, slideIds: next });
   }
 
@@ -365,7 +365,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
                     slides={scopeSlides}
                     selectedSlideIds={selectedSlideIds}
                     isBackground={element.kind === "background"}
-                    disabled={disabled}
+                    disabled={false}
                     onChange={changeVisualScope}
                   />}
                 </div>
@@ -377,7 +377,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
                       title={`선택한 ${selectedSlideIds.length}장에서 제거`}><Trash2 className="size-3.5" aria-hidden="true" /></Button>
                   </div>}
                   <Button size="sm" variant="outline" disabled={disabled} onClick={() => void addElement("text")}>텍스트 추가</Button>
-                  <Button ref={imageLibraryButtonRef} size="sm" variant={showImageLibrary ? "secondary" : "outline"} disabled={disabled}
+                  <Button ref={imageLibraryButtonRef} size="sm" variant={showImageLibrary ? "secondary" : "outline"}
                     aria-expanded={showImageLibrary} aria-controls="editor-image-library"
                     onClick={() => setShowImageLibrary((current) => !current)}>이미지 추가</Button>
                   <label className="sr-only" htmlFor="add-shape">도형 추가</label>

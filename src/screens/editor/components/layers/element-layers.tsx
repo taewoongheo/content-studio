@@ -19,10 +19,10 @@ function LayerRow({ placement, name, role, selected, disabled, onSelect }: {
 }) {
   const { setNodeRef, transform, transition, attributes, listeners, isDragging } =
     useSortable({ id: placement.id, disabled });
-  return <button ref={setNodeRef} type="button" {...attributes} {...listeners} disabled={disabled}
+  return <button ref={setNodeRef} type="button" {...attributes} {...(disabled ? {} : listeners)} aria-disabled={undefined}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       aria-label={`${name} Element 선택 및 레이어 순서 이동`} aria-pressed={selected} onClick={() => onSelect(placement.id)}
-      className={`min-w-0 shrink-0 touch-none cursor-grab rounded-md border px-3 py-3 text-left text-xs focus-visible:outline-2 active:cursor-grabbing ${selected ? "border-foreground bg-muted" : "border-border hover:bg-muted/50"} ${isDragging ? "relative z-10 bg-muted opacity-70" : ""}`}>
+      className={`min-w-0 shrink-0 touch-none rounded-md border px-3 py-3 text-left text-xs focus-visible:outline-2 ${disabled ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"} ${selected ? "border-foreground bg-muted" : "border-border hover:bg-muted/50"} ${isDragging ? "relative z-10 bg-muted opacity-70" : ""}`}>
       <span className="block truncate font-medium">{name}</span>
       <span className="mt-0.5 block truncate text-muted-foreground">{role}</span>
     </button>;
@@ -50,7 +50,7 @@ export function ElementLayers({ document, slide, selectedPlacementId, selectedSl
           return <LayerRow key={item.id} placement={item} name={definition?.name ?? "Element"} role={definition?.role ?? ""}
             selected={item.id === selectedPlacementId} disabled={disabled || saving} onSelect={onSelect} />;
         })}
-        <button type="button" disabled={disabled || saving} onClick={() => onSelect(BACKGROUND_PLACEMENT_ID)}
+        <button type="button" onClick={() => onSelect(BACKGROUND_PLACEMENT_ID)}
           aria-pressed={selectedPlacementId === BACKGROUND_PLACEMENT_ID}
           className={`mt-1 shrink-0 rounded-md border px-3 py-3 text-left text-xs font-medium hover:bg-muted focus-visible:outline-2 ${selectedPlacementId === BACKGROUND_PLACEMENT_ID ? "border-foreground bg-muted" : "border-border"}`}>배경</button>
       </div>
