@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { ArrowLeft, Copy, LoaderCircle, Plus, Trash2, Undo2 } from "lucide-react";
+import { ArrowLeft, Copy, LoaderCircle, Plus, Trash2, Undo2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import type { EditorCommand, ElementFrame, ElementKind } from "@/lib/content-jobs/editor/types";
@@ -54,6 +54,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   const [placementId, setPlacementId] = useState<string | null>(null);
   const [scopeSelection, setScopeSelection] = useState<{ key: string; slideIds: string[] } | null>(null);
   const [imageError, setImageError] = useState("");
+  const [dismissedIssue, setDismissedIssue] = useState<string | null>(null);
   const [showGuides, setShowGuides] = useState(true);
   const [showImageLibrary, setShowImageLibrary] = useState(false);
   const [unlockedImageRatios, setUnlockedImageRatios] = useState<Set<string>>(() => new Set());
@@ -93,6 +94,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   }
 
   async function action(body: Record<string, unknown>) {
+    setDismissedIssue(null);
     try {
       if (body.action === "chat_edit" && inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
       await commandQueue.current;
@@ -113,6 +115,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
         latestDocument.current = updated.editor.document;
         return true;
       } catch {
+        setDismissedIssue(null);
         return false;
       }
     });
@@ -123,6 +126,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   async function uploadImage(file: File) {
     if (!slide || !placement) return false;
     setImageError("");
+    setDismissedIssue(null);
     try {
       if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
       const updated = await uploadEditorImage(job.id, file);
@@ -156,6 +160,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
 
   async function addStoredImage(assetId: string) {
     setImageError("");
+    setDismissedIssue(null);
     try {
       const updated = await attachStoredEditorImage(job.id, assetId);
       latestRevision.current = Math.max(latestRevision.current, updated.editor.revision);
@@ -169,6 +174,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   async function addDroppedImage(file: File, center: { x: number; y: number }) {
     if (!document || !slide) return false;
     setImageError("");
+    setDismissedIssue(null);
     try {
       if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
       const existingAssetIds = new Set(job.assets.map((asset) => asset.id));
@@ -246,7 +252,10 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
       if (!copied) return false;
       clipboard.current = copied;
     } else if (!clipboard.current) return false;
-    void enqueueClipboard(() => handleClipboard(shortcut)).catch(() => setImageError("Element 복사·붙여넣기에 실패했습니다."));
+    void enqueueClipboard(() => handleClipboard(shortcut)).catch(() => {
+      setDismissedIssue(null);
+      setImageError("Element 복사·붙여넣기에 실패했습니다.");
+    });
     return true;
   });
 
@@ -297,14 +306,19 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
               return true;
             }} />
           {document && <ExportControl jobId={job.id} disabled={disabled}
-            onBeforeExport={prepareExport} onError={setImageError} />}
+            onBeforeExport={prepareExport} onError={(message) => { setDismissedIssue(null); setImageError(message); }} />}
           <Button variant="outline" size="sm" disabled={disabled || !document} title="되돌리기 (⌘Z)" onClick={() => void action({ action: "editor_undo" })}>
             <Undo2 className="size-4" aria-hidden="true" /> 되돌리기
           </Button>
         </div>
       </header>
 
-      {issue && <p role="alert" className="mx-5 mt-4 shrink-0 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">{issue}</p>}
+      {issue && issue !== dismissedIssue && <div role="alert" className="mx-5 mt-4 flex shrink-0 items-start gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+        <p className="min-w-0 flex-1 break-words">{issue}</p>
+        <Button type="button" variant="ghost" size="icon-sm" aria-label="오류 메시지 닫기"
+          className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          onClick={() => setDismissedIssue(issue)}><X className="size-4" aria-hidden="true" /></Button>
+      </div>}
 
       {!document ? (
         <main className="grid min-h-0 flex-1 place-items-center px-5 text-center">
