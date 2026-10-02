@@ -6,6 +6,7 @@ import Image from "next/image";
 import { LoaderCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { StoredAsset } from "@/lib/local-db/assets";
+import { imagePickerPosition } from "./picker-position";
 
 export function ImageLibraryPicker({ anchorRef, disabled, onSelect, onAddEmpty, onClose }: {
   anchorRef: RefObject<HTMLButtonElement | null>;
@@ -17,7 +18,7 @@ export function ImageLibraryPicker({ anchorRef, disabled, onSelect, onAddEmpty, 
   const [assets, setAssets] = useState<StoredAsset[] | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [position, setPosition] = useState<{ left: number; bottom: number; width: number; maxHeight: number } | null>(null);
+  const [position, setPosition] = useState<ReturnType<typeof imagePickerPosition> | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const focused = useRef(false);
 
@@ -25,13 +26,7 @@ export function ImageLibraryPicker({ anchorRef, disabled, onSelect, onAddEmpty, 
     function updatePosition() {
       const anchor = anchorRef.current?.getBoundingClientRect();
       if (!anchor) return;
-      const width = Math.min(480, window.innerWidth - 32);
-      setPosition({
-        left: Math.max(16, Math.min(anchor.left, window.innerWidth - width - 16)),
-        bottom: window.innerHeight - anchor.top + 8,
-        width,
-        maxHeight: Math.max(100, Math.min(480, anchor.top - 24)),
-      });
+      setPosition(imagePickerPosition(anchor, { width: window.innerWidth, height: window.innerHeight }));
     }
     updatePosition();
     window.addEventListener("resize", updatePosition);
@@ -92,9 +87,9 @@ export function ImageLibraryPicker({ anchorRef, disabled, onSelect, onAddEmpty, 
       if (!busy) onClose();
     }} />
     <div id="editor-image-library" role="dialog" aria-label="저장된 이미지 선택"
-      className="fixed z-50 flex flex-col rounded-lg border bg-background p-3 shadow-lg"
+      className="fixed z-50 flex flex-col overflow-hidden rounded-lg border bg-background p-3 shadow-lg"
       style={position}>
-    <div className="mb-2 flex items-center justify-between gap-2">
+    <div className="mb-2 flex shrink-0 items-center justify-between gap-2">
       <h3 className="text-sm font-semibold">저장된 이미지</h3>
       <Button ref={closeRef} type="button" variant="ghost" size="icon-sm" aria-label="이미지 목록 닫기" disabled={busy} onClick={onClose}>
         <X className="size-4" aria-hidden="true" />
