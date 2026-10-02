@@ -1,17 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createDocumentFromAnalysis, BACKGROUND_ELEMENT_ID } from "@/lib/content-jobs/editor/document";
-import type { EditorAnalysis } from "@/lib/content-jobs/editor/types";
+import { BACKGROUND_ELEMENT_ID } from "@/lib/content-jobs/editor/document";
+import { createTestDocument as createDocumentFromAnalysis, type FixtureLayout as EditorAnalysis } from "@/lib/content-jobs/editor/tests/fixtures";
 import { resolveEditorSelection } from "./editor-selection";
 
 const analysis: EditorAnalysis = {
   elements: [{
-    id: "title", name: "제목", role: "본문 제목", kind: "text", sourceImageId: "image-2",
-    frame: { x: 0.1, y: 0.1, width: 0.8, height: 0.1 },
+    id: "title", name: "제목", role: "본문 제목", kind: "text", frame: { x: 0.1, y: 0.1, width: 0.8, height: 0.1 },
     style: { color: "#111111", backgroundColor: "transparent", fontSize: 36, lineHeight: 1.2, fontWeight: 700,
       textAlign: "center", borderRadius: 0, fontFamily: "sans-serif", imageFit: "cover" },
   }],
-  formatNotes: { visualRules: "상단 제목", writingStyle: "짧게", hookPattern: "질문", bodyProgression: "반복" },
+
   slides: [
     { imageId: "image-1", role: "hook", backgroundColor: "#FFFFFF", elementIds: [], visuals: [] },
     { imageId: "image-2", role: "body", backgroundColor: "#FFFFFF", elementIds: ["title"], visuals: [] },

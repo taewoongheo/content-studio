@@ -15,8 +15,7 @@ const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
   minute: "2-digit",
 });
 
-export function SavedProjectsPage({ codexModel, onOpen }: {
-  codexModel: string;
+export function SavedProjectsPage({ onOpen }: {
   onOpen: (job: ContentJobSnapshot, projectName: string) => void;
 }) {
   const [projects, setProjects] = useState<SavedProjectSummary[]>([]);
@@ -37,8 +36,7 @@ export function SavedProjectsPage({ codexModel, onOpen }: {
     setOpeningId(project.id);
     setError("");
     try {
-      if (!codexModel) throw new Error("Codex에 연결하고 모델을 선택해 주세요.");
-      onOpen(await loadContentProject(project.id, codexModel), project.name);
+      onOpen(await loadContentProject(project.id), project.name);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "프로젝트를 열지 못했습니다.");
     } finally {
@@ -68,7 +66,7 @@ export function SavedProjectsPage({ codexModel, onOpen }: {
                   {project.aspectRatio} · {project.slideCount}장 · {project.outputLanguage} · {dateFormatter.format(new Date(project.updatedAt))}
                 </p>
               </div>
-              <Button type="button" variant="outline" className="shrink-0" disabled={openingId !== null || !codexModel}
+              <Button type="button" variant="outline" className="shrink-0" disabled={openingId !== null}
                 onClick={() => void openProject(project)}>
                 {openingId === project.id ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <FolderOpen aria-hidden="true" />}
                 열기

@@ -7,9 +7,9 @@ import { clipboardShortcut, copyElement, pasteElement, createClipboardQueue } fr
 import { frameCommandsForScope } from "../canvas/frame/commands";
 
 function fixture() {
-  const element = makeElementDefinition({ kind: "rectangle", id: "shape", sourceImageId: "image-1" });
+  const element = makeElementDefinition({ kind: "rectangle", id: "shape", });
   const document: EditorDocument = { version: 1, structure: "sequential", aspectRatio: "4:5",
-    formatNotes: { visualRules: "기본", writingStyle: "기본", hookPattern: "기본", bodyProgression: "기본" }, elements: [element],
+elements: [element],
     slides: ["a", "b", "c"].map((id) => ({ id, role: "body", backgroundColor: "#FFFFFF", placements: id === "c" ? [] : [{
       id: `p-${id}`, elementId: element.id, value: id, frameOverride: null,
       styleOverride: { backgroundColor: id === "a" ? "#FF0000" : "#0000FF" },

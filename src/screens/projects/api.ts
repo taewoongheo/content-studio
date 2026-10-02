@@ -20,11 +20,9 @@ export function saveContentProject(jobId: string, name: string) {
   }).then((response) => readJson<SavedProjectSummary>(response));
 }
 
-export function loadContentProject(projectId: string, model: string) {
+export function loadContentProject(projectId: string) {
   return fetch(`/api/content-projects/${encodeURIComponent(projectId)}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model }),
   })
     .then((response) => readJson<ContentJobSnapshot>(response));
 }

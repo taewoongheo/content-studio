@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Content Studio | 새 콘텐츠",
-  description: "콘텐츠 자동화 및 관리 툴",
+  title: "Content Studio | 슬라이드 편집기",
+  description: "로컬 슬라이드 편집 및 관리",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

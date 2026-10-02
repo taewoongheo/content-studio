@@ -1,7 +1,6 @@
 import { validateEditorDocument } from "../editor/document";
 import type { EditorDocument } from "../editor/types";
 import { ContentJobError, type ContentJobRegistry } from "../workflow/registry";
-import type { ContentWorkflowService } from "../workflow/workflow";
 import { AssetStore } from "@/lib/local-db/assets";
 import { getLocalDatabase } from "@/lib/local-db/database";
 import { ContentProjectStore, type SavedProjectAsset } from "@/lib/local-db/projects/store";
@@ -59,8 +58,6 @@ export async function saveContentProject(
   stores = defaultStores(),
 ) {
   const record = registry.getRecord(jobId);
-  if (record.activeOperation)
-    throw new ContentJobError("OPERATION_IN_PROGRESS", "AI 작업이 끝난 뒤 프로젝트를 저장해 주세요.");
   const document = record.editor.document;
   if (!document)
     throw new ContentJobError("INVALID_STAGE", "편집 문서가 준비된 뒤 저장해 주세요.");
@@ -79,9 +76,8 @@ export async function saveContentProject(
 }
 
 export async function loadContentProject(
-  workflow: ContentWorkflowService,
+  registry: ContentJobRegistry,
   projectId: string,
-  model: string,
   stores = defaultStores(),
 ) {
   const project = stores.projects.get(projectId);
@@ -95,17 +91,13 @@ export async function loadContentProject(
     type: asset.type,
     bytes: asset.bytes,
   }));
-  const created = await workflow.createJob({
-    model,
+  const created = registry.add({
     structure: document.structure,
-    productContext: { name: "", description: "", audience: "", constraints: "" },
     aspectRatio: document.aspectRatio,
     slideCount: document.slides.length,
     outputLanguage: project.outputLanguage,
-    referenceImages: [],
   }, project.id);
-  return workflow.registry.update(created.id, (job) => {
-    job.editor.status = "ready";
+  return registry.update(created.id, (job) => {
     job.editor.document = structuredClone(document);
     job.editor.revision = 0;
     job.assets = assets.map((asset) => ({

@@ -2,13 +2,11 @@ import type { SlideshowStructure } from "../domain/types";
 import { validBorder } from "./elements/style";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_FRAME, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, syncBackgroundColors } from "./background";
 import type {
-  EditorAnalysis,
   EditorCommand,
   EditorDocument,
   EditorSlide,
   ElementFrame,
   ElementStyle,
-  PlacedElement,
 } from "./types";
 
 const colorPattern = /^#[0-9a-fA-F]{6}$/;
@@ -37,8 +35,7 @@ function unique(values: string[]) {
 
 export function validateEditorDocument(document: EditorDocument): string[] {
   const errors: string[] = [];
-  if (Object.values(document.formatNotes).some((value) => !value.trim()))
-    errors.push("포맷 규칙을 모두 작성해 주세요.");
+  if (!["4:5", "1:1", "9:16"].includes(document.aspectRatio)) errors.push("화면 비율이 올바르지 않습니다.");
   const elementIds = document.elements.map((element) => element.id);
   const slideIds = document.slides.map((slide) => slide.id);
   if (!unique(elementIds) || !unique(slideIds)) errors.push("Element와 슬라이드 ID는 고유해야 합니다.");
@@ -89,48 +86,22 @@ export function validateEditorDocument(document: EditorDocument): string[] {
   return errors;
 }
 
-export function createDocumentFromAnalysis(
-  analysis: EditorAnalysis,
-  structure: SlideshowStructure,
-  slideCount: number,
-  aspectRatio: EditorDocument["aspectRatio"],
-): EditorDocument {
-  if (analysis.slides.length !== slideCount)
-    throw new Error("레퍼런스 분석의 슬라이드 수가 입력과 일치하지 않습니다.");
-  if (structure === "repeating" && analysis.slides.some((slide, index) =>
-    slide.role !== (index === 0 ? "hook" : index === slideCount - 1 ? "cta" : "body")))
-    throw new Error("반복형 레퍼런스의 역할 순서가 올바르지 않습니다.");
-  const knownElements = new Set(analysis.elements.map((element) => element.id));
-  if (analysis.slides.some((slide) => slide.elementIds.some((id) => !knownElements.has(id))))
-    throw new Error("존재하지 않는 Element를 참조합니다.");
-  if (knownElements.has(BACKGROUND_ELEMENT_ID)) throw new Error("예약된 배경 Element ID입니다.");
-  const makeSlide = (source: EditorAnalysis["slides"][number], index: number): EditorSlide => ({
-    id: `slide-${index + 1}`,
-    role: source.role,
-    backgroundColor: source.backgroundColor,
-    placements: source.elementIds.map((elementId, placementIndex): PlacedElement => {
-      const visual = source.visuals.find((item) => item.elementId === elementId);
-      return {
-        id: `placement-${index + 1}-${placementIndex + 1}`,
-        elementId,
-        value: "",
-        frameOverride: visual?.frame ?? null,
-        styleOverride: visual?.style ?? null,
-      };
-    }),
-  });
-  const slides = analysis.slides.map(makeSlide);
+export function createBlankDocument(input: {
+  structure: SlideshowStructure;
+  slideCount: number;
+  aspectRatio: EditorDocument["aspectRatio"];
+}): EditorDocument {
   const document: EditorDocument = {
-    version: 1,
-    structure,
-    aspectRatio,
-    formatNotes: structuredClone(analysis.formatNotes),
-    elements: structuredClone(analysis.elements),
-    slides,
+    version: 1, structure: input.structure, aspectRatio: input.aspectRatio, elements: [],
+    slides: Array.from({ length: input.slideCount }, (_, index) => ({
+      id: `slide-${index + 1}`,
+      role: index === 0 ? "hook" : index === input.slideCount - 1 ? "cta" : "body",
+      backgroundColor: "#FFFFFF", placements: [],
+    })),
   };
   ensureSharedBackground(document);
   const errors = validateEditorDocument(document);
-  if (errors.length > 0) throw new Error(errors.join(" "));
+  if (errors.length) throw new Error(errors.join(" "));
   return document;
 }
 
@@ -168,6 +139,10 @@ function offsetFrame(frame: ElementFrame): ElementFrame {
 export function applyEditorCommand(document: EditorDocument, command: EditorCommand): EditorDocument {
   const next = ensureSharedBackground(structuredClone(document));
   switch (command.type) {
+    case "set_aspect_ratio": {
+      next.aspectRatio = command.aspectRatio;
+      break;
+    }
     case "rename_slide": {
       const name = command.name.trim();
       if (!name || name.length > 120) throw new Error("슬라이드 이름은 1~120자로 입력해 주세요.");

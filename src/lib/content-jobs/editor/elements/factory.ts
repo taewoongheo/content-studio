@@ -3,7 +3,6 @@ import type { ElementDefinition, ElementKind } from "../types";
 export function makeElementDefinition(input: {
   id: string;
   kind: Exclude<ElementKind, "background">;
-  sourceImageId: string;
   name?: string;
   role?: string;
 }): ElementDefinition {
@@ -22,6 +21,5 @@ export function makeElementDefinition(input: {
       fontSize: 36, lineHeight: 1.2, fontWeight: 700, textAlign: "center", borderRadius: 0,
       borderEnabled: isShape, borderColor: "#111111", borderWidth: 2,
       fontFamily: "sans-serif", imageFit: "cover" },
-    sourceImageId: input.sourceImageId,
   };
 }

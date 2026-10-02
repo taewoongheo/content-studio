@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Copy, LoaderCircle, Plus, Trash2, Undo2, X } from "lucide-react";
+import { ArrowLeft, Copy, Plus, Trash2, Undo2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import type { EditorCommand, ElementFrame, ElementKind } from "@/lib/content-jobs/editor/types";
@@ -10,10 +10,9 @@ import { slideActionCommand } from "@/lib/content-jobs/editor/slides/commands";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, getDuplicateTargets } from "@/lib/content-jobs/editor/document";
 import { attachStoredEditorImage, getContentJob, uploadEditorImage } from "@/screens/content-job/api";
 import { useContentJob } from "@/screens/content-job/use-content-job";
-import { ChatPanel } from "./components/chat-panel";
 import { ElementInspector, type ElementInspectorHandle } from "./components/inspector/element-inspector";
 import { ElementScopePicker } from "./components/element-scope-picker";
-import { removalCommandsForScope, selectVisualSlides, visualScopeLabel, type ScopeChoice } from "./components/element-scope";
+import { removalCommandsForScope, selectVisualSlides, type ScopeChoice } from "./components/element-scope";
 import { SlideCanvas } from "./components/canvas/slide-canvas";
 import { frameForDroppedImage } from "./components/canvas/frame/geometry";
 import { SlideBackground } from "./components/inspector/slide-background";
@@ -73,8 +72,8 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
     ? ensureSharedBackground(structuredClone(job.editor.document)) : null, [job.editor.document]);
   const { slide, placement, element, appliedSlides, scopeSlides, visualTargets, scopeKey, selectedSlideIds } =
     resolveEditorSelection(document, slideId, placementId, scopeSelection);
-  const disabled = submitting || Boolean(job.activeOperation);
-  const issue = clientError || imageError || job.lastError;
+  const disabled = submitting;
+  const issue = clientError || imageError;
   const imageRatioKey = element?.kind === "image" ? element.id : "";
   const imageAspectRatioLocked = Boolean(imageRatioKey) && !unlockedImageRatios.has(imageRatioKey);
 
@@ -91,7 +90,6 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   async function action(body: Record<string, unknown>) {
     setDismissedIssue(null);
     try {
-      if (body.action === "chat_edit" && inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
       await commandQueue.current;
       const updated = await send({ ...body, expectedRevision: latestRevision.current });
       latestRevision.current = updated.editor.revision;
@@ -139,7 +137,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
     if (!slide) return false;
     const id = crypto.randomUUID();
     const newPlacementId = crypto.randomUUID();
-    const createdElement = makeElementDefinition({ id, kind, sourceImageId: "" });
+    const createdElement = makeElementDefinition({ id, kind,  });
     const newElement = initialFrame ? { ...createdElement, frame: initialFrame } : createdElement;
     const saved = await saveCommands([
       { type: "add_element", element: newElement },
@@ -287,10 +285,20 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
           <h1 className="truncate text-sm font-semibold">Content Studio <span className="font-normal text-muted-foreground">/ 슬라이드 편집기</span></h1>
         </div>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <p className="hidden text-xs text-muted-foreground sm:block">{job.structure === "repeating" ? "반복형" : "장면별 구성"} · {job.slideCount}장 · {job.outputLanguage}</p>
+          <label className="flex items-center gap-2 text-xs">
+            <span className="sr-only">화면 비율</span>
+            <select aria-label="화면 비율" value={document?.aspectRatio ?? "4:5"} disabled={disabled}
+              className="h-8 rounded-md border bg-background px-2"
+              onChange={(event) => { void saveCommands([{ type: "set_aspect_ratio", aspectRatio: event.target.value as "4:5" | "1:1" | "9:16" }]); }}>
+              <option value="4:5">4:5 · 1080 × 1350</option>
+              <option value="9:16">9:16 · 1080 × 1920</option>
+              <option value="1:1">1:1 · 1080 × 1080</option>
+            </select>
+            <span>{job.slideCount}장</span>
+          </label>
           <ProjectSaveControl ref={projectSaveRef} jobId={job.id} revision={job.editor.revision}
             getRevision={() => latestRevision.current}
-            defaultName={job.editor.selectedTopic?.title || `${job.productContext.name} 콘텐츠`}
+            defaultName="새 콘텐츠"
             initialProjectName={initialProjectName} disabled={disabled || !document}
             onBeforeSave={async () => {
               if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
@@ -312,17 +320,8 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
           onClick={() => setDismissedIssue(issue)}><X className="size-4" aria-hidden="true" /></Button>
       </div>}
 
-      {!document ? (
-        <main className="grid min-h-0 flex-1 place-items-center px-5 text-center">
-          <div className="grid max-w-md justify-items-center gap-3">
-            {job.editor.status === "analyzing" ? <LoaderCircle className="size-6 animate-spin" aria-hidden="true" /> : null}
-            <h2 className="text-xl font-semibold">{job.editor.status === "analyzing" ? "레퍼런스로 편집기 초안을 만드는 중" : "편집기 초안을 준비하지 못했습니다"}</h2>
-            <p className="text-sm leading-6 text-muted-foreground">이미지에서 슬라이드 역할과 Element의 시각 스타일·의미를 읽고 있습니다.</p>
-            {job.editor.status === "pending" && <Button onClick={() => void action({ action: "initialize_editor" })} disabled={disabled}>분석 다시 시작</Button>}
-          </div>
-        </main>
-      ) : slide ? (
-        <main className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden bg-background lg:grid-cols-[minmax(220px,260px)_180px_minmax(0,1fr)_minmax(260px,320px)] 2xl:grid-cols-[minmax(260px,300px)_220px_minmax(0,1fr)_minmax(300px,360px)] max-lg:overflow-visible">
+      {document && slide ? (
+        <main className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden bg-background lg:grid-cols-[minmax(220px,260px)_minmax(0,1fr)_180px] 2xl:grid-cols-[minmax(260px,300px)_minmax(0,1fr)_220px] max-lg:overflow-visible">
           <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden border-r px-4 py-4 max-lg:order-2 max-lg:min-h-[360px] max-lg:border-r-0 max-lg:border-t" aria-label="선택 항목 편집">
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {element?.kind === "background" && placement ? (
@@ -357,7 +356,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
             </div>
           </aside>
 
-          <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden border-r px-3 py-3 max-lg:order-2 max-lg:h-80 max-lg:border-r-0 max-lg:border-t" aria-label="Element 레이어">
+          <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden border-l px-3 py-3 lg:col-start-3 lg:row-start-1 max-lg:order-2 max-lg:h-80 max-lg:border-l-0 max-lg:border-t" aria-label="Element 레이어">
               {showImageLibrary && <ImageLibraryPicker anchorRef={imageLibraryButtonRef} disabled={disabled}
                 onSelect={(asset) => addStoredImage(asset.id)}
                 onAddEmpty={() => addElement("image")}
@@ -403,7 +402,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
                 selectedSlideIds={selectedSlideIds} disabled={disabled} onSelect={setPlacementId} onCommand={saveCommands} />
             </aside>
 
-          <section className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-background max-lg:order-1 max-lg:min-h-[620px] max-lg:border-b" aria-label="슬라이드 편집 영역">
+          <section className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-background lg:col-start-2 lg:row-start-1 max-lg:order-1 max-lg:min-h-[620px] max-lg:border-b" aria-label="슬라이드 편집 영역">
             <nav aria-label="페이지 선택" className="shrink-0 border-b px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -441,16 +440,6 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
 
           </section>
 
-          <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden border-l bg-background max-lg:order-3 max-lg:min-h-[460px] max-lg:border-l-0 max-lg:border-t" aria-label="AI 채팅 편집">
-            <div className="shrink-0 border-b px-4 py-3">
-              <h2 className="text-sm font-semibold">AI 채팅 편집</h2>
-            </div>
-            <ChatPanel jobId={job.id} editor={job.editor} activeOperation={job.activeOperation} disabled={disabled}
-              selectedTarget={slide && placement && element ? {
-                target: { slideId: slide.id, placementId: placement.id, elementId: element.id, slideIds: selectedSlideIds },
-                name: element.name, scopeLabel: visualScopeLabel(selectedSlideIds.length, scopeSlides.length),
-              } : null} onAction={action} />
-          </aside>
         </main>
       ) : null}
     </div>

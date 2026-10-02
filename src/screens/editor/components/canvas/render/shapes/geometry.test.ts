@@ -3,7 +3,7 @@ import test from "node:test";
 import { makeElementDefinition } from "@/lib/content-jobs/editor/elements/factory";
 import { shapeGeometry, roundedTrianglePath } from "./geometry";
 
-const shape = makeElementDefinition({ id: "shape", kind: "rectangle", sourceImageId: "" });
+const shape = makeElementDefinition({ id: "shape", kind: "rectangle", });
 
 test("투명 도형은 테두리만 렌더링하며 테두리는 프레임 안쪽에 위치한다", () => {
   const geometry = shapeGeometry(200, 100, { ...shape.style, backgroundColor: "transparent",

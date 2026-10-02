@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readyJob } from "@/lib/content-jobs/editor/workflow/orchestration/tests/fixtures";
+import { createBlankDocument } from "@/lib/content-jobs/editor/document";
 import { applyEditorCommands, BACKGROUND_PLACEMENT_ID } from "@/lib/content-jobs/editor/document";
 import { frontToBack, reorderLayerCommands } from "./layer-order";
 
 function documentWithLayers() {
-  const document = readyJob().job.editor.document!;
+  const document = applyEditorCommands(createBlankDocument({ structure: "repeating", aspectRatio: "4:5", slideCount: 4 }), [
+ { type: "add_element", element: { id: "title", name: "제목", role: "제목", kind: "text", frame: {x: 0,y: 0,width: 50,height: 10}, style: { ...createBlankDocument({structure:"repeating",aspectRatio:"4:5",slideCount:4}).elements[0].style } } },
+ {type:"place_element",slideId:"slide-2",elementId:"title",placementId:"title-2"},
+ {type:"place_element",slideId:"slide-3",elementId:"title",placementId:"title-3"}
+ ]);
   return applyEditorCommands(document, [
-    { type: "add_element", element: { ...document.elements[0], id: "extra", kind: "text" } },
+    { type: "add_element", element: { ...document.elements.find(element => element.id === "title")!, id: "extra", kind: "text" } },
     { type: "place_element", slideId: "slide-2", elementId: "extra", placementId: "extra-2" },
     { type: "place_element", slideId: "slide-3", elementId: "extra", placementId: "extra-3" },
   ]);

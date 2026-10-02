@@ -6,27 +6,13 @@ import test from "node:test";
 import { AssetStore } from "@/lib/local-db/assets";
 import { openLocalDatabase } from "@/lib/local-db/database";
 import { ContentProjectStore } from "@/lib/local-db/projects/store";
-import { createDocumentFromAnalysis } from "../editor/document";
-import { analysis, input } from "../editor/workflow/orchestration/tests/fixtures";
+import { createBlankDocument } from "../editor/document";
+import { makeElementDefinition } from "../editor/elements/factory";
 import { ContentJobRegistry } from "../workflow/registry";
-import { ContentWorkflowService } from "../workflow/workflow";
 import { loadContentProject, saveContentProject } from "./service";
 
 const pngHeader = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
-class FakeCodexClient {
-  async connect() {
-    return { status: "connected" as const, message: "연결됨" };
-  }
-
-  async startThread() {
-    return { threadId: "fresh-thread" };
-  }
-
-  async runStructuredTurn(): Promise<never> {
-    throw new Error("이 테스트에서는 AI turn을 실행하지 않습니다.");
-  }
-}
 
 test("프로젝트는 시각 문서와 사용 이미지만 저장하고 새 편집 세션으로 불러온다", async () => {
   const directory = mkdtempSync(join(tmpdir(), "content-studio-project-test-"));
@@ -42,10 +28,10 @@ test("프로젝트는 시각 문서와 사용 이미지만 저장하고 새 편�
       bytes: pngHeader,
     });
     const registry = new ContentJobRegistry({ createId: () => "project-1" });
-    registry.add(input, "old-thread");
+    registry.add({structure:"repeating",aspectRatio:"4:5",slideCount:4,outputLanguage:"English"});
     registry.update("project-1", (job) => {
-      const document = createDocumentFromAnalysis(analysis, "repeating", 4, "4:5");
-      const template = document.elements.find((element) => element.id === "title")!;
+      const document = createBlankDocument({structure:"repeating",aspectRatio:"4:5",slideCount:4});
+      const template = makeElementDefinition({id:"title",kind:"text"});
       document.elements.push({ ...structuredClone(template), id: "visual", name: "운동 이미지", kind: "image" });
       document.slides[0].placements.push({
         id: "visual-placement",
@@ -54,17 +40,8 @@ test("프로젝트는 시각 문서와 사용 이미지만 저장하고 새 편�
         frameOverride: null,
         styleOverride: null,
       });
-      job.editor.status = "ready";
       job.editor.document = document;
-      job.editor.messages.push({ id: "message-1", role: "user", text: "저장되면 안 되는 대화" });
-      job.editorHistory.push({
-        document: structuredClone(document),
-        selectedTopic: null,
-        bodyReady: false,
-        hookSuggestions: [],
-        selectedHookId: null,
-        proposalSets: [],
-      });
+      job.editorHistory.push(structuredClone(document));
       job.assets = [{ id: image.id, name: image.name, type: image.type, size: image.size }];
     });
 
@@ -77,17 +54,13 @@ test("프로젝트는 시각 문서와 사용 이미지만 저장하고 새 편�
     const reopenedProjects = new ContentProjectStore(reopened);
     const reopenedAssets = new AssetStore(reopened);
     const restoredRegistry = new ContentJobRegistry();
-    const workflow = new ContentWorkflowService(new FakeCodexClient(), restoredRegistry, { cwd: directory });
-    const restored = await loadContentProject(workflow, "project-1", "gpt-6-luna", {
+    const restored = await loadContentProject(restoredRegistry, "project-1", {
       projects: reopenedProjects,
       assets: reopenedAssets,
     });
 
     assert.equal(restored.id, "project-1");
     assert.equal(restored.editor.document?.aspectRatio, "4:5");
-    assert.deepEqual(restored.editor.messages, []);
-    assert.deepEqual(restored.editor.proposalSets, []);
-    assert.equal(restoredRegistry.getRecord("project-1").threadId, "fresh-thread");
     assert.deepEqual(restoredRegistry.getRecord("project-1").editorHistory, []);
     assert.deepEqual(reopenedAssets.readImage(image.id)?.bytes, Buffer.from(pngHeader));
     assert.equal(reopenedProjects.list()[0].name, "운동 콘텐츠");
