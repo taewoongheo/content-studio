@@ -1,7 +1,7 @@
 import Konva from "konva";
 import type { EditorDocument, EditorSlide, ElementFrame } from "@/lib/content-jobs/editor/types";
 import { BACKGROUND_ELEMENT_ID } from "@/lib/content-jobs/editor/document";
-import { artworkSize, fittedImage, pixelFrame } from "./layout";
+import { artworkSize, fittedImage, pixelFrame, renderImageUrl } from "./layout";
 import type { ArtworkImageLoader } from "./assets";
 
 type Options = {
@@ -21,8 +21,12 @@ export async function renderArtwork(options: Options) {
   const elements = new Map(doc.elements.map((element) => [element.id, element]));
   await window.document.fonts.ready;
   const images = new Map(await Promise.all(slide.placements.flatMap((placement) => {
-    if (elements.get(placement.elementId)?.kind !== "image" || !placement.value) return [];
-    const url = `/api/content-jobs/${encodeURIComponent(jobId)}/assets/${encodeURIComponent(placement.value)}`;
+    const element = elements.get(placement.elementId);
+    if (element?.kind !== "image" || !placement.value) return [];
+    // Reuse the committed-size derivative throughout a drag; resample once after resize commits.
+    const box = pixelFrame(placement.frameOverride ?? element.frame, size);
+    const fit = placement.styleOverride?.imageFit ?? element.style.imageFit;
+    const url = renderImageUrl(jobId, placement.value, box, fit);
     return [loadImage(url).then((image) => [placement.id, image] as const)];
   })));
 

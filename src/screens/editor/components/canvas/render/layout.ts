@@ -15,3 +15,10 @@ export function fittedImage(source: { width: number; height: number }, box: { wi
   const height = source.height * scale;
   return { x: (box.width - width) / 2, y: (box.height - height) / 2, width, height };
 }
+
+export function renderImageUrl(jobId: string, assetId: string, box: { width: number; height: number }, fit: "contain" | "cover") {
+  const scale = Math.min(1, 4096 / Math.max(box.width, box.height));
+  const dimension = (value: number) => Math.min(4096, Math.max(1, Math.ceil(value)));
+  const params = new URLSearchParams({ width: String(dimension(box.width * scale)), height: String(dimension(box.height * scale)), fit });
+  return `/api/content-jobs/${encodeURIComponent(jobId)}/assets/${encodeURIComponent(assetId)}?${params}`;
+}

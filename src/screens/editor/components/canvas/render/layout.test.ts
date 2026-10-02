@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fittedImage, pixelFrame } from "./layout";
+import { fittedImage, pixelFrame, renderImageUrl } from "./layout";
 import { createArtworkImageLoader } from "./assets";
 
 test("캔버스 밖 좌표를 유지하면서 문서 좌표를 원본 픽셀로 변환한다", () => {
@@ -20,6 +20,7 @@ test("동일 이미지 요청을 공유하고 decode 완료 후에만 렌더러�
   let finishDecode!: () => void;
   class TestImage {
     naturalWidth = 100;
+    naturalHeight = 100;
     onload: (() => void) | null = null;
     onerror: (() => void) | null = null;
     set src(_value: string) { requests++; queueMicrotask(() => this.onload?.()); }
@@ -42,4 +43,36 @@ test("동일 이미지 요청을 공유하고 decode 완료 후에만 렌더러�
   const image = await first;
   assert.equal(image.naturalWidth, 100);
   assert.equal(requests, 1);
+});
+
+test("렌더 이미지 URL은 최종 픽셀 크기와 fit으로 캐시를 구분하며 과대 크기는 비율대로 제한한다", () => {
+  const url = new URL(renderImageUrl("job/a", "asset/b", { width: 320.2, height: 180.1 }, "cover"), "http://localhost");
+  assert.equal(url.pathname, "/api/content-jobs/job%2Fa/assets/asset%2Fb");
+  assert.equal(url.search, "?width=321&height=181&fit=cover");
+  const large = new URL(renderImageUrl("job", "asset", { width: 8192, height: 4096 }, "contain"), "http://localhost");
+  assert.equal(large.search, "?width=4096&height=2048&fit=contain");
+});
+
+test("디코딩 이미지 캐시는 픽셀 메모리 용량을 기준으로 오래된 이미지를 제거한다", async (t) => {
+  let requests = 0;
+  class TestImage {
+    naturalWidth = 10;
+    naturalHeight = 10;
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    set src(_value: string) { requests++; queueMicrotask(() => this.onload?.()); }
+    async decode() {}
+  }
+  const original = Object.getOwnPropertyDescriptor(globalThis, "Image");
+  Object.defineProperty(globalThis, "Image", { configurable: true, value: TestImage });
+  t.after(() => {
+    if (original) Object.defineProperty(globalThis, "Image", original);
+    else Reflect.deleteProperty(globalThis, "Image");
+  });
+  const load = createArtworkImageLoader({ maxBytes: 800, maxEntries: 40 });
+  await load("a"); await load("b"); await load("a"); await load("c");
+  await load("a");
+  assert.equal(requests, 3);
+  await load("b");
+  assert.equal(requests, 4);
 });
