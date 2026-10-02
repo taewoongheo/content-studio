@@ -18,13 +18,16 @@ test("슬라이드 이름 변경은 내용·역할·ID를 보존하며 잘못된
   assert.equal(reordered.slides[2].name, "운동 설명");
 });
 
-test("반복형 본문 순서 변경은 가능하지만 훅·CTA 순서 파괴와 ID 누락은 거부한다", () => {
+test("모든 슬라이드 역할의 순서 변경을 허용하지만 ID 누락은 거부한다", () => {
   const { job } = readyJob();
   const before = job.editor.document!;
   const after = applyEditorCommands(before, [{ type: "reorder_slides", slideIds: ["slide-1", "slide-3", "slide-2", "slide-4"] }]);
   assert.equal(after.slides[1].id, "slide-3");
   assert.equal(before.slides[1].id, "slide-2");
-  assert.throws(() => applyEditorCommands(before, [{ type: "reorder_slides", slideIds: ["slide-2", "slide-1", "slide-3", "slide-4"] }]), /순서/);
+  const moved = applyEditorCommands(before, [{ type: "reorder_slides", slideIds: ["slide-4", "slide-2", "slide-3", "slide-1"] }]);
+  assert.deepEqual(moved.slides.map((slide) => slide.role), ["cta", "body", "body", "hook"]);
+  assert.throws(() => applyEditorCommands(moved, [{ type: "remove_slide", slideId: "slide-1" }]), /훅과 CTA/);
+  assert.equal(applyEditorCommands(moved, [{ type: "remove_slide", slideId: "slide-2" }]).slides.length, 3);
   assert.throws(() => applyEditorCommands(before, [{ type: "reorder_slides", slideIds: ["slide-1"] }]), /정확히/);
 });
 

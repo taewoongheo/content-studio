@@ -50,9 +50,10 @@ export function validateEditorDocument(document: EditorDocument): string[] {
     errors.push("슬라이드 수가 올바르지 않습니다.");
   if (document.structure === "repeating" && document.slides.length < 3)
     errors.push("반복형에는 본문 슬라이드가 한 장 이상 필요합니다.");
-  if (document.structure === "repeating" && document.slides.some((slide, index) =>
-    slide.role !== (index === 0 ? "hook" : index === document.slides.length - 1 ? "cta" : "body")))
-    errors.push("반복형은 훅·본문·CTA 순서여야 합니다.");
+  if (document.structure === "repeating" &&
+    (document.slides.filter((slide) => slide.role === "hook").length !== 1 ||
+      document.slides.filter((slide) => slide.role === "cta").length !== 1))
+    errors.push("반복형에는 훅과 CTA가 한 장씩 필요합니다.");
   for (const element of document.elements) {
     if (!element.id || !element.name.trim() || !element.role.trim() ||
       !["background", "text", "image", "rectangle", "circle", "triangle"].includes(element.kind) ||
@@ -267,9 +268,8 @@ export function applyEditorCommand(document: EditorDocument, command: EditorComm
       const afterIndex = next.slides.findIndex((slide) => slide.id === command.afterSlideId);
       const source = requireSlide(next, command.sourceSlideId);
       if (afterIndex < 0) throw new Error("삽입 위치의 슬라이드를 찾을 수 없습니다.");
-      if (next.structure === "repeating" &&
-        (afterIndex === next.slides.length - 1 || source.role !== "body"))
-        throw new Error("반복형 본문 장 사이에 본문 슬라이드만 추가할 수 있습니다.");
+      if (next.structure === "repeating" && source.role !== "body")
+        throw new Error("반복형에서는 본문 슬라이드만 추가할 수 있습니다.");
       const slide = structuredClone(source);
       slide.id = command.newSlideId;
       slide.placements = slide.placements.map((placement) => ({
@@ -284,7 +284,7 @@ export function applyEditorCommand(document: EditorDocument, command: EditorComm
     case "remove_slide": {
       const index = next.slides.findIndex((slide) => slide.id === command.slideId);
       if (index < 0) throw new Error("슬라이드를 찾을 수 없습니다.");
-      if (next.structure === "repeating" && (index === 0 || index === next.slides.length - 1))
+      if (next.structure === "repeating" && next.slides[index].role !== "body")
         throw new Error("반복형의 훅과 CTA 장은 제거할 수 없습니다.");
       if (next.slides.length <= (next.structure === "repeating" ? 3 : 2))
         throw new Error("필수 슬라이드는 제거할 수 없습니다.");

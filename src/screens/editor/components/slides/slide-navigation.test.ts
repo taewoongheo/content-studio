@@ -3,11 +3,11 @@ import test from "node:test";
 import { readyJob } from "@/lib/content-jobs/editor/workflow/orchestration/tests/fixtures";
 import { reorderedSlideIds, slideLabel } from "./slide-navigation";
 
-test("본문 드래그는 ID를 보존하고 훅·CTA는 이동하지 않는다", () => {
+test("모든 역할의 드래그는 ID를 보존한다", () => {
   const document = readyJob().job.editor.document!;
   assert.deepEqual(reorderedSlideIds(document, "slide-2", "slide-3"), ["slide-1", "slide-3", "slide-2", "slide-4"]);
-  assert.equal(reorderedSlideIds(document, "slide-1", "slide-2"), null);
-  assert.equal(reorderedSlideIds(document, "slide-2", "slide-4"), null);
+  assert.deepEqual(reorderedSlideIds(document, "slide-1", "slide-2"), ["slide-2", "slide-1", "slide-3", "slide-4"]);
+  assert.deepEqual(reorderedSlideIds(document, "slide-4", "slide-1"), ["slide-4", "slide-1", "slide-2", "slide-3"]);
   assert.equal(reorderedSlideIds(document, "missing", "slide-2"), null);
   assert.equal(reorderedSlideIds(document, "slide-2", "slide-2"), null);
   assert.equal(document.slides[1].id, "slide-2");

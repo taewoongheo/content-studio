@@ -126,13 +126,13 @@ function replaceDocument(job: ContentJobRecord, document: EditorDocument) {
 
 function bodySlots(document: EditorDocument) {
   const kinds = new Map(document.elements.map((element) => [element.id, element.kind]));
-  return document.slides.slice(1).flatMap((slide) => slide.placements
+  return document.slides.filter((slide) => slide.role !== "hook").flatMap((slide) => slide.placements
     .filter((placement) => kinds.get(placement.elementId) === "text")
     .map((placement) => `${slide.id}:${placement.id}`));
 }
 
 function hookPlacement(document: EditorDocument) {
-  const firstSlide = document.slides[0];
+  const firstSlide = document.slides.find((slide) => slide.role === "hook") ?? document.slides[0];
   const placement = firstSlide.placements.find((item) =>
     document.elements.some((element) => element.id === item.elementId && element.kind === "text"));
   if (!placement) invalid("훅 텍스트 슬롯을 찾을 수 없습니다.");
@@ -140,10 +140,11 @@ function hookPlacement(document: EditorDocument) {
 }
 
 function changedBodyText(before: EditorDocument, after: EditorDocument) {
-  const values = (document: EditorDocument) => document.slides.slice(1).flatMap((slide) =>
+  const values = (document: EditorDocument) => document.slides.filter((slide) => slide.role !== "hook").flatMap((slide) =>
     slide.placements.filter((placement) => document.elements.some((element) =>
       element.id === placement.elementId && element.kind === "text"))
-      .map((placement) => [slide.id, placement.id, placement.value]));
+      .map((placement) => [slide.id, placement.id, placement.value])).sort((a, b) =>
+        a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]));
   return JSON.stringify(values(before)) !== JSON.stringify(values(after));
 }
 
@@ -686,7 +687,7 @@ export class EditorWorkflowService {
         if (result.appliedProposal?.kind === "topic") current.editor.selectedTopic = result.appliedProposal;
         if (result.appliedProposal?.kind === "hook") current.editor.selectedHookId = result.appliedProposal.id;
         const slots = bodySlots(result.document);
-        if (slots.length) current.editor.bodyReady = result.document.slides.slice(1).every((slide) =>
+        if (slots.length) current.editor.bodyReady = result.document.slides.filter((slide) => slide.role !== "hook").every((slide) =>
           slide.placements.filter((p) => result.document.elements.some((e) => e.id === p.elementId && e.kind === "text"))
             .every((p) => Boolean(p.value.trim())));
       }

@@ -113,8 +113,10 @@ test("반복형 본문 장을 비워 추가하거나 내용을 복제하고, 필
   assert.deepEqual(validateEditorDocument(removed), []);
   assert.throws(() => applyEditorCommand(initial, { type: "remove_slide", slideId: "slide-1" }), /훅과 CTA/);
   assert.throws(() => applyEditorCommand(initial, { type: "remove_slide", slideId: "slide-4" }), /훅과 CTA/);
-  assert.throws(() => applyEditorCommand(initial, { type: "add_slide", afterSlideId: "slide-4",
-    sourceSlideId: "slide-2", newSlideId: "too-late", copyContent: false }), /본문 장 사이/);
+  const appended = applyEditorCommand(initial, { type: "add_slide", afterSlideId: "slide-4",
+    sourceSlideId: "slide-2", newSlideId: "last-body", copyContent: false });
+  assert.equal(appended.slides.at(-1)?.role, "body");
+  assert.deepEqual(validateEditorDocument(appended), []);
   assert.throws(() => applyEditorCommand(initial, { type: "add_slide", afterSlideId: "slide-2",
     sourceSlideId: "slide-2", newSlideId: "", copyContent: false }), /슬라이드 ID/);
   const three = applyEditorCommand(initial, { type: "remove_slide", slideId: "slide-2" });

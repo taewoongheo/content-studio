@@ -10,8 +10,6 @@ export function reorderedSlideIds(document: EditorDocument, activeId: string, ov
   const from = document.slides.findIndex((slide) => slide.id === activeId);
   const to = document.slides.findIndex((slide) => slide.id === overId);
   if (from < 0 || to < 0 || from === to) return null;
-  if (document.structure === "repeating" &&
-    (document.slides[from].role !== "body" || document.slides[to].role !== "body")) return null;
   const ids = document.slides.map((slide) => slide.id);
   ids.splice(to, 0, ids.splice(from, 1)[0]);
   return ids;

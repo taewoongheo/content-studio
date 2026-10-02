@@ -24,6 +24,7 @@ import { ProjectSaveControl, type ProjectSaveHandle } from "./components/project
 import { ExportControl } from "./components/export/export-control";
 import { resolveEditorSelection, roleLabels } from "./editor-selection";
 import { SlideTabs } from "./components/slides/slide-tabs";
+import { ElementLayers } from "./components/layers/element-layers";
 
 async function readImageAspectRatio(file: File) {
   try {
@@ -276,7 +277,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
           </div>
         </main>
       ) : slide ? (
-        <main className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden bg-background lg:grid-cols-[minmax(260px,300px)_minmax(0,1fr)_minmax(300px,360px)] 2xl:grid-cols-[minmax(300px,340px)_minmax(0,1fr)_minmax(340px,400px)] max-lg:overflow-visible">
+        <main className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden bg-background lg:grid-cols-[minmax(220px,260px)_180px_minmax(0,1fr)_minmax(260px,320px)] 2xl:grid-cols-[minmax(260px,300px)_220px_minmax(0,1fr)_minmax(300px,360px)] max-lg:overflow-visible">
           <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden border-r px-4 py-4 max-lg:order-2 max-lg:min-h-[360px] max-lg:border-r-0 max-lg:border-t" aria-label="선택 항목 편집">
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {element?.kind === "background" && placement ? (
@@ -310,6 +311,55 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
               ) : null}
             </div>
           </aside>
+
+          <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden border-r px-3 py-3 max-lg:order-2 max-lg:h-80 max-lg:border-r-0 max-lg:border-t" aria-label="Element 레이어">
+              {showImageLibrary && <ImageLibraryPicker anchorRef={imageLibraryButtonRef} disabled={disabled}
+                onSelect={(asset) => addStoredImage(asset.id)}
+                onAddEmpty={() => addElement("image")}
+                onClose={() => { setShowImageLibrary(false); imageLibraryButtonRef.current?.focus(); }} />}
+              <div className="flex shrink-0 flex-col items-stretch gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-sm font-semibold">Element</h2>
+                  {element && placement && appliedSlides.length > 1 && <ElementScopePicker
+                    key={scopeKey}
+                    currentSlideId={slide.id}
+                    slides={appliedSlides}
+                    selectedSlideIds={selectedSlideIds}
+                    isBackground={element.kind === "background"}
+                    disabled={disabled}
+                    onChange={changeVisualScope}
+                  />}
+                  {element && placement && appliedSlides.length === 1 && <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Layers3 className="size-3.5" aria-hidden="true" /> {visualScopeLabel(1, 1)}
+                  </span>}
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {element && placement && element.kind !== "background" && <div className="mr-1 flex items-center gap-1.5 border-r pr-2">
+                    <Button size="sm" variant="outline" disabled={disabled} onClick={() => void duplicateElement()} aria-label={`선택한 ${selectedSlideIds.length}장에서 ${element.name} 복제`}><Copy className="size-3.5" aria-hidden="true" /> 복제</Button>
+                    <Button size="icon-sm" variant="destructive" disabled={disabled} onClick={() => void removeElement()}
+                      aria-label={`선택한 ${selectedSlideIds.length}장에서 ${element.name} 제거`}
+                      title={`선택한 ${selectedSlideIds.length}장에서 제거`}><Trash2 className="size-3.5" aria-hidden="true" /></Button>
+                  </div>}
+                  <Button size="sm" variant="outline" disabled={disabled} onClick={() => void addElement("text")}>텍스트 추가</Button>
+                  <Button ref={imageLibraryButtonRef} size="sm" variant={showImageLibrary ? "secondary" : "outline"} disabled={disabled}
+                    aria-expanded={showImageLibrary} aria-controls="editor-image-library"
+                    onClick={() => setShowImageLibrary((current) => !current)}>이미지 추가</Button>
+                  <label className="sr-only" htmlFor="add-shape">도형 추가</label>
+                  <select id="add-shape" defaultValue="" disabled={disabled} className="h-7 rounded-md border bg-background px-2 text-[0.8rem] font-medium" onChange={(event) => {
+                    const kind = event.target.value as "rectangle" | "circle" | "triangle";
+                    event.target.value = "";
+                    void addElement(kind);
+                  }}>
+                    <option value="" disabled>도형 추가</option>
+                    <option value="rectangle">사각형</option>
+                    <option value="circle">원형</option>
+                    <option value="triangle">삼각형</option>
+                  </select>
+                </div>
+              </div>
+              <ElementLayers document={document} slide={slide} selectedPlacementId={placement?.id ?? null}
+                selectedSlideIds={selectedSlideIds} disabled={disabled} onSelect={setPlacementId} onCommand={saveCommands} />
+            </aside>
 
           <section className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-background max-lg:order-1 max-lg:min-h-[620px] max-lg:border-b" aria-label="슬라이드 편집 영역">
             <nav aria-label="페이지 선택" className="shrink-0 border-b px-4 py-3">
@@ -361,64 +411,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
                 onSelect={setPlacementId} onSelectBackground={() => setPlacementId(BACKGROUND_PLACEMENT_ID)}
                 onFrameChange={changeFrame} onDropImage={addDroppedImage} />
             </div>
-            <div className="shrink-0 border-t px-4 py-3">
-              {showImageLibrary && <ImageLibraryPicker anchorRef={imageLibraryButtonRef} disabled={disabled}
-                onSelect={(asset) => addStoredImage(asset.id)}
-                onAddEmpty={() => addElement("image")}
-                onClose={() => { setShowImageLibrary(false); imageLibraryButtonRef.current?.focus(); }} />}
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-sm font-semibold">Element</h2>
-                  {element && placement && appliedSlides.length > 1 && <ElementScopePicker
-                    key={scopeKey}
-                    currentSlideId={slide.id}
-                    slides={appliedSlides}
-                    selectedSlideIds={selectedSlideIds}
-                    isBackground={element.kind === "background"}
-                    disabled={disabled}
-                    onChange={changeVisualScope}
-                  />}
-                  {element && placement && appliedSlides.length === 1 && <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Layers3 className="size-3.5" aria-hidden="true" /> {visualScopeLabel(1, 1)}
-                  </span>}
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {element && placement && element.kind !== "background" && <div className="mr-1 flex items-center gap-1.5 border-r pr-2">
-                    <Button size="sm" variant="outline" disabled={disabled} onClick={() => void duplicateElement()} aria-label={`선택한 ${selectedSlideIds.length}장에서 ${element.name} 복제`}><Copy className="size-3.5" aria-hidden="true" /> 복제</Button>
-                    <Button size="icon-sm" variant="destructive" disabled={disabled} onClick={() => void removeElement()}
-                      aria-label={`선택한 ${selectedSlideIds.length}장에서 ${element.name} 제거`}
-                      title={`선택한 ${selectedSlideIds.length}장에서 제거`}><Trash2 className="size-3.5" aria-hidden="true" /></Button>
-                  </div>}
-                  <Button size="sm" variant="outline" disabled={disabled} onClick={() => void addElement("text")}>텍스트 추가</Button>
-                  <Button ref={imageLibraryButtonRef} size="sm" variant={showImageLibrary ? "secondary" : "outline"} disabled={disabled}
-                    aria-expanded={showImageLibrary} aria-controls="editor-image-library"
-                    onClick={() => setShowImageLibrary((current) => !current)}>이미지 추가</Button>
-                  <label className="sr-only" htmlFor="add-shape">도형 추가</label>
-                  <select id="add-shape" defaultValue="" disabled={disabled} className="h-7 rounded-md border bg-background px-2 text-[0.8rem] font-medium" onChange={(event) => {
-                    const kind = event.target.value as "rectangle" | "circle" | "triangle";
-                    event.target.value = "";
-                    void addElement(kind);
-                  }}>
-                    <option value="" disabled>도형 추가</option>
-                    <option value="rectangle">사각형</option>
-                    <option value="circle">원형</option>
-                    <option value="triangle">삼각형</option>
-                  </select>
-                </div>
-              </div>
-              <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-                <button type="button" onClick={() => setPlacementId(BACKGROUND_PLACEMENT_ID)} aria-pressed={element?.kind === "background"} className={`shrink-0 rounded-lg border px-3 py-2 text-left text-xs font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground ${element?.kind === "background" ? "border-foreground bg-muted" : "bg-background"}`}>배경</button>
-                {slide.placements.filter((item) => item.elementId !== BACKGROUND_ELEMENT_ID).map((item) => {
-                  const definition = document.elements.find((candidate) => candidate.id === item.elementId);
-                  return (
-                    <button type="button" key={item.id} onClick={() => setPlacementId(item.id)} aria-pressed={item.id === placement?.id} className={`max-w-44 shrink-0 rounded-lg border px-3 py-2 text-left text-xs hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground ${item.id === placement?.id ? "border-foreground bg-muted" : "bg-background"}`}>
-                      <span className="block truncate font-medium">{definition?.name ?? "Element"}</span>
-                      <span className="mt-0.5 block truncate text-muted-foreground">{definition?.role ?? "역할 없음"}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+
           </section>
 
           <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden border-l bg-background max-lg:order-3 max-lg:min-h-[460px] max-lg:border-l-0 max-lg:border-t" aria-label="AI 채팅 편집">
