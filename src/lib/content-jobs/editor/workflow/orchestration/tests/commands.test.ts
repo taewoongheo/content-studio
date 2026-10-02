@@ -5,6 +5,28 @@ import { validateStructuredOutput } from "../../../../structured-output/schemas"
 import { assignServerIds } from "../executor";
 import { agentOutputSchema } from "../output-schema";
 import { readyJob } from "./fixtures";
+import { makeElementDefinition } from "../../../elements/factory";
+
+test("테두리 설정은 JSON 명령으로 저장하고 잘못된 두께·색상은 거부한다", () => {
+  const before = readyJob().job.editor.document!;
+  const element = makeElementDefinition({ id: "shape", kind: "rectangle", sourceImageId: "" });
+  const document = applyEditorCommands(before, [
+    { type: "add_element", element },
+    { type: "place_element", slideId: "slide-2", elementId: element.id, placementId: "shape-p" },
+  ]);
+  const style = { backgroundColor: "transparent", borderEnabled: true, borderColor: "#0088FF", borderWidth: 8, borderRadius: 10 };
+  const command = { type: "update_visual" as const, scope: "local" as const, slideId: "slide-2", placementId: "shape-p", style };
+  const result = applyEditorCommands(document, [command]);
+  assert.deepEqual(result.slides[1].placements.find((p) => p.id === "shape-p")?.styleOverride, style);
+  assert.throws(() => applyEditorCommands(document, [{ ...command, style: { borderWidth: -1 } }]), /스타일/);
+  assert.throws(() => applyEditorCommands(document, [{ ...command, style: { borderColor: "red" } }]), /스타일/);
+  const output = { status: "complete", reply: "완료", actions: [], topics: [], hooks: [],
+    appliedProposalId: "", history: "none", commands: [{ ...command, frame: null, style: {
+      color: null, fontSize: null, lineHeight: null, fontWeight: null, textAlign: null,
+      fontFamily: null, imageFit: null, ...style,
+    } }] };
+  assert.equal(validateStructuredOutput(agentOutputSchema, output).ok, true);
+});
 
 test("슬라이드 이름 변경은 내용·역할·ID를 보존하며 잘못된 이름을 거부한다", () => {
   const before = readyJob().job.editor.document!;

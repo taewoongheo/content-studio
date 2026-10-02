@@ -25,6 +25,24 @@ test("입력 초안은 바뀐 필드만 개별 수정 명령으로 만든다", (
   ]);
 });
 
+test("기존 스타일에도 테두리 기본값을 표시하고 선택한 장 또는 전체 범위에 저장한다", () => {
+  const draft = makeElementDraft(element, placement);
+  assert.equal(draft.style.borderEnabled, false);
+  assert.equal(draft.style.borderWidth, 2);
+  const patch = { borderEnabled: true, borderColor: "#FF0000", borderWidth: 8, borderRadius: 12 };
+  const changed = { ...draft, style: { ...draft.style, ...patch } };
+  const all = [...targets, { slideId: "slide-2", placement: { ...placement, id: "p2" } }];
+  assert.deepEqual(commandsFromDraft(changed, element, placement, "slide-1", all, ["slide-1"]), [
+    { type: "update_visual", scope: "local", slideId: "slide-1", placementId: placement.id, style: patch },
+  ]);
+  assert.deepEqual(commandsFromDraft(changed, element, placement, "slide-1", all, ["slide-1", "slide-2"]), [
+    { type: "update_visual", scope: "common", elementId: element.id, style: patch },
+  ]);
+  assert.equal(validElementDraft(changed), true);
+  assert.equal(validElementDraft({ ...changed, style: { ...changed.style, borderWidth: -1 } }), false);
+  assert.equal(validElementDraft({ ...changed, style: { ...changed.style, borderColor: "invalid" } }), false);
+});
+
 test("빈 텍스트 슬롯은 내용 입력칸도 비워 둔다", () => {
   const emptyPlacement = { ...placement, value: "" };
   const draft = makeElementDraft(element, emptyPlacement);

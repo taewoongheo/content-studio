@@ -125,7 +125,26 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
           <label className="grid gap-1.5 text-xs font-medium">{isShape ? "채우기 색" : "배경색"}
             <Input type="color" className="h-10 p-1" value={draft.style.backgroundColor === "transparent" ? "#FFFFFF" : draft.style.backgroundColor} onChange={(event) => updateStyle("backgroundColor", event.target.value)} disabled={draft.style.backgroundColor === "transparent"} />
           </label>
-          {!isShape && <label className="col-span-2 flex items-center gap-2 text-xs font-medium"><input type="checkbox" checked={draft.style.backgroundColor === "transparent"} onChange={(event) => updateStyle("backgroundColor", event.target.checked ? "transparent" : "#FFFFFF")} />투명 배경</label>}
+          <label className="col-span-2 flex items-center gap-2 text-xs font-medium"><input type="checkbox" checked={draft.style.backgroundColor === "transparent"}
+            onChange={(event) => {
+              const transparent = event.target.checked;
+              setDraft((current) => ({ ...current, style: { ...current.style,
+                backgroundColor: transparent ? "transparent" : "#FFFFFF",
+                ...(isShape && transparent ? { borderEnabled: true } : {}),
+              } }));
+            }} />투명 배경</label>
+          {isShape && <>
+            <label className="col-span-2 flex items-center gap-2 text-xs font-medium">
+              <input type="checkbox" checked={draft.style.borderEnabled ?? false}
+                onChange={(event) => updateStyle("borderEnabled", event.target.checked)} />테두리
+            </label>
+            <label className="grid gap-1.5 text-xs font-medium">테두리 색
+              <Input type="color" className="h-10 p-1" value={draft.style.borderColor ?? "#111111"}
+                disabled={!draft.style.borderEnabled} onChange={(event) => updateStyle("borderColor", event.target.value)} />
+            </label>
+            <NumberField label="테두리 두께 (px)" value={draft.style.borderWidth ?? 2} min={0} max={100} step={0.5}
+              disabled={!draft.style.borderEnabled} onChange={(value) => updateStyle("borderWidth", value)} />
+          </>}
           {element.kind === "text" && (
             <>
               <NumberField label="글자 크기" value={draft.style.fontSize}
@@ -157,8 +176,8 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
               <option value="cover">영역 채우기</option><option value="contain">전체 보이기</option>
             </select>
           </label>}
-          {(element.kind === "text" || element.kind === "image" || element.kind === "rectangle") &&
-            <NumberField label="모서리" value={draft.style.borderRadius} onChange={(value) => updateStyle("borderRadius", value)} />}
+          {(element.kind === "text" || element.kind === "image" || element.kind === "rectangle" || element.kind === "triangle") &&
+            <NumberField label="모서리 반경 (px)" value={draft.style.borderRadius} min={0} max={100} onChange={(value) => updateStyle("borderRadius", value)} />}
         </fieldset>
       </div>
 

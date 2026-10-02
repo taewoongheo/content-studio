@@ -1,4 +1,5 @@
 import type { EditorCommand, ElementDefinition, ElementFrame, ElementStyle, PlacedElement } from "@/lib/content-jobs/editor/types";
+import { validBorder, withBorderDefaults } from "@/lib/content-jobs/editor/elements/style";
 
 export type VisualTarget = { slideId: string; placement: PlacedElement };
 export type ElementDraft = {
@@ -40,7 +41,7 @@ export function makeElementDraft(element: ElementDefinition, placement: PlacedEl
     role: element.role,
     value: placement.value,
     frame: visualPlacement.frameOverride ?? element.frame,
-    style: { ...element.style, ...visualPlacement.styleOverride },
+    style: withBorderDefaults({ ...element.style, ...visualPlacement.styleOverride }),
   };
 }
 
@@ -51,7 +52,7 @@ export function validElementDraft(draft: ElementDraft) {
     draft.style.fontSize >= 8 && draft.style.fontSize <= 200 &&
     draft.style.lineHeight >= 0.8 && draft.style.lineHeight <= 3 &&
     Number.isInteger(draft.style.fontWeight) && draft.style.fontWeight >= 100 && draft.style.fontWeight <= 900 &&
-    draft.style.borderRadius >= 0 && draft.style.borderRadius <= 100;
+    draft.style.borderRadius >= 0 && draft.style.borderRadius <= 100 && validBorder(draft.style);
 }
 
 export function commandsFromDraft(
@@ -70,7 +71,7 @@ export function commandsFromDraft(
     commands.push({ type: "set_slot_value", slideId, placementId: placement.id, value: draft.value });
 
   const baseFrame = visualPlacement.frameOverride ?? element.frame;
-  const baseStyle = { ...element.style, ...visualPlacement.styleOverride };
+  const baseStyle = withBorderDefaults({ ...element.style, ...visualPlacement.styleOverride });
   const changedFrameKeys = (Object.keys(baseFrame) as Array<keyof ElementFrame>)
     .filter((key) => draft.frame[key] !== baseFrame[key]);
   const changedStyle = Object.fromEntries((Object.keys(baseStyle) as Array<keyof ElementStyle>)

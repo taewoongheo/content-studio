@@ -16,6 +16,9 @@ export type ElementStyle = {
   fontWeight: number;
   textAlign: "left" | "center" | "right";
   borderRadius: number;
+  borderEnabled?: boolean;
+  borderColor?: string;
+  borderWidth?: number;
   fontFamily: "sans-serif" | "serif" | "monospace";
   imageFit: "cover" | "contain";
 };

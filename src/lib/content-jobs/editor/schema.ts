@@ -18,9 +18,12 @@ const style = object({
   fontWeight: { type: "integer", minimum: 100, maximum: 900 },
   textAlign: { type: "string", enum: ["left", "center", "right"] },
   borderRadius: { type: "number", minimum: 0, maximum: 100 },
+  borderEnabled: { type: "boolean" },
+  borderColor: color,
+  borderWidth: { type: "number", minimum: 0, maximum: 100 },
   fontFamily: { type: "string", enum: ["sans-serif", "serif", "monospace"] },
   imageFit: { type: "string", enum: ["cover", "contain"] },
-});
+}, ["color", "backgroundColor", "fontSize", "lineHeight", "fontWeight", "textAlign", "borderRadius", "fontFamily", "imageFit"]);
 const stylePatch = {
   type: "object",
   properties: style.properties,

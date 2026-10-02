@@ -3,6 +3,7 @@ import type { EditorDocument, EditorSlide, ElementFrame } from "@/lib/content-jo
 import { BACKGROUND_ELEMENT_ID } from "@/lib/content-jobs/editor/document";
 import { artworkSize, fittedImage, pixelFrame, renderImageUrl } from "./layout";
 import type { ArtworkImageLoader } from "./assets";
+import { roundedTrianglePath, shapeGeometry } from "./shapes/geometry";
 
 type Options = {
   document: EditorDocument;
@@ -46,13 +47,19 @@ export async function renderArtwork(options: Options) {
       layer.add(group);
       const bounds = { width: frame.width, height: frame.height };
       const radius = Math.min(style.borderRadius, frame.width / 2, frame.height / 2);
+      const shape = shapeGeometry(frame.width, frame.height, style);
 
       if (element.kind === "circle") {
         group.add(new Konva.Ellipse({ x: frame.width / 2, y: frame.height / 2,
-          radiusX: frame.width / 2, radiusY: frame.height / 2, fill: style.backgroundColor }));
+          radiusX: shape.width / 2, radiusY: shape.height / 2, fill: shape.fill,
+          stroke: shape.stroke, strokeWidth: shape.strokeWidth, strokeEnabled: shape.strokeEnabled }));
       } else if (element.kind === "triangle") {
-        group.add(new Konva.Line({ points: [frame.width / 2, 0, 0, frame.height, frame.width, frame.height],
-          closed: true, fill: style.backgroundColor }));
+        group.add(new Konva.Path({ x: shape.x, y: shape.y,
+          data: roundedTrianglePath(shape.width, shape.height, shape.radius),
+          fill: shape.fill, stroke: shape.stroke, strokeWidth: shape.strokeWidth,
+          strokeEnabled: shape.strokeEnabled, lineJoin: "round" }));
+      } else if (element.kind === "rectangle") {
+        group.add(new Konva.Rect({ ...shape, cornerRadius: shape.radius }));
       } else {
         group.add(new Konva.Rect({ ...bounds, cornerRadius: radius, fill: style.backgroundColor }));
         if (element.kind === "image") {

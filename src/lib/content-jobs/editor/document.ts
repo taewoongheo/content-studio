@@ -1,4 +1,5 @@
 import type { SlideshowStructure } from "../domain/types";
+import { validBorder } from "./elements/style";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_FRAME, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, syncBackgroundColors } from "./background";
 import type {
   EditorAnalysis,
@@ -19,7 +20,7 @@ function validFrame(frame: ElementFrame) {
 }
 
 function validStyle(style: ElementStyle) {
-  return colorPattern.test(style.color) &&
+  return validBorder(style) && colorPattern.test(style.color) &&
     (colorPattern.test(style.backgroundColor) || style.backgroundColor === "transparent") &&
     Number.isFinite(style.fontSize) && style.fontSize >= 8 && style.fontSize <= 200 &&
     Number.isFinite(style.lineHeight) && style.lineHeight >= 0.8 && style.lineHeight <= 3 &&
