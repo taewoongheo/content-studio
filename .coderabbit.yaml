@@ -36,11 +36,6 @@ reviews:
         Review screen-level composition, accessibility, responsive behavior, and state
         ownership. Keep screen-specific UI inside the screen and shared UI in src/components.
         Follow the project's minimal shadcn and Tailwind visual language.
-    - path: "src/lib/codex/**"
-      instructions: |
-        Review child-process lifecycle, JSONL request correlation, stream cleanup,
-        timeouts, reconnect behavior, and prevention of duplicate Codex processes.
-        Do not treat API keys as interchangeable with the user's ChatGPT-managed Codex login.
     - path: "**/*.tsx"
       instructions: |
         Review React accessibility, stable event behavior, predictable state updates,
