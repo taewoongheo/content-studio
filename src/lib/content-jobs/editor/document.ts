@@ -151,9 +151,12 @@ export function getDuplicateTargets(document: EditorDocument, slideId: string, p
   if (source.elementId === BACKGROUND_ELEMENT_ID) throw new Error("배경 Element는 복제할 수 없습니다.");
   const selected = new Set(selectedSlideIds);
   if (!selected.has(slideId)) throw new Error("현재 장을 복제 범위에 포함해 주세요.");
-  return document.slides.filter((slide) => selected.has(slide.id)).flatMap((slide) => slide.placements
-    .filter((placement) => placement.elementId === source.elementId)
-    .map((placement) => ({ slideId: slide.id, sourcePlacementId: placement.id })));
+  for (const id of selected) requireSlide(document, id);
+  return document.slides.filter((slide) => selected.has(slide.id)).flatMap((slide) => {
+    const placements = slide.placements.filter((placement) => placement.elementId === source.elementId);
+    return (placements.length ? placements : [source])
+      .map((placement) => ({ slideId: slide.id, sourcePlacementId: placement.id }));
+  });
 }
 
 function offsetFrame(frame: ElementFrame): ElementFrame {
@@ -317,12 +320,15 @@ export function applyEditorCommand(document: EditorDocument, command: EditorComm
         name: `${sourceElement.name} 복사본`, frame: offsetFrame(sourceElement.frame) });
       for (const target of command.placements) {
         const slide = requireSlide(next, target.slideId);
-        const original = requirePlacement(slide, target.sourcePlacementId);
+        const original = slide.placements.find((placement) => placement.id === target.sourcePlacementId && placement.elementId === source.elementId)
+          ?? source;
         if (slide.placements.some((placement) => placement.id === target.newPlacementId))
           throw new Error("이미 존재하는 배치 ID입니다.");
         const duplicate = { ...structuredClone(original), id: target.newPlacementId, elementId: command.newElementId,
           frameOverride: original.frameOverride ? offsetFrame(original.frameOverride) : null };
-        slide.placements.splice(slide.placements.indexOf(original) + 1, 0, duplicate);
+        const sourceIndex = slide.placements.indexOf(original);
+        if (sourceIndex < 0) slide.placements.push(duplicate);
+        else slide.placements.splice(sourceIndex + 1, 0, duplicate);
       }
       break;
     }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { ArrowLeft, Copy, Layers3, LoaderCircle, Plus, Trash2, Undo2 } from "lucide-react";
+import { ArrowLeft, Copy, LoaderCircle, Plus, Trash2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import type { EditorCommand, ElementFrame, ElementKind } from "@/lib/content-jobs/editor/types";
@@ -25,6 +25,7 @@ import { ExportControl } from "./components/export/export-control";
 import { resolveEditorSelection, roleLabels } from "./editor-selection";
 import { SlideTabs } from "./components/slides/slide-tabs";
 import { ElementLayers } from "./components/layers/element-layers";
+import { clipboardShortcut, copyElement, pasteElement, type ElementClipboard } from "./components/clipboard/element-clipboard";
 
 async function readImageAspectRatio(file: File) {
   try {
@@ -60,12 +61,15 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   const imageLibraryButtonRef = useRef<HTMLButtonElement>(null);
   const latestRevision = useRef(job.editor.revision);
   const commandQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const clipboard = useRef<ElementClipboard | null>(null);
+  const latestDocument = useRef(job.editor.document);
   useEffect(() => {
     latestRevision.current = Math.max(latestRevision.current, job.editor.revision);
-  }, [job.editor.revision]);
+    latestDocument.current = job.editor.document;
+  }, [job.editor.revision, job.editor.document]);
   const document = useMemo(() => job.editor.document
     ? ensureSharedBackground(structuredClone(job.editor.document)) : null, [job.editor.document]);
-  const { slide, placement, element, appliedSlides, visualTargets, scopeKey, selectedSlideIds } =
+  const { slide, placement, element, appliedSlides, scopeSlides, visualTargets, scopeKey, selectedSlideIds } =
     resolveEditorSelection(document, slideId, placementId, scopeSelection);
   const disabled = submitting || Boolean(job.activeOperation);
   const issue = clientError || imageError || job.lastError;
@@ -104,6 +108,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
       try {
         const updated = await send({ action: "editor_command", commands, expectedRevision: latestRevision.current });
         latestRevision.current = updated.editor.revision;
+        latestDocument.current = updated.editor.document;
         return true;
       } catch {
         return false;
@@ -211,6 +216,21 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
     if (saved) setPlacementId(placements.find((item) => item.slideId === slide.id && item.sourcePlacementId === placement.id)?.newPlacementId ?? null);
   }
 
+  async function handleClipboard(action: "copy" | "paste") {
+    if (!slide || !placement || disabled) return;
+    if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return;
+    await commandQueue.current;
+    const current = latestDocument.current;
+    if (!current) return;
+    if (action === "copy") {
+      clipboard.current = copyElement(current, slide.id, placement.id, selectedSlideIds);
+      return;
+    }
+    if (!clipboard.current) return;
+    const pasted = pasteElement(current, clipboard.current, slide.id, () => crypto.randomUUID());
+    if (pasted && await saveCommands(pasted.commands)) setPlacementId(pasted.destinationPlacementId);
+  }
+
   async function removeElement() {
     if (!placement || element?.kind === "background") return;
     const commands = removalCommandsForScope(visualTargets, selectedSlideIds);
@@ -221,7 +241,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
 
   async function changeVisualScope(choice: ScopeChoice) {
     if (!slide || !placement || disabled) return;
-    const next = selectVisualSlides(slide.id, appliedSlides.map((item) => item.slideId), selectedSlideIds, choice);
+    const next = selectVisualSlides(slide.id, scopeSlides.map((item) => item.slideId), selectedSlideIds, choice);
     if (next.join() === selectedSlideIds.join()) return;
     if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return;
     setScopeSelection({ key: scopeKey, slideIds: next });
@@ -240,7 +260,14 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   }
 
   return (
-    <div className="flex h-svh min-h-0 flex-col overflow-hidden bg-background text-foreground max-lg:h-auto max-lg:min-h-svh max-lg:overflow-visible">
+    <div onKeyDown={(event) => {
+      const target = event.target as HTMLElement;
+      const editingText = Boolean(target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false']), [role='textbox']"));
+      const shortcut = clipboardShortcut(event, editingText);
+      if (!shortcut || disabled || (shortcut === "copy" ? !element || element.kind === "background" : !clipboard.current)) return;
+      event.preventDefault();
+      void handleClipboard(shortcut);
+    }} className="flex h-svh min-h-0 flex-col overflow-hidden bg-background text-foreground max-lg:h-auto max-lg:min-h-svh max-lg:overflow-visible">
       <header className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b px-3 py-1.5 sm:px-4">
         <div className="flex min-w-0 items-center gap-3">
           <Button variant="ghost" size="icon-sm" onClick={onNewJob} aria-label="새 작업으로 돌아가기"><ArrowLeft className="size-4" /></Button>
@@ -320,18 +347,15 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
               <div className="flex shrink-0 flex-col items-stretch gap-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-sm font-semibold">Element</h2>
-                  {element && placement && appliedSlides.length > 1 && <ElementScopePicker
+                  {element && placement && <ElementScopePicker
                     key={scopeKey}
                     currentSlideId={slide.id}
-                    slides={appliedSlides}
+                    slides={scopeSlides}
                     selectedSlideIds={selectedSlideIds}
                     isBackground={element.kind === "background"}
                     disabled={disabled}
                     onChange={changeVisualScope}
                   />}
-                  {element && placement && appliedSlides.length === 1 && <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Layers3 className="size-3.5" aria-hidden="true" /> {visualScopeLabel(1, 1)}
-                  </span>}
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
                   {element && placement && element.kind !== "background" && <div className="mr-1 flex items-center gap-1.5 border-r pr-2">
@@ -406,7 +430,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
             <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted/20 p-5 sm:p-6">
               <SlideCanvas key={slide.id} document={document} slide={slide} jobId={job.id}
                 selectedPlacementId={placement?.id ?? null} disabled={disabled} showGuides={showGuides}
-                selectionAppliesToAll={appliedSlides.length > 1 && selectedSlideIds.length === appliedSlides.length}
+                selectionAppliesToAll={appliedSlides.length > 1 && appliedSlides.every((item) => selectedSlideIds.includes(item.slideId))}
                 lockImageAspectRatio={imageAspectRatioLocked}
                 onSelect={setPlacementId} onSelectBackground={() => setPlacementId(BACKGROUND_PLACEMENT_ID)}
                 onFrameChange={changeFrame} onDropImage={addDroppedImage} />
@@ -421,7 +445,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
             <ChatPanel jobId={job.id} editor={job.editor} activeOperation={job.activeOperation} disabled={disabled}
               selectedTarget={slide && placement && element ? {
                 target: { slideId: slide.id, placementId: placement.id, elementId: element.id, slideIds: selectedSlideIds },
-                name: element.name, scopeLabel: visualScopeLabel(selectedSlideIds.length, appliedSlides.length),
+                name: element.name, scopeLabel: visualScopeLabel(selectedSlideIds.length, scopeSlides.length),
               } : null} onAction={action} />
           </aside>
         </main>

@@ -59,6 +59,7 @@ export function SlideCanvas({
   function beginGesture(event: PointerEvent<HTMLButtonElement>, placementId: string, frame: ElementFrame, mode: DragMode,
     lockAspectRatio = false) {
     event.stopPropagation();
+    event.currentTarget.focus({ preventScroll: true });
     if (selectedPlacementId !== placementId) {
       onSelect(placementId);
       return;

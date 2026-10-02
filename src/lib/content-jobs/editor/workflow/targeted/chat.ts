@@ -15,8 +15,7 @@ export function resolveChatTarget(document: EditorDocument, value: unknown): Edi
   const slide = document.slides.find((item) => item.id === target.slideId);
   const placement = slide?.placements.find((item) => item.id === target.placementId);
   if (!placement || placement.elementId !== target.elementId ||
-    target.slideIds.some((id) => !document.slides.some((item) => item.id === id &&
-      item.placements.some((placed) => placed.elementId === target.elementId))))
+    target.slideIds.some((id) => !document.slides.some((item) => item.id === id)))
     throw new Error("선택한 Element가 해당 슬라이드에 없습니다.");
   return { slideId: target.slideId, placementId: target.placementId,
     elementId: target.elementId, slideIds: target.slideIds as string[] };
@@ -45,7 +44,7 @@ function visualCommands(document: EditorDocument, target: EditorChatTarget,
   const patch = { ...(frame ? { frame } : {}), ...(Object.keys(style).length ? { style } : {}) };
   const appliedSlideCount = document.slides.filter((slide) => slide.placements.some((placement) =>
     placement.elementId === target.elementId)).length;
-  if (target.slideIds.length === appliedSlideCount)
+  if (new Set(selectedPlacements(document, target).map((item) => item.slideId)).size === appliedSlideCount)
     return [{ type: "update_visual", scope: "common", elementId: target.elementId, ...patch }];
   return selectedPlacements(document, target).map(({ slideId, placementId }) => ({
     type: "update_visual", scope: "local", slideId, placementId, ...patch,

@@ -19,11 +19,13 @@ export function resolveEditorSelection(
     .filter((placed) => placed.elementId === element.id)
     .map((placed) => ({ slideId: item.id, placement: placed }))) ?? [] : [];
   const scopeKey = slide && placement ? `${slide.id}:${placement.id}` : "";
+  const scopeSlides = document?.slides.map((item, index) => ({ slideId: item.id,
+    label: slideLabel(item, index), hasElement: item.placements.some((placed) => placed.elementId === element?.id) })) ?? [];
   const selectedSlideIds = slide && placement
-    ? selectVisualSlides(slide.id, appliedSlides.map((item) => item.slideId),
+    ? selectVisualSlides(slide.id, scopeSlides.map((item) => item.slideId),
       scopeSelection?.key === scopeKey ? scopeSelection.slideIds
-        : defaultVisualSlides(appliedSlides.map((item) => item.slideId)),
+        : defaultVisualSlides(scopeSlides.map((item) => item.slideId)),
       { slideId: slide.id, checked: true })
     : [];
-  return { slide, placement, element, appliedSlides, visualTargets, scopeKey, selectedSlideIds };
+  return { slide, placement, element, appliedSlides, scopeSlides, visualTargets, scopeKey, selectedSlideIds };
 }

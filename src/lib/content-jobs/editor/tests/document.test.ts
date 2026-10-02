@@ -5,6 +5,7 @@ import {
   applyEditorCommands,
   createDocumentFromAnalysis as buildDocument,
   ensureSharedBackground,
+  getDuplicateTargets,
   BACKGROUND_ELEMENT_ID,
   BACKGROUND_PLACEMENT_ID,
   validateEditorDocument,
@@ -41,6 +42,21 @@ const analysis: EditorAnalysis = {
     { imageId: "image-3", role: "cta", backgroundColor: "#FFFFFF", elementIds: [], visuals: [] },
   ],
 };
+
+test("복제 범위는 Element가 없는 장까지 포함하고 선택한 원본의 내용을 채운다", () => {
+  const initial = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
+  const populated = applyEditorCommand(initial, { type: "set_slot_value", slideId: "slide-2", placementId: "placement-2-1", value: "Squat" });
+  const ids = populated.slides.map((slide) => slide.id);
+  const targets = getDuplicateTargets(populated, "slide-2", "placement-2-1", ids);
+  assert.equal(targets.length, 4);
+  const next = applyEditorCommand(populated, { type: "duplicate_placement", sourceSlideId: "slide-2",
+    sourcePlacementId: "placement-2-1", newElementId: "everywhere",
+    placements: targets.map((target, index) => ({ ...target, newPlacementId: `new-${index}` })) });
+  assert.ok(next.slides.every((slide) => slide.placements.some((placement) => placement.elementId === "everywhere")));
+  assert.equal(next.slides[0].placements.find((placement) => placement.elementId === "everywhere")?.value, "Squat");
+  assert.equal(next.slides[2].placements.find((placement) => placement.elementId === "everywhere")?.value, "");
+  assert.throws(() => getDuplicateTargets(populated, "slide-2", "placement-2-1", ["slide-2", "unknown"]));
+});
 
 function createDocumentFromAnalysis(source: EditorAnalysis, structure: SlideshowStructure,
   slideCount: number, aspectRatio: EditorDocument["aspectRatio"]) {
