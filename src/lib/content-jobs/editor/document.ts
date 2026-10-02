@@ -61,6 +61,8 @@ export function validateEditorDocument(document: EditorDocument): string[] {
   }
   const knownElements = new Set(elementIds);
   for (const slide of document.slides) {
+    if (slide.name !== undefined && (typeof slide.name !== "string" || !slide.name.trim() || slide.name.length > 120))
+      errors.push(`${slide.id}의 이름은 1~120자여야 합니다.`);
     if (!colorPattern.test(slide.backgroundColor)) errors.push(`${slide.id}의 배경색이 올바르지 않습니다.`);
     const backgroundPlacements = slide.placements.filter((placement) => placement.elementId === BACKGROUND_ELEMENT_ID);
     const backgroundPlacement = backgroundPlacements[0];
@@ -161,6 +163,12 @@ function offsetFrame(frame: ElementFrame): ElementFrame {
 export function applyEditorCommand(document: EditorDocument, command: EditorCommand): EditorDocument {
   const next = ensureSharedBackground(structuredClone(document));
   switch (command.type) {
+    case "rename_slide": {
+      const name = command.name.trim();
+      if (!name || name.length > 120) throw new Error("슬라이드 이름은 1~120자로 입력해 주세요.");
+      requireSlide(next, command.slideId).name = name;
+      break;
+    }
     case "reorder_slides": {
       if (!unique(command.slideIds) || command.slideIds.length !== next.slides.length ||
         command.slideIds.some((id) => !next.slides.some((slide) => slide.id === id)))

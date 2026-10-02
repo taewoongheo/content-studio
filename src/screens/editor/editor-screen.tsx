@@ -23,6 +23,7 @@ import { ImageLibraryPicker } from "./components/library/image-library-picker";
 import { ProjectSaveControl, type ProjectSaveHandle } from "./components/projects/project-save-control";
 import { ExportControl } from "./components/export/export-control";
 import { resolveEditorSelection, roleLabels } from "./editor-selection";
+import { SlideTabs } from "./components/slides/slide-tabs";
 
 async function readImageAspectRatio(file: File) {
   try {
@@ -349,19 +350,8 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
                   )}
                 </div>
               </div>
-              <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-                {document.slides.map((item, index) => (
-                  <button
-                    type="button"
-                    key={item.id}
-                    onClick={() => { setSlideId(item.id); setPlacementId(null); }}
-                    aria-current={item.id === slide.id ? "page" : undefined}
-                    className={`shrink-0 rounded-lg border px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground ${item.id === slide.id ? "border-foreground bg-muted text-foreground" : "border-border bg-background text-muted-foreground"}`}
-                  >
-                    {index + 1}장 · {roleLabels[item.role]}
-                  </button>
-                ))}
-              </div>
+              <SlideTabs document={document} selectedSlideId={slide.id} disabled={disabled}
+                onSelect={(id) => { setSlideId(id); setPlacementId(null); }} onCommand={saveCommands} />
             </nav>
             <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted/20 p-5 sm:p-6">
               <SlideCanvas key={slide.id} document={document} slide={slide} jobId={job.id}

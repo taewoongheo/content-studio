@@ -37,6 +37,7 @@ export type PlacedElement = {
 };
 export type EditorSlide = {
   id: string;
+  name?: string;
   role: SlideRole;
   backgroundColor: string;
   placements: PlacedElement[];
@@ -119,6 +120,7 @@ export type EditorAnalysis = {
 
 export type EditorCommand =
   | { type: "reorder_slides"; slideIds: string[] }
+  | { type: "rename_slide"; slideId: string; name: string }
   | { type: "reorder_layers"; slideId: string; placementIds: string[] }
   | { type: "set_slide_background"; slideId: string; color: string }
   | { type: "set_slot_value"; slideId: string; placementId: string; value: string }

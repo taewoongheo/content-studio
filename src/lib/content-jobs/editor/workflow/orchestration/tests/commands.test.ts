@@ -6,6 +6,18 @@ import { assignServerIds } from "../executor";
 import { agentOutputSchema } from "../output-schema";
 import { readyJob } from "./fixtures";
 
+test("슬라이드 이름 변경은 내용·역할·ID를 보존하며 잘못된 이름을 거부한다", () => {
+  const before = readyJob().job.editor.document!;
+  const after = applyEditorCommands(before, [{ type: "rename_slide", slideId: "slide-2", name: "  운동 설명  " }]);
+  assert.deepEqual(after.slides[1], { ...before.slides[1], name: "운동 설명" });
+  assert.equal(before.slides[1].name, undefined);
+  assert.throws(() => applyEditorCommands(before, [{ type: "rename_slide", slideId: "slide-2", name: " " }]), /이름/);
+  assert.throws(() => applyEditorCommands(before, [{ type: "rename_slide", slideId: "slide-2", name: "a".repeat(121) }]), /이름/);
+  assert.throws(() => applyEditorCommands(before, [{ type: "rename_slide", slideId: "missing", name: "설명" }]), /슬라이드/);
+  const reordered = applyEditorCommands(after, [{ type: "reorder_slides", slideIds: ["slide-1", "slide-3", "slide-2", "slide-4"] }]);
+  assert.equal(reordered.slides[2].name, "운동 설명");
+});
+
 test("반복형 본문 순서 변경은 가능하지만 훅·CTA 순서 파괴와 ID 누락은 거부한다", () => {
   const { job } = readyJob();
   const before = job.editor.document!;

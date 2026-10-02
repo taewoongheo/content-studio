@@ -114,6 +114,7 @@ export function assignServerIds(commands: EditorCommand[], createId: () => strin
   return commands.map((command): EditorCommand => {
     switch (command.type) {
       case "reorder_slides": return { ...command, slideIds: command.slideIds.map(slide) };
+      case "rename_slide": return { ...command, slideId: slide(command.slideId) };
       case "reorder_layers": return { ...command, slideId: slide(command.slideId),
         placementIds: command.placementIds.map((id) => placement(command.slideId, id)) };
       case "set_slide_background": return { ...command, slideId: slide(command.slideId) };

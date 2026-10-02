@@ -60,6 +60,7 @@ export const editorAnalysisSchema = object({
 });
 
 const commandVariants = [
+  object({ type: { const: "rename_slide" }, slideId: text, name: { type: "string", minLength: 1, maxLength: 120 } }),
   object({ type: { const: "reorder_slides" }, slideIds: { type: "array", items: text } }),
   object({ type: { const: "reorder_layers" }, slideId: text, placementIds: { type: "array", items: text } }),
   object({ type: { const: "set_slide_background" }, slideId: text, color }),
