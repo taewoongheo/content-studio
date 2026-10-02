@@ -25,7 +25,8 @@ import { ExportControl } from "./components/export/export-control";
 import { resolveEditorSelection, roleLabels } from "./editor-selection";
 import { SlideTabs } from "./components/slides/slide-tabs";
 import { ElementLayers } from "./components/layers/element-layers";
-import { clipboardShortcut, copyElement, pasteElement, type ElementClipboard } from "./components/clipboard/element-clipboard";
+import { createClipboardQueue, copyElement, pasteElement, type ElementClipboard } from "./components/clipboard/element-clipboard";
+import { useElementShortcuts } from "./components/clipboard/use-element-shortcuts";
 
 async function readImageAspectRatio(file: File) {
   try {
@@ -62,6 +63,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   const latestRevision = useRef(job.editor.revision);
   const commandQueue = useRef<Promise<unknown>>(Promise.resolve());
   const clipboard = useRef<ElementClipboard | null>(null);
+  const [enqueueClipboard] = useState(createClipboardQueue);
   const latestDocument = useRef(job.editor.document);
   useEffect(() => {
     latestRevision.current = Math.max(latestRevision.current, job.editor.revision);
@@ -217,7 +219,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   }
 
   async function handleClipboard(action: "copy" | "paste") {
-    if (!slide || !placement || disabled) return;
+    if (!slide || !placement) return;
     if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return;
     await commandQueue.current;
     const current = latestDocument.current;
@@ -230,6 +232,18 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
     const pasted = pasteElement(current, clipboard.current, slide.id, () => crypto.randomUUID());
     if (pasted && await saveCommands(pasted.commands)) setPlacementId(pasted.destinationPlacementId);
   }
+
+  useElementShortcuts((action) => {
+    if (disabled || !document || !slide || !placement) return false;
+    if (action === "copy") {
+      // Make the snapshot available synchronously so an immediate Cmd+V is accepted.
+      const copied = copyElement(document, slide.id, placement.id, selectedSlideIds);
+      if (!copied) return false;
+      clipboard.current = copied;
+    } else if (!clipboard.current) return false;
+    void enqueueClipboard(() => handleClipboard(action)).catch(() => setImageError("Element 복사·붙여넣기에 실패했습니다."));
+    return true;
+  });
 
   async function removeElement() {
     if (!placement || element?.kind === "background") return;
@@ -260,14 +274,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   }
 
   return (
-    <div onKeyDown={(event) => {
-      const target = event.target as HTMLElement;
-      const editingText = Boolean(target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false']), [role='textbox']"));
-      const shortcut = clipboardShortcut(event, editingText);
-      if (!shortcut || disabled || (shortcut === "copy" ? !element || element.kind === "background" : !clipboard.current)) return;
-      event.preventDefault();
-      void handleClipboard(shortcut);
-    }} className="flex h-svh min-h-0 flex-col overflow-hidden bg-background text-foreground max-lg:h-auto max-lg:min-h-svh max-lg:overflow-visible">
+    <div className="flex h-svh min-h-0 flex-col overflow-hidden bg-background text-foreground max-lg:h-auto max-lg:min-h-svh max-lg:overflow-visible">
       <header className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b px-3 py-1.5 sm:px-4">
         <div className="flex min-w-0 items-center gap-3">
           <Button variant="ghost" size="icon-sm" onClick={onNewJob} aria-label="새 작업으로 돌아가기"><ArrowLeft className="size-4" /></Button>

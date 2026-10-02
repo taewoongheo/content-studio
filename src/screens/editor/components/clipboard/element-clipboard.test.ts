@@ -3,7 +3,7 @@ import test from "node:test";
 import { applyEditorCommand, applyEditorCommands, ensureSharedBackground } from "@/lib/content-jobs/editor/document";
 import { makeElementDefinition } from "@/lib/content-jobs/editor/elements/factory";
 import type { EditorDocument } from "@/lib/content-jobs/editor/types";
-import { clipboardShortcut, copyElement, pasteElement } from "./element-clipboard";
+import { clipboardShortcut, copyElement, pasteElement, createClipboardQueue } from "./element-clipboard";
 import { frameCommandsForScope } from "../canvas/frame/commands";
 
 function fixture() {
@@ -26,6 +26,8 @@ test("전체 범위 붙여넣기는 없는 장에도 하나의 새 공유 Elemen
   assert.ok(next.slides.every((slide) => slide.placements.some((placement) => placement.elementId === "new-0")));
   assert.equal(next.slides[1].placements.find((placement) => placement.elementId === "new-0")?.styleOverride?.backgroundColor, "#0000FF");
   assert.equal(next.slides[2].placements.find((placement) => placement.id === pasted.destinationPlacementId)?.value, "a");
+  assert.equal(next.slides[2].placements.find((placement) => placement.id === pasted.destinationPlacementId)?.frameOverride?.x,
+    clipboard.element.frame.x + 0.03);
   assert.deepEqual(document, fixture());
 });
 
@@ -67,4 +69,28 @@ test("단축키는 Ctrl/Cmd를 지원하고 텍스트 입력 및 반복 키는 �
   assert.equal(clipboardShortcut(event, true), null);
   assert.equal(clipboardShortcut({ ...event, repeat: true }, false), null);
   assert.equal(clipboardShortcut({ ...event, ctrlKey: false }, false), null);
+});
+
+test("Mac 한글 입력 상태의 Cmd+C/V도 물리 키로 인식한다", () => {
+  const event = { key: "ㅊ", code: "KeyC", ctrlKey: false, metaKey: true, altKey: false, shiftKey: false, repeat: false };
+  assert.equal(clipboardShortcut(event, false), "copy");
+  assert.equal(clipboardShortcut({ ...event, key: "ㅍ", code: "KeyV" }, false), "paste");
+  assert.equal(clipboardShortcut(event, true), null);
+});
+
+test("빠른 복사·붙여넣기는 저장 완료를 기다리고 순서대로 처리한다", async () => {
+  const enqueue = createClipboardQueue();
+  const events: string[] = [];
+  let finishCopy!: () => void;
+  const pending = new Promise<void>((resolve) => { finishCopy = resolve; });
+  const copying = enqueue(async () => { events.push("copy-start"); await pending; events.push("copy-done"); });
+  const pasting = enqueue(async () => { events.push("paste"); });
+  await Promise.resolve();
+  assert.deepEqual(events, ["copy-start"]);
+  finishCopy();
+  await Promise.all([copying, pasting]);
+  assert.deepEqual(events, ["copy-start", "copy-done", "paste"]);
+  await assert.rejects(enqueue(async () => { throw new Error("failure"); }));
+  await enqueue(async () => { events.push("retry"); });
+  assert.equal(events.at(-1), "retry");
 });

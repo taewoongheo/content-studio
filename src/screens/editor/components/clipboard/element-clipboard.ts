@@ -31,20 +31,30 @@ export function pasteElement(document: EditorDocument, clipboard: ElementClipboa
   for (const slide of document.slides.filter((slide) => selected.has(slide.id))) {
     const originals = clipboard.placements.filter((item) => item.slideId === slide.id).map((item) => item.placement);
     for (const original of originals.length ? originals : [clipboard.source]) {
+      const frame = original.frameOverride ?? clipboard.element.frame;
       const placementId = id();
       if (slide.id === destinationSlideId && !destinationPlacementId) destinationPlacementId = placementId;
       commands.push({ type: "place_element", slideId: slide.id, elementId, placementId },
         { type: "set_slot_value", slideId: slide.id, placementId, value: original.value },
         { type: "update_visual", scope: "local", slideId: slide.id, placementId,
-          frame: structuredClone(original.frameOverride ?? clipboard.element.frame),
+          frame: { ...frame, x: frame.x + 0.03, y: frame.y + 0.03 },
           style: { ...clipboard.element.style, ...original.styleOverride } });
     }
   }
   return { commands, destinationPlacementId };
 }
 
-export function clipboardShortcut(event: { key: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean; shiftKey: boolean; repeat: boolean }, editingText: boolean) {
+export function clipboardShortcut(event: { key: string; code?: string; ctrlKey: boolean; metaKey: boolean; altKey: boolean; shiftKey: boolean; repeat: boolean }, editingText: boolean) {
   if (editingText || event.repeat || event.altKey || event.shiftKey || !(event.ctrlKey || event.metaKey)) return null;
-  const key = event.key.toLowerCase();
+  const key = event.code ? event.code.replace(/^Key/, "").toLowerCase() : event.key.toLowerCase();
   return key === "c" ? "copy" : key === "v" ? "paste" : null;
+}
+
+export function createClipboardQueue() {
+  let pending: Promise<unknown> = Promise.resolve();
+  return (operation: () => Promise<void>) => {
+    const next = pending.then(operation);
+    pending = next.catch(() => undefined);
+    return next;
+  };
 }
