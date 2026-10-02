@@ -27,3 +27,17 @@ test("sends an immediate safe snapshot and subsequent job changes", async () => 
   abort.abort();
   assert.equal((await reader.read()).done, true);
 });
+
+test("stops delivering updates after the consumer cancels", async () => {
+  const registry = new ContentJobRegistry({ createId: () => "job-1" });
+  registry.add(input);
+  const controller = new AbortController();
+  const reader = contentJobEvents(registry, "job-1", controller.signal).body!.getReader();
+
+  await reader.cancel();
+  assert.doesNotThrow(() => {
+    registry.update("job-1", (job) => {
+      job.editor.revision += 1;
+    });
+  });
+});
