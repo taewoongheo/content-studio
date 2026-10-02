@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useEffectEvent } from "react";
-import { clipboardShortcut } from "./element-clipboard";
+import { editorShortcut, type EditorShortcut } from "./editor-shortcut";
 
-export function useElementShortcuts(onShortcut: (action: "copy" | "paste") => boolean) {
+export function useEditorShortcuts(onShortcut: (action: EditorShortcut) => boolean) {
   const handleKey = useEffectEvent((event: KeyboardEvent) => {
     const target = event.target;
     const editingText = target instanceof HTMLElement && Boolean(target.closest(
       "input, textarea, select, [contenteditable]:not([contenteditable='false']), [role='textbox']",
     ));
-    const action = clipboardShortcut(event, editingText);
+    const action = editorShortcut(event, editingText);
     if (!action || event.defaultPrevented) return;
     if (onShortcut(action)) event.preventDefault();
   });

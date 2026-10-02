@@ -26,7 +26,7 @@ import { resolveEditorSelection, roleLabels } from "./editor-selection";
 import { SlideTabs } from "./components/slides/slide-tabs";
 import { ElementLayers } from "./components/layers/element-layers";
 import { createClipboardQueue, copyElement, pasteElement, type ElementClipboard } from "./components/clipboard/element-clipboard";
-import { useElementShortcuts } from "./components/clipboard/use-element-shortcuts";
+import { useEditorShortcuts } from "./components/shortcuts/use-editor-shortcuts";
 
 async function readImageAspectRatio(file: File) {
   try {
@@ -233,15 +233,20 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
     if (pasted && await saveCommands(pasted.commands)) setPlacementId(pasted.destinationPlacementId);
   }
 
-  useElementShortcuts((action) => {
-    if (disabled || !document || !slide || !placement) return false;
-    if (action === "copy") {
+  useEditorShortcuts((shortcut) => {
+    if (disabled || !document) return false;
+    if (shortcut === "undo") {
+      void action({ action: "editor_undo" });
+      return true;
+    }
+    if (!slide || !placement) return false;
+    if (shortcut === "copy") {
       // Make the snapshot available synchronously so an immediate Cmd+V is accepted.
       const copied = copyElement(document, slide.id, placement.id, selectedSlideIds);
       if (!copied) return false;
       clipboard.current = copied;
     } else if (!clipboard.current) return false;
-    void enqueueClipboard(() => handleClipboard(action)).catch(() => setImageError("Element 복사·붙여넣기에 실패했습니다."));
+    void enqueueClipboard(() => handleClipboard(shortcut)).catch(() => setImageError("Element 복사·붙여넣기에 실패했습니다."));
     return true;
   });
 
@@ -293,7 +298,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
             }} />
           {document && <ExportControl jobId={job.id} disabled={disabled}
             onBeforeExport={prepareExport} onError={setImageError} />}
-          <Button variant="outline" size="sm" disabled={disabled || !document} onClick={() => void action({ action: "editor_undo" })}>
+          <Button variant="outline" size="sm" disabled={disabled || !document} title="되돌리기 (⌘Z)" onClick={() => void action({ action: "editor_undo" })}>
             <Undo2 className="size-4" aria-hidden="true" /> 되돌리기
           </Button>
         </div>
