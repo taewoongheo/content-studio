@@ -321,7 +321,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
       </div>}
 
       {document && slide ? (
-        <main className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden bg-background lg:grid-cols-[minmax(220px,260px)_minmax(0,1fr)_180px] 2xl:grid-cols-[minmax(260px,300px)_minmax(0,1fr)_220px] max-lg:overflow-visible">
+        <main className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden bg-background lg:grid-cols-[minmax(220px,260px)_minmax(0,1fr)_minmax(220px,260px)] 2xl:grid-cols-[minmax(260px,300px)_minmax(0,1fr)_minmax(260px,300px)] max-lg:overflow-visible">
           <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden border-r px-4 py-4 max-lg:order-2 max-lg:min-h-[360px] max-lg:border-r-0 max-lg:border-t" aria-label="선택 항목 편집">
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {element?.kind === "background" && placement ? (
