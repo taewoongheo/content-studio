@@ -24,6 +24,7 @@ test("allows loopback reads and same-origin mutations", () => {
 });
 
 test("rejects remote hosts, cross-site requests, and missing mutation origins", () => {
+  assert.equal(isLocalRequest(request("%%%")), false);
   assert.equal(isLocalRequest(request("example.com")), false);
   assert.equal(
     isLocalRequest(
