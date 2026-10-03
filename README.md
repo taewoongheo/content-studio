@@ -86,9 +86,9 @@ In-memory jobs/temp references + SQLite image assets  Codex app-server
 
 ### Local image storage
 
-SQLite stores the original image bytes (`BLOB`) and the image's name, description, type, size, and optional character link in the same database. Character records, reference images, and published-post records share the database. The dashboard can add and delete these records; AI auto-selection from the asset library is not implemented yet. Image listing queries exclude the binary column, and previews fetch bytes by asset ID only when displayed.
+SQLite stores the original image bytes (`BLOB`) and the image's name, description, type, and size in the same database. Character records reference their turnaround image by asset ID. Character records and published-post records share the database; reference uploads remain temporary files. The dashboard can add and delete these records; AI auto-selection from the asset library is not implemented yet. Image listing queries exclude the binary column, and previews fetch bytes by asset ID only when displayed.
 
-The default database location is `content-studio.sqlite` beside the repository, in the parent `content-studio-workspace/` directory. The repository itself remains a separate Git root, so the database is not tracked by that repository. Set `CONTENT_STUDIO_DB_PATH` to use a different path. SQLite uses WAL sidecar files while the server runs, so back up a live database with SQLite's backup mechanism rather than copying only the main file. The database is created lazily when an editor image is first uploaded. Existing images in temporary job folders are not migrated automatically.
+The default database location is `content-studio.sqlite` beside the repository, in the parent `content-studio-workspace/` directory. The repository itself remains a separate Git root, so the database is not tracked by that repository. Set `CONTENT_STUDIO_DB_PATH` to use a different path. SQLite uses WAL sidecar files while the server runs, so back up a live database with SQLite's backup mechanism rather than copying only the main file. The database is created lazily on first access, including when dashboard asset or published-content pages load. Existing images in temporary job folders are not migrated automatically.
 
 ## Local Codex connection
 
