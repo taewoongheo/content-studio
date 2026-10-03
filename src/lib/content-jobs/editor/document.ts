@@ -318,5 +318,8 @@ export function applyEditorCommand(document: EditorDocument, command: EditorComm
 }
 
 export function applyEditorCommands(document: EditorDocument, commands: EditorCommand[]) {
-  return commands.reduce(applyEditorCommand, document);
+  return commands.reduce((current, command, index) => {
+    try { return applyEditorCommand(current, command); }
+    catch (error) { throw new Error(`commands[${index}] (${command.type}): ${error instanceof Error ? error.message : "편집 실패"}`); }
+  }, document);
 }

@@ -59,6 +59,7 @@ export function SlideCanvas({
   selectionAppliesToAll,
   disabled,
   showGuides,
+  showOverflow,
   lockImageAspectRatio,
   onSelect,
   onSelectBackground,
@@ -72,6 +73,7 @@ export function SlideCanvas({
   selectionAppliesToAll: boolean;
   disabled: boolean;
   showGuides: boolean;
+  showOverflow: boolean;
   lockImageAspectRatio: boolean;
   onSelect: (placementId: string) => void;
   onSelectBackground: () => void;
@@ -220,7 +222,7 @@ export function SlideCanvas({
   return (
     <div
       ref={canvasRef}
-      className={`relative mx-auto h-[85%] w-auto max-h-[85%] max-w-full overflow-visible border bg-white shadow-sm ${selectedPlacementId === BACKGROUND_PLACEMENT_ID ? `ring-2 ${selectionRing} ring-offset-2` : ""}`}
+      className={`relative mx-auto h-[85%] w-auto max-h-[85%] max-w-full ${showOverflow ? "overflow-visible" : "overflow-hidden"} border bg-white shadow-sm ${selectedPlacementId === BACKGROUND_PLACEMENT_ID ? `ring-2 ${selectionRing} ring-offset-2` : ""}`}
       style={{
         aspectRatio: document.aspectRatio.replace(":", "/"),
         containerType: "inline-size",

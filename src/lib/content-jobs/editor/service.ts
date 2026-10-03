@@ -1,6 +1,7 @@
 import { applyEditorCommands, validateEditorDocument } from "./document";
 import { validateEditorCommands } from "./schema";
 import { ContentJobError, type ContentJobRegistry } from "../workflow/registry";
+import type { EditorAsset } from "../domain/types";
 export const EDITOR_HISTORY_LIMIT = 100;
 export class EditorService {
   constructor(readonly registry: ContentJobRegistry) {}
@@ -10,7 +11,7 @@ export class EditorService {
       throw new ContentJobError("INVALID_STAGE", "편집 문서가 변경되었습니다. 최신 결과를 확인해 주세요.");
     return job;
   }
-  applyCommands(id: string, commands: unknown, revision: number) {
+  applyCommands(id: string, commands: unknown, revision: number, addedAssets: EditorAsset[] = []) {
     const job = this.requireRevision(id, revision);
     const checked = validateEditorCommands({ commands });
     if (!checked.ok) throw new ContentJobError("INVALID_OUTPUT", checked.errors.join(" "));
@@ -20,7 +21,7 @@ export class EditorService {
       const errors = validateEditorDocument(next);
       if (errors.length) throw new Error(errors.join(" "));
       const images = new Set(next.elements.filter((element) => element.kind === "image").map((element) => element.id));
-      const assets = new Set(job.assets.map((asset) => asset.id));
+      const assets = new Set([...job.assets, ...addedAssets].map((asset) => asset.id));
       if (next.slides.some((slide) => slide.placements.some((placement) =>
         images.has(placement.elementId) && placement.value && !assets.has(placement.value))))
         throw new Error("슬라이드에서 사용하는 이미지를 찾을 수 없습니다.");
@@ -32,6 +33,7 @@ export class EditorService {
       if (current.editorHistory.length > EDITOR_HISTORY_LIMIT)
         current.editorHistory.splice(0, current.editorHistory.length - EDITOR_HISTORY_LIMIT);
       current.editor.document = next;
+      current.assets.push(...addedAssets.filter((asset) => !current.assets.some((item) => item.id === asset.id)));
       current.slideCount = next.slides.length;
       current.aspectRatio = next.aspectRatio;
       current.editor.revision += 1;

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import type { SavedProjectSummary } from "@/lib/local-db/projects/store";
 import { listContentProjects, loadContentProject } from "@/screens/projects/api";
+import { ProjectPromptCopyButton } from "@/screens/projects/components/project-prompt-copy-button";
 
 const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
   year: "numeric",
@@ -66,11 +67,14 @@ export function SavedProjectsPage({ onOpen }: {
                   {project.aspectRatio} · {project.slideCount}장 · {project.outputLanguage} · {dateFormatter.format(new Date(project.updatedAt))}
                 </p>
               </div>
-              <Button type="button" variant="outline" className="shrink-0" disabled={openingId !== null}
-                onClick={() => void openProject(project)}>
-                {openingId === project.id ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <FolderOpen aria-hidden="true" />}
-                열기
-              </Button>
+              <div className="flex shrink-0 flex-wrap items-start justify-end gap-2">
+                <Button type="button" variant="outline" className="shrink-0" disabled={openingId !== null}
+                  onClick={() => void openProject(project)}>
+                  {openingId === project.id ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <FolderOpen aria-hidden="true" />}
+                  열기
+                </Button>
+                <ProjectPromptCopyButton projectId={project.id} />
+              </div>
             </article>
           ))}
         </div>

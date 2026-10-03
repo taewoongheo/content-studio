@@ -29,7 +29,7 @@ export function DashboardScreen() {
         const restored = jobResult.status === "fulfilled" ? jobResult.value
           : saved ? await loadContentProject(saved.id) : null;
         if (!active) return;
-        if (restored) { setJob(restored); setProjectName(saved?.name); }
+        if (restored) { setJob(restored); setProjectName(restored.name ?? saved?.name); }
         else {
           setError("작업을 찾을 수 없습니다. 저장된 프로젝트를 다시 열어 주세요.");
           const url = new URL(window.location.href);

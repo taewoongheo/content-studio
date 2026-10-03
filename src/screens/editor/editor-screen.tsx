@@ -25,6 +25,7 @@ import { SlideTabs } from "./components/slides/slide-tabs";
 import { ElementLayers } from "./components/layers/element-layers";
 import { createClipboardQueue, copyElement, pasteElement, type ElementClipboard } from "./components/clipboard/element-clipboard";
 import { useEditorShortcuts } from "./components/shortcuts/use-editor-shortcuts";
+import { ProjectPromptCopyButton } from "@/screens/projects/components/project-prompt-copy-button";
 
 async function readImageAspectRatio(file: File) {
   try {
@@ -54,6 +55,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   const [imageError, setImageError] = useState("");
   const [dismissedIssue, setDismissedIssue] = useState<string | null>(null);
   const [showGuides, setShowGuides] = useState(true);
+  const [showOverflow, setShowOverflow] = useState(false);
   const [showImageLibrary, setShowImageLibrary] = useState(false);
   const [unlockedImageRatios, setUnlockedImageRatios] = useState<Set<string>>(() => new Set());
   const inspectorRef = useRef<ElementInspectorHandle>(null);
@@ -279,12 +281,24 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
 
   return (
     <div className="flex h-svh min-h-0 flex-col overflow-hidden bg-background text-foreground max-lg:h-auto max-lg:min-h-svh max-lg:overflow-visible">
-      <header className="flex min-h-12 shrink-0 items-center justify-between gap-3 border-b px-3 py-1.5 sm:px-4">
+      <header className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-3 border-b px-3 py-1.5 sm:px-4">
         <div className="flex min-w-0 items-center gap-3">
           <Button variant="ghost" size="icon-sm" onClick={onNewJob} aria-label="새 작업으로 돌아가기"><ArrowLeft className="size-4" /></Button>
           <h1 className="truncate text-sm font-semibold">Content Studio <span className="font-normal text-muted-foreground">/ 슬라이드 편집기</span></h1>
         </div>
-        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={showOverflow}
+              onChange={(event) => setShowOverflow(event.target.checked)}
+              className="size-4 accent-primary" />
+            잘린 영역 표시
+          </label>
+          <ProjectPromptCopyButton projectId={job.id} size="sm" disabled={disabled || !document}
+            onBeforeCopy={async () => {
+              if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
+              await commandQueue.current;
+              return true;
+            }} />
           <label className="flex items-center gap-2 text-xs">
             <span className="sr-only">화면 비율</span>
             <select aria-label="화면 비율" value={document?.aspectRatio ?? "4:5"} disabled={disabled}
@@ -432,7 +446,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
             </nav>
             <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted/20 p-5 sm:p-6">
               <SlideCanvas key={slide.id} document={document} slide={slide} jobId={job.id}
-                selectedPlacementId={placement?.id ?? null} disabled={disabled} showGuides={showGuides}
+                selectedPlacementId={placement?.id ?? null} disabled={disabled} showGuides={showGuides} showOverflow={showOverflow}
                 selectionAppliesToAll={appliedSlides.length > 1 && appliedSlides.every((item) => selectedSlideIds.includes(item.slideId))}
                 lockImageAspectRatio={imageAspectRatioLocked}
                 onSelect={setPlacementId} onSelectBackground={() => setPlacementId(BACKGROUND_PLACEMENT_ID)}

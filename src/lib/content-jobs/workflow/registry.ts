@@ -31,6 +31,7 @@ export class ContentJobRegistry {
     return this.snapshot(job);
   }
   has(id: string) { return this.jobs.has(id); }
+  list() { return [...this.jobs.values()].map((job) => this.snapshot(job)); }
   get(id: string) { return this.snapshot(this.getRecord(id)); }
   getRecord(id: string) {
     const job = this.jobs.get(id);
@@ -56,7 +57,7 @@ export class ContentJobRegistry {
   }
   private snapshot(job: ContentJobRecord): ContentJobSnapshot {
     return structuredClone({
-      id: job.id, structure: job.structure, aspectRatio: job.aspectRatio,
+      id: job.id, name: job.name, structure: job.structure, aspectRatio: job.aspectRatio,
       slideCount: job.slideCount, outputLanguage: job.outputLanguage,
       editor: job.editor, assets: job.assets, createdAt: job.createdAt, updatedAt: job.updatedAt,
     });
