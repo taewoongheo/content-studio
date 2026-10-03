@@ -10,6 +10,7 @@ import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import type { EditorCommand, ElementDefinition, ElementFrame, ElementStyle, PlacedElement } from "@/lib/content-jobs/editor/types";
 import { commandsFromDraft, draftWithFontSize, frameWithLockedDimension, makeElementDraft, validElementDraft, type VisualTarget } from "./element-draft";
 import { useAutosave } from "./use-autosave";
+import { EDITOR_FONTS, editorFont, supportedFontWeight } from "@/lib/content-jobs/editor/typography/fonts";
 
 type Props = {
   ref?: Ref<ElementInspectorHandle>;
@@ -151,10 +152,20 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
                 onChange={(value) => setDraft((current) => draftWithFontSize(current, value))} />
               <NumberField label="줄 높이" value={draft.style.lineHeight} step={0.1} min={0.8} max={3}
                 onChange={(value) => updateStyle("lineHeight", value)} />
-              <NumberField label="글자 굵기" value={draft.style.fontWeight} onChange={(value) => updateStyle("fontWeight", value)} />
+              <label className="grid gap-1.5 text-xs font-medium">글자 굵기
+                <select aria-label="글자 굵기" className="h-10 rounded-md border bg-background px-2 text-sm"
+                  value={supportedFontWeight(draft.style.fontFamily, draft.style.fontWeight)}
+                  onChange={(event) => updateStyle("fontWeight", Number(event.target.value))}>
+                  {editorFont(draft.style.fontFamily).weights.map((weight) => <option key={weight} value={weight}>{weight}</option>)}
+                </select>
+              </label>
               <label className="grid gap-1.5 text-xs font-medium">글꼴 계열
-                <select className="h-10 rounded-md border bg-background px-2 text-sm" value={draft.style.fontFamily} onChange={(event) => updateStyle("fontFamily", event.target.value as ElementStyle["fontFamily"])}>
-                  <option value="sans-serif">고딕</option><option value="serif">명조</option><option value="monospace">고정폭</option>
+                <select aria-label="글꼴 계열" className="h-10 rounded-md border bg-background px-2 text-sm" value={draft.style.fontFamily} onChange={(event) => {
+                  const fontFamily = event.target.value as ElementStyle["fontFamily"];
+                  setDraft((current) => ({ ...current, style: { ...current.style, fontFamily,
+                    fontWeight: supportedFontWeight(fontFamily, current.style.fontWeight) } }));
+                }}>
+                  {EDITOR_FONTS.map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}
                 </select>
               </label>
               <div className="grid gap-1.5 text-xs font-medium">

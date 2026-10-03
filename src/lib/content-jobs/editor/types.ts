@@ -1,4 +1,5 @@
 import type { SlideshowStructure } from "../domain/types";
+import type { EditorFontFamily } from "./typography/fonts";
 
 // Normalized document coordinates still allow elements far outside the slide.
 export const MAX_FRAME_COORDINATE = 10;
@@ -23,7 +24,7 @@ export type ElementStyle = {
   borderEnabled?: boolean;
   borderColor?: string;
   borderWidth?: number;
-  fontFamily: "sans-serif" | "serif" | "monospace";
+  fontFamily: EditorFontFamily;
   imageFit: "cover" | "contain";
 };
 export type ElementDefinition = {

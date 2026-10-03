@@ -4,6 +4,7 @@ import { BACKGROUND_ELEMENT_ID } from "@/lib/content-jobs/editor/document";
 import { artworkSize, fittedImage, pixelFrame, renderImageUrl } from "./layout";
 import { loadArtworkImages, type ArtworkImageLoader } from "./assets";
 import { roundedTrianglePath, shapeGeometry } from "./shapes/geometry";
+import { canvasFont } from "./fonts";
 
 type Options = {
   document: EditorDocument;
@@ -21,6 +22,13 @@ export async function renderArtwork(options: Options) {
   const size = artworkSize(doc.aspectRatio);
   const elements = new Map(doc.elements.map((element) => [element.id, element]));
   await window.document.fonts.ready;
+  await Promise.all(slide.placements.flatMap((placement) => {
+    const element = elements.get(placement.elementId);
+    if (element?.kind !== "text") return [];
+    const style = { ...element.style, ...placement.styleOverride };
+    const font = canvasFont(style.fontFamily, style.fontWeight);
+    return [window.document.fonts.load(`${font.weight} ${style.fontSize}px ${font.family}`, placement.value || element.name)];
+  }));
   const images = await loadArtworkImages(slide.placements.flatMap((placement) => {
     const element = elements.get(placement.elementId);
     if (element?.kind !== "image" || !placement.value) return [];
@@ -78,10 +86,11 @@ export async function renderArtwork(options: Options) {
             group.add(new Konva.Text({ ...bounds, text: element.name, fontSize: 32, fill: "#777", align: "center", verticalAlign: "middle" }));
           }
         } else if (element.kind === "text" && (placement.value || showPlaceholders)) {
+          const font = canvasFont(style.fontFamily, style.fontWeight);
           // Measure the wrapped block before centering; a fixed Text height would crop excess lines.
           const text = new Konva.Text({ x: 10.8, width: Math.max(1, frame.width - 21.6),
             text: placement.value || element.name, fontSize: style.fontSize,
-            fontFamily: style.fontFamily, fontStyle: String(style.fontWeight),
+            fontFamily: font.family, fontStyle: String(font.weight),
             lineHeight: style.lineHeight, align: style.textAlign, verticalAlign: "top", padding: 0,
             fill: placement.value ? style.color : "#999", wrap: "word" });
           text.y((frame.height - text.height()) / 2);

@@ -23,7 +23,7 @@ const annotations = (readOnlyHint: boolean) => ({ readOnlyHint, destructiveHint:
 /** A fresh protocol instance per HTTP request; project state belongs to the app registry. */
 export function createStudioMcpServer(origin: string) {
   const server = new McpServer({ name: "content-studio", version: "0.1.0" }, {
-    instructions: "Read the target project before editing. Reuse a project by passing sourceProjectId to create_project; omit it for a blank project. Find and select local images with your filesystem tools, then use set_local_image inside edit_project. Edit batches are one undo step. Never write the app database directly.",
+    instructions: "Read the target project before editing. Reuse a project by passing sourceProjectId to create_project; omit it for a blank project. Find and select local images with your filesystem tools, then use set_local_image inside edit_project. Edit batches are one undo step. English hook fonts: bebas-neue and anton (weight 400 only), oswald (200-700), barlow-condensed (100-900). sans-serif uses Geist and monospace uses Geist Mono (100-900). Never write the app database directly.",
   });
   const describe = (id: string) => {
     const job = contentJobRegistry.get(id);

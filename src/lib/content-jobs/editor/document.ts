@@ -1,4 +1,5 @@
 import type { SlideshowStructure } from "../domain/types";
+import { EDITOR_FONT_FAMILIES } from "./typography/fonts";
 import { validBorder } from "./elements/style";
 import { MAX_FRAME_COORDINATE, MAX_FRAME_DIMENSION } from "./types";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_FRAME, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, syncBackgroundColors } from "./background";
@@ -28,7 +29,7 @@ function validStyle(style: ElementStyle) {
     Number.isInteger(style.fontWeight) && style.fontWeight >= 100 && style.fontWeight <= 900 &&
     ["left", "center", "right"].includes(style.textAlign) &&
     Number.isFinite(style.borderRadius) && style.borderRadius >= 0 && style.borderRadius <= 100 &&
-    ["sans-serif", "serif", "monospace"].includes(style.fontFamily) &&
+    EDITOR_FONT_FAMILIES.includes(style.fontFamily) &&
     ["cover", "contain"].includes(style.imageFit);
 }
 

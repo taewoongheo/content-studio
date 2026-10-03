@@ -1,4 +1,5 @@
 import Ajv from "ajv";
+import { EDITOR_FONT_FAMILIES } from "./typography/fonts";
 import type { EditorCommand } from "./types";
 import { MAX_FRAME_COORDINATE, MAX_FRAME_DIMENSION } from "./types";
 
@@ -21,7 +22,7 @@ const style = object({
   borderEnabled: { type: "boolean" },
   borderColor: color,
   borderWidth: { type: "number", minimum: 0, maximum: 100 },
-  fontFamily: { type: "string", enum: ["sans-serif", "serif", "monospace"] },
+  fontFamily: { type: "string", enum: EDITOR_FONT_FAMILIES },
   imageFit: { type: "string", enum: ["cover", "contain"] },
 }, ["color", "backgroundColor", "fontSize", "lineHeight", "fontWeight", "textAlign", "borderRadius", "fontFamily", "imageFit"]);
 const stylePatch = {
