@@ -5,6 +5,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  // The network boundary is the 127.0.0.1 binding in `pnpm dev` / `pnpm start`.
+  // Host/Origin validation does not authenticate a connection peer. Do not expose this route via a proxy.
   if (!isLocalRequest(request))
     return new Response("Local MCP requests only", { status: 403 });
   // Next may normalize request.url to localhost; use the validated Host for browser URLs.

@@ -25,6 +25,8 @@ http://127.0.0.1:3000 에서 ‘편집기 열기’를 누르면 4:5 (1080 × 13
 
 앱 서버는 `/mcp`에서 로컬 Streamable HTTP MCP 연결을 제공합니다. Codex의 `~/.codex/config.toml`에 등록하고 Codex를 재시작하세요. 앱 서버도 실행되어 있어야 합니다.
 
+`pnpm dev`와 `pnpm start`는 서버를 `127.0.0.1`에만 바인딩합니다. 이 네트워크 경계가 로컬 전용 접근을 보장합니다. Host/Origin 검사는 접속자 인증이 아니므로 외부 인터페이스로 바인딩하거나 역방향 프록시로 노출하지 마세요. 외부 접근을 지원하려면 별도 인증이 필요합니다.
+
 ```toml
 [mcp_servers.content_studio]
 url = "http://127.0.0.1:3000/mcp"
@@ -34,7 +36,7 @@ url = "http://127.0.0.1:3000/mcp"
 - `create_project`: 원본 ID가 있으면 현재 작업을 복제하고, 없으면 빈 작업 생성. 결과의 URL로 편집기를 엽니다.
 - `edit_project`: 명령 배열을 한 번에 적용하고 한 단계로 되돌릴 수 있습니다. `expectedRevision`은 최근 읽기·쓰기 응답의 revision을 전달합니다.
 - `undo_project`: 직전 편집을 취소합니다.
-- `preview_slide`: 기존 편집기·내보내기 렌더러로 PNG 이미지를 반환합니다. 미리보기에는 Playwright Chromium이 필요합니다.
+- `preview_slide`: 기존 편집기·내보내기 렌더러로 PNG 이미지를 반환합니다. 미리보기에는 Playwright Chromium이 필요하며, 동시 요청은 프로세스 전체에서 한 번에 하나씩 렌더링합니다.
 
 “이 URL의 프로젝트를 기준으로 가슴 루틴을 새로 만들어줘”라고 요청하면 Codex가 `?job=`의 ID를 `sourceProjectId`로 전달합니다. 원본 없이 요청하면 기본 4:5, 6장의 빈 프로젝트에서 시작합니다. 같은 ID의 미저장 작업이 있으면 저장본보다 우선합니다. 원본 ID를 잘못 지정하면 오류가 발생합니다.
 
