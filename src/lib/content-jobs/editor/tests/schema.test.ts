@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { validateEditorCommands } from "../schema";
+import { createBlankDocument, validateEditorDocument } from "../document";
+import { makeElementDefinition } from "../elements/factory";
 
 const element = {
   id: "heading",
@@ -37,4 +39,22 @@ test("편집 명령은 허용된 종류와 필드만 받는다", () => {
   assert.equal(validateEditorCommands({ commands: [{
     type: "set_slot_value", slideId: "slide-1", placementId: "placement-1-1", value: "새 제목", extra: true,
   }] }).ok, false);
+});
+
+test("캔버스 밖 프레임은 허용하되 극단적 좌표와 크기는 명령과 저장 문서에서 거부한다", () => {
+  const document = createBlankDocument({ structure: "sequential", aspectRatio: "4:5", slideCount: 2 });
+  const definition = makeElementDefinition({ id: "outside", kind: "rectangle" });
+  document.elements.push(definition);
+  for (const frame of [
+    { x: -10, y: 10, width: 20, height: 20 },
+    { x: 1e300, y: 0, width: 1, height: 1 },
+    { x: 0, y: -11, width: 1, height: 1 },
+    { x: 0, y: 0, width: 1e300, height: 1 },
+    { x: 0, y: 0, width: 1, height: 21 },
+  ]) {
+    definition.frame = frame;
+    const expected = frame.x === -10;
+    assert.equal(validateEditorCommands({ commands: [{ type: "add_element", element: definition }] }).ok, expected);
+    assert.equal(validateEditorDocument(document).length === 0, expected);
+  }
 });

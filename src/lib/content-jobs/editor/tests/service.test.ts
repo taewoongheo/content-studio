@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { ContentJobRegistry } from "../../workflow/registry";
-import { EditorService } from "../service";
+import { EditorService, EDITOR_HISTORY_LIMIT } from "../service";
 import { makeElementDefinition } from "../elements/factory";
 
 function session() {
@@ -9,6 +9,20 @@ function session() {
   registry.add({ structure: "sequential", aspectRatio: "4:5", slideCount: 6, outputLanguage: "English" });
   return { registry, service: new EditorService(registry) };
 }
+
+test("긴 편집 세션은 최근 100회만 되돌리고 오래된 문서를 해제한다", () => {
+  const { registry, service } = session();
+  let revision = 0;
+  for (let index = 1; index <= EDITOR_HISTORY_LIMIT + 5; index++) {
+    revision = service.applyCommands("job", [{ type: "rename_slide", slideId: "slide-1", name: String(index) }], revision).editor.revision;
+  }
+  assert.equal(registry.getRecord("job").editorHistory.length, EDITOR_HISTORY_LIMIT);
+  for (let index = 0; index < EDITOR_HISTORY_LIMIT; index++) {
+    revision = service.undo("job", revision).editor.revision;
+  }
+  assert.equal(registry.get("job").editor.document.slides[0].name, "5");
+  assert.throws(() => service.undo("job", revision), /되돌릴 수정이 없습니다/);
+});
 
 test("빈 문서는 AI 없이 열리며 비율 변경과 되돌리기의 상태가 일치한다", () => {
   const { registry, service } = session();

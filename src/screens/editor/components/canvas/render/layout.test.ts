@@ -1,7 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fittedImage, pixelFrame, renderImageUrl } from "./layout";
-import { createArtworkImageLoader } from "./assets";
+import { createArtworkImageLoader, loadArtworkImages } from "./assets";
+
+test("편집기는 실패한 이미지만 비워 두고 정상 이미지를 유지하며 내보내기는 누락을 알린다", async () => {
+  const image = { naturalWidth: 100, naturalHeight: 100 } as HTMLImageElement;
+  const requests = [{ placementId: "missing", url: "/missing" }, { placementId: "valid", url: "/valid" }];
+  const load = async (url: string) => {
+    if (url === "/missing") throw new Error("missing asset");
+    return image;
+  };
+  const images = await loadArtworkImages(requests, load, true);
+  assert.equal(images.has("missing"), false);
+  assert.equal(images.get("valid"), image);
+  await assert.rejects(loadArtworkImages(requests, load, false), /내보내기를 중단했습니다/);
+});
 
 test("캔버스 밖 좌표를 유지하면서 문서 좌표를 원본 픽셀로 변환한다", () => {
   assert.deepEqual(pixelFrame({ x: -0.1, y: 0.2, width: 0.5, height: 0.4 }, { width: 1080, height: 1350 }),

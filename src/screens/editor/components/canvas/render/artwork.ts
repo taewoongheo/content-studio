@@ -2,7 +2,7 @@ import Konva from "konva";
 import type { EditorDocument, EditorSlide, ElementFrame } from "@/lib/content-jobs/editor/types";
 import { BACKGROUND_ELEMENT_ID } from "@/lib/content-jobs/editor/document";
 import { artworkSize, fittedImage, pixelFrame, renderImageUrl } from "./layout";
-import type { ArtworkImageLoader } from "./assets";
+import { loadArtworkImages, type ArtworkImageLoader } from "./assets";
 import { roundedTrianglePath, shapeGeometry } from "./shapes/geometry";
 
 type Options = {
@@ -21,15 +21,15 @@ export async function renderArtwork(options: Options) {
   const size = artworkSize(doc.aspectRatio);
   const elements = new Map(doc.elements.map((element) => [element.id, element]));
   await window.document.fonts.ready;
-  const images = new Map(await Promise.all(slide.placements.flatMap((placement) => {
+  const images = await loadArtworkImages(slide.placements.flatMap((placement) => {
     const element = elements.get(placement.elementId);
     if (element?.kind !== "image" || !placement.value) return [];
     // Reuse the committed-size derivative throughout a drag; resample once after resize commits.
     const box = pixelFrame(placement.frameOverride ?? element.frame, size);
     const fit = placement.styleOverride?.imageFit ?? element.style.imageFit;
     const url = renderImageUrl(jobId, placement.value, box, fit);
-    return [loadImage(url).then((image) => [placement.id, image] as const)];
-  })));
+    return [{ placementId: placement.id, url }];
+  }), loadImage, showPlaceholders);
 
   const container = window.document.createElement("div");
   const stage = new Konva.Stage({ container, ...size });

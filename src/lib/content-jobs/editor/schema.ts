@@ -1,13 +1,14 @@
 import Ajv from "ajv";
 import type { EditorCommand } from "./types";
+import { MAX_FRAME_COORDINATE, MAX_FRAME_DIMENSION } from "./types";
 
 const text = { type: "string" };
 const color = { type: "string", pattern: "^#[0-9a-fA-F]{6}$" };
 const frame = object({
-  x: { type: "number" },
-  y: { type: "number" },
-  width: { type: "number", exclusiveMinimum: 0 },
-  height: { type: "number", exclusiveMinimum: 0 },
+  x: { type: "number", minimum: -MAX_FRAME_COORDINATE, maximum: MAX_FRAME_COORDINATE },
+  y: { type: "number", minimum: -MAX_FRAME_COORDINATE, maximum: MAX_FRAME_COORDINATE },
+  width: { type: "number", exclusiveMinimum: 0, maximum: MAX_FRAME_DIMENSION },
+  height: { type: "number", exclusiveMinimum: 0, maximum: MAX_FRAME_DIMENSION },
 });
 const style = object({
   color,

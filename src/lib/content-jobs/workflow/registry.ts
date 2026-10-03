@@ -30,6 +30,7 @@ export class ContentJobRegistry {
     this.emit(job);
     return this.snapshot(job);
   }
+  has(id: string) { return this.jobs.has(id); }
   get(id: string) { return this.snapshot(this.getRecord(id)); }
   getRecord(id: string) {
     const job = this.jobs.get(id);

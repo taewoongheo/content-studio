@@ -1,5 +1,6 @@
 import type { SlideshowStructure } from "../domain/types";
 import { validBorder } from "./elements/style";
+import { MAX_FRAME_COORDINATE, MAX_FRAME_DIMENSION } from "./types";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_FRAME, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, syncBackgroundColors } from "./background";
 import type {
   EditorCommand,
@@ -14,7 +15,9 @@ export { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID, ensureSharedBackground 
 
 function validFrame(frame: ElementFrame) {
   return Object.values(frame).every((value) => Number.isFinite(value)) &&
-    frame.width > 0 && frame.height > 0;
+    Math.abs(frame.x) <= MAX_FRAME_COORDINATE && Math.abs(frame.y) <= MAX_FRAME_COORDINATE &&
+    frame.width > 0 && frame.width <= MAX_FRAME_DIMENSION &&
+    frame.height > 0 && frame.height <= MAX_FRAME_DIMENSION;
 }
 
 function validStyle(style: ElementStyle) {

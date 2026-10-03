@@ -6,7 +6,7 @@ import { frontToBack, reorderLayerCommands } from "./layer-order";
 
 function documentWithLayers() {
   const document = applyEditorCommands(createBlankDocument({ structure: "repeating", aspectRatio: "4:5", slideCount: 4 }), [
- { type: "add_element", element: { id: "title", name: "제목", role: "제목", kind: "text", frame: {x: 0,y: 0,width: 50,height: 10}, style: { ...createBlankDocument({structure:"repeating",aspectRatio:"4:5",slideCount:4}).elements[0].style } } },
+ { type: "add_element", element: { id: "title", name: "제목", role: "제목", kind: "text", frame: {x: 0,y: 0,width: 0.5,height: 0.1}, style: { ...createBlankDocument({structure:"repeating",aspectRatio:"4:5",slideCount:4}).elements[0].style } } },
  {type:"place_element",slideId:"slide-2",elementId:"title",placementId:"title-2"},
  {type:"place_element",slideId:"slide-3",elementId:"title",placementId:"title-3"}
  ]);

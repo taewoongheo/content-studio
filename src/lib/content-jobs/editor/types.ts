@@ -1,5 +1,9 @@
 import type { SlideshowStructure } from "../domain/types";
 
+// Normalized document coordinates still allow elements far outside the slide.
+export const MAX_FRAME_COORDINATE = 10;
+export const MAX_FRAME_DIMENSION = 20;
+
 export type SlideRole = "hook" | "body" | "cta";
 export type ElementKind = "background" | "text" | "image" | "rectangle" | "circle" | "triangle";
 export type ElementFrame = {

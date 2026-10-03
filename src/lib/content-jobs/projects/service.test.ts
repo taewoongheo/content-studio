@@ -8,6 +8,7 @@ import { openLocalDatabase } from "@/lib/local-db/database";
 import { ContentProjectStore } from "@/lib/local-db/projects/store";
 import { createBlankDocument } from "../editor/document";
 import { makeElementDefinition } from "../editor/elements/factory";
+import { EditorService } from "../editor/service";
 import { ContentJobRegistry } from "../workflow/registry";
 import { loadContentProject, saveContentProject } from "./service";
 
@@ -47,6 +48,13 @@ test("프로젝트는 시각 문서와 사용 이미지만 저장하고 새 편�
 
     await saveContentProject(registry, "project-1", "운동 콘텐츠", { projects, assets });
     assert.equal(projects.get("project-1")?.assets.length, 1);
+    const service = new EditorService(registry);
+    const edited = service.applyCommands("project-1", [{ type: "rename_slide", slideId: "slide-1", name: "저장 후 수정" }], 0);
+    const history = registry.getRecord("project-1").editorHistory;
+    const reloaded = await loadContentProject(registry, "project-1", { projects, assets });
+    assert.deepEqual(reloaded, edited);
+    assert.equal(registry.getRecord("project-1").editorHistory, history);
+    assert.equal(service.undo("project-1", reloaded.editor.revision).editor.revision, 2);
     assert.equal(assets.delete(image.id), true);
     database.close();
 

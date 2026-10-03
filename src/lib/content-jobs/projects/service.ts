@@ -83,6 +83,7 @@ export async function loadContentProject(
   const project = stores.projects.get(projectId);
   if (!project)
     throw new ContentJobError("JOB_NOT_FOUND", "저장된 프로젝트를 찾을 수 없습니다.");
+  if (registry.has(project.id)) return registry.get(project.id);
   const document = parseDocument(project.document);
   const assets = project.assets.map((asset) => stores.assets.restore({
     id: asset.assetId,

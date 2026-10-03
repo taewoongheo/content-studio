@@ -1,6 +1,7 @@
 import { applyEditorCommands, validateEditorDocument } from "./document";
 import { validateEditorCommands } from "./schema";
 import { ContentJobError, type ContentJobRegistry } from "../workflow/registry";
+export const EDITOR_HISTORY_LIMIT = 100;
 export class EditorService {
   constructor(readonly registry: ContentJobRegistry) {}
   private requireRevision(id: string, expected: number) {
@@ -28,6 +29,8 @@ export class EditorService {
     }
     return this.registry.update(id, (current) => {
       current.editorHistory.push(structuredClone(current.editor.document));
+      if (current.editorHistory.length > EDITOR_HISTORY_LIMIT)
+        current.editorHistory.splice(0, current.editorHistory.length - EDITOR_HISTORY_LIMIT);
       current.editor.document = next;
       current.slideCount = next.slides.length;
       current.aspectRatio = next.aspectRatio;
