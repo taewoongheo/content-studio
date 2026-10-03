@@ -1,5 +1,5 @@
 import type { CodexConnectionManager } from "./connection";
-import type { CodexConnection } from "./types";
+import type { CodexConnection } from "../transport/types";
 
 export function connectionEvents(
   manager: CodexConnectionManager,

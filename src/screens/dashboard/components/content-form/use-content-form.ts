@@ -1,54 +1,88 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  REFERENCE_ROLES,
+  type ReferenceRole,
+} from "@/lib/content-jobs/domain/types";
 import type { ProductContext } from "../../hooks/use-product-context";
 import {
-  templates,
+  validateReference,
+  validateReferenceImages,
+  validateRepeatingReference,
+} from "./reference-input/validation";
+import {
+  createReferenceImageDrafts,
+  reorderReferenceImages,
+  type ReferenceImageDraft,
+} from "./reference-input/reference-images-model";
+import {
+  DEFAULT_SLIDESHOW_STRUCTURE,
+  isImplementedWorkflow,
   type ContentType,
-  type Method,
-  type Materials,
-  type ContentSettings,
-} from "./model";
-import { validateMaterials, validateReferenceImages } from "./validation";
+  type CreationMethod,
+  type SlideshowStructure,
+} from "./selection/model";
+import type { ContentSettings } from "./settings/model";
 
 export function useContentForm(context: ProductContext | null) {
   const [type, setType] = useState<ContentType>("slideshow");
-  const [method, setMethod] = useState<Method>("reference");
-  const [materials, setMaterials] = useState<Materials>({
-    reference: "",
-    referenceText: "",
-    files: [],
-    template: templates[0],
-    notes: "",
-  });
+  const [structure, setStructure] = useState<SlideshowStructure>(DEFAULT_SLIDESHOW_STRUCTURE);
+  const [method, setMethod] = useState<CreationMethod>("reference");
+  const [referenceImages, setReferenceImages] = useState<
+    ReferenceImageDraft[]
+  >([]);
+  const [roleImages, setRoleImages] = useState<
+    Partial<Record<ReferenceRole, ReferenceImageDraft>>
+  >({});
   const [settings, setSettings] = useState<ContentSettings>({
-    ratio: "4:5",
+    ratio: "9:16",
     count: "6장",
-    videoRatio: "9:16",
-    duration: "30초",
-    channel: "SNS 게시글",
-    length: "보통 · 약 500자",
     language: "한국어",
   });
   const [reviewOpen, setReviewOpen] = useState(false);
   const [error, setError] = useState("");
   const [fileError, setFileError] = useState("");
   const referenceInput = useRef<HTMLInputElement>(null);
+  const previewUrls = useRef(new Set<string>());
+  const canCreate = isImplementedWorkflow(type, method, structure);
+  const roleReferences = REFERENCE_ROLES.flatMap((role) => {
+    const image = roleImages[role];
+    return image ? [{ image, role }] : [];
+  });
+  const activeImages = structure === "repeating"
+    ? roleReferences.map(({ image }) => image)
+    : referenceImages;
+  const files = activeImages.map((image) => image.file);
+  const referenceInputs = structure === "repeating"
+    ? roleReferences.map(({ image, role }) => ({ file: image.file, role }))
+    : referenceImages.map((image) => ({ file: image.file, role: null }));
 
-  function changeType(value: ContentType) {
-    setType(value);
+  useEffect(() => {
+    const urls = previewUrls.current;
+    return () => {
+      for (const url of urls) URL.revokeObjectURL(url);
+      urls.clear();
+    };
+  }, []);
+
+  function changeType(nextType: ContentType) {
+    setType(nextType);
     setError("");
     setFileError("");
+    setReviewOpen(false);
   }
 
-  function changeMethod(value: Method) {
-    setMethod(value);
+  function changeMethod(nextMethod: CreationMethod) {
+    setMethod(nextMethod);
     setError("");
+    setFileError("");
+    setReviewOpen(false);
   }
 
-  function changeMaterials(patch: Partial<Materials>) {
-    setMaterials((previous) => ({ ...previous, ...patch }));
-    if (patch.reference !== undefined || patch.referenceText !== undefined) {
-      setError("");
-    }
+  function changeStructure(nextStructure: SlideshowStructure) {
+    setStructure(nextStructure);
+    setError("");
+    setFileError("");
+    setReviewOpen(false);
   }
 
   function changeSettings(patch: Partial<ContentSettings>) {
@@ -58,33 +92,79 @@ export function useContentForm(context: ProductContext | null) {
   function addFiles(list: FileList | null) {
     if (!list) return;
     const incoming = Array.from(list);
-    const message = validateReferenceImages(materials.files.length, incoming);
+    const message = validateReferenceImages(referenceImages.length, incoming);
     if (message) {
       setFileError(message);
       return;
     }
-    setMaterials((previous) => ({
-      ...previous,
-      files: [...previous.files, ...incoming],
-    }));
+    const drafts = createReferenceImageDrafts(incoming);
+    for (const draft of drafts) previewUrls.current.add(draft.previewUrl);
+    setReferenceImages((previous) => [...previous, ...drafts]);
     setFileError("");
     setError("");
   }
 
-  function removeFile(index: number) {
-    setMaterials((previous) => ({
-      ...previous,
-      files: previous.files.filter((_, i) => i !== index),
-    }));
+  function removeImage(id: string) {
+    const removed = referenceImages.find((image) => image.id === id);
+    if (removed) {
+      URL.revokeObjectURL(removed.previewUrl);
+      previewUrls.current.delete(removed.previewUrl);
+    }
+    setReferenceImages((previous) =>
+      previous.filter((image) => image.id !== id),
+    );
+  }
+
+  function reorderImages(activeId: string, overId: string) {
+    setReferenceImages((previous) =>
+      reorderReferenceImages(previous, activeId, overId),
+    );
+  }
+
+  function setRoleImage(role: ReferenceRole, list: FileList | null) {
+    if (!list) return;
+    if (list.length !== 1) {
+      setFileError("역할마다 대표 이미지를 한 장씩 추가해 주세요.");
+      return;
+    }
+    const message = validateReferenceImages(0, [list[0]]);
+    if (message) {
+      setFileError(message);
+      return;
+    }
+    const [draft] = createReferenceImageDrafts([list[0]]);
+    const previous = roleImages[role];
+    if (previous) {
+      URL.revokeObjectURL(previous.previewUrl);
+      previewUrls.current.delete(previous.previewUrl);
+    }
+    previewUrls.current.add(draft.previewUrl);
+    setRoleImages((current) => ({ ...current, [role]: draft }));
+    setFileError("");
+    setError("");
+  }
+
+  function removeRoleImage(role: ReferenceRole) {
+    const image = roleImages[role];
+    if (!image) return;
+    URL.revokeObjectURL(image.previewUrl);
+    previewUrls.current.delete(image.previewUrl);
+    setRoleImages((current) => {
+      const next = { ...current };
+      delete next[role];
+      return next;
+    });
   }
 
   function review(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!context) return;
-    const message = validateMaterials(type, method, materials);
+    if (!context || !canCreate) return;
+    const message = structure === "repeating"
+      ? validateRepeatingReference(roleReferences)
+      : validateReference(files);
     setError(message);
     if (message) {
-      referenceInput.current?.focus();
+      if (structure === "sequential") referenceInput.current?.focus();
       return;
     }
     setReviewOpen(true);
@@ -92,19 +172,27 @@ export function useContentForm(context: ProductContext | null) {
 
   return {
     type,
+    structure,
     method,
-    materials,
+    canCreate,
+    referenceImages: activeImages,
+    roleImages,
+    files,
+    referenceInputs,
     settings,
     reviewOpen,
     error,
     fileError,
     referenceInput,
     changeType,
+    changeStructure,
     changeMethod,
-    changeMaterials,
     changeSettings,
     addFiles,
-    removeFile,
+    removeImage,
+    reorderImages,
+    setRoleImage,
+    removeRoleImage,
     review,
     setReviewOpen,
   };

@@ -1,36 +1,40 @@
 "use client";
 
+import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
+import { createContentJob } from "@/screens/content-job/api";
 import type { ProductContext } from "../../hooks/use-product-context";
-import { contentTypes, creationMethods } from "./model";
-import { ChoiceSection } from "./choice-section";
-import { MaterialsFields } from "./materials-fields";
-import { ContentSettings } from "./content-settings";
 import { ContentReviewDialog } from "./content-review-dialog";
+import { ReferenceRoleImages } from "./reference-input/repeating/reference-role-images";
+import { ReferenceImages } from "./reference-input/sequential/reference-images";
+import { ChoiceSection } from "./selection/choice-section";
+import { contentTypes, creationMethods, slideshowStructures } from "./selection/model";
+import { ContentSettings } from "./settings/content-settings";
+import { slideCount } from "./settings/model";
 import { useContentForm } from "./use-content-form";
+import { WorkflowPlaceholder } from "./workflow-placeholder";
 
 export function ContentForm({
   context,
+  codexModel,
   onRegisterContext,
+  onJobStarted,
 }: {
   context: ProductContext | null;
+  codexModel: string;
   onRegisterContext: () => void;
+  onJobStarted: (job: ContentJobSnapshot) => void;
 }) {
   const form = useContentForm(context);
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState("");
 
   if (!context)
     return (
-      <section
-        className={
-          "flex max-w-[640px] flex-col items-start gap-4 rounded-lg border p-8 max-md:p-6"
-        }
-        aria-labelledby="context-required"
-      >
-        <h2
-          id="context-required"
-          className="text-xl font-semibold tracking-tight"
-        >
+      <section className="flex max-w-[640px] flex-col items-start gap-4 rounded-lg border p-8 max-md:p-6" aria-labelledby="context-required">
+        <h2 id="context-required" className="text-xl font-semibold tracking-tight">
           제품 컨텍스트를 먼저 등록하세요
         </h2>
         <p className="text-sm leading-6 text-muted-foreground">
@@ -42,61 +46,111 @@ export function ContentForm({
         </Button>
       </section>
     );
+  const productContext = context;
+
+  async function start() {
+    if (!form.canCreate || !codexModel) return;
+    setStarting(true);
+    setStartError("");
+    try {
+      const job = await createContentJob({
+        model: codexModel,
+        context: productContext,
+        referenceInputs: form.referenceInputs,
+        structure: form.structure,
+        aspectRatio: form.settings.ratio,
+        slideCount: slideCount(form.settings),
+        outputLanguage: form.settings.language,
+      });
+      form.setReviewOpen(false);
+      onJobStarted(job);
+    } catch (error) {
+      setStartError(
+        error instanceof Error ? error.message : "분석을 시작하지 못했습니다.",
+      );
+    } finally {
+      setStarting(false);
+    }
+  }
 
   return (
     <div className="max-w-[850px]">
       <form onSubmit={form.review} className="grid gap-8">
         <ChoiceSection
           name="content-type"
-          idPrefix="type"
           title="콘텐츠 유형"
-          options={contentTypes}
           value={form.type}
+          columns={2}
+          options={contentTypes}
           onChange={form.changeType}
         />
+        {form.type === "slideshow" && (
+          <ChoiceSection
+            name="slideshow-structure"
+            title="슬라이드 구성"
+            value={form.structure}
+            columns={2}
+            options={slideshowStructures}
+            onChange={form.changeStructure}
+          />
+        )}
         <ChoiceSection
-          name="method"
-          idPrefix="method"
+          name="creation-method"
           title="제작 방식"
-          options={creationMethods}
           value={form.method}
+          columns={3}
+          options={creationMethods}
           onChange={form.changeMethod}
         />
-        <MaterialsFields
-          type={form.type}
-          method={form.method}
-          value={form.materials}
-          onChange={form.changeMaterials}
-          error={form.error}
-          fileError={form.fileError}
-          referenceInput={form.referenceInput}
-          onAddFiles={form.addFiles}
-          onRemoveFile={form.removeFile}
-        />
-        <ContentSettings
-          type={form.type}
-          value={form.settings}
-          onChange={form.changeSettings}
-        />
-        <div className="flex flex-wrap items-center justify-between gap-4 border-t pt-6">
-          <p className="max-w-md text-sm leading-6 text-muted-foreground">
-            현재는 입력 확인까지 지원합니다. AI 생성은 준비 중이며, 제작 입력은
-            새로고침하면 초기화됩니다.
-          </p>
-          <Button type="submit" className="h-11 px-5">
-            입력 내용 확인
-            <ArrowRight aria-hidden="true" />
-          </Button>
-        </div>
+        {form.canCreate ? (
+          <>
+            {form.structure === "repeating" ? (
+              <ReferenceRoleImages
+                images={form.roleImages}
+                error={form.error || form.fileError}
+                onAddFile={form.setRoleImage}
+                onRemoveImage={form.removeRoleImage}
+              />
+            ) : (
+              <ReferenceImages
+                images={form.referenceImages}
+                error={form.error || form.fileError}
+                inputRef={form.referenceInput}
+                onAddFiles={form.addFiles}
+                onRemoveImage={form.removeImage}
+                onReorderImages={form.reorderImages}
+              />
+            )}
+            <ContentSettings
+              value={form.settings}
+              structure={form.structure}
+              onChange={form.changeSettings}
+            />
+            <div className="flex flex-wrap items-center justify-between gap-4 border-t pt-6">
+              <p className="max-w-md text-sm leading-6 text-muted-foreground">
+                이미지가 분석된 뒤 전략, 본문, 훅을 순서대로 검토합니다.
+              </p>
+              <Button type="submit" className="h-11 px-5">
+                입력 내용 확인
+                <ArrowRight aria-hidden="true" />
+              </Button>
+            </div>
+          </>
+        ) : (
+          <WorkflowPlaceholder type={form.type} method={form.method} structure={form.structure} />
+        )}
       </form>
       <ContentReviewDialog
         open={form.reviewOpen}
         onOpenChange={form.setReviewOpen}
         context={context}
-        type={form.type}
-        method={form.method}
-        materials={form.materials}
+        model={codexModel}
+        structure={form.structure}
+        files={form.files}
         settings={form.settings}
+        starting={starting}
+        error={startError}
+        onStart={() => void start()}
       />
     </div>
   );

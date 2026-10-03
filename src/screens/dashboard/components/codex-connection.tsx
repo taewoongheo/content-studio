@@ -1,7 +1,11 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useCodexConnection } from "@/lib/codex/use-codex-connection";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
+import type { CodexConnectionController } from "@/lib/codex/use-codex-connection";
 
 const labels = {
   disconnected: "연결 안 됨",
@@ -18,8 +22,21 @@ const dots = {
   error: "bg-destructive",
 };
 
-export function CodexConnection() {
-  const { connection, busy, requestError, act } = useCodexConnection();
+export function CodexConnection({
+  controller,
+}: {
+  controller: CodexConnectionController;
+}) {
+  const {
+    connection,
+    busy,
+    requestError,
+    models,
+    selectedModel,
+    modelsError,
+    selectModel,
+    act,
+  } = controller;
 
   const status = connection?.status;
   const canDisconnect = status === "connected" || status === "login-required";
@@ -54,6 +71,39 @@ export function CodexConnection() {
         <p role="alert" className="text-xs leading-5 text-destructive">
           {requestError}
         </p>
+      )}
+      {status === "connected" && (
+        <div className="grid gap-2 border-t pt-3">
+          <label htmlFor="codex-model" className="text-xs font-medium">
+            모델
+          </label>
+          <NativeSelect
+            id="codex-model"
+            value={selectedModel}
+            disabled={models.length === 0}
+            className="w-full"
+            aria-describedby="codex-model-description"
+            onChange={(event) => selectModel(event.target.value)}
+          >
+            {models.length === 0 && (
+              <NativeSelectOption value="">불러오는 중…</NativeSelectOption>
+            )}
+            {models.map((model) => (
+              <NativeSelectOption key={model.id} value={model.model}>
+                {model.displayName}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+          <p
+            id="codex-model-description"
+            className="text-xs leading-5 text-muted-foreground"
+          >
+            {modelsError ||
+              models.find((model) => model.model === selectedModel)
+                ?.description ||
+              "이미지 입력을 지원하는 모델을 불러옵니다."}
+          </p>
+        </div>
       )}
       <div className="flex gap-2">
         {status !== "connected" && (
