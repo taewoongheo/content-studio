@@ -10,17 +10,31 @@ export function contentJobEvents(
   let cleanup = () => {};
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
+      let closed = false;
+      let unsubscribe = () => {};
       const send = (snapshot: ContentJobSnapshot) => {
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify(snapshot)}\n\n`),
-        );
+        if (closed) return;
+        try {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify(snapshot)}\n\n`),
+          );
+        } catch {
+          cleanup();
+        }
       };
-      const unsubscribe = registry.subscribe(jobId, send);
+      unsubscribe = registry.subscribe(jobId, send);
       const abort = () => {
+        if (closed) return;
         cleanup();
-        controller.close();
+        try {
+          controller.close();
+        } catch {
+          // The consumer may have already closed or cancelled the stream.
+        }
       };
       cleanup = () => {
+        if (closed) return;
+        closed = true;
         unsubscribe();
         signal.removeEventListener("abort", abort);
       };
