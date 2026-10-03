@@ -7,7 +7,12 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   if (!isLocalRequest(request, true)) return new Response(null, { status: 403 });
-  const form = await request.formData();
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch {
+    return Response.json({ error: "이미지 정보를 확인해 주세요." }, { status: 400 });
+  }
   const file = form.get("image");
   const name = form.get("name");
   const description = form.get("description");

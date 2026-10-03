@@ -326,6 +326,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {element?.kind === "background" && placement ? (
                 <SlideBackground
+                  key={`${scopeKey}:${selectedSlideIds.join(",")}`}
                   color={slide.backgroundColor}
                   disabled={disabled}
                   onSave={(color) => saveCommands(selectedSlideIds.length === document.slides.length

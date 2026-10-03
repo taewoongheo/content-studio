@@ -19,6 +19,16 @@ const origin = "http://localhost:3000";
 const headers = { host: "localhost:3000", origin };
 const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
+test("이미지 업로드는 multipart가 아니거나 손상된 본문을 JSON 400으로 거부한다", async () => {
+  for (const contentType of ["application/json", "multipart/form-data; boundary=missing"]) {
+    const response = await addAsset(new Request(`${origin}/api/library/assets`, {
+      method: "POST", headers: { ...headers, "Content-Type": contentType }, body: "invalid",
+    }));
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), { error: "이미지 정보를 확인해 주세요." });
+  }
+});
+
 test("대시보드 API는 DB 기록을 추가·조회·삭제한다", async () => {
   const directory = mkdtempSync(join(tmpdir(), "content-studio-api-test-"));
   process.env.CONTENT_STUDIO_DB_PATH = join(directory, "studio.sqlite");
