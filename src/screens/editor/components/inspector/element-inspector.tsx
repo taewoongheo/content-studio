@@ -11,6 +11,8 @@ import type { EditorCommand, ElementDefinition, ElementFrame, ElementStyle, Plac
 import { commandsFromDraft, draftWithFontSize, frameWithLockedDimension, makeElementDraft, validElementDraft, type VisualTarget } from "./element-draft";
 import { useAutosave } from "./use-autosave";
 import { EDITOR_FONTS, editorFont, supportedFontWeight } from "@/lib/content-jobs/editor/typography/fonts";
+import { remapTextColors } from "@/lib/content-jobs/editor/typography/text-colors";
+import { TextContentControl } from "./text/text-content-control";
 
 type Props = {
   ref?: Ref<ElementInspectorHandle>;
@@ -81,7 +83,10 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
         <label className="grid gap-1.5 text-sm"><span className="font-medium">이름</span><Input value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} /></label>
         <label className="grid gap-1.5 text-sm"><span className="font-medium">역할·의미</span><Textarea value={draft.role} onChange={(event) => setDraft((current) => ({ ...current, role: event.target.value }))} /></label>
         {element.kind === "text" ? (
-          <label className="grid gap-1.5 text-sm"><span className="font-medium">내용</span><Textarea value={draft.value} onChange={(event) => setDraft((current) => ({ ...current, value: event.target.value }))} /></label>
+          <TextContentControl value={draft.value} textColors={draft.textColors} baseColor={draft.style.color} disabled={disabled}
+            onChange={(value) => setDraft((current) => ({ ...current, value,
+              textColors: remapTextColors(current.value, value, current.textColors) }))}
+            onColorsChange={(textColors) => setDraft((current) => ({ ...current, textColors }))} />
         ) : element.kind === "image" ? (
           <div className="grid gap-3">
             {currentImage && <div className="grid gap-1.5 text-sm">

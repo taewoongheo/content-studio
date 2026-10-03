@@ -141,6 +141,71 @@ try {
       method: "POST", headers: { origin: "https://example.com", "content-type": "application/json" }, body: "{}",
     });
     assert.equal(denied.status, 403);
+    const colorProject = (await call("create_project", { name: "Partial colors" })).structuredContent as Project;
+    const colorText = "BUILD A BIGGER\nCHEST ROUTINE";
+    const colorStart = colorText.indexOf("CHEST");
+    await call("edit_project", { projectId: colorProject.id, expectedRevision: 0, commands: [
+      { type: "add_element", element: { id: "color-title", name: "Color title", role: "Hook", kind: "text",
+        frame: { x: 0.1, y: 0.15, width: 0.8, height: 0.5 }, style: { ...style, fontSize: 150, color: "#000000" } } },
+      { type: "place_element", slideId: "slide-1", elementId: "color-title", placementId: "color-title-1" },
+      { type: "set_slot_value", slideId: "slide-1", placementId: "color-title-1", value: colorText },
+    ] });
+    const beforeColors = await call("preview_slide", { projectId: colorProject.id, slideId: "slide-1" });
+    await page.goto(`${origin}/?job=${colorProject.id}`);
+    await page.getByRole("button", { name: "Color title Element 선택 및 레이어 순서 이동", exact: true }).click();
+    const content = page.getByLabel("내용", { exact: true });
+    await content.evaluate((input, start) => {
+      const textarea = input as HTMLTextAreaElement;
+      textarea.focus(); textarea.setSelectionRange(start, start);
+    }, colorStart);
+    for (let i = 0; i < 5; i++) await content.press("Shift+ArrowRight");
+    const applied = page.waitForResponse(response => response.url().endsWith(`/api/content-jobs/${colorProject.id}`)
+      && response.request().method() === "POST");
+    await page.getByRole("button", { name: "선택 색상 적용", exact: true }).click();
+    assert.equal((await applied).status(), 200);
+    const colored = (await call("read_project", { projectId: colorProject.id })).structuredContent as Project;
+    assert.deepEqual(colored.editor.document.slides[0].placements.find(p => p.id === "color-title-1")?.textColors,
+      [{ start: colorStart, end: colorStart + 5, color: "#FF0000" }]);
+    const afterColors = await call("preview_slide", { projectId: colorProject.id, slideId: "slide-1" });
+    async function pixels(result: Awaited<ReturnType<typeof call>>) {
+      const image = result.content.find(item => item.type === "image");
+      assert.ok(image?.type === "image");
+      return sharp(Buffer.from(image.data, "base64")).removeAlpha().raw().toBuffer();
+    }
+    const beforePixels = await pixels(beforeColors), afterPixels = await pixels(afterColors);
+    const ink = (data: Buffer) => Buffer.from(Array.from({ length: data.length / 3 }, (_, i) =>
+      Math.min(data[i * 3], data[i * 3 + 1], data[i * 3 + 2])));
+    assert.deepEqual(ink(afterPixels), ink(beforePixels), "color changes must preserve glyph positions, wrapping and alignment");
+    assert.ok(afterPixels.some((value, i) => i % 3 === 0 && value > 200 && afterPixels[i + 1] < 30), "selected word must contain red ink");
+    const colorClone = (await call("create_project", { sourceProjectId: colorProject.id, name: "Colored clone" })).structuredContent as Project;
+    assert.deepEqual(colorClone.editor.document, colored.editor.document);
+    const colorUndo = (await call("undo_project", { projectId: colorProject.id, expectedRevision: colored.editor.revision })).structuredContent as Project;
+    assert.equal(colorUndo.editor.document.slides[0].placements.find(p => p.id === "color-title-1")?.textColors, undefined);
+    const invalidColor = await client.callTool({ name: "edit_project", arguments: { projectId: colorProject.id,
+      expectedRevision: colorUndo.editor.revision, commands: [{ type: "set_text_colors", slideId: "slide-1", placementId: "color-title-1",
+        textColors: [{ start: 0, end: 1000, color: "#FF0000" }] }] } });
+    assert.equal(invalidColor.isError, true);
+    const afterInvalidColor = (await call("read_project", { projectId: colorProject.id })).structuredContent as Project;
+    assert.deepEqual(afterInvalidColor.editor.document, colorUndo.editor.document);
+    let colorRevision = colorUndo.editor.revision;
+    for (const textAlign of ["left", "right"]) {
+      const wrappedText = "AVATAR VERYLONGWORDWITHOUTSPACES\nCHEST ROUTINE";
+      const plain = (await call("edit_project", { projectId: colorProject.id, expectedRevision: colorRevision, commands: [
+        { type: "update_visual", scope: "local", slideId: "slide-1", placementId: "color-title-1",
+          frame: { x: 0.1, y: 0.15, width: 0.4, height: 0.7 }, style: { textAlign } },
+        { type: "set_slot_value", slideId: "slide-1", placementId: "color-title-1", value: wrappedText, textColors: [] },
+      ] })).structuredContent as Project;
+      const plainPreview = await pixels(await call("preview_slide", { projectId: colorProject.id, slideId: "slide-1" }));
+      const ranged = (await call("edit_project", { projectId: colorProject.id, expectedRevision: plain.editor.revision, commands: [
+        { type: "set_text_colors", slideId: "slide-1", placementId: "color-title-1",
+          textColors: [{ start: 2, end: wrappedText.length - 2, color: "#FF0000" }] },
+      ] })).structuredContent as Project;
+      const rangedPreview = await pixels(await call("preview_slide", { projectId: colorProject.id, slideId: "slide-1" }));
+      assert.deepEqual(ink(rangedPreview), ink(plainPreview), `${textAlign} alignment and forced word wrapping must preserve glyph layout`);
+      colorRevision = ranged.editor.revision;
+    }
+    console.log("PASS selected text color UI, exact glyph-layout preservation, clone, undo and invalid ranges");
+
     console.log("PASS autosave status and live project-list refresh");
     console.log("PASS shared memory, clone independence, open/list, undo, revision conflict and cross-origin rejection");
   } finally { await browser.close(); }

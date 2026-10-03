@@ -5,6 +5,7 @@ import { artworkSize, fittedImage, pixelFrame, renderImageUrl } from "./layout";
 import { loadArtworkImages, type ArtworkImageLoader } from "./assets";
 import { roundedTrianglePath, shapeGeometry } from "./shapes/geometry";
 import { canvasFont } from "./fonts";
+import { addColoredText } from "./text/colored-text";
 
 type Options = {
   document: EditorDocument;
@@ -94,7 +95,7 @@ export async function renderArtwork(options: Options) {
             lineHeight: style.lineHeight, align: style.textAlign, verticalAlign: "top", padding: 0,
             fill: placement.value ? style.color : "#999", wrap: "word" });
           text.y((frame.height - text.height()) / 2);
-          group.add(text);
+          addColoredText(group, text, placement.textColors ?? []);
         }
       }
     }

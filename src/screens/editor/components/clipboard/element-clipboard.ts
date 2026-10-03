@@ -35,7 +35,8 @@ export function pasteElement(document: EditorDocument, clipboard: ElementClipboa
       const placementId = id();
       if (slide.id === destinationSlideId && !destinationPlacementId) destinationPlacementId = placementId;
       commands.push({ type: "place_element", slideId: slide.id, elementId, placementId },
-        { type: "set_slot_value", slideId: slide.id, placementId, value: original.value },
+        { type: "set_slot_value", slideId: slide.id, placementId, value: original.value,
+          ...(original.textColors !== undefined ? { textColors: structuredClone(original.textColors) } : {}) },
         { type: "update_visual", scope: "local", slideId: slide.id, placementId,
           frame: { ...frame, x: frame.x + 0.03, y: frame.y + 0.03 },
           style: { ...clipboard.element.style, ...original.styleOverride } });

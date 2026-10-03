@@ -21,6 +21,27 @@ function fixture() {
   return { database, registry, writes, stores };
 }
 
+test("부분 색상을 저장·복구하고 잘못된 구간은 저장본을 바꾸지 않는다", async () => {
+  const f = fixture();
+  try {
+    const job = f.writes.create({ name: "Colors" });
+    const edited = await f.writes.edit(job.id, [
+      { type: "add_element", element: makeElementDefinition({ id: "title", kind: "text" }) },
+      { type: "place_element", slideId: "slide-1", elementId: "title", placementId: "title-1" },
+      { type: "set_slot_value", slideId: "slide-1", placementId: "title-1", value: "BUILD CHEST",
+        textColors: [{ start: 6, end: 11, color: "#FF0000" }] },
+    ], 0);
+    const restored = loadContentProject(new ContentJobRegistry(), job.id, f.stores);
+    assert.deepEqual(restored.editor.document, edited.editor.document);
+    await assert.rejects(f.writes.edit(job.id, [{ type: "set_text_colors", slideId: "slide-1", placementId: "title-1",
+      textColors: [{ start: 6, end: 12, color: "#FF0000" }] }], 1), /부분 색상/);
+    assert.deepEqual(f.stores.projects.get(job.id)?.document, edited.editor.document);
+    const undone = f.writes.undo(job.id, 1);
+    assert.deepEqual(f.stores.projects.get(job.id)?.document, undone.editor.document);
+    assert.deepEqual(undone.editor.document, job.editor.document);
+  } finally { f.database.close(); }
+});
+
 test("MCP 생성·복제·편집·되돌리기는 최신 문서를 저장하고 새 메모리에서 복구한다", async () => {
   const f = fixture();
   try {

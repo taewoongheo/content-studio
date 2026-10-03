@@ -5,6 +5,9 @@ import { MAX_FRAME_COORDINATE, MAX_FRAME_DIMENSION } from "./types";
 
 const text = { type: "string" };
 const color = { type: "string", pattern: "^#[0-9a-fA-F]{6}$" };
+const textColors = { type: "array", maxItems: 200, items: object({
+  start: { type: "integer", minimum: 0 }, end: { type: "integer", minimum: 1 }, color,
+}) };
 const frame = object({
   x: { type: "number", minimum: -MAX_FRAME_COORDINATE, maximum: MAX_FRAME_COORDINATE },
   y: { type: "number", minimum: -MAX_FRAME_COORDINATE, maximum: MAX_FRAME_COORDINATE },
@@ -50,7 +53,8 @@ const commandVariants = [
   object({ type: { const: "reorder_slides" }, slideIds: { type: "array", items: text } }),
   object({ type: { const: "reorder_layers" }, slideId: text, placementIds: { type: "array", items: text } }),
   object({ type: { const: "set_slide_background" }, slideId: text, color }),
-  object({ type: { const: "set_slot_value" }, slideId: text, placementId: text, value: text }),
+  object({ type: { const: "set_slot_value" }, slideId: text, placementId: text, value: text, textColors }, ["type", "slideId", "placementId", "value"]),
+  object({ type: { const: "set_text_colors" }, slideId: text, placementId: text, textColors }),
   object({ type: { const: "update_visual" }, scope: { const: "common" }, elementId: text, frame, style: stylePatch }, ["type", "scope", "elementId"]),
   object({ type: { const: "update_visual" }, scope: { const: "local" }, slideId: text, placementId: text, frame, style: stylePatch }, ["type", "scope", "slideId", "placementId"]),
   object({ type: { const: "update_element" }, elementId: text, name: text, role: text }, ["type", "elementId"]),
