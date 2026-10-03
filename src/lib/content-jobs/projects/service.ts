@@ -4,6 +4,7 @@ import { ContentJobError, type ContentJobRegistry } from "../workflow/registry";
 import { AssetStore } from "@/lib/local-db/assets";
 import { getLocalDatabase } from "@/lib/local-db/database";
 import { ContentProjectStore, type SavedProjectAsset } from "@/lib/local-db/projects/store";
+import { notifyProjectsChanged } from "./events";
 
 export function defaultProjectStores() {
   const database = getLocalDatabase();
@@ -51,7 +52,7 @@ function parseDocument(value: unknown): EditorDocument {
   return document;
 }
 
-export async function saveContentProject(
+export function saveContentProject(
   registry: ContentJobRegistry,
   jobId: string,
   name: string,
@@ -73,11 +74,12 @@ export async function saveContentProject(
     document,
     assets: projectAssetIds(document).map((assetId) => readProjectAsset(assetId, stores.assets)),
   });
-  registry.update(jobId, (job) => { job.name = saved.name; });
+  registry.update(jobId, (job) => { job.name = saved.name; job.savedRevision = job.editor.revision; });
+  registry.afterCommit(notifyProjectsChanged);
   return saved;
 }
 
-export async function loadContentProject(
+export function loadContentProject(
   registry: ContentJobRegistry,
   projectId: string,
   stores = defaultProjectStores(),
@@ -104,6 +106,7 @@ export async function loadContentProject(
     job.name = project.name;
     job.editor.document = structuredClone(document);
     job.editor.revision = 0;
+    job.savedRevision = 0;
     job.assets = assets.map((asset) => ({
       id: asset.id,
       name: asset.name,
@@ -114,14 +117,14 @@ export async function loadContentProject(
 }
 
 /** Clone the current draft when available; loading a saved source never discards a draft. */
-export async function createContentProject(
+export function createContentProject(
   registry: ContentJobRegistry,
   input: { name?: string; sourceProjectId?: string; aspectRatio?: EditorDocument["aspectRatio"];
     slideCount?: number; structure?: EditorDocument["structure"]; outputLanguage?: string },
   stores = defaultProjectStores(),
 ) {
   const source = input.sourceProjectId
-    ? await loadContentProject(registry, input.sourceProjectId, stores) : null;
+    ? loadContentProject(registry, input.sourceProjectId, stores) : null;
   if (source && (input.aspectRatio || input.slideCount !== undefined || input.structure || input.outputLanguage))
     throw new ContentJobError("INVALID_OUTPUT", "복제할 때는 원본 설정을 사용합니다. 생성 후 편집해 주세요.");
   const created = registry.add(source ? {
@@ -132,7 +135,7 @@ export async function createContentProject(
     slideCount: input.slideCount ?? 6, outputLanguage: input.outputLanguage ?? "English",
   });
   return registry.update(created.id, (job) => {
-    job.name = input.name ?? (source?.name ? `${source.name} 복사본` : "새 프로젝트");
+    job.name = input.name ?? (source?.name ? `${source.name.slice(0, 115)} 복사본` : "새 프로젝트");
     if (source) {
       job.editor.document = structuredClone(source.editor.document);
       job.assets = structuredClone(source.assets);

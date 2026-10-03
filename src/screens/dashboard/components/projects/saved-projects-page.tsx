@@ -26,11 +26,31 @@ export function SavedProjectsPage({ onOpen }: {
 
   useEffect(() => {
     let active = true;
-    void listContentProjects()
-      .then((items) => { if (active) setProjects(items); })
-      .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : "프로젝트를 불러오지 못했습니다."); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+    let refreshing = false;
+    let requested = false;
+    async function refresh() {
+      requested = true;
+      if (refreshing) return;
+      refreshing = true;
+      try {
+        while (active && requested) {
+          requested = false;
+          try {
+            const items = await listContentProjects();
+            if (active) { setProjects(items); setError(""); }
+          } catch (cause) {
+            if (active) setError(cause instanceof Error ? cause.message : "프로젝트를 불러오지 못했습니다.");
+          } finally { if (active) setLoading(false); }
+        }
+      } finally { refreshing = false; }
+    }
+    const events = new EventSource("/api/content-projects");
+    // The stream sends an initial event too, so initial load and reconnect use the same path.
+    events.onmessage = () => { void refresh(); };
+    events.onerror = () => { void refresh(); };
+    const onFocus = () => { void refresh(); };
+    window.addEventListener("focus", onFocus);
+    return () => { active = false; events.close(); window.removeEventListener("focus", onFocus); };
   }, []);
 
   async function openProject(project: SavedProjectSummary) {

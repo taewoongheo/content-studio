@@ -2,11 +2,12 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod/v4";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { EditorCommand } from "@/lib/content-jobs/editor/types";
-import { contentJobRegistry, editorService } from "@/lib/content-jobs/workflow/service";
-import { createContentProject, defaultProjectStores, loadContentProject } from "@/lib/content-jobs/projects/service";
+import { contentJobRegistry } from "@/lib/content-jobs/workflow/service";
+import { defaultProjectStores, loadContentProject } from "@/lib/content-jobs/projects/service";
 import { getLocalDatabase } from "@/lib/local-db/database";
 import { createSchema, editSchema, previewSchema, projectSchema, undoSchema } from "./tools/schema";
-import { editWithLocalImages, type LocalImageCommand } from "./tools/images";
+import type { LocalImageCommand } from "./tools/images";
+import { McpProjectWrites } from "./tools/project-writes";
 import { previewSlide } from "./preview/render";
 
 const json = (data: Record<string, unknown>): CallToolResult => ({
@@ -37,7 +38,7 @@ export function createStudioMcpServer(origin: string) {
     for (const job of contentJobRegistry.list()) {
       entries.set(job.id, { id: job.id, name: job.name ?? entries.get(job.id)?.name ?? "새 프로젝트",
         aspectRatio: job.aspectRatio, slideCount: job.slideCount, outputLanguage: job.outputLanguage,
-        createdAt: job.createdAt, updatedAt: job.updatedAt, state: "draft", url: `${origin}/?job=${encodeURIComponent(job.id)}` });
+        createdAt: job.createdAt, updatedAt: job.updatedAt, state: job.savedRevision === job.editor.revision ? "saved" : "draft", url: `${origin}/?job=${encodeURIComponent(job.id)}` });
     }
     return json({ projects: [...entries.values()] });
   }));
@@ -49,10 +50,10 @@ export function createStudioMcpServer(origin: string) {
     return json(describe(projectId));
   }));
   server.registerTool("create_project", {
-    description: "Create a new unsaved project. Optional sourceProjectId clones its current draft or saved document and assets, without modifying the source. With a source, omit blank-document settings. Without a source, defaults are sequential, 4:5, 6 slides, English. Returns a new ID and editor URL.",
+    description: "Create a new project and save it to the database before returning success. Optional sourceProjectId clones its current draft or saved document and assets, without modifying the source. With a source, omit blank-document settings. Without a source, defaults are sequential, 4:5, 6 slides, English. Returns a new ID and editor URL.",
     inputSchema: createSchema, annotations: annotations(false),
   }, (input) => guarded(async () => {
-    const job = await createContentProject(contentJobRegistry, input);
+    const job = new McpProjectWrites(contentJobRegistry, getLocalDatabase()).create(input);
     return json(describe(job.id));
   }));
   server.registerTool("read_project", {
@@ -60,17 +61,17 @@ export function createStudioMcpServer(origin: string) {
     inputSchema: projectSchema, annotations: annotations(true),
   }, ({ projectId }) => guarded(() => json(describe(projectId))));
   server.registerTool("edit_project", {
-    description: "Apply an ordered command batch atomically as one undo step. Use expectedRevision from read/edit/undo; on conflict re-read. update_visual common changes the shared definition AND clears matching local overrides on all placements; local changes only the specified slide placement. Rectangle/circle/triangle/text/image are elements: add_element then place_element. set_local_image loads a PNG/JPG/WebP absolute localPath (max 10MB) into an existing image placement, including one created earlier in this batch. Non-background placements render back-to-front; the background sentinel must be last in reorder_layers. No separate image-upload tool is needed.",
+    description: "Apply an ordered command batch atomically as one undo step and save it to the database before returning success. Use expectedRevision from read/edit/undo; on conflict re-read. update_visual common changes the shared definition AND clears matching local overrides on all placements; local changes only the specified slide placement. Rectangle/circle/triangle/text/image are elements: add_element then place_element. set_local_image loads a PNG/JPG/WebP absolute localPath (max 10MB) into an existing image placement, including one created earlier in this batch. Non-background placements render back-to-front; the background sentinel must be last in reorder_layers. No separate image-upload tool is needed.",
     inputSchema: editSchema, annotations: annotations(false),
   }, (raw) => guarded(async () => {
     const { projectId, commands, expectedRevision } = raw as { projectId: string; commands: Array<EditorCommand | LocalImageCommand>; expectedRevision: number };
-    const job = await editWithLocalImages(contentJobRegistry, getLocalDatabase(), projectId, commands, expectedRevision);
+    const job = await new McpProjectWrites(contentJobRegistry, getLocalDatabase()).edit(projectId, commands, expectedRevision);
     return json({ ...job, url: `${origin}/?job=${encodeURIComponent(job.id)}` });
   }));
   server.registerTool("undo_project", {
-    description: "Undo the last edit batch, including text, styles and image placement. Imported assets remain available. Returns the new document and revision.",
+    description: "Undo the last edit batch, including text, styles and image placement. Imported assets remain available. Saves the restored document before returning success with the new document and revision.",
     inputSchema: undoSchema, annotations: annotations(false),
-  }, ({ projectId, expectedRevision }) => guarded(() => json({ ...editorService.undo(projectId, expectedRevision) })));
+  }, ({ projectId, expectedRevision }) => guarded(() => json({ ...new McpProjectWrites(contentJobRegistry, getLocalDatabase()).undo(projectId, expectedRevision) })));
   server.registerTool("preview_slide", {
     description: "See one slide as a PNG rendered by the same renderer as the editor/export. Uses a snapshot and returns its revision. Does not save the project.",
     inputSchema: previewSchema, annotations: annotations(true),

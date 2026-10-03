@@ -10,6 +10,7 @@ export type ContentJobInput = {
 export type ContentJobRecord = ContentJobInput & {
   id: string;
   name?: string;
+  savedRevision?: number;
   editor: { revision: number; document: EditorDocument };
   editorHistory: EditorDocument[];
   assets: EditorAsset[];

@@ -17,17 +17,20 @@ import { saveContentProject } from "@/screens/projects/api";
 
 export type ProjectSaveHandle = { saveAutomatically: () => Promise<boolean> };
 
-export function ProjectSaveControl({ ref, jobId, revision, getRevision, defaultName, initialProjectName, disabled, onBeforeSave }: {
+export function ProjectSaveControl({ ref, jobId, revision, getRevision, defaultName, initialProjectName, currentProjectName, persistedRevision, disabled, onBeforeSave }: {
   ref?: Ref<ProjectSaveHandle>;
   jobId: string;
   revision: number;
   getRevision: () => number;
   defaultName: string;
   initialProjectName?: string;
+  currentProjectName?: string;
+  persistedRevision?: number;
   disabled: boolean;
   onBeforeSave: () => Promise<boolean>;
 }) {
-  const [projectName, setProjectName] = useState(initialProjectName ?? "");
+  const [localProjectName, setProjectName] = useState(initialProjectName ?? "");
+  const projectName = currentProjectName ?? localProjectName;
   const [draftName, setDraftName] = useState(initialProjectName ?? defaultName);
   const [savedRevision, setSavedRevision] = useState<number | null>(initialProjectName ? revision : null);
   const [open, setOpen] = useState(false);
@@ -63,7 +66,7 @@ export function ProjectSaveControl({ ref, jobId, revision, getRevision, defaultN
     else setOpen(true);
   }
 
-  const saved = Boolean(projectName) && savedRevision === revision;
+  const saved = Boolean(projectName) && (persistedRevision ?? savedRevision) === revision;
 
   return (
     <>

@@ -311,6 +311,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
             <span>{job.slideCount}장</span>
           </label>
           <ProjectSaveControl ref={projectSaveRef} jobId={job.id} revision={job.editor.revision}
+            currentProjectName={job.name} persistedRevision={job.savedRevision}
             getRevision={() => latestRevision.current}
             defaultName="새 콘텐츠"
             initialProjectName={initialProjectName} disabled={disabled || !document}

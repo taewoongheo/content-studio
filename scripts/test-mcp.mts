@@ -20,13 +20,25 @@ if (!address || typeof address === "string") throw new Error("No test port");
 const port = address.port;
 await new Promise<void>((resolve, reject) => portServer.close((error) => error ? reject(error) : resolve()));
 const origin = `http://127.0.0.1:${port}`;
-const app = spawn("pnpm", [process.argv.includes("--production") ? "start" : "dev", "--port", String(port)], {
-  env: { ...process.env, CONTENT_STUDIO_DB_PATH: join(directory, "test.sqlite") },
-  stdio: ["ignore", "pipe", "pipe"], detached: true,
-});
 let serverLog = "";
-app.stdout.on("data", (chunk) => { serverLog += chunk; });
-app.stderr.on("data", (chunk) => { serverLog += chunk; });
+function startApp() {
+  const child = spawn("pnpm", [process.argv.includes("--production") ? "start" : "dev", "--port", String(port)], {
+    env: { ...process.env, CONTENT_STUDIO_DB_PATH: join(directory, "test.sqlite") },
+    stdio: ["ignore", "pipe", "pipe"], detached: true,
+  });
+  child.stdout.on("data", (chunk) => { serverLog += chunk; });
+  child.stderr.on("data", (chunk) => { serverLog += chunk; });
+  return child;
+}
+let app = startApp();
+async function waitForApp() {
+  const deadline = Date.now() + 60_000;
+  while (true) {
+    try { if ((await fetch(`${origin}/mcp`)).status === 405) return; } catch { /* starting */ }
+    if (app.exitCode !== null || Date.now() > deadline) throw new Error(`Server did not start: ${serverLog}`);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+}
 const stop = () => {
   if (app.pid) {
     try { process.kill(-app.pid, "SIGTERM"); } catch { /* already stopped */ }
@@ -35,12 +47,8 @@ const stop = () => {
 process.once("SIGINT", stop);
 const client = new Client({ name: "studio-smoke", version: "1.0.0" });
 try {
-  const deadline = Date.now() + 60_000;
-  while (true) {
-    try { if ((await fetch(`${origin}/mcp`)).status === 405) break; } catch { /* starting */ }
-    if (app.exitCode !== null || Date.now() > deadline) throw new Error(`Server did not start: ${serverLog}`);
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
+  await waitForApp();
+  let recovery: Project | undefined;
   await client.connect(new StreamableHTTPClientTransport(new URL(`${origin}/mcp`)));
   async function call(name: string, args: Record<string, unknown>) {
     const result = CallToolResultSchema.parse(await client.callTool({ name, arguments: args }));
@@ -65,6 +73,9 @@ try {
 
   const browser = await chromium.launch();
   try {
+    const listPage = await browser.newPage();
+    await listPage.goto(origin);
+    await listPage.getByRole("heading", { name: "MCP smoke", exact: true }).waitFor();
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
     await page.goto(created.url);
     await page.getByRole("button", { name: "ZIP 내보내기" }).waitFor();
@@ -88,6 +99,8 @@ try {
       { type: "update_visual", scope: "common", elementId: "title", style: { color: "#FF0000" } },
     ] })).structuredContent as Project;
     await page.getByRole("button", { name: /Live MCP.*선택/ }).waitFor();
+    await page.getByRole("button", { name: "저장됨", exact: true }).waitFor();
+    assert.equal(updated.savedRevision, updated.editor.revision);
     console.log("UI received MCP edit via SSE, revision", updated.editor.revision);
     const preview = await call("preview_slide", { projectId: id, slideId: "slide-1" });
     const png = preview.content.find((content) => content.type === "image");
@@ -101,6 +114,7 @@ try {
     console.log("preview", meta.width, meta.height, bytes.length);
 
     const cloned = (await call("create_project", { sourceProjectId: id, name: "Clone" })).structuredContent as Project;
+    await listPage.getByRole("heading", { name: "Clone", exact: true }).waitFor();
     assert.notEqual(cloned.id, id);
     assert.equal(cloned.editor.document.slides[0].name, "Live MCP");
     const undone = (await call("undo_project", { projectId: id, expectedRevision: 1 })).structuredContent as Project;
@@ -115,6 +129,8 @@ try {
     assert.equal(save.status, 201);
     const opened = (await call("open_project", { projectId: cloned.id })).structuredContent as Project;
     assert.equal(opened.name, "Saved clone");
+    await listPage.getByRole("heading", { name: "Saved clone", exact: true }).waitFor();
+    recovery = (await call("create_project", { sourceProjectId: cloned.id, name: "Restart recovery" })).structuredContent as Project;
     const listed = (await call("list_projects", {})).structuredContent as { projects: Array<{ id: string }> };
     assert.equal(listed.projects.filter((project) => project.id === cloned.id).length, 1);
     const invalid = await client.callTool({ name: "edit_project", arguments: {
@@ -125,8 +141,30 @@ try {
       method: "POST", headers: { origin: "https://example.com", "content-type": "application/json" }, body: "{}",
     });
     assert.equal(denied.status, 403);
+    console.log("PASS autosave status and live project-list refresh");
     console.log("PASS shared memory, clone independence, open/list, undo, revision conflict and cross-origin rejection");
   } finally { await browser.close(); }
+  assert.ok(recovery);
+  await client.close();
+  stop();
+  if (app.exitCode === null && app.signalCode === null) await new Promise((resolve) => app.once("exit", resolve));
+  serverLog = "";
+  app = startApp();
+  await waitForApp();
+  assert.equal((await fetch(`${origin}/api/content-jobs/${recovery.id}`)).status, 404);
+  await client.connect(new StreamableHTTPClientTransport(new URL(`${origin}/mcp`)));
+  const restored = (await call("open_project", { projectId: recovery.id })).structuredContent as Project;
+  assert.deepEqual(restored.editor.document, recovery.editor.document);
+  assert.equal(restored.assets.length, recovery.assets.length);
+  assert.equal(restored.savedRevision, 0);
+  assert.equal(restored.name, recovery.name);
+  const preview = await call("preview_slide", { projectId: restored.id, slideId: "slide-1" });
+  const restoredPng = preview.content.find((item) => item.type === "image");
+  assert.ok(restoredPng?.type === "image");
+  const restoredPixel = await sharp(Buffer.from(restoredPng.data, "base64"))
+    .extract({ left: 540, top: 800, width: 1, height: 1 }).removeAlpha().raw().toBuffer();
+  assert.deepEqual([...restoredPixel], [0, 255, 0]);
+  console.log("PASS real server restart restores the autosaved document and images");
 } finally {
   await client.close();
   stop();
