@@ -65,7 +65,7 @@ export function ContentReviewDialog({
           </div>
           <div>
             <dt>레퍼런스</dt>
-            <dd>{structure === "repeating" ? "훅 · 반복 본문 · CTA 대표 이미지" : `${files.length}장`}</dd>
+            <dd>{files.length}장 · 업로드 순서대로 분석</dd>
           </div>
           <div>
             <dt>설정</dt>

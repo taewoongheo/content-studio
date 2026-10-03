@@ -26,8 +26,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { FormField } from "../../form-field";
-import type { ReferenceImageDraft } from "../reference-images-model";
+import { FormField } from "../form-field";
+import type { ReferenceImageDraft } from "./reference-images-model";
 
 function ReferenceThumbnail({ image }: { image: ReferenceImageDraft }) {
   return (
@@ -153,9 +153,10 @@ export function ReferenceImages({
   return (
     <section className="grid gap-5 rounded-lg bg-surface-subtle p-6 max-md:p-4" aria-labelledby="reference-heading">
       <div className="grid gap-2">
-        <h2 id="reference-heading" className="font-semibold">
-          레퍼런스 슬라이드
-        </h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="reference-heading" className="font-semibold">레퍼런스 슬라이드</h2>
+          <span className="text-sm tabular-nums text-muted-foreground">{images.length}장</span>
+        </div>
         <p className="text-sm leading-6 text-muted-foreground">
           분석할 게시물의 모든 슬라이드를 원래 순서대로 추가하세요.
         </p>

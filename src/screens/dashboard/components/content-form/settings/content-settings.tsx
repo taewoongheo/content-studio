@@ -5,7 +5,6 @@ import {
   NativeSelectOption,
 } from "@/components/ui/native-select";
 import type { ContentSettings as Settings } from "./model";
-import type { SlideshowStructure } from "@/lib/content-jobs/domain/types";
 
 function Setting({
   id,
@@ -40,11 +39,9 @@ function Setting({
 
 export function ContentSettings({
   value,
-  structure,
   onChange,
 }: {
   value: Settings;
-  structure: SlideshowStructure;
   onChange: (patch: Partial<Settings>) => void;
 }) {
   return (
@@ -54,25 +51,16 @@ export function ContentSettings({
           TikTok 슬라이드쇼 설정
         </h2>
         <p className="text-sm leading-6 text-muted-foreground">
-          {structure === "repeating"
-            ? "총 장수에는 훅 1장과 CTA 1장이 포함됩니다. 나머지는 같은 포맷의 본문입니다."
-            : "게시 화면, 결과 장수와 사용할 언어를 정하세요."}
+          업로드한 이미지 순서와 장수로 슬라이드를 구성합니다.
         </p>
       </div>
-      <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+      <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
         <Setting
           id="ratio"
           label="화면 비율"
           value={value.ratio}
           onChange={(ratio) => onChange({ ratio: ratio as Settings["ratio"] })}
           options={["9:16", "4:5", "1:1"]}
-        />
-        <Setting
-          id="count"
-          label="슬라이드 수"
-          value={value.count}
-          onChange={(count) => onChange({ count })}
-          options={["4장", "5장", "6장", "7장", "8장", "9장", "10장"]}
         />
         <Setting
           id="language"

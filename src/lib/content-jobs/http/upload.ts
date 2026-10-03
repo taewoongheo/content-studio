@@ -1,17 +1,12 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { extname, join } from "node:path";
-import {
-  REFERENCE_ROLES,
-  type ContentJobInput,
-  type ProductContextInput,
-  type SlideshowStructure,
-} from "../domain/types";
+import type { ContentJobInput, ProductContextInput, SlideshowStructure } from "../domain/types";
 
 export const MAX_REFERENCE_IMAGES = 20;
 export const MAX_REFERENCE_IMAGE_BYTES = 10 * 1024 * 1024;
 
-const imageTypes = {
+export const imageTypes = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
   "image/webp": ".webp",
@@ -54,7 +49,7 @@ function parseProductContext(value: FormDataEntryValue | null) {
   return data as ProductContextInput;
 }
 
-function validSignature(type: keyof typeof imageTypes, bytes: Uint8Array) {
+export function validSignature(type: keyof typeof imageTypes, bytes: Uint8Array) {
   if (type === "image/jpeg")
     return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
   if (type === "image/png")
@@ -75,24 +70,18 @@ function parseImages(formData: FormData, structure: SlideshowStructure) {
     throw new ContentJobInputError(
       `레퍼런스 이미지는 1장 이상 ${MAX_REFERENCE_IMAGES}장 이하로 추가해 주세요.`,
     );
-  const roles = formData.getAll("imageRoles");
-  if (structure === "repeating") {
-    if (
-      images.length !== REFERENCE_ROLES.length ||
-      roles.length !== REFERENCE_ROLES.length ||
-      roles.some((role, index) => role !== REFERENCE_ROLES[index])
-    )
-      throw new ContentJobInputError(
-        "반복형은 훅, 반복 본문, CTA 이미지를 하나씩 추가해 주세요.",
-      );
-    return images.map((image, index) => ({
-      image,
-      role: REFERENCE_ROLES[index],
-    }));
-  }
-  if (roles.length > 0)
-    throw new ContentJobInputError("장면별 구성에는 이미지 역할을 지정하지 마세요.");
-  return images.map((image) => ({ image, role: null }));
+  if (formData.has("imageRoles"))
+    throw new ContentJobInputError("이미지 역할은 업로드 순서로 자동 지정됩니다.");
+  if (structure === "repeating" && images.length < 3)
+    throw new ContentJobInputError("반복형은 훅·본문·CTA를 포함해 최소 3장이 필요합니다.");
+  if (structure === "sequential" && images.length < 2)
+    throw new ContentJobInputError("장면별 구성은 최소 2장이 필요합니다.");
+  return images.map((image, index) => ({
+    image,
+    role: structure === "repeating"
+      ? index === 0 ? "hook" as const : index === images.length - 1 ? "cta" as const : "body" as const
+      : null,
+  }));
 }
 
 export async function saveContentJobInput(formData: FormData): Promise<{
@@ -113,9 +102,6 @@ export async function saveContentJobInput(formData: FormData): Promise<{
   const aspectRatio = formData.get("aspectRatio");
   if (aspectRatio !== "4:5" && aspectRatio !== "1:1" && aspectRatio !== "9:16")
     throw new ContentJobInputError("화면 비율을 확인해 주세요.");
-  const slideCount = Number(formData.get("slideCount"));
-  if (!Number.isInteger(slideCount) || slideCount < 4 || slideCount > 10)
-    throw new ContentJobInputError("슬라이드 수는 4장부터 10장까지입니다.");
   const outputLanguage = formData.get("outputLanguage");
   if (
     typeof outputLanguage !== "string" ||
@@ -165,7 +151,7 @@ export async function saveContentJobInput(formData: FormData): Promise<{
         structure,
         productContext,
         aspectRatio,
-        slideCount,
+        slideCount: images.length,
         outputLanguage: outputLanguage.trim(),
         referenceImages,
       },

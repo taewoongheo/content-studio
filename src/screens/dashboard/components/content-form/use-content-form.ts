@@ -1,13 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import {
-  REFERENCE_ROLES,
-  type ReferenceRole,
-} from "@/lib/content-jobs/domain/types";
 import type { ProductContext } from "../../hooks/use-product-context";
 import {
   validateReference,
   validateReferenceImages,
-  validateRepeatingReference,
 } from "./reference-input/validation";
 import {
   createReferenceImageDrafts,
@@ -30,12 +25,8 @@ export function useContentForm(context: ProductContext | null) {
   const [referenceImages, setReferenceImages] = useState<
     ReferenceImageDraft[]
   >([]);
-  const [roleImages, setRoleImages] = useState<
-    Partial<Record<ReferenceRole, ReferenceImageDraft>>
-  >({});
   const [settings, setSettings] = useState<ContentSettings>({
     ratio: "9:16",
-    count: "6장",
     language: "한국어",
   });
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -44,17 +35,7 @@ export function useContentForm(context: ProductContext | null) {
   const referenceInput = useRef<HTMLInputElement>(null);
   const previewUrls = useRef(new Set<string>());
   const canCreate = isImplementedWorkflow(type, method, structure);
-  const roleReferences = REFERENCE_ROLES.flatMap((role) => {
-    const image = roleImages[role];
-    return image ? [{ image, role }] : [];
-  });
-  const activeImages = structure === "repeating"
-    ? roleReferences.map(({ image }) => image)
-    : referenceImages;
-  const files = activeImages.map((image) => image.file);
-  const referenceInputs = structure === "repeating"
-    ? roleReferences.map(({ image, role }) => ({ file: image.file, role }))
-    : referenceImages.map((image) => ({ file: image.file, role: null }));
+  const files = referenceImages.map((image) => image.file);
 
   useEffect(() => {
     const urls = previewUrls.current;
@@ -121,50 +102,13 @@ export function useContentForm(context: ProductContext | null) {
     );
   }
 
-  function setRoleImage(role: ReferenceRole, list: FileList | null) {
-    if (!list) return;
-    if (list.length !== 1) {
-      setFileError("역할마다 대표 이미지를 한 장씩 추가해 주세요.");
-      return;
-    }
-    const message = validateReferenceImages(0, [list[0]]);
-    if (message) {
-      setFileError(message);
-      return;
-    }
-    const [draft] = createReferenceImageDrafts([list[0]]);
-    const previous = roleImages[role];
-    if (previous) {
-      URL.revokeObjectURL(previous.previewUrl);
-      previewUrls.current.delete(previous.previewUrl);
-    }
-    previewUrls.current.add(draft.previewUrl);
-    setRoleImages((current) => ({ ...current, [role]: draft }));
-    setFileError("");
-    setError("");
-  }
-
-  function removeRoleImage(role: ReferenceRole) {
-    const image = roleImages[role];
-    if (!image) return;
-    URL.revokeObjectURL(image.previewUrl);
-    previewUrls.current.delete(image.previewUrl);
-    setRoleImages((current) => {
-      const next = { ...current };
-      delete next[role];
-      return next;
-    });
-  }
-
   function review(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!context || !canCreate) return;
-    const message = structure === "repeating"
-      ? validateRepeatingReference(roleReferences)
-      : validateReference(files);
+    const message = validateReference(files, structure);
     setError(message);
     if (message) {
-      if (structure === "sequential") referenceInput.current?.focus();
+      referenceInput.current?.focus();
       return;
     }
     setReviewOpen(true);
@@ -175,10 +119,8 @@ export function useContentForm(context: ProductContext | null) {
     structure,
     method,
     canCreate,
-    referenceImages: activeImages,
-    roleImages,
+    referenceImages,
     files,
-    referenceInputs,
     settings,
     reviewOpen,
     error,
@@ -191,8 +133,6 @@ export function useContentForm(context: ProductContext | null) {
     addFiles,
     removeImage,
     reorderImages,
-    setRoleImage,
-    removeRoleImage,
     review,
     setReviewOpen,
   };

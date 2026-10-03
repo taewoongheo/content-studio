@@ -7,12 +7,10 @@ import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import { createContentJob } from "@/screens/content-job/api";
 import type { ProductContext } from "../../hooks/use-product-context";
 import { ContentReviewDialog } from "./content-review-dialog";
-import { ReferenceRoleImages } from "./reference-input/repeating/reference-role-images";
-import { ReferenceImages } from "./reference-input/sequential/reference-images";
+import { ReferenceImages } from "./reference-input/reference-images";
 import { ChoiceSection } from "./selection/choice-section";
 import { contentTypes, creationMethods, slideshowStructures } from "./selection/model";
 import { ContentSettings } from "./settings/content-settings";
-import { slideCount } from "./settings/model";
 import { useContentForm } from "./use-content-form";
 import { WorkflowPlaceholder } from "./workflow-placeholder";
 
@@ -56,10 +54,9 @@ export function ContentForm({
       const job = await createContentJob({
         model: codexModel,
         context: productContext,
-        referenceInputs: form.referenceInputs,
+        referenceImages: form.files,
         structure: form.structure,
         aspectRatio: form.settings.ratio,
-        slideCount: slideCount(form.settings),
         outputLanguage: form.settings.language,
       });
       form.setReviewOpen(false);
@@ -104,31 +101,21 @@ export function ContentForm({
         />
         {form.canCreate ? (
           <>
-            {form.structure === "repeating" ? (
-              <ReferenceRoleImages
-                images={form.roleImages}
-                error={form.error || form.fileError}
-                onAddFile={form.setRoleImage}
-                onRemoveImage={form.removeRoleImage}
-              />
-            ) : (
-              <ReferenceImages
-                images={form.referenceImages}
-                error={form.error || form.fileError}
-                inputRef={form.referenceInput}
-                onAddFiles={form.addFiles}
-                onRemoveImage={form.removeImage}
-                onReorderImages={form.reorderImages}
-              />
-            )}
+            <ReferenceImages
+              images={form.referenceImages}
+              error={form.error || form.fileError}
+              inputRef={form.referenceInput}
+              onAddFiles={form.addFiles}
+              onRemoveImage={form.removeImage}
+              onReorderImages={form.reorderImages}
+            />
             <ContentSettings
               value={form.settings}
-              structure={form.structure}
               onChange={form.changeSettings}
             />
             <div className="flex flex-wrap items-center justify-between gap-4 border-t pt-6">
               <p className="max-w-md text-sm leading-6 text-muted-foreground">
-                이미지가 분석된 뒤 전략, 본문, 훅을 순서대로 검토합니다.
+                이미지를 분석해 슬라이드 편집기 초안을 만듭니다. 편집기에서 주제와 훅을 정할 수 있습니다.
               </p>
               <Button type="submit" className="h-11 px-5">
                 입력 내용 확인
