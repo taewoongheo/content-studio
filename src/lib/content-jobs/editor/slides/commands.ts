@@ -16,8 +16,7 @@ export function slideActionCommand(document: EditorDocument, slideId: string,
       ? slide : document.slides.find((item) => item.role === "body");
     if (!body || (action === "duplicate_slide" && slide.role !== "body"))
       throw new Error("반복형에서는 본문 슬라이드를 복제해 주세요.");
-    const afterSlideId = slide.role === "cta" ? document.slides.at(-2)!.id : slide.id;
-    return { type: "add_slide", afterSlideId, sourceSlideId: body.id,
+    return { type: "add_slide", afterSlideId: slide.id, sourceSlideId: body.id,
       newSlideId, copyContent: action === "duplicate_slide" };
   }
   return { type: "add_slide", afterSlideId: slide.id, sourceSlideId: slide.id,

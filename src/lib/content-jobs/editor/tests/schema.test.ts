@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { validateEditorAnalysis, validateEditorCommands } from "../schema";
+import { validateEditorCommands } from "../schema";
+import { createBlankDocument, validateEditorDocument } from "../document";
+import { makeElementDefinition } from "../elements/factory";
 
 const element = {
   id: "heading",
@@ -12,48 +14,17 @@ const element = {
     color: "#111111",
     backgroundColor: "#FFFFFF",
     fontSize: 36,
+    lineHeight: 1.2,
     fontWeight: 700,
     textAlign: "center",
     borderRadius: 0,
     fontFamily: "sans-serif",
     imageFit: "cover",
   },
-  sourceImageId: "image-1",
-};
-
-test("AI 분석은 입력 이미지, 역할, Element 참조를 검증한다", () => {
-  const valid = {
-    elements: [
-      element,
-      { ...element, id: "body", sourceImageId: "image-2" },
-      { ...element, id: "cta", sourceImageId: "image-4" },
-    ],
-    formatNotes: { visualRules: "상단 제목", writingStyle: "짧음", hookPattern: "질문형", bodyProgression: "반복" },
-    slides: [
-      { imageId: "image-1", role: "hook", backgroundColor: "#FFFFFF", elementIds: ["heading"], visuals: [] },
-      { imageId: "image-2", role: "body", backgroundColor: "#FFFFFF", elementIds: ["body"], visuals: [] },
-      { imageId: "image-3", role: "body", backgroundColor: "#FFFFFF", elementIds: ["body"], visuals: [] },
-      { imageId: "image-4", role: "cta", backgroundColor: "#FFFFFF", elementIds: ["cta"], visuals: [] },
-    ],
   };
-  const imageIds = ["image-1", "image-2", "image-3", "image-4"];
-  assert.equal(validateEditorAnalysis(valid, imageIds, "repeating", 4).ok, true);
-  assert.equal(validateEditorAnalysis({ ...valid, elements: [
-    { ...element, slot: { placeholder: "완성된 문구" } }, ...valid.elements.slice(1),
-  ] }, imageIds, "repeating", 4).ok, false);
-  assert.equal(validateEditorAnalysis({ ...valid, slides: [
-    { ...valid.slides[0], elementIds: ["missing"] }, ...valid.slides.slice(1),
-  ] }, imageIds, "repeating", 4).ok, false);
-  assert.equal(validateEditorAnalysis({ ...valid, slides: [
-    { ...valid.slides[0], role: "body" }, ...valid.slides.slice(1),
-  ] }, imageIds, "repeating", 4).ok, false);
-  assert.equal(validateEditorAnalysis({ ...valid, slides: [
-    valid.slides[0], valid.slides[1], { ...valid.slides[2], elementIds: ["heading"] }, valid.slides[3],
-  ] }, imageIds, "repeating", 4).ok, false);
-  assert.equal(validateEditorAnalysis(valid, imageIds.slice(0, 3), "repeating", 4).ok, false);
-});
 
-test("AI 수정 명령은 허용된 종류와 필드만 받는다", () => {
+test("편집 명령은 허용된 종류와 필드만 받는다", () => {
+  assert.equal(validateEditorCommands({commands:[{type:"add_element",element}]}).ok, true);
   assert.equal(validateEditorCommands({ commands: [{
     type: "set_slot_value", slideId: "slide-1", placementId: "placement-1-1", value: "새 제목",
   }] }).ok, true);
@@ -62,7 +33,28 @@ test("AI 수정 명령은 허용된 종류와 필드만 받는다", () => {
     sourceSlideId: "slide-2", sourcePlacementId: "placement-2-1", newElementId: "copy",
     placements: [{ slideId: "slide-2", sourcePlacementId: "placement-2-1", newPlacementId: "new-placement" }],
   }] }).ok, true);
+  assert.equal(validateEditorCommands({ commands: [{ type: "update_visual", scope: "common",
+    elementId: "heading", frame: { x: -0.25, y: 1.1, width: 1.5, height: 0.2 },
+  }] }).ok, true);
   assert.equal(validateEditorCommands({ commands: [{
     type: "set_slot_value", slideId: "slide-1", placementId: "placement-1-1", value: "새 제목", extra: true,
   }] }).ok, false);
+});
+
+test("캔버스 밖 프레임은 허용하되 극단적 좌표와 크기는 명령과 저장 문서에서 거부한다", () => {
+  const document = createBlankDocument({ structure: "sequential", aspectRatio: "4:5", slideCount: 2 });
+  const definition = makeElementDefinition({ id: "outside", kind: "rectangle" });
+  document.elements.push(definition);
+  for (const frame of [
+    { x: -10, y: 10, width: 20, height: 20 },
+    { x: 1e300, y: 0, width: 1, height: 1 },
+    { x: 0, y: -11, width: 1, height: 1 },
+    { x: 0, y: 0, width: 1e300, height: 1 },
+    { x: 0, y: 0, width: 1, height: 21 },
+  ]) {
+    definition.frame = frame;
+    const expected = frame.x === -10;
+    assert.equal(validateEditorCommands({ commands: [{ type: "add_element", element: definition }] }).ok, expected);
+    assert.equal(validateEditorDocument(document).length === 0, expected);
+  }
 });

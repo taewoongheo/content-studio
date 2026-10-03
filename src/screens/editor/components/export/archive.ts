@@ -1,0 +1,22 @@
+import JSZip from "jszip";
+export { artworkSize as exportDimensions } from "../canvas/render/layout";
+
+export function slideFilename(index: number, slideCount: number) {
+  const digits = Math.max(2, String(slideCount).length);
+  return `slide-${String(index + 1).padStart(digits, "0")}.png`;
+}
+
+export function pngDataUrlBytes(dataUrl: string) {
+  const marker = "data:image/png;base64,";
+  if (!dataUrl.startsWith(marker)) throw new Error("PNG 이미지 데이터가 올바르지 않습니다.");
+  const binary = atob(dataUrl.slice(marker.length));
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
+export async function createSlideArchive(images: readonly Uint8Array[]) {
+  const zip = new JSZip();
+  images.forEach((image, index) => {
+    zip.file(slideFilename(index, images.length), image, { binary: true, compression: "STORE" });
+  });
+  return zip.generateAsync({ type: "blob", compression: "STORE", streamFiles: true });
+}

@@ -1,4 +1,4 @@
-import { imageTypes, MAX_REFERENCE_IMAGE_BYTES, validSignature } from "@/lib/content-jobs/http/upload";
+import { imageTypes, MAX_UPLOAD_IMAGE_BYTES, validSignature } from "@/lib/content-jobs/http/upload";
 import { isLocalRequest } from "@/lib/http/local-request";
 import { AssetStore, type ImageMimeType } from "@/lib/local-db/assets";
 import { getLocalDatabase } from "@/lib/local-db/database";
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   const file = form.get("image");
   const name = form.get("name");
   const description = form.get("description");
-  if (!(file instanceof File) || !(file.type in imageTypes) || file.size === 0 || file.size > MAX_REFERENCE_IMAGE_BYTES)
+  if (!(file instanceof File) || !(file.type in imageTypes) || file.size === 0 || file.size > MAX_UPLOAD_IMAGE_BYTES)
     return Response.json({ error: "PNG, JPG, WebP 이미지를 10MB 이하로 추가해 주세요." }, { status: 400 });
   if (typeof name !== "string" || !name.trim() || name.length > 120 ||
       typeof description !== "string" || description.length > 2000)

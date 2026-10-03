@@ -1,7 +1,7 @@
 import { isLocalRequest } from "@/lib/http/local-request";
 import { CharacterStore } from "@/lib/local-db/characters";
 import { getLocalDatabase } from "@/lib/local-db/database";
-import { imageTypes, MAX_REFERENCE_IMAGE_BYTES, validSignature } from "@/lib/content-jobs/http/upload";
+import { imageTypes, MAX_UPLOAD_IMAGE_BYTES, validSignature } from "@/lib/content-jobs/http/upload";
 import type { ImageMimeType } from "@/lib/local-db/assets";
 
 export const runtime = "nodejs";
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   const image = form.get("image");
   if (typeof description !== "string" || !description.trim() || description.length > 2000)
     return Response.json({ error: "캐릭터 설명이 필요합니다." }, { status: 400 });
-  if (!(image instanceof File) || !(image.type in imageTypes) || image.size === 0 || image.size > MAX_REFERENCE_IMAGE_BYTES)
+  if (!(image instanceof File) || !(image.type in imageTypes) || image.size === 0 || image.size > MAX_UPLOAD_IMAGE_BYTES)
     return Response.json({ error: "PNG, JPG, WebP 턴어라운드 이미지를 10MB 이하로 추가해 주세요." }, { status: 400 });
   const bytes = new Uint8Array(await image.arrayBuffer());
   const type = image.type as ImageMimeType;

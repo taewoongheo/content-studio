@@ -3,14 +3,15 @@ import test from "node:test";
 import {
   applyEditorCommand,
   applyEditorCommands,
-  createDocumentFromAnalysis as buildDocument,
   ensureSharedBackground,
+  getDuplicateTargets,
   BACKGROUND_ELEMENT_ID,
   BACKGROUND_PLACEMENT_ID,
   validateEditorDocument,
 } from "../document";
 import type { SlideshowStructure } from "../../domain/types";
-import type { EditorAnalysis, EditorDocument } from "../types";
+import type { EditorDocument } from "../types";
+import { createTestDocument as buildDocument, type FixtureLayout as EditorAnalysis } from "./fixtures";
 
 const analysis: EditorAnalysis = {
   elements: [
@@ -24,16 +25,16 @@ const analysis: EditorAnalysis = {
         color: "#111111",
         backgroundColor: "#FFFFFF",
         fontSize: 42,
+        lineHeight: 1.2,
         fontWeight: 700,
         textAlign: "center",
         borderRadius: 0,
         fontFamily: "sans-serif",
         imageFit: "cover",
       },
-      sourceImageId: "image-2",
-    },
+      },
   ],
-  formatNotes: { visualRules: "상단 제목", writingStyle: "짧은 문장", hookPattern: "문제 제기", bodyProgression: "동작별 반복" },
+
   slides: [
     { imageId: "image-1", role: "hook", backgroundColor: "#FFFFFF", elementIds: [], visuals: [] },
     { imageId: "image-2", role: "body", backgroundColor: "#FFFFFF", elementIds: ["title"], visuals: [] },
@@ -41,7 +42,22 @@ const analysis: EditorAnalysis = {
   ],
 };
 
-function createDocumentFromAnalysis(source: EditorAnalysis, structure: SlideshowStructure,
+test("복제 범위는 Element가 없는 장까지 포함하고 선택한 원본의 내용을 채운다", () => {
+  const initial = createTestDocument(analysis, "repeating", 4, "9:16");
+  const populated = applyEditorCommand(initial, { type: "set_slot_value", slideId: "slide-2", placementId: "placement-2-1", value: "Squat" });
+  const ids = populated.slides.map((slide) => slide.id);
+  const targets = getDuplicateTargets(populated, "slide-2", "placement-2-1", ids);
+  assert.equal(targets.length, 4);
+  const next = applyEditorCommand(populated, { type: "duplicate_placement", sourceSlideId: "slide-2",
+    sourcePlacementId: "placement-2-1", newElementId: "everywhere",
+    placements: targets.map((target, index) => ({ ...target, newPlacementId: `new-${index}` })) });
+  assert.ok(next.slides.every((slide) => slide.placements.some((placement) => placement.elementId === "everywhere")));
+  assert.equal(next.slides[0].placements.find((placement) => placement.elementId === "everywhere")?.value, "Squat");
+  assert.equal(next.slides[2].placements.find((placement) => placement.elementId === "everywhere")?.value, "");
+  assert.throws(() => getDuplicateTargets(populated, "slide-2", "placement-2-1", ["slide-2", "unknown"]));
+});
+
+function createTestDocument(source: EditorAnalysis, structure: SlideshowStructure,
   slideCount: number, aspectRatio: EditorDocument["aspectRatio"]) {
   const slides = source.slides.length === slideCount ? source.slides : Array.from({ length: slideCount }, (_, index) => ({
     ...source.slides[index === 0 ? 0 : index === slideCount - 1 ? 2 : 1],
@@ -50,13 +66,12 @@ function createDocumentFromAnalysis(source: EditorAnalysis, structure: Slideshow
   return buildDocument({ ...source, slides }, structure, slideCount, aspectRatio);
 }
 
-test("반복형 분석의 공통 Element를 각 본문 슬라이드에 배치한다", () => {
-  const document = createDocumentFromAnalysis(analysis, "repeating", 5, "9:16");
+test("반복형 문서의 공통 Element를 각 본문 슬라이드에 배치한다", () => {
+  const document = createTestDocument(analysis, "repeating", 5, "9:16");
   assert.deepEqual(document.slides.map((slide) => slide.role), ["hook", "body", "body", "body", "cta"]);
   assert.equal(document.elements.length, 2);
   assert.equal(document.elements.filter((element) => element.kind === "background").length, 1);
   assert.equal(document.slides.every((slide) => slide.placements.at(-1)?.elementId === BACKGROUND_ELEMENT_ID), true);
-  assert.equal(document.formatNotes.bodyProgression, "동작별 반복");
   assert.equal(document.slides[1].placements[0].elementId, "title");
   assert.equal(document.slides[1].placements[0].value, "");
   assert.equal(document.slides.every((slide) => slide.placements.every((placement) => placement.value === "")), true);
@@ -65,10 +80,19 @@ test("반복형 분석의 공통 Element를 각 본문 슬라이드에 배치한
   assert.deepEqual(validateEditorDocument(document), []);
 });
 
-test("모든 레퍼런스 장을 그대로 만들면서 반복 Element ID를 공유한다", () => {
+test("Element와 개별 배치는 슬라이드 바깥 프레임을 허용한다", () => {
+  const document = createTestDocument(analysis, "repeating", 3, "4:5");
+  const title = document.elements.find((element) => element.id === "title");
+  assert.ok(title);
+  title.frame = { x: -0.2, y: 0.9, width: 1.4, height: 0.3 };
+  document.slides[1].placements[0].frameOverride = { x: 1.1, y: -0.2, width: 0.4, height: 0.5 };
+  assert.deepEqual(validateEditorDocument(document), []);
+});
+
+test("모든 장을 그대로 만들면서 반복 Element ID를 공유한다", () => {
   const source: EditorAnalysis = {
     ...analysis,
-    elements: [...analysis.elements, { ...analysis.elements[0], id: "detail", sourceImageId: "image-3" }],
+    elements: [...analysis.elements, { ...analysis.elements[0], id: "detail", }],
     slides: [analysis.slides[0], analysis.slides[1],
       { imageId: "image-3", role: "body", backgroundColor: "#222222", elementIds: ["title", "detail"],
         visuals: [{ elementId: "title", frame: { x: 0.2, y: 0.2, width: 0.7, height: 0.12 },
@@ -86,7 +110,7 @@ test("모든 레퍼런스 장을 그대로 만들면서 반복 Element ID를 공
 });
 
 test("반복형 본문 장을 비워 추가하거나 내용을 복제하고, 필수 장 제거는 막는다", () => {
-  const initial = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
+  const initial = createTestDocument(analysis, "repeating", 4, "9:16");
   const filled = applyEditorCommand(initial, { type: "set_slot_value", slideId: "slide-2",
     placementId: "placement-2-1", value: "스쿼트" });
   const added = applyEditorCommand(filled, { type: "add_slide", afterSlideId: "slide-2",
@@ -103,8 +127,10 @@ test("반복형 본문 장을 비워 추가하거나 내용을 복제하고, 필
   assert.deepEqual(validateEditorDocument(removed), []);
   assert.throws(() => applyEditorCommand(initial, { type: "remove_slide", slideId: "slide-1" }), /훅과 CTA/);
   assert.throws(() => applyEditorCommand(initial, { type: "remove_slide", slideId: "slide-4" }), /훅과 CTA/);
-  assert.throws(() => applyEditorCommand(initial, { type: "add_slide", afterSlideId: "slide-4",
-    sourceSlideId: "slide-2", newSlideId: "too-late", copyContent: false }), /본문 장 사이/);
+  const appended = applyEditorCommand(initial, { type: "add_slide", afterSlideId: "slide-4",
+    sourceSlideId: "slide-2", newSlideId: "last-body", copyContent: false });
+  assert.equal(appended.slides.at(-1)?.role, "body");
+  assert.deepEqual(validateEditorDocument(appended), []);
   assert.throws(() => applyEditorCommand(initial, { type: "add_slide", afterSlideId: "slide-2",
     sourceSlideId: "slide-2", newSlideId: "", copyContent: false }), /슬라이드 ID/);
   const three = applyEditorCommand(initial, { type: "remove_slide", slideId: "slide-2" });
@@ -112,7 +138,7 @@ test("반복형 본문 장을 비워 추가하거나 내용을 복제하고, 필
 });
 
 test("배경은 모든 장이 공유하는 삭제 불가 Element이며 기존 장별 색을 보존한다", () => {
-  const document = createDocumentFromAnalysis({ ...analysis, slides: analysis.slides.map((slide, index) => ({
+  const document = createTestDocument({ ...analysis, slides: analysis.slides.map((slide, index) => ({
     ...slide, backgroundColor: index === 1 ? "#222222" : "#FFFFFF",
   })) }, "repeating", 5, "9:16");
   assert.equal(document.slides.every((slide) => slide.placements.at(-1)?.id === BACKGROUND_PLACEMENT_ID), true);
@@ -130,21 +156,23 @@ test("배경은 모든 장이 공유하는 삭제 불가 Element이며 기존 �
 });
 
 test("기존 문서에 배경 Element를 추가해도 장별 색과 텍스트 배치 순서를 유지한다", () => {
-  const current = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
+  const current = createTestDocument(analysis, "repeating", 4, "9:16");
   const legacy = structuredClone(current);
+  delete (legacy.elements[0].style as Partial<typeof legacy.elements[0]["style"]>).lineHeight;
   legacy.elements = legacy.elements.filter((element) => element.id !== BACKGROUND_ELEMENT_ID);
   for (const slide of legacy.slides) slide.placements = slide.placements.filter((placement) => placement.elementId !== BACKGROUND_ELEMENT_ID);
   legacy.slides[2].backgroundColor = "#0000FF";
   ensureSharedBackground(legacy);
   ensureSharedBackground(legacy);
   assert.deepEqual(validateEditorDocument(legacy), []);
+  assert.equal(legacy.elements[0].style.lineHeight, 1.2);
   assert.equal(legacy.slides[1].placements[0].elementId, "title");
   assert.equal(legacy.slides[2].placements.at(-1)?.styleOverride?.backgroundColor, "#0000FF");
   assert.equal(legacy.slides.every((slide) => slide.placements.filter((placement) => placement.elementId === BACKGROUND_ELEMENT_ID).length === 1), true);
 });
 
 test("개별 스타일 수정은 한 장에만, 공통 수정은 모든 배치에 적용한다", () => {
-  const initial = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
+  const initial = createTestDocument(analysis, "repeating", 4, "9:16");
   const body = initial.slides[1];
   const local = applyEditorCommand(initial, {
     type: "update_visual",
@@ -177,7 +205,7 @@ test("개별 스타일 수정은 한 장에만, 공통 수정은 모든 배치�
 });
 
 test("같은 Element는 서로 다른 색을 가진 뒤 전체 색 변경으로 다시 통일할 수 있다", () => {
-  let document = createDocumentFromAnalysis(analysis, "repeating", 5, "9:16");
+  let document = createTestDocument(analysis, "repeating", 5, "9:16");
   for (const [index, color] of [[1, "#FF0000"], [2, "#0000FF"]] as const) {
     const slide = document.slides[index];
     document = applyEditorCommand(document, { type: "update_visual", scope: "local", slideId: slide.id,
@@ -194,8 +222,8 @@ test("같은 Element는 서로 다른 색을 가진 뒤 전체 색 변경으로 
   assert.equal(unified.slides[2].placements[0].styleOverride, null);
 });
 
-test("존재하지 않는 Element와 유효하지 않은 화면 좌표는 거부한다", () => {
-  const document = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
+test("존재하지 않는 Element와 양수가 아닌 크기는 거부한다", () => {
+  const document = createTestDocument(analysis, "repeating", 4, "9:16");
   assert.throws(() => applyEditorCommand(document, {
     type: "place_element",
     slideId: "slide-1",
@@ -206,12 +234,12 @@ test("존재하지 않는 Element와 유효하지 않은 화면 좌표는 거부
     type: "update_visual",
     scope: "common",
     elementId: "title",
-    frame: { x: 0.9, y: 0.1, width: 0.8, height: 0.1 },
+    frame: { x: 0.9, y: 0.1, width: 0, height: 0.1 },
   }));
 });
 
 test("Element 슬롯 값은 지정한 슬라이드의 배치에만 반영된다", () => {
-  const document = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
+  const document = createTestDocument(analysis, "repeating", 4, "9:16");
   const body = document.slides[1];
   const edited = applyEditorCommand(document, {
     type: "set_slot_value",
@@ -224,7 +252,7 @@ test("Element 슬롯 값은 지정한 슬라이드의 배치에만 반영된다"
 });
 
 test("텍스트 Element를 새 장에 놓아도 내용은 비어 있다", () => {
-  const document = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
+  const document = createTestDocument(analysis, "repeating", 4, "9:16");
   const placed = applyEditorCommand(document, {
     type: "place_element", slideId: "slide-1", elementId: "title", placementId: "new-title",
   });
@@ -232,7 +260,7 @@ test("텍스트 Element를 새 장에 놓아도 내용은 비어 있다", () => 
 });
 
 test("일반 Element를 모두 제거해도 배경은 남는다", () => {
-  const document = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
+  const document = createTestDocument(analysis, "repeating", 4, "9:16");
   const slide = document.slides[1];
   const edited = applyEditorCommand(document, { type: "remove_placement", slideId: slide.id,
     placementId: slide.placements[0].id });
@@ -240,17 +268,8 @@ test("일반 Element를 모두 제거해도 배경은 남는다", () => {
   assert.deepEqual(validateEditorDocument(edited), []);
 });
 
-test("포맷 규칙은 시각 수정 이후에도 생성 맥락으로 보존된다", () => {
-  const document = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
-  const edited = applyEditorCommand(document, {
-    type: "set_slide_background", slideId: "slide-2", color: "#222222",
-  });
-  assert.equal(edited.formatNotes.writingStyle, "짧은 문장");
-  assert.equal(document.formatNotes.writingStyle, "짧은 문장");
-});
-
 test("슬라이드 배경도 JSON 수정 명령으로 변경한다", () => {
-  const document = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
+  const document = createTestDocument(analysis, "repeating", 4, "9:16");
   const edited = applyEditorCommand(document, { type: "set_slide_background", slideId: "slide-2", color: "#202020" });
   assert.equal(edited.slides[1].backgroundColor, "#202020");
   assert.equal(document.slides[1].backgroundColor, "#FFFFFF");
@@ -258,7 +277,7 @@ test("슬라이드 배경도 JSON 수정 명령으로 변경한다", () => {
 });
 
 test("공유 Element 복제는 원본이 놓인 모든 장에 새 공유 원본과 개별 내용을 복제한다", () => {
-  const initial = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
+  const initial = createTestDocument(analysis, "repeating", 4, "9:16");
   const first = applyEditorCommand(initial, { type: "set_slot_value", slideId: "slide-2", placementId: "placement-2-1", value: "스쿼트" });
   const second = applyEditorCommand(first, { type: "set_slot_value", slideId: "slide-3", placementId: "placement-3-1", value: "데드리프트" });
   const duplicated = applyEditorCommand(second, {
@@ -279,7 +298,7 @@ test("공유 Element 복제는 원본이 놓인 모든 장에 새 공유 원본�
 });
 
 test("선택한 장만 복제하면 독립 Element가 만들어지고 다른 Element 배치는 거부한다", () => {
-  const initial = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
+  const initial = createTestDocument(analysis, "repeating", 4, "9:16");
   const duplicated = applyEditorCommand(initial, {
     type: "duplicate_placement", sourceSlideId: "slide-2", sourcePlacementId: "placement-2-1",
     newElementId: "local-copy",
@@ -295,7 +314,7 @@ test("선택한 장만 복제하면 독립 Element가 만들어지고 다른 Ele
 });
 
 test("선택한 일부 장에서만 공유 Element를 복제한다", () => {
-  const initial = createDocumentFromAnalysis(analysis, "repeating", 5, "9:16");
+  const initial = createTestDocument(analysis, "repeating", 5, "9:16");
   const duplicated = applyEditorCommand(initial, {
     type: "duplicate_placement", sourceSlideId: "slide-2", sourcePlacementId: "placement-2-1",
     newElementId: "partial-copy",
@@ -310,7 +329,7 @@ test("선택한 일부 장에서만 공유 Element를 복제한다", () => {
 });
 
 test("선택한 일부 장에서만 공유 Element 배치를 제거한다", () => {
-  const initial = createDocumentFromAnalysis(analysis, "repeating", 5, "9:16");
+  const initial = createTestDocument(analysis, "repeating", 5, "9:16");
   const removed = applyEditorCommands(initial, [
     { type: "remove_placement", slideId: "slide-2", placementId: "placement-2-1" },
     { type: "remove_placement", slideId: "slide-4", placementId: "placement-4-1" },
@@ -322,7 +341,7 @@ test("선택한 일부 장에서만 공유 Element 배치를 제거한다", () =
 });
 
 test("사각형·원형·삼각형 Element를 편집 문서에 추가할 수 있다", () => {
-  const initial = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
+  const initial = createTestDocument(analysis, "repeating", 4, "9:16");
   for (const kind of ["rectangle", "circle", "triangle"] as const) {
     const shape = { ...analysis.elements[0], id: `shape-${kind}`, name: `${kind} 도형`, kind,
       style: { ...analysis.elements[0].style, backgroundColor: "#FF0000" } };

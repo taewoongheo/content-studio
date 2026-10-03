@@ -2,12 +2,13 @@
 
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import Image from "next/image";
+import { AlignCenter, AlignLeft, AlignRight } from "lucide-react";
 import { ImageUploadField } from "@/components/media/image-upload-field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import type { EditorCommand, ElementDefinition, ElementFrame, ElementStyle, PlacedElement } from "@/lib/content-jobs/editor/types";
-import { commandsFromDraft, makeElementDraft, validElementDraft, type VisualTarget } from "./element-draft";
+import { commandsFromDraft, draftWithFontSize, frameWithLockedDimension, makeElementDraft, validElementDraft, type VisualTarget } from "./element-draft";
 import { useAutosave } from "./use-autosave";
 
 type Props = {
@@ -19,14 +20,23 @@ type Props = {
   visualTargets: VisualTarget[];
   jobId: string;
   currentImage: ContentJobSnapshot["assets"][number] | null;
+  imageAspectRatioLocked: boolean;
   disabled: boolean;
   onSave: (commands: EditorCommand[]) => Promise<boolean>;
   onUploadImage: (file: File) => Promise<boolean>;
+  onImageAspectRatioLockedChange: (locked: boolean) => void;
 };
 
 export type ElementInspectorHandle = { flushPending: () => Promise<boolean> };
 
-export function ElementInspector({ ref, element, placement, slideId, selectedSlideIds, visualTargets, jobId, currentImage, disabled, onSave, onUploadImage }: Props) {
+const textAlignmentOptions = [
+  { value: "left", label: "왼쪽 정렬", Icon: AlignLeft },
+  { value: "center", label: "가운데 정렬", Icon: AlignCenter },
+  { value: "right", label: "오른쪽 정렬", Icon: AlignRight },
+] as const;
+
+export function ElementInspector({ ref, element, placement, slideId, selectedSlideIds, visualTargets, jobId,
+  currentImage, imageAspectRatioLocked, disabled, onSave, onUploadImage, onImageAspectRatioLockedChange }: Props) {
   const [draft, setDraft] = useState(() => makeElementDraft(element, placement));
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -49,7 +59,10 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
   }), [commands, valid, onSave]);
 
   function updateFrame(key: keyof ElementFrame, percent: number) {
-    setDraft((current) => ({ ...current, frame: { ...current.frame, [key]: percent / 100 } }));
+    setDraft((current) => ({ ...current, frame: element.kind === "image" && imageAspectRatioLocked &&
+      (key === "width" || key === "height")
+      ? frameWithLockedDimension(current.frame, key, percent / 100)
+      : { ...current.frame, [key]: percent / 100 } }));
   }
 
   function updateStyle<Key extends keyof ElementStyle>(key: Key, value: ElementStyle[Key]) {
@@ -95,8 +108,15 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
         <fieldset disabled={disabled} className="grid min-w-0 grid-cols-2 gap-3 [&>*]:min-w-0">
           <NumberField label="X (%)" value={draft.frame.x * 100} onChange={(value) => updateFrame("x", value)} />
           <NumberField label="Y (%)" value={draft.frame.y * 100} onChange={(value) => updateFrame("y", value)} />
-          <NumberField label="너비 (%)" value={draft.frame.width * 100} onChange={(value) => updateFrame("width", value)} />
-          <NumberField label="높이 (%)" value={draft.frame.height * 100} onChange={(value) => updateFrame("height", value)} />
+          <NumberField label={element.kind === "text" ? "영역 너비 (%)" : "너비 (%)"}
+            value={draft.frame.width * 100} onChange={(value) => updateFrame("width", value)} />
+          <NumberField label={element.kind === "text" ? "영역 높이 (%)" : "높이 (%)"}
+            value={draft.frame.height * 100} onChange={(value) => updateFrame("height", value)} />
+          {element.kind === "image" && <label className="col-span-2 flex items-center gap-2 text-xs font-medium">
+            <input type="checkbox" checked={imageAspectRatioLocked}
+              onChange={(event) => onImageAspectRatioLockedChange(event.target.checked)} />
+            너비·높이 비율 유지
+          </label>}
         </fieldset>
         <fieldset disabled={disabled} className="grid min-w-0 grid-cols-2 gap-3 [&>*]:min-w-0">
           {element.kind === "text" && (
@@ -105,21 +125,50 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
           <label className="grid gap-1.5 text-xs font-medium">{isShape ? "채우기 색" : "배경색"}
             <Input type="color" className="h-10 p-1" value={draft.style.backgroundColor === "transparent" ? "#FFFFFF" : draft.style.backgroundColor} onChange={(event) => updateStyle("backgroundColor", event.target.value)} disabled={draft.style.backgroundColor === "transparent"} />
           </label>
-          {!isShape && <label className="col-span-2 flex items-center gap-2 text-xs font-medium"><input type="checkbox" checked={draft.style.backgroundColor === "transparent"} onChange={(event) => updateStyle("backgroundColor", event.target.checked ? "transparent" : "#FFFFFF")} />투명 배경</label>}
+          <label className="col-span-2 flex items-center gap-2 text-xs font-medium"><input type="checkbox" checked={draft.style.backgroundColor === "transparent"}
+            onChange={(event) => {
+              const transparent = event.target.checked;
+              setDraft((current) => ({ ...current, style: { ...current.style,
+                backgroundColor: transparent ? "transparent" : "#FFFFFF",
+                ...(isShape && transparent ? { borderEnabled: true } : {}),
+              } }));
+            }} />투명 배경</label>
+          {isShape && <>
+            <label className="col-span-2 flex items-center gap-2 text-xs font-medium">
+              <input type="checkbox" checked={draft.style.borderEnabled ?? false}
+                onChange={(event) => updateStyle("borderEnabled", event.target.checked)} />테두리
+            </label>
+            <label className="grid gap-1.5 text-xs font-medium">테두리 색
+              <Input type="color" className="h-10 p-1" value={draft.style.borderColor ?? "#111111"}
+                disabled={!draft.style.borderEnabled} onChange={(event) => updateStyle("borderColor", event.target.value)} />
+            </label>
+            <NumberField label="테두리 두께 (px)" value={draft.style.borderWidth ?? 2} min={0} max={100} step={0.5}
+              disabled={!draft.style.borderEnabled} onChange={(value) => updateStyle("borderWidth", value)} />
+          </>}
           {element.kind === "text" && (
             <>
-              <NumberField label="글자 크기" value={draft.style.fontSize} onChange={(value) => updateStyle("fontSize", value)} />
+              <NumberField label="글자 크기" value={draft.style.fontSize}
+                onChange={(value) => setDraft((current) => draftWithFontSize(current, value))} />
+              <NumberField label="줄 높이" value={draft.style.lineHeight} step={0.1} min={0.8} max={3}
+                onChange={(value) => updateStyle("lineHeight", value)} />
               <NumberField label="글자 굵기" value={draft.style.fontWeight} onChange={(value) => updateStyle("fontWeight", value)} />
               <label className="grid gap-1.5 text-xs font-medium">글꼴 계열
                 <select className="h-10 rounded-md border bg-background px-2 text-sm" value={draft.style.fontFamily} onChange={(event) => updateStyle("fontFamily", event.target.value as ElementStyle["fontFamily"])}>
                   <option value="sans-serif">고딕</option><option value="serif">명조</option><option value="monospace">고정폭</option>
                 </select>
               </label>
-              <label className="grid gap-1.5 text-xs font-medium">정렬
-                <select className="h-10 rounded-md border bg-background px-2 text-sm" value={draft.style.textAlign} onChange={(event) => updateStyle("textAlign", event.target.value as ElementStyle["textAlign"])}>
-                  <option value="left">왼쪽</option><option value="center">가운데</option><option value="right">오른쪽</option>
-                </select>
-              </label>
+              <div className="grid gap-1.5 text-xs font-medium">
+                <span>정렬</span>
+                <div className="grid h-10 grid-cols-3 overflow-hidden rounded-md border bg-background" role="group" aria-label="텍스트 정렬">
+                  {textAlignmentOptions.map(({ value, label, Icon }) => (
+                    <button key={value} type="button" aria-label={label} aria-pressed={draft.style.textAlign === value}
+                      title={label} onClick={() => updateStyle("textAlign", value)}
+                      className={`grid place-items-center border-r last:border-r-0 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-foreground ${draft.style.textAlign === value ? "bg-foreground text-background" : "hover:bg-muted"}`}>
+                      <Icon className="size-4" aria-hidden="true" />
+                    </button>
+                  ))}
+                </div>
+              </div>
             </>
           )}
           {element.kind === "image" && <label className="grid gap-1.5 text-xs font-medium">이미지 맞춤
@@ -127,8 +176,8 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
               <option value="cover">영역 채우기</option><option value="contain">전체 보이기</option>
             </select>
           </label>}
-          {(element.kind === "text" || element.kind === "image" || element.kind === "rectangle") &&
-            <NumberField label="모서리" value={draft.style.borderRadius} onChange={(value) => updateStyle("borderRadius", value)} />}
+          {(element.kind === "text" || element.kind === "image" || element.kind === "rectangle" || element.kind === "triangle") &&
+            <NumberField label="모서리 반경 (px)" value={draft.style.borderRadius} min={0} max={100} onChange={(value) => updateStyle("borderRadius", value)} />}
         </fieldset>
       </div>
 
@@ -136,6 +185,8 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
   );
 }
 
-function NumberField({ label, value, onChange, disabled = false }: { label: string; value: number; onChange: (value: number) => void; disabled?: boolean }) {
-  return <label className="grid gap-1.5 text-xs font-medium">{label}<Input type="number" step="1" value={Number(value.toFixed(1))} disabled={disabled} onChange={(event) => onChange(Number(event.target.value))} /></label>;
+function NumberField({ label, value, onChange, disabled = false, step = 1, min, max }: { label: string; value: number;
+  onChange: (value: number) => void; disabled?: boolean; step?: number; min?: number; max?: number }) {
+  return <label className="grid gap-1.5 text-xs font-medium">{label}<Input type="number" step={step} min={min} max={max}
+    value={Number(value.toFixed(1))} disabled={disabled} onChange={(event) => onChange(Number(event.target.value))} /></label>;
 }
