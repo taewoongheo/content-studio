@@ -10,9 +10,15 @@ import { contentJobRegistry } from "@/lib/content-jobs/workflow/service";
 import { createContentProject, saveContentProject } from "@/lib/content-jobs/projects/service";
 import { getLocalDatabase } from "@/lib/local-db/database";
 import { ContentProjectStore } from "@/lib/local-db/projects/store";
+import type { ReuseGuide } from "@/lib/content-jobs/projects/reuse-guide";
 import { PATCH } from "@/app/api/content-projects/[projectId]/reuse/route";
 
 const origin = "http://localhost:3000";
+const guide = (contentRole = "Routine guide"): ReuseGuide => ({
+  contentRole, readerOutcome: "Build an actionable routine", requiredInformation: "Exercise choices, sets and reps",
+  selectionCriteria: "Routine requests, rather than ranking alternatives or correcting habits",
+});
+
 test("MCP는 가이드 목록만 제공하고 빈 생성·미등록 복제를 차단하며 대시보드 등록과 같은 원본을 사용한다", async () => {
   const directory = mkdtempSync(join(tmpdir(), "studio-template-mcp-"));
   process.env.CONTENT_STUDIO_DB_PATH = join(directory, "db.sqlite");
@@ -25,32 +31,72 @@ test("MCP는 가이드 목록만 제공하고 빈 생성·미등록 복제를 �
     const names = (await client.listTools()).tools.map(tool => tool.name);
     assert.equal(names.includes("create_project"), false);
     assert.ok(names.includes("clone_project"));
+    assert.ok(names.includes("register_template"));
+    assert.ok(names.includes("unregister_template"));
     assert.deepEqual((await client.callTool({ name: "list_template_guides", arguments: {} })).structuredContent, { templates: [] });
     assert.equal((await client.callTool({ name: "clone_project", arguments: {} })).isError, true);
     const source = createContentProject(contentJobRegistry, { name: "Back routine" });
     saveContentProject(contentJobRegistry, source.id, "Back routine");
+    const projects = new ContentProjectStore(getLocalDatabase());
+    const original = projects.get(source.id)!;
+    const register = (projectId: string, reuseGuide?: unknown) => client.callTool({ name: "register_template", arguments: { projectId, ...(reuseGuide === undefined ? {} : { reuseGuide }) } });
+    const unregister = (projectId: string) => client.callTool({ name: "unregister_template", arguments: { projectId } });
+    assert.equal((await register("missing", guide())).isError, true);
+    assert.equal((await unregister("missing")).isError, true);
+    assert.equal((await register(source.id)).isError, true);
+    assert.equal((await register(source.id, "   ")).isError, true);
+    assert.equal((await register(source.id, { contentRole: "Routine" })).isError, true);
+    assert.equal((await register(source.id, { ...guide(), readerOutcome: " " })).isError, true);
+    assert.equal((await register(source.id, { ...guide(), visualFeatures: "Cards" })).isError, true);
+    assert.equal((await register(source.id, guide("x".repeat(1001)))).isError, true);
+    assert.equal(projects.getSummary(source.id)?.isTemplate, false);
+    assert.equal(projects.getSummary(source.id)?.reuseGuide, null);
+    assert.equal((await register(source.id, guide(" Routine guide "))).isError, undefined);
+    assert.deepEqual(projects.getSummary(source.id)?.reuseGuide, guide());
+    assert.equal((await register(source.id)).isError, undefined);
+    assert.equal(projects.list().length, 1);
+    assert.deepEqual(projects.get(source.id)?.document, original.document);
+    assert.deepEqual(projects.get(source.id)?.assets, original.assets);
+    assert.equal((await unregister(source.id)).isError, undefined);
+    assert.equal((await unregister(source.id)).isError, undefined);
+    assert.deepEqual(projects.getSummary(source.id)?.reuseGuide, guide());
+    assert.deepEqual((await client.callTool({ name: "list_template_guides", arguments: {} })).structuredContent, { templates: [] });
+    assert.equal((await register(source.id)).isError, undefined);
+    assert.equal(projects.listTemplates()[0].id, source.id);
+    assert.equal((await unregister(source.id)).isError, undefined);
+    assert.equal((await client.callTool({ name: "set_reuse_guide", arguments: { projectId: source.id, reuseGuide: null } })).isError, undefined);
     assert.equal((await client.callTool({ name: "clone_project", arguments: { templateProjectId: source.id } })).isError, true);
     const context = { params: Promise.resolve({ projectId: source.id }) };
     const patch = (body: unknown, requestOrigin = origin) => PATCH(new Request(`${origin}/api/content-projects/${source.id}/reuse`, {
       method: "PATCH", headers: { host: "localhost:3000", origin: requestOrigin, "content-type": "application/json" }, body: JSON.stringify(body),
     }), context);
     assert.equal((await patch({ isTemplate: true })).status, 422);
-    assert.equal((await patch({ reuseGuide: "Exercise cards", isTemplate: true }, "https://example.com")).status, 403);
-    assert.equal((await patch({ reuseGuide: "Exercise cards", isTemplate: true })).status, 200);
+    assert.equal((await patch({ reuseGuide: "Legacy prose" })).status, 400);
+    assert.equal((await patch({ reuseGuide: { contentRole: "Routine" } })).status, 400);
+    assert.equal((await patch({ reuseGuide: { ...guide(), readerOutcome: " " }, isTemplate: true })).status, 422);
+    assert.equal(projects.getSummary(source.id)?.isTemplate, false);
+    assert.equal((await patch({ reuseGuide: guide("Exercise cards"), isTemplate: true }, "https://example.com")).status, 403);
+    assert.equal((await patch({ reuseGuide: guide("Exercise cards"), isTemplate: true })).status, 200);
     const guides = (await client.callTool({ name: "list_template_guides", arguments: {} })).structuredContent as { templates: Array<Record<string, unknown>> };
     assert.equal(guides.templates.length, 1);
     assert.equal(guides.templates[0].id, source.id);
-    assert.equal(guides.templates[0].reuseGuide, "Exercise cards");
+    assert.deepEqual(guides.templates[0].reuseGuide, guide("Exercise cards"));
     assert.equal("editor" in guides.templates[0], false);
     assert.equal("document" in guides.templates[0], false);
     assert.equal("assets" in guides.templates[0], false);
-    assert.equal((await client.callTool({ name: "set_reuse_guide", arguments: { projectId: source.id, reuseGuide: "Updated routine guide" } })).isError, undefined);
-    assert.equal((await client.callTool({ name: "set_reuse_guide", arguments: { projectId: source.id, reuseGuide: "" } })).isError, true);
+    assert.equal((await client.callTool({ name: "set_reuse_guide", arguments: { projectId: source.id, reuseGuide: guide("Updated routine guide") } })).isError, undefined);
+    assert.equal((await client.callTool({ name: "set_reuse_guide", arguments: { projectId: source.id, reuseGuide: null } })).isError, true);
     const cloned = await client.callTool({ name: "clone_project", arguments: { templateProjectId: source.id, name: "Chest" } });
     assert.equal(cloned.isError, undefined);
-    const projects = new ContentProjectStore(getLocalDatabase());
     assert.equal(projects.list().length, 2);
     assert.equal(projects.listTemplates().length, 1);
+    const clonedProject = projects.get((cloned.structuredContent as { id: string }).id);
+    assert.equal((await unregister(source.id)).isError, undefined);
+    assert.deepEqual(projects.get(clonedProject!.id), clonedProject);
+    assert.deepEqual(projects.get(source.id)?.document, original.document);
+    assert.deepEqual(projects.getSummary(source.id)?.reuseGuide, guide("Updated routine guide"));
+    assert.equal((await client.callTool({ name: "clone_project", arguments: { templateProjectId: source.id } })).isError, true);
+    assert.equal((await register(source.id)).isError, undefined);
     assert.equal((await patch({ isTemplate: false })).status, 200);
     assert.equal((await client.callTool({ name: "clone_project", arguments: { templateProjectId: source.id } })).isError, true);
     assert.ok(projects.get(source.id));

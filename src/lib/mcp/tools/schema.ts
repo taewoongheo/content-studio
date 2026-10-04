@@ -1,4 +1,5 @@
 import * as z from "zod/v4";
+import { completeReuseGuideSchema } from "@/lib/content-jobs/projects/reuse-guide";
 import { editorCommandsSchema } from "@/lib/content-jobs/editor/schema";
 
 const localImageSchema = {
@@ -22,4 +23,5 @@ export const cloneSchema = z.strictObject({
   name: z.string().trim().min(1).max(120).optional(),
   templateProjectId: z.string().min(1),
 });
-export const reuseGuideSchema = projectSchema.extend({ reuseGuide: z.string().trim().max(4000) });
+export const reuseGuideSchema = projectSchema.extend({ reuseGuide: completeReuseGuideSchema.nullable() });
+export const registerTemplateSchema = projectSchema.extend({ reuseGuide: completeReuseGuideSchema.optional() });

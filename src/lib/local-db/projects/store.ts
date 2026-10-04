@@ -1,4 +1,6 @@
 import type Database from "better-sqlite3";
+import { emptyReuseGuide, hasCompleteReuseGuide, projectReuseUpdateSchema, type ReuseGuide, type ProjectReuseUpdate } from "@/lib/content-jobs/projects/reuse-guide";
+import { migrateReuseGuide, REUSE_GUIDE_COLUMNS } from "./migrate-reuse-guide";
 import type { EditorAsset } from "../../content-jobs/domain/types";
 
 export type SavedProjectSummary = {
@@ -7,7 +9,7 @@ export type SavedProjectSummary = {
   aspectRatio: string;
   slideCount: number;
   outputLanguage: string;
-  reuseGuide: string;
+  reuseGuide: ReuseGuide | null;
   isTemplate: boolean;
   createdAt: string;
   updatedAt: string;
@@ -31,7 +33,10 @@ type ProjectRow = {
   aspect_ratio: string;
   slide_count: number;
   output_language: string;
-  reuse_guide: string;
+  reuse_content_role: string;
+  reuse_reader_outcome: string;
+  reuse_required_information: string;
+  reuse_selection_criteria: string;
   is_template: number;
   document_json: string;
   created_at: string;
@@ -45,7 +50,7 @@ type AssetRow = {
   data: Buffer;
 };
 
-const SUMMARY_COLUMNS = "id, name, aspect_ratio, slide_count, output_language, reuse_guide, is_template, created_at, updated_at";
+const SUMMARY_COLUMNS = `id, name, aspect_ratio, slide_count, output_language, ${REUSE_GUIDE_COLUMNS.join(", ")}, is_template, created_at, updated_at`;
 const PROJECT_COLUMNS = `${SUMMARY_COLUMNS}, document_json`;
 
 function summary(row: ProjectRow): SavedProjectSummary {
@@ -55,7 +60,10 @@ function summary(row: ProjectRow): SavedProjectSummary {
     aspectRatio: row.aspect_ratio,
     slideCount: row.slide_count,
     outputLanguage: row.output_language,
-    reuseGuide: row.reuse_guide,
+    reuseGuide: REUSE_GUIDE_COLUMNS.some(column => row[column]) ? {
+      contentRole: row.reuse_content_role, readerOutcome: row.reuse_reader_outcome,
+      requiredInformation: row.reuse_required_information, selectionCriteria: row.reuse_selection_criteria,
+    } : null,
     isTemplate: row.is_template === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -92,24 +100,24 @@ export class ContentProjectStore {
           PRIMARY KEY (project_id, asset_id)
         );
       `);
-      const columns = this.database.prepare("PRAGMA table_info(content_projects)").all() as Array<{ name: string }>;
-      if (!columns.some(column => column.name === "reuse_guide"))
-        this.database.exec("ALTER TABLE content_projects ADD COLUMN reuse_guide TEXT NOT NULL DEFAULT ''");
-      if (!columns.some(column => column.name === "is_template"))
-        this.database.exec("ALTER TABLE content_projects ADD COLUMN is_template INTEGER NOT NULL DEFAULT 0 CHECK (is_template IN (0, 1))");
+      migrateReuseGuide(this.database);
     })();
   }
 
-  updateReuse(id: string, input: { reuseGuide?: string; isTemplate?: boolean }) {
+  updateReuse(id: string, input: ProjectReuseUpdate) {
+    const validated = projectReuseUpdateSchema.parse(input);
     return this.database.transaction(() => {
       const project = this.getSummary(id);
       if (!project) throw new Error("프로젝트를 찾을 수 없습니다.");
-      const reuseGuide = input.reuseGuide?.trim() ?? project.reuseGuide;
-      const isTemplate = input.isTemplate ?? project.isTemplate;
-      if (reuseGuide.length > 4000) throw new Error("재사용 가이드는 4000자 이하로 입력해 주세요.");
-      if (isTemplate && !reuseGuide) throw new Error("템플릿으로 등록하려면 재사용 가이드를 입력해 주세요.");
-      this.database.prepare("UPDATE content_projects SET reuse_guide = ?, is_template = ?, updated_at = ? WHERE id = ?")
-        .run(reuseGuide, isTemplate ? 1 : 0, new Date().toISOString(), id);
+      const reuseGuide = validated.reuseGuide === undefined ? project.reuseGuide : validated.reuseGuide;
+      const isTemplate = validated.isTemplate ?? project.isTemplate;
+      if (isTemplate && !hasCompleteReuseGuide(reuseGuide))
+        throw new Error("템플릿으로 등록하려면 재사용 가이드의 네 항목을 모두 입력해 주세요.");
+      const guide = reuseGuide ?? emptyReuseGuide();
+      this.database.prepare(`UPDATE content_projects SET reuse_content_role = ?, reuse_reader_outcome = ?,
+        reuse_required_information = ?, reuse_selection_criteria = ?, is_template = ?, updated_at = ? WHERE id = ?`)
+        .run(guide.contentRole, guide.readerOutcome, guide.requiredInformation, guide.selectionCriteria,
+          isTemplate ? 1 : 0, new Date().toISOString(), id);
       return this.getSummary(id)!;
     })();
   }

@@ -1,4 +1,5 @@
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
+import type { ProjectReuseUpdate } from "@/lib/content-jobs/projects/reuse-guide";
 import type { SavedProjectSummary } from "@/lib/local-db/projects/store";
 
 async function readJson<T>(response: Response): Promise<T> {
@@ -43,7 +44,7 @@ export function deleteProject(id: string, expectedTabId?: string) {
   return projectMutation(id, "DELETE", { expectedTabId });
 }
 
-export async function updateProjectReuse(id: string, input: { reuseGuide?: string; isTemplate?: boolean }) {
+export async function updateProjectReuse(id: string, input: ProjectReuseUpdate) {
   const response = await fetch(`/api/content-projects/${encodeURIComponent(id)}/reuse`, {
     method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
   });

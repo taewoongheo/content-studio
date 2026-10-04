@@ -20,7 +20,7 @@ function fixture() {
   function seed(name: string) {
     const job = createContentProject(registry, { name }, stores);
     saveContentProject(registry, job.id, name, stores);
-    stores.projects.updateReuse(job.id, { reuseGuide: "운동 루틴 소개", isTemplate: true });
+    stores.projects.updateReuse(job.id, { reuseGuide: { contentRole: "운동 루틴 구성", readerOutcome: "운동을 선택한다", requiredInformation: "운동과 수행량", selectionCriteria: "실행 계획 요청" }, isTemplate: true });
     return registry.get(job.id);
   }
   return { database, registry, writes, stores, seed };

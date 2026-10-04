@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { hasCompleteReuseGuide, REUSE_GUIDE_FIELDS } from "@/lib/content-jobs/projects/reuse-guide";
 import { FolderOpen, LayoutTemplate, LoaderCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SavedProjectSummary } from "@/lib/local-db/projects/store";
@@ -40,9 +41,13 @@ export function TemplateProjectsPage({ onOpen }: { onOpen: (projectId: string) =
         <p className="mt-1.5 text-xs text-muted-foreground">
           {project.aspectRatio} · {project.slideCount}장 · {project.outputLanguage} · {dateFormatter.format(new Date(project.updatedAt))}
         </p>
-        <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-muted-foreground">
-          {project.reuseGuide || "재사용 가이드를 작성해 템플릿으로 지정하세요."}
-        </p>
+        {project.reuseGuide ? <dl className="mt-3 grid gap-2 text-sm leading-relaxed">
+          {REUSE_GUIDE_FIELDS.map(({ key, label }) => <div key={key}>
+            <dt className="font-medium">{label}</dt>
+            <dd className="whitespace-pre-wrap break-words text-muted-foreground">{project.reuseGuide?.[key] || "미작성"}</dd>
+          </div>)}
+          {!hasCompleteReuseGuide(project.reuseGuide) && <p className="text-xs text-muted-foreground">네 항목을 모두 작성해야 템플릿으로 사용할 수 있습니다.</p>}
+        </dl> : <p className="mt-3 text-sm text-muted-foreground">재사용 가이드를 작성해 템플릿으로 지정하세요.</p>}
       </div>
       <div className="flex min-w-0 flex-wrap items-start gap-2">
         <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void openProject(project.id)}>
@@ -60,7 +65,7 @@ export function TemplateProjectsPage({ onOpen }: { onOpen: (projectId: string) =
         </> : <>
           {project.isTemplate ? <Button type="button" variant="secondary" size="sm" disabled>
             <LayoutTemplate aria-hidden="true" />템플릿 지정됨
-          </Button> : project.reuseGuide.trim() ? <Button type="button" size="sm" disabled={busy}
+          </Button> : hasCompleteReuseGuide(project.reuseGuide) ? <Button type="button" size="sm" disabled={busy}
             aria-label={`${project.name} 템플릿 지정`} onClick={() => void designate(project.id, true)}>
             {updatingId === project.id ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <LayoutTemplate aria-hidden="true" />}
             템플릿 지정

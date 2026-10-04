@@ -9,7 +9,13 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import { chromium } from "playwright";
 import sharp from "sharp";
+import type { ReuseGuide } from "../src/lib/content-jobs/projects/reuse-guide";
 import type { ContentJobSnapshot } from "../src/lib/content-jobs/domain/types";
+
+const routineGuide: ReuseGuide = {
+  contentRole: "운동 루틴 구성", readerOutcome: "운동을 선택하고 수행량을 정한다",
+  requiredInformation: "운동 그룹, 선택지, 세트·횟수", selectionCriteria: "실제 루틴 구성 요청에 적합하며 순위 평가와 구분한다",
+};
 
 type Project = ContentJobSnapshot & { url: string };
 const directory = await mkdtemp(join(tmpdir(), "studio-mcp-smoke-"));
@@ -68,11 +74,8 @@ try {
     return (await call("read_project", { projectId: job.id })).structuredContent as Project;
   }
   async function registerTemplate(projectId: string) {
-    const response = await fetch(`${origin}/api/content-projects/${projectId}/reuse`, {
-      method: "PATCH", headers: { origin, "content-type": "application/json" },
-      body: JSON.stringify({ reuseGuide: "이미지와 짧은 설명이 있는 운동 루틴", isTemplate: true }),
-    });
-    assert.equal(response.status, 200);
+    const result = await call("register_template", { projectId, reuseGuide: routineGuide });
+    assert.equal((result.structuredContent as { project: { isTemplate: boolean } }).project.isTemplate, true);
   }
   async function cloneTemplate(projectId: string, name: string) {
     await registerTemplate(projectId);
@@ -80,7 +83,7 @@ try {
   }
   const tools = (await client.listTools()).tools.map((tool) => tool.name);
   assert.deepEqual([...tools].sort(), [
-    "list_projects", "list_template_guides", "set_reuse_guide", "open_project", "clone_project", "read_project",
+    "list_projects", "list_template_guides", "set_reuse_guide", "register_template", "unregister_template", "open_project", "clone_project", "read_project",
     "edit_project", "undo_project", "preview_slide",
   ].sort(), "MCP must expose only the supported tools, without project deletion or tab close");
   assert.equal(tools.includes("add_image"), false);
@@ -110,14 +113,15 @@ try {
     assert.equal(await listPage.getByRole("tab", { name: "저장된 프로젝트", exact: true }).count(), 0);
     await savedColumn.getByRole("button", { name: "MCP smoke 템플릿 지정", exact: true }).click();
     const reuseDialog = listPage.getByRole("dialog");
-    await reuseDialog.getByLabel("재사용 가이드", { exact: true }).fill("운동별 이미지와 처방 정보를 보여주는 루틴");
+    for (const [key, label] of [["contentRole", "콘텐츠 역할"], ["readerOutcome", "독자가 얻을 결과"], ["requiredInformation", "필요한 정보"], ["selectionCriteria", "선택 기준"]] as const)
+      await reuseDialog.getByLabel(label, { exact: true }).fill(routineGuide[key]);
     await reuseDialog.getByRole("button", { name: "저장하고 템플릿 지정", exact: true }).click();
     await reuseDialog.waitFor({ state: "hidden" });
     await templateColumn.getByRole("heading", { name: "MCP smoke", exact: true }).waitFor();
     await savedColumn.getByRole("button", { name: "템플릿 지정됨", exact: true }).waitFor();
-    const registeredGuides = (await call("list_template_guides", {})).structuredContent as { templates: Array<{ id: string; reuseGuide: string }> };
+    const registeredGuides = (await call("list_template_guides", {})).structuredContent as { templates: Array<{ id: string; reuseGuide: ReuseGuide }> };
     assert.equal(registeredGuides.templates[0].id, id);
-    assert.equal(registeredGuides.templates[0].reuseGuide, "운동별 이미지와 처방 정보를 보여주는 루틴");
+    assert.deepEqual(registeredGuides.templates[0].reuseGuide, routineGuide);
     await listPage.setViewportSize({ width: 1440, height: 1000 });
     const leftBounds = await templateColumn.boundingBox();
     const rightBounds = await savedColumn.boundingBox();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { emptyReuseGuide, REUSE_GUIDE_FIELDS } from "@/lib/content-jobs/projects/reuse-guide";
 import { LayoutTemplate } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,12 +14,12 @@ export function ProjectReuseButton({ project, mode = "guide", disabled, size = "
 }) {
   const id = useId();
   const [open, setOpen] = useState(false);
-  const [guide, setGuide] = useState(project.reuseGuide);
+  const [guide, setGuide] = useState(project.reuseGuide ?? emptyReuseGuide());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   function show() {
-    setGuide(project.reuseGuide); setError(""); setOpen(true);
+    setGuide(project.reuseGuide ?? emptyReuseGuide()); setError(""); setOpen(true);
   }
   async function save() {
     setSaving(true); setError("");
@@ -36,20 +37,20 @@ export function ProjectReuseButton({ project, mode = "guide", disabled, size = "
       {mode === "register" ? "템플릿 지정" : "가이드 편집"}
     </Button>
     <Dialog open={open} onOpenChange={saving ? undefined : setOpen}>
-      <DialogContent>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{mode === "register" ? "템플릿 지정" : "재사용 가이드 편집"}</DialogTitle>
-          <DialogDescription>‘{project.name}’에 적합한 게시글 유형과 재사용 상황을 작성하세요.{mode === "register" && " 저장하면 이 원본이 템플릿으로 지정됩니다."}</DialogDescription>
+          <DialogDescription>‘{project.name}’의 역할과 선택 기준을 네 항목으로 작성하세요. 시각적 특징은 템플릿이 담당합니다.{mode === "register" && " 저장하면 이 원본이 템플릿으로 지정됩니다."}</DialogDescription>
         </DialogHeader>
         <form onSubmit={event => { event.preventDefault(); void save(); }} className="grid gap-5">
-          <div className="grid gap-2">
-            <label htmlFor={`${id}-guide`} className="text-sm font-medium">재사용 가이드</label>
-            <Textarea id={`${id}-guide`} value={guide} onChange={event => setGuide(event.target.value)}
-              maxLength={4000} rows={6} disabled={saving} required={mode === "register" || project.isTemplate}
-              aria-describedby={`${id}-hint`}
-              placeholder="운동별 이미지와 세트·횟수가 있는 루틴 소개에 적합합니다. 부위를 바꿔 재사용할 수 있습니다. 큰 훅 제목과 운동 카드, 계정 뱃지를 포함합니다." />
-            <p id={`${id}-hint`} className="text-xs text-muted-foreground">적합한 게시글 유형, 재사용 상황, 시각적 구성과 정보량을 적어주세요.</p>
-          </div>
+          {REUSE_GUIDE_FIELDS.map(({ key, label, description, placeholder }) => <div key={key} className="grid gap-2">
+            <label htmlFor={`${id}-${key}`} className="text-sm font-medium">{label}</label>
+            <Textarea id={`${id}-${key}`} value={guide[key]}
+              onChange={event => setGuide(previous => ({ ...previous, [key]: event.target.value }))}
+              maxLength={1000} rows={2} disabled={saving} required={mode === "register" || project.isTemplate}
+              aria-describedby={`${id}-${key}-hint`} placeholder={placeholder} />
+            <p id={`${id}-${key}-hint`} className="text-xs text-muted-foreground">{description}</p>
+          </div>)}
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" disabled={saving} onClick={() => setOpen(false)}>취소</Button>
