@@ -12,12 +12,12 @@ export function listContentProjects() {
     .then((response) => readJson<SavedProjectSummary[]>(response));
 }
 
-export function saveContentProject(jobId: string, name: string, tabId?: string) {
+export function saveContentProject(jobId: string, name: string, tabId?: string, onlyIfChanged = false) {
   return fetch("/api/content-projects", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jobId, name, expectedTabId: tabId }),
-  }).then((response) => readJson<SavedProjectSummary>(response));
+    body: JSON.stringify({ jobId, name, expectedTabId: tabId, onlyIfChanged }),
+  }).then((response) => readJson<SavedProjectSummary | null>(response));
 }
 
 export function loadContentProject(projectId: string) {

@@ -12,6 +12,7 @@ export type ContentJobRecord = ContentJobInput & {
   tabId: string;
   name?: string;
   savedRevision?: number;
+  saveError?: string;
   editor: { revision: number; document: EditorDocument };
   initialState: { name?: string; document: EditorDocument; outputLanguage: string };
   editorHistory: EditorDocument[];

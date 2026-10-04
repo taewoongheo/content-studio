@@ -95,7 +95,7 @@ export class ContentJobRegistry {
   }
   private snapshot(job: ContentJobRecord): ContentJobSnapshot {
     return structuredClone({
-      id: job.id, tabId: job.tabId, name: job.name, savedRevision: job.savedRevision, structure: job.structure, aspectRatio: job.aspectRatio,
+      id: job.id, tabId: job.tabId, name: job.name, savedRevision: job.savedRevision, saveError: job.saveError, structure: job.structure, aspectRatio: job.aspectRatio,
       slideCount: job.slideCount, outputLanguage: job.outputLanguage,
       editor: job.editor, assets: job.assets, createdAt: job.createdAt, updatedAt: job.updatedAt,
     });

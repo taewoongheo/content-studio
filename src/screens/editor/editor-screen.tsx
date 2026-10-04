@@ -50,11 +50,10 @@ export type EditorViewState = {
 };
 export type EditorWorkspaceHandle = { flushPending: () => Promise<boolean>; getViewState: () => EditorViewState };
 
-export function EditorScreen({ ref, initialViewState, initialJob, initialProjectName, onNewJob }: {
+export function EditorScreen({ ref, initialViewState, initialJob, onNewJob }: {
   ref?: Ref<EditorWorkspaceHandle>;
   initialViewState?: EditorViewState;
   initialJob: ContentJobSnapshot;
-  initialProjectName?: string;
   onNewJob: () => void;
 }) {
   const { job, submitting, clientError, send } = useContentJob(initialJob);
@@ -85,7 +84,7 @@ export function EditorScreen({ ref, initialViewState, initialJob, initialProject
   const { slide, placement, element, appliedSlides, scopeSlides, visualTargets, scopeKey, selectedSlideIds } =
     resolveEditorSelection(document, slideId, placementId, scopeSelection);
   const disabled = submitting;
-  const issue = clientError || imageError;
+  const issue = clientError || imageError || job.saveError;
   const imageRatioKey = element?.kind === "image" ? element.id : "";
   const imageAspectRatioLocked = Boolean(imageRatioKey) && !unlockedImageRatios.has(imageRatioKey);
 
@@ -99,16 +98,18 @@ export function EditorScreen({ ref, initialViewState, initialJob, initialProject
     return successful;
   }
 
+  async function flushPendingEdits() {
+    const failuresBeforeFlush = failedCommands.current;
+    const workResults = await Promise.all([...activeWork.current]);
+    const commandsSaved = await waitForCommands();
+    if (workResults.includes(false) || !commandsSaved || failedCommands.current !== failuresBeforeFlush) return false;
+    if (backgroundRef.current && !(await backgroundRef.current.flushPending())) return false;
+    if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
+    return (await waitForCommands()) && failedCommands.current === failuresBeforeFlush;
+  }
+
   useImperativeHandle(ref, () => ({
-    flushPending: async () => {
-      const failuresBeforeFlush = failedCommands.current;
-      const workResults = await Promise.all([...activeWork.current]);
-      const commandsSaved = await waitForCommands();
-      if (workResults.includes(false) || !commandsSaved || failedCommands.current !== failuresBeforeFlush) return false;
-      if (backgroundRef.current && !(await backgroundRef.current.flushPending())) return false;
-      if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
-      return (await waitForCommands()) && failedCommands.current === failuresBeforeFlush;
-    },
+    flushPending: async () => (await projectSaveRef.current?.saveAutomatically(true)) ?? false,
     getViewState: () => ({ slideId: slide?.id ?? slideId, placementId: placement?.id ?? null,
       scopeSelection, showGuides, showOverflow, unlockedImageRatios: [...unlockedImageRatios] }),
   }));
@@ -262,6 +263,10 @@ export function EditorScreen({ ref, initialViewState, initialJob, initialProject
   }
 
   useEditorShortcuts((shortcut) => {
+    if (shortcut === "save") {
+      void projectSaveRef.current?.saveAutomatically();
+      return true;
+    }
     if (!document || (disabled && shortcut !== "copy")) return false;
     if (shortcut === "undo") {
       void action({ action: "editor_undo" });
@@ -336,13 +341,8 @@ export function EditorScreen({ ref, initialViewState, initialJob, initialProject
           </label>
           <ProjectSaveControl ref={projectSaveRef} jobId={job.id} tabId={job.tabId} revision={job.editor.revision}
             currentProjectName={job.name} persistedRevision={job.savedRevision}
-            getRevision={() => latestRevision.current}
-            defaultName="새 콘텐츠"
-            initialProjectName={initialProjectName} disabled={disabled || !document}
-            onBeforeSave={async () => {
-              if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
-              return waitForCommands();
-            }} />
+            disabled={!document}
+            onBeforeSave={flushPendingEdits} />
           {document && <ExportControl jobId={job.id} disabled={disabled}
             onBeforeExport={prepareExport} onError={(message) => { setDismissedIssue(null); setImageError(message); }} />}
           <Button variant="outline" size="sm" disabled={disabled || !document} title="되돌리기 (⌘Z)" onClick={() => void action({ action: "editor_undo" })}>

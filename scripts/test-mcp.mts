@@ -255,7 +255,6 @@ try {
     await listPage.getByRole("navigation", { name: "프로젝트 탭" }).getByRole("button", { name: "Colored clone", exact: true }).click();
     await listPage.waitForURL(url => url.searchParams.get("job") === colorClone.id);
     await page.getByRole("button", { name: "Colored clone 탭 닫기", exact: true }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "저장 후 종료", exact: true }).click();
     await page.getByRole("button", { name: "Colored clone 탭 닫기", exact: true }).waitFor({ state: "detached" });
     await listPage.getByRole("heading", { name: "저장된 프로젝트", exact: true }).waitFor();
     assert.equal((await fetch(`${origin}/api/content-jobs/${colorClone.id}`)).status, 404);
@@ -285,7 +284,7 @@ try {
     await writeFile("/tmp/content-studio-project-tabs.png", await page.screenshot({ fullPage: true }));
     console.log("PASS global tabs, chooser reuse, text/background flush, view restoration, two-browser close and stale-tab rejection");
 
-    // A new editor is temporary until explicitly saved (or mutated through MCP).
+    // An untouched new editor stays temporary; edits autosave and navigation flushes immediately.
     async function savedIds() {
       return (await fetch(`${origin}/api/content-projects`).then(response => response.json()) as Array<{ id: string }>).map(project => project.id);
     }
@@ -296,12 +295,8 @@ try {
     await blankTab.getByRole("button", { name: "Temporary renamed", exact: true }).waitFor();
     assert.equal((await savedIds()).includes(blankId), false);
     await blankTab.getByRole("button", { name: /탭 닫기$/ }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "취소", exact: true }).click();
-    assert.equal((await fetch(`${origin}/api/content-jobs/${blankId}`)).status, 200);
-    await blankTab.getByRole("button", { name: /탭 닫기$/ }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "저장하지 않고 종료", exact: true }).click();
     await blankTab.waitFor({ state: "detached" });
-    assert.equal((await savedIds()).includes(blankId), false);
+    assert.equal((await savedIds()).includes(blankId), true, "closing persists a changed project name");
 
     async function newBlank() {
       await tabBar.getByRole("button", { name: "새 탭", exact: true }).click();
@@ -319,11 +314,30 @@ try {
     assert.equal((await savedIds()).includes(untouched.id), false);
     assert.equal(await page.getByRole("dialog").count(), 0);
 
+    const automatic = await newBlank();
+    await page.getByRole("button", { name: "텍스트 추가", exact: true }).click();
+    await page.getByLabel("내용", { exact: true }).fill("AUTOSAVE AFTER FIVE SECONDS");
+    assert.equal((await savedIds()).includes(automatic.id), false);
+    await page.getByRole("button", { name: "저장됨", exact: true }).waitFor();
+    assert.equal((await savedIds()).includes(automatic.id), true);
+    await page.getByLabel("내용", { exact: true }).fill("CTRL S FLUSHES PENDING TEXT");
+    await page.getByLabel("내용", { exact: true }).press("Control+s");
+    await page.getByRole("button", { name: "저장됨", exact: true }).waitFor();
+    const keyboardSaved = (await call("read_project", { projectId: automatic.id })).structuredContent as Project;
+    assert.equal(keyboardSaved.savedRevision, keyboardSaved.editor.revision);
+    assert.ok(keyboardSaved.editor.document.slides[0].placements.some(p => p.value === "CTRL S FLUSHES PENDING TEXT"));
+    await page.getByLabel("내용", { exact: true }).fill("CMD S ALSO SAVES");
+    await page.getByLabel("내용", { exact: true }).press("Meta+s");
+    await page.getByRole("button", { name: "저장됨", exact: true }).waitFor();
+    const metaSaved = (await call("read_project", { projectId: automatic.id })).structuredContent as Project;
+    assert.ok(metaSaved.editor.document.slides[0].placements.some(p => p.value === "CMD S ALSO SAVES"));
+    assert.equal(metaSaved.savedRevision, metaSaved.editor.revision);
+    console.log("PASS five-second UI autosave and Ctrl+S/Cmd+S flush input before persistence");
+
     const temporary = await newBlank();
     await page.getByRole("button", { name: "슬라이드 배경 선택", exact: true }).click();
     await page.getByLabel("슬라이드 배경색", { exact: true }).fill("#456789");
     await tabBar.locator(`[data-project-tab="${temporary.tabId}"]`).getByRole("button", { name: /탭 닫기$/ }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "저장 후 종료", exact: true }).click();
     await tabBar.locator(`[data-project-tab="${temporary.tabId}"]`).waitFor({ state: "detached" });
     assert.equal((await savedIds()).includes(temporary.id), true);
     const savedTemporary = (await call("open_project", { projectId: temporary.id })).structuredContent as Project;
@@ -357,7 +371,7 @@ try {
     const plus = await tabBar.getByRole("button", { name: "새 탭", exact: true }).boundingBox();
     assert.ok(lastTab && plus && plus.x - (lastTab.x + lastTab.width) <= 8, "plus belongs immediately after the last tab");
     await writeFile("/tmp/content-studio-project-tabs.png", await page.screenshot({ fullPage: true }));
-    console.log("PASS rename, temporary drafts, cancel/save/discard close, header/list deletion and canvas/tab layout");
+    console.log("PASS rename, temporary drafts, immediate save on close, header/list deletion and canvas/tab layout");
 
     // Malformed mutation bodies are client errors and must not alter a project.
     for (const [path, method] of [

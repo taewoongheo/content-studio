@@ -102,7 +102,7 @@ export function WorkspaceScreen() {
     {(error || connectionError) && <p role="alert" className="shrink-0 border-b px-4 py-2 text-sm text-destructive">{error || connectionError}</p>}
     <div className="relative min-h-0 flex-1 overflow-auto">
       {busy && <div className="absolute inset-0 z-40 cursor-wait bg-background/20" aria-label="탭 처리 중" />}
-      {job ? <EditorScreen key={job.tabId} ref={editor} initialJob={job} initialProjectName={job.savedRevision !== undefined ? job.name : undefined}
+      {job ? <EditorScreen key={job.tabId} ref={editor} initialJob={job}
         initialViewState={initialViewState} onNewJob={dashboard} />
         : <DashboardContent onOpen={select} onNew={() => setChooser(true)} />}
     </div>

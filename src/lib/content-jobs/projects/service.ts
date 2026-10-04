@@ -74,7 +74,7 @@ export function saveContentProject(
     document,
     assets: projectAssetIds(document).map((assetId) => readProjectAsset(assetId, record)),
   });
-  registry.update(jobId, (job) => { job.name = saved.name; job.savedRevision = job.editor.revision; });
+  registry.update(jobId, (job) => { job.name = saved.name; job.savedRevision = job.editor.revision; delete job.saveError; });
   registry.afterCommit(notifyProjectsChanged);
   return saved;
 }
