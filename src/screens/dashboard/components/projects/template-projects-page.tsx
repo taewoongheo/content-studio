@@ -47,7 +47,7 @@ export function TemplateProjectsPage({ onOpen }: { onOpen: (projectId: string) =
       <div className="flex min-w-0 flex-wrap items-start gap-2">
         <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void openProject(project.id)}>
           {openingId === project.id ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <FolderOpen aria-hidden="true" />}
-          {templateColumn ? "원본 열기" : "열기"}
+          열기
         </Button>
         <ProjectReuseButton project={project} disabled={busy} size="sm" />
         {templateColumn ? <>
