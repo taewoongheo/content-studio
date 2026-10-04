@@ -14,17 +14,17 @@ export function ProjectReuseButton({ project, mode = "guide", disabled, size = "
 }) {
   const id = useId();
   const [open, setOpen] = useState(false);
-  const [guide, setGuide] = useState(project.composition);
+  const [composition, setComposition] = useState(project.composition);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   function show() {
-    setGuide(project.composition); setError(""); setOpen(true);
+    setComposition(project.composition); setError(""); setOpen(true);
   }
   async function save() {
     setSaving(true); setError("");
     try {
-      await updateProjectReuse(project.id, { composition: guide, ...(mode === "register" ? { isTemplate: true } : {}) });
+      await updateProjectReuse(project.id, { composition, ...(mode === "register" ? { isTemplate: true } : {}) });
       setOpen(false);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "재사용 설정을 저장하지 못했습니다."); }
     finally { setSaving(false); }
@@ -45,7 +45,7 @@ export function ProjectReuseButton({ project, mode = "guide", disabled, size = "
         <form onSubmit={event => { event.preventDefault(); void save(); }} className="grid gap-5">
           <div className="grid gap-2">
             <label htmlFor={`${id}-composition`} className="text-sm font-medium">구성</label>
-            <Textarea id={`${id}-composition`} value={guide} onChange={event => setGuide(event.target.value)}
+            <Textarea id={`${id}-composition`} value={composition} onChange={event => setComposition(event.target.value)}
               maxLength={COMPOSITION_LIMIT} rows={6} disabled={saving} required={mode === "register" || project.isTemplate}
               aria-describedby={`${id}-hint`}
               placeholder="도입 후 정보를 그룹별로 나눈다. 각 그룹에서 여러 선택지를 함께 보여주고 하나를 선택하도록 안내한다. 선택지마다 이미지·이름·짧은 보조 정보를 배치한다." />

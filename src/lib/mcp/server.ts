@@ -3,12 +3,11 @@ import * as z from "zod/v4";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { EditorCommand } from "@/lib/content-jobs/editor/types";
 import { contentJobRegistry } from "@/lib/content-jobs/workflow/service";
-import { defaultProjectStores, loadContentProject } from "@/lib/content-jobs/projects/service";
+import { defaultProjectStores, loadContentProject, updateContentProjectReuse } from "@/lib/content-jobs/projects/service";
 import { getLocalDatabase } from "@/lib/local-db/database";
 import { cloneSchema, setCompositionSchema, registerTemplateSchema, editSchema, previewSchema, projectSchema, undoSchema } from "./tools/schema";
 import type { LocalImageCommand } from "./tools/images";
 import { McpProjectWrites } from "./tools/project-writes";
-import { notifyProjectsChanged } from "@/lib/content-jobs/projects/events";
 import { previewSlide } from "./preview/render";
 
 const json = (data: Record<string, unknown>): CallToolResult => ({
@@ -59,24 +58,21 @@ export function createStudioMcpServer(origin: string) {
     description: "Save a project's composition description (max 2000 characters): visual information structure and page flow. Describe grouping, placement, repeated page patterns, whether alternatives appear together or each subject is explained separately. Keep it reusable across topics; do not list topic-specific suitability, reader outcomes or required content. For example: introduction followed by one ranked item per page with a short evaluation and image; one subject per page with two explanations and an image; grouped alternatives shown together with a choose-one prompt. Read element roles and the actual document when authoring or maintaining this description, but never to compare template candidates during selection. Update when composition or flow changes. Does not change template designation; use register_template and unregister_template. An empty string clears the description only for unregistered projects.",
     inputSchema: setCompositionSchema, annotations: annotations(false),
   }, ({ projectId, composition }) => guarded(() => {
-    const project = defaultProjectStores().projects.updateReuse(projectId, { composition });
-    notifyProjectsChanged();
+    const project = updateContentProjectReuse(projectId, { composition });
     return json({ project });
   }));
   server.registerTool("register_template", {
     description: "Register an existing saved project as a template by referencing the original, without copying or creating a project. Editing the original changes future clones; existing clones remain independent. Use only when the user requests template registration, never automatically to bypass clone restrictions or because a new post was created. Requires a non-empty composition description: optionally provide composition (1-2000 characters) to save it and register atomically, or use the already saved guide. Follow set_reuse_guide's composition criteria. Repeated registration is safe. Does not save an active draft; registration refers to the saved project. Returns summary metadata and refreshes dashboard lists.",
     inputSchema: registerTemplateSchema, annotations: annotations(false),
   }, ({ projectId, composition }) => guarded(() => {
-    const project = defaultProjectStores().projects.updateReuse(projectId, { isTemplate: true, composition });
-    notifyProjectsChanged();
+    const project = updateContentProjectReuse(projectId, { isTemplate: true, composition });
     return json({ project });
   }));
   server.registerTool("unregister_template", {
     description: "Remove a saved project's template designation when the user requests it. Preserves the original document, assets and composition, as well as existing clones. The project remains in saved projects but can no longer be cloned via clone_project. Repeated unregistration is safe; unknown project IDs are errors. Returns summary metadata and refreshes dashboard lists.",
     inputSchema: projectSchema, annotations: annotations(false),
   }, ({ projectId }) => guarded(() => {
-    const project = defaultProjectStores().projects.updateReuse(projectId, { isTemplate: false });
-    notifyProjectsChanged();
+    const project = updateContentProjectReuse(projectId, { isTemplate: false });
     return json({ project });
   }));
   server.registerTool("clone_project", {

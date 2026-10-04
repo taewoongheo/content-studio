@@ -1,5 +1,5 @@
 import type Database from "better-sqlite3";
-import { projectReuseUpdateSchema, type ProjectReuseUpdate } from "@/lib/content-jobs/projects/composition";
+import { ProjectReuseError, projectReuseUpdateSchema, type ProjectReuseUpdate } from "@/lib/content-jobs/projects/composition";
 import type { EditorAsset } from "../../content-jobs/domain/types";
 
 export type SavedProjectSummary = {
@@ -102,11 +102,11 @@ export class ContentProjectStore {
     const validated = projectReuseUpdateSchema.parse(input);
     return this.database.transaction(() => {
       const project = this.getSummary(id);
-      if (!project) throw new Error("프로젝트를 찾을 수 없습니다.");
+      if (!project) throw new ProjectReuseError("PROJECT_NOT_FOUND");
       const composition = validated.composition === undefined ? project.composition : validated.composition;
       const isTemplate = validated.isTemplate ?? project.isTemplate;
       if (isTemplate && !composition.trim())
-        throw new Error("템플릿으로 등록하려면 구성을 입력해 주세요.");
+        throw new ProjectReuseError("COMPOSITION_REQUIRED");
       this.database.prepare("UPDATE content_projects SET composition = ?, is_template = ?, updated_at = ? WHERE id = ?")
         .run(composition, isTemplate ? 1 : 0, new Date().toISOString(), id);
       return this.getSummary(id)!;

@@ -12,3 +12,10 @@ export const projectReuseUpdateSchema = z.strictObject({
   message: "변경할 재사용 설정을 입력해 주세요.",
 });
 export type ProjectReuseUpdate = z.infer<typeof projectReuseUpdateSchema>;
+
+export class ProjectReuseError extends Error {
+  constructor(public readonly code: "PROJECT_NOT_FOUND" | "COMPOSITION_REQUIRED") {
+    super(code === "PROJECT_NOT_FOUND" ? "프로젝트를 찾을 수 없습니다." : "템플릿으로 등록하려면 구성을 입력해 주세요.");
+    this.name = "ProjectReuseError";
+  }
+}

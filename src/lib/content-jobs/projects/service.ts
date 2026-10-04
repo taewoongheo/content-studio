@@ -5,12 +5,19 @@ import type { ContentJobRecord } from "../domain/types";
 import { getLocalDatabase } from "@/lib/local-db/database";
 import { ContentProjectStore, type SavedProjectAsset } from "@/lib/local-db/projects/store";
 import { notifyProjectsChanged } from "./events";
+import type { ProjectReuseUpdate } from "./composition";
 
 export function defaultProjectStores() {
   const database = getLocalDatabase();
   return {
     projects: new ContentProjectStore(database),
   };
+}
+
+export function updateContentProjectReuse(projectId: string, input: ProjectReuseUpdate, stores = defaultProjectStores()) {
+  const updated = stores.projects.updateReuse(projectId, input);
+  notifyProjectsChanged();
+  return updated;
 }
 
 function projectAssetIds(document: EditorDocument) {

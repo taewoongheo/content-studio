@@ -66,6 +66,10 @@ test("MCP는 가이드 목록만 제공하고 빈 생성·미등록 복제를 �
     const patch = (body: unknown, requestOrigin = origin) => PATCH(new Request(`${origin}/api/content-projects/${source.id}/reuse`, {
       method: "PATCH", headers: { host: "localhost:3000", origin: requestOrigin, "content-type": "application/json" }, body: JSON.stringify(body),
     }), context);
+    assert.equal((await PATCH(new Request(`${origin}/api/content-projects/missing/reuse`, {
+      method: "PATCH", headers: { host: "localhost:3000", origin, "content-type": "application/json" },
+      body: JSON.stringify({ composition: guide() }),
+    }), { params: Promise.resolve({ projectId: "missing" }) })).status, 404);
     assert.equal((await patch({ isTemplate: true })).status, 422);
     assert.equal((await patch({ composition: null })).status, 400);
     assert.equal((await patch({ composition: { contentRole: "Routine" } })).status, 400);
@@ -73,6 +77,8 @@ test("MCP는 가이드 목록만 제공하고 빈 생성·미등록 복제를 �
     assert.equal(projects.getSummary(source.id)?.isTemplate, false);
     assert.equal((await patch({ composition: guide("Exercise cards"), isTemplate: true }, "https://example.com")).status, 403);
     assert.equal((await patch({ composition: guide("Exercise cards"), isTemplate: true })).status, 200);
+    assert.equal((await patch({ composition: " " })).status, 422);
+    assert.equal(projects.getSummary(source.id)?.composition, guide("Exercise cards"));
     const guides = (await client.callTool({ name: "list_template_guides", arguments: {} })).structuredContent as { templates: Array<Record<string, unknown>> };
     assert.equal(guides.templates.length, 1);
     assert.equal(guides.templates[0].id, source.id);
