@@ -1,5 +1,4 @@
 import type Database from "better-sqlite3";
-import { hasCompleteReuseGuide, type ReuseGuide } from "@/lib/content-jobs/projects/reuse-guide";
 import { ContentProjectStore } from "@/lib/local-db/projects/store";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import type { ContentJobRegistry } from "@/lib/content-jobs/workflow/registry";
@@ -14,14 +13,14 @@ export class McpProjectWrites {
     this.stores = { projects: new ContentProjectStore(database) };
   }
   clone(input: { templateProjectId: string; name?: string }) {
-    let reuseGuide: ReuseGuide | null = null;
+    let composition = "";
     return this.commit(() => {
       const template = this.stores.projects.getSummary(input.templateProjectId);
-      if (!template?.isTemplate || !hasCompleteReuseGuide(template.reuseGuide))
-        throw new Error("재사용 가이드의 네 항목이 완성된 등록된 템플릿 프로젝트를 선택해 주세요.");
-      reuseGuide = template.reuseGuide;
+      if (!template?.isTemplate || !template.composition.trim())
+        throw new Error("구성이 작성된 등록된 템플릿 프로젝트를 선택해 주세요.");
+      composition = template.composition;
       return createContentProject(this.registry, { sourceProjectId: template.id, name: input.name }, this.stores);
-    }, changed => this.stores.projects.updateReuse(changed.id, { reuseGuide }));
+    }, changed => this.stores.projects.updateReuse(changed.id, { composition }));
   }
   edit(projectId: string, commands: Array<EditorCommand | LocalImageCommand>, expectedRevision: number, expectedTabId?: string) {
     if (expectedTabId) this.registry.requireTab(projectId, expectedTabId);

@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import { mkdirSync, realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 
 export function defaultDatabasePath() {
   if (process.env.CONTENT_STUDIO_DB_PATH) return process.env.CONTENT_STUDIO_DB_PATH;

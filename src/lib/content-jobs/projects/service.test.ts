@@ -77,7 +77,7 @@ test("프로젝트는 시각 문서와 사용 이미지만 저장하고 새 편�
     assert.equal(isolated.assets.length, 1);
     assert.deepEqual(reopenedProjects.get(clone.id)?.assets[0].bytes, Buffer.from(pngHeader));
     assert.equal(reopenedProjects.list()[0].name, "복제본");
-    assert.equal(reopened.pragma("user_version", { simple: true }), 6);
+    assert.equal(reopened.pragma("user_version", { simple: true }), 7);
     reopened.close();
   } finally {
     rmSync(directory, { recursive: true, force: true });

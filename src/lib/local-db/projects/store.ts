@@ -1,6 +1,5 @@
 import type Database from "better-sqlite3";
-import { emptyReuseGuide, hasCompleteReuseGuide, projectReuseUpdateSchema, type ReuseGuide, type ProjectReuseUpdate } from "@/lib/content-jobs/projects/reuse-guide";
-import { migrateReuseGuide, REUSE_GUIDE_COLUMNS } from "./migrate-reuse-guide";
+import { projectReuseUpdateSchema, type ProjectReuseUpdate } from "@/lib/content-jobs/projects/composition";
 import type { EditorAsset } from "../../content-jobs/domain/types";
 
 export type SavedProjectSummary = {
@@ -9,7 +8,7 @@ export type SavedProjectSummary = {
   aspectRatio: string;
   slideCount: number;
   outputLanguage: string;
-  reuseGuide: ReuseGuide | null;
+  composition: string;
   isTemplate: boolean;
   createdAt: string;
   updatedAt: string;
@@ -33,10 +32,7 @@ type ProjectRow = {
   aspect_ratio: string;
   slide_count: number;
   output_language: string;
-  reuse_content_role: string;
-  reuse_reader_outcome: string;
-  reuse_required_information: string;
-  reuse_selection_criteria: string;
+  composition: string;
   is_template: number;
   document_json: string;
   created_at: string;
@@ -50,7 +46,7 @@ type AssetRow = {
   data: Buffer;
 };
 
-const SUMMARY_COLUMNS = `id, name, aspect_ratio, slide_count, output_language, ${REUSE_GUIDE_COLUMNS.join(", ")}, is_template, created_at, updated_at`;
+const SUMMARY_COLUMNS = `id, name, aspect_ratio, slide_count, output_language, composition, is_template, created_at, updated_at`;
 const PROJECT_COLUMNS = `${SUMMARY_COLUMNS}, document_json`;
 
 function summary(row: ProjectRow): SavedProjectSummary {
@@ -60,10 +56,7 @@ function summary(row: ProjectRow): SavedProjectSummary {
     aspectRatio: row.aspect_ratio,
     slideCount: row.slide_count,
     outputLanguage: row.output_language,
-    reuseGuide: REUSE_GUIDE_COLUMNS.some(column => row[column]) ? {
-      contentRole: row.reuse_content_role, readerOutcome: row.reuse_reader_outcome,
-      requiredInformation: row.reuse_required_information, selectionCriteria: row.reuse_selection_criteria,
-    } : null,
+    composition: row.composition,
     isTemplate: row.is_template === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -85,6 +78,8 @@ export class ContentProjectStore {
           slide_count INTEGER NOT NULL CHECK (slide_count > 0),
           output_language TEXT NOT NULL,
           document_json TEXT NOT NULL,
+          composition TEXT NOT NULL DEFAULT '',
+          is_template INTEGER NOT NULL DEFAULT 0 CHECK (is_template IN (0, 1)),
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL
         );
@@ -100,7 +95,6 @@ export class ContentProjectStore {
           PRIMARY KEY (project_id, asset_id)
         );
       `);
-      migrateReuseGuide(this.database);
     })();
   }
 
@@ -109,15 +103,12 @@ export class ContentProjectStore {
     return this.database.transaction(() => {
       const project = this.getSummary(id);
       if (!project) throw new Error("프로젝트를 찾을 수 없습니다.");
-      const reuseGuide = validated.reuseGuide === undefined ? project.reuseGuide : validated.reuseGuide;
+      const composition = validated.composition === undefined ? project.composition : validated.composition;
       const isTemplate = validated.isTemplate ?? project.isTemplate;
-      if (isTemplate && !hasCompleteReuseGuide(reuseGuide))
-        throw new Error("템플릿으로 등록하려면 재사용 가이드의 네 항목을 모두 입력해 주세요.");
-      const guide = reuseGuide ?? emptyReuseGuide();
-      this.database.prepare(`UPDATE content_projects SET reuse_content_role = ?, reuse_reader_outcome = ?,
-        reuse_required_information = ?, reuse_selection_criteria = ?, is_template = ?, updated_at = ? WHERE id = ?`)
-        .run(guide.contentRole, guide.readerOutcome, guide.requiredInformation, guide.selectionCriteria,
-          isTemplate ? 1 : 0, new Date().toISOString(), id);
+      if (isTemplate && !composition.trim())
+        throw new Error("템플릿으로 등록하려면 구성을 입력해 주세요.");
+      this.database.prepare("UPDATE content_projects SET composition = ?, is_template = ?, updated_at = ? WHERE id = ?")
+        .run(composition, isTemplate ? 1 : 0, new Date().toISOString(), id);
       return this.getSummary(id)!;
     })();
   }

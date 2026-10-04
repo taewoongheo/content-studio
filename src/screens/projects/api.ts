@@ -1,5 +1,5 @@
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
-import type { ProjectReuseUpdate } from "@/lib/content-jobs/projects/reuse-guide";
+import type { ProjectReuseUpdate } from "@/lib/content-jobs/projects/composition";
 import type { SavedProjectSummary } from "@/lib/local-db/projects/store";
 
 async function readJson<T>(response: Response): Promise<T> {

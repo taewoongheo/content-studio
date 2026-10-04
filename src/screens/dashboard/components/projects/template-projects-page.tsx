@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { hasCompleteReuseGuide, REUSE_GUIDE_FIELDS } from "@/lib/content-jobs/projects/reuse-guide";
 import { FolderOpen, LayoutTemplate, LoaderCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SavedProjectSummary } from "@/lib/local-db/projects/store";
@@ -41,13 +40,10 @@ export function TemplateProjectsPage({ onOpen }: { onOpen: (projectId: string) =
         <p className="mt-1.5 text-xs text-muted-foreground">
           {project.aspectRatio} · {project.slideCount}장 · {project.outputLanguage} · {dateFormatter.format(new Date(project.updatedAt))}
         </p>
-        {templateColumn && (project.reuseGuide ? <dl className="mt-3 grid gap-2 text-sm leading-relaxed">
-          {REUSE_GUIDE_FIELDS.map(({ key, label }) => <div key={key}>
-            <dt className="font-medium">{label}</dt>
-            <dd className="whitespace-pre-wrap break-words text-muted-foreground">{project.reuseGuide?.[key] || "미작성"}</dd>
-          </div>)}
-          {!hasCompleteReuseGuide(project.reuseGuide) && <p className="text-xs text-muted-foreground">네 항목을 모두 작성해야 템플릿으로 사용할 수 있습니다.</p>}
-        </dl> : <p className="mt-3 text-sm text-muted-foreground">재사용 가이드를 작성해 템플릿으로 지정하세요.</p>)}
+        {templateColumn && <div className="mt-3 text-sm leading-relaxed">
+          <p className="font-medium">구성</p>
+          <p className="whitespace-pre-wrap break-words text-muted-foreground">{project.composition || "구성을 작성해 주세요."}</p>
+        </div>}
       </div>
       <div className="flex min-w-0 flex-wrap items-start gap-2">
         <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void openProject(project.id)}>
@@ -65,7 +61,7 @@ export function TemplateProjectsPage({ onOpen }: { onOpen: (projectId: string) =
         </> : <>
           {project.isTemplate ? <Button type="button" variant="secondary" size="sm" disabled>
             <LayoutTemplate aria-hidden="true" />템플릿 지정됨
-          </Button> : hasCompleteReuseGuide(project.reuseGuide) ? <Button type="button" size="sm" disabled={busy}
+          </Button> : project.composition.trim() ? <Button type="button" size="sm" disabled={busy}
             aria-label={`${project.name} 템플릿 지정`} onClick={() => void designate(project.id, true)}>
             {updatingId === project.id ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <LayoutTemplate aria-hidden="true" />}
             템플릿 지정
@@ -79,7 +75,7 @@ export function TemplateProjectsPage({ onOpen }: { onOpen: (projectId: string) =
   return <div className="grid gap-8">
     <header>
       <h1 className="text-3xl font-semibold tracking-tight">템플릿 프로젝트</h1>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">저장된 프로젝트를 템플릿으로 지정하고 재사용 가이드를 관리하세요.</p>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">저장된 프로젝트를 템플릿으로 지정하고 구성을 관리하세요.</p>
     </header>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {loading ? <p role="status" className="text-sm text-muted-foreground">프로젝트를 불러오는 중…</p> :

@@ -9,13 +9,9 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import { chromium } from "playwright";
 import sharp from "sharp";
-import type { ReuseGuide } from "../src/lib/content-jobs/projects/reuse-guide";
 import type { ContentJobSnapshot } from "../src/lib/content-jobs/domain/types";
 
-const routineGuide: ReuseGuide = {
-  contentRole: "운동 루틴 구성", readerOutcome: "운동을 선택하고 수행량을 정한다",
-  requiredInformation: "운동 그룹, 선택지, 세트·횟수", selectionCriteria: "실제 루틴 구성 요청에 적합하며 순위 평가와 구분한다",
-};
+const routineGuide = "도입 후 그룹별로 여러 선택지를 함께 보여주고 하나를 선택하도록 안내한다.";
 
 type Project = ContentJobSnapshot & { url: string };
 const directory = await mkdtemp(join(tmpdir(), "studio-mcp-smoke-"));
@@ -74,7 +70,7 @@ try {
     return (await call("read_project", { projectId: job.id })).structuredContent as Project;
   }
   async function registerTemplate(projectId: string) {
-    const result = await call("register_template", { projectId, reuseGuide: routineGuide });
+    const result = await call("register_template", { projectId, composition: routineGuide });
     assert.equal((result.structuredContent as { project: { isTemplate: boolean } }).project.isTemplate, true);
   }
   async function cloneTemplate(projectId: string, name: string) {
@@ -113,15 +109,14 @@ try {
     assert.equal(await listPage.getByRole("tab", { name: "저장된 프로젝트", exact: true }).count(), 0);
     await savedColumn.getByRole("button", { name: "MCP smoke 템플릿 지정", exact: true }).click();
     const reuseDialog = listPage.getByRole("dialog");
-    for (const [key, label] of [["contentRole", "콘텐츠 역할"], ["readerOutcome", "독자가 얻을 결과"], ["requiredInformation", "필요한 정보"], ["selectionCriteria", "선택 기준"]] as const)
-      await reuseDialog.getByLabel(label, { exact: true }).fill(routineGuide[key]);
+    await reuseDialog.getByLabel("구성", { exact: true }).fill(routineGuide);
     await reuseDialog.getByRole("button", { name: "저장하고 템플릿 지정", exact: true }).click();
     await reuseDialog.waitFor({ state: "hidden" });
     await templateColumn.getByRole("heading", { name: "MCP smoke", exact: true }).waitFor();
     await savedColumn.getByRole("button", { name: "템플릿 지정됨", exact: true }).waitFor();
-    const registeredGuides = (await call("list_template_guides", {})).structuredContent as { templates: Array<{ id: string; reuseGuide: ReuseGuide }> };
+    const registeredGuides = (await call("list_template_guides", {})).structuredContent as { templates: Array<{ id: string; composition: string }> };
     assert.equal(registeredGuides.templates[0].id, id);
-    assert.deepEqual(registeredGuides.templates[0].reuseGuide, routineGuide);
+    assert.deepEqual(registeredGuides.templates[0].composition, routineGuide);
     await listPage.setViewportSize({ width: 1440, height: 1000 });
     const leftBounds = await templateColumn.boundingBox();
     const rightBounds = await savedColumn.boundingBox();
