@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { ContentJobSnapshot, OpenProjectTab } from "@/lib/content-jobs/domain/types";
 import { DashboardContent } from "@/screens/dashboard/dashboard-content";
 import { EditorScreen, type EditorViewState, type EditorWorkspaceHandle } from "@/screens/editor/editor-screen";
@@ -39,6 +39,21 @@ export function WorkspaceScreen() {
       current.current = null; setJob(null); setInitialViewState(undefined); updateUrl(null, true);
     }
   });
+
+  const handleCloseShortcut = useEffectEvent((event: KeyboardEvent) => {
+    const closeKey = event.code === "KeyW" || event.key.toLowerCase() === "w";
+    if (!closeKey || !event.metaKey || event.ctrlKey || event.altKey || event.shiftKey || event.defaultPrevented) return;
+    const activeTab = tabs?.find(tab => tab.tabId === job?.tabId);
+    if (!activeTab) return;
+    event.preventDefault();
+    if (event.repeat || busy || chooser || lifecycle.closing || lifecycle.renaming) return;
+    lifecycle.close(activeTab);
+  });
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => handleCloseShortcut(event);
+    window.addEventListener("keydown", listener, true);
+    return () => window.removeEventListener("keydown", listener, true);
+  }, []);
 
   async function prepareSwitch() {
     if (!editor.current) return;
