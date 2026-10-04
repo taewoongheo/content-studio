@@ -36,3 +36,13 @@ test("텍스트 선택이 없어야 Element 복사·붙여넣기가 동작하고
   assert.equal(editorShortcut({ ...event, code: "KeyV" }, false, false), "paste");
   assert.equal(editorShortcut(event, false, true), "undo");
 });
+
+test("Ctrl+S와 Cmd+S는 입력칸·텍스트 선택·한글 키보드에서도 저장으로 처리한다", () => {
+  for (const metaKey of [true, false]) {
+    const save = { ...event, code: "KeyS", key: "ㄴ", metaKey, ctrlKey: !metaKey };
+    assert.equal(editorShortcut(save, true, true), "save");
+    assert.equal(editorShortcut({ ...save, repeat: true }, true), "save");
+    assert.equal(editorShortcut({ ...save, shiftKey: true }, true), null);
+    assert.equal(editorShortcut({ ...save, altKey: true }, true), null);
+  }
+});

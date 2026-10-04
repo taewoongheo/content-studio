@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
-import type { ImageMimeType } from "../assets";
+import { ProjectReuseError, projectReuseUpdateSchema, type ProjectReuseUpdate } from "@/lib/content-jobs/projects/composition";
+import type { EditorAsset } from "../../content-jobs/domain/types";
 
 export type SavedProjectSummary = {
   id: string;
@@ -7,6 +8,8 @@ export type SavedProjectSummary = {
   aspectRatio: string;
   slideCount: number;
   outputLanguage: string;
+  composition: string;
+  isTemplate: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -14,8 +17,7 @@ export type SavedProjectSummary = {
 export type SavedProjectAsset = {
   assetId: string;
   name: string;
-  description: string;
-  type: ImageMimeType;
+  type: EditorAsset["type"];
   bytes: Buffer;
 };
 
@@ -30,6 +32,8 @@ type ProjectRow = {
   aspect_ratio: string;
   slide_count: number;
   output_language: string;
+  composition: string;
+  is_template: number;
   document_json: string;
   created_at: string;
   updated_at: string;
@@ -38,12 +42,12 @@ type ProjectRow = {
 type AssetRow = {
   asset_id: string;
   name: string;
-  description: string;
-  mime_type: ImageMimeType;
+  mime_type: EditorAsset["type"];
   data: Buffer;
 };
 
-const PROJECT_COLUMNS = "id, name, aspect_ratio, slide_count, output_language, document_json, created_at, updated_at";
+const SUMMARY_COLUMNS = `id, name, aspect_ratio, slide_count, output_language, composition, is_template, created_at, updated_at`;
+const PROJECT_COLUMNS = `${SUMMARY_COLUMNS}, document_json`;
 
 function summary(row: ProjectRow): SavedProjectSummary {
   return {
@@ -52,6 +56,8 @@ function summary(row: ProjectRow): SavedProjectSummary {
     aspectRatio: row.aspect_ratio,
     slideCount: row.slide_count,
     outputLanguage: row.output_language,
+    composition: row.composition,
+    isTemplate: row.is_template === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -63,30 +69,53 @@ export class ContentProjectStore {
   }
 
   private ensureSchema() {
-    this.database.exec(`
-      CREATE TABLE IF NOT EXISTS content_projects (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        aspect_ratio TEXT NOT NULL,
-        slide_count INTEGER NOT NULL CHECK (slide_count > 0),
-        output_language TEXT NOT NULL,
-        document_json TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS content_projects_updated_at_idx
-        ON content_projects(updated_at DESC);
-      CREATE TABLE IF NOT EXISTS content_project_assets (
-        project_id TEXT NOT NULL REFERENCES content_projects(id) ON DELETE CASCADE,
-        asset_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        description TEXT NOT NULL DEFAULT '',
-        mime_type TEXT NOT NULL CHECK (mime_type IN ('image/png', 'image/jpeg', 'image/webp')),
-        byte_size INTEGER NOT NULL CHECK (byte_size > 0),
-        data BLOB NOT NULL,
-        PRIMARY KEY (project_id, asset_id)
-      );
-    `);
+    this.database.transaction(() => {
+      this.database.exec(`
+        CREATE TABLE IF NOT EXISTS content_projects (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          aspect_ratio TEXT NOT NULL,
+          slide_count INTEGER NOT NULL CHECK (slide_count > 0),
+          output_language TEXT NOT NULL,
+          document_json TEXT NOT NULL,
+          composition TEXT NOT NULL DEFAULT '',
+          is_template INTEGER NOT NULL DEFAULT 0 CHECK (is_template IN (0, 1)),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS content_projects_updated_at_idx
+          ON content_projects(updated_at DESC);
+        CREATE TABLE IF NOT EXISTS content_project_assets (
+          project_id TEXT NOT NULL REFERENCES content_projects(id) ON DELETE CASCADE,
+          asset_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          mime_type TEXT NOT NULL CHECK (mime_type IN ('image/png', 'image/jpeg', 'image/webp')),
+          byte_size INTEGER NOT NULL CHECK (byte_size > 0),
+          data BLOB NOT NULL,
+          PRIMARY KEY (project_id, asset_id)
+        );
+      `);
+    })();
+  }
+
+  updateReuse(id: string, input: ProjectReuseUpdate) {
+    const validated = projectReuseUpdateSchema.parse(input);
+    return this.database.transaction(() => {
+      const project = this.getSummary(id);
+      if (!project) throw new ProjectReuseError("PROJECT_NOT_FOUND");
+      const composition = validated.composition === undefined ? project.composition : validated.composition;
+      const isTemplate = validated.isTemplate ?? project.isTemplate;
+      if (isTemplate && !composition.trim())
+        throw new ProjectReuseError("COMPOSITION_REQUIRED");
+      this.database.prepare("UPDATE content_projects SET composition = ?, is_template = ?, updated_at = ? WHERE id = ?")
+        .run(composition, isTemplate ? 1 : 0, new Date().toISOString(), id);
+      return this.getSummary(id)!;
+    })();
+  }
+
+  listTemplates(): SavedProjectSummary[] {
+    return (this.database.prepare(`SELECT ${SUMMARY_COLUMNS} FROM content_projects
+      WHERE is_template = 1 ORDER BY updated_at DESC, id DESC`).all() as ProjectRow[]).map(summary);
   }
 
   save(input: {
@@ -125,18 +154,18 @@ export class ContentProjectStore {
       for (const asset of previous) if (!retained.has(asset.asset_id)) removeAsset.run(input.id, asset.asset_id);
       const insertAsset = this.database.prepare(`
         INSERT INTO content_project_assets
-          (project_id, asset_id, name, description, mime_type, byte_size, data)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+          (project_id, asset_id, name, mime_type, byte_size, data)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(project_id, asset_id) DO UPDATE SET
-          name = excluded.name, description = excluded.description, mime_type = excluded.mime_type,
+          name = excluded.name, mime_type = excluded.mime_type,
           byte_size = excluded.byte_size, data = excluded.data
-        WHERE name IS NOT excluded.name OR description IS NOT excluded.description
+        WHERE name IS NOT excluded.name
           OR mime_type IS NOT excluded.mime_type OR byte_size IS NOT excluded.byte_size OR data IS NOT excluded.data
       `);
       for (const asset of input.assets) {
         if (!asset.assetId.trim() || !asset.name.trim() || asset.bytes.byteLength === 0)
           throw new Error("프로젝트 이미지가 올바르지 않습니다.");
-        insertAsset.run(input.id, asset.assetId, asset.name, asset.description, asset.type,
+        insertAsset.run(input.id, asset.assetId, asset.name, asset.type,
           asset.bytes.byteLength, asset.bytes);
       }
     })();
@@ -161,13 +190,13 @@ export class ContentProjectStore {
   }
 
   list(): SavedProjectSummary[] {
-    const rows = this.database.prepare(`SELECT ${PROJECT_COLUMNS} FROM content_projects
+    const rows = this.database.prepare(`SELECT ${SUMMARY_COLUMNS} FROM content_projects
       ORDER BY updated_at DESC, id DESC`).all() as ProjectRow[];
     return rows.map(summary);
   }
 
   getSummary(id: string): SavedProjectSummary | null {
-    const row = this.database.prepare(`SELECT ${PROJECT_COLUMNS} FROM content_projects WHERE id = ?`)
+    const row = this.database.prepare(`SELECT ${SUMMARY_COLUMNS} FROM content_projects WHERE id = ?`)
       .get(id) as ProjectRow | undefined;
     return row ? summary(row) : null;
   }
@@ -176,7 +205,7 @@ export class ContentProjectStore {
     const row = this.database.prepare(`SELECT ${PROJECT_COLUMNS} FROM content_projects WHERE id = ?`)
       .get(id) as ProjectRow | undefined;
     if (!row) return null;
-    const assets = this.database.prepare(`SELECT asset_id, name, description, mime_type, data
+    const assets = this.database.prepare(`SELECT asset_id, name, mime_type, data
       FROM content_project_assets WHERE project_id = ? ORDER BY asset_id`)
       .all(id) as AssetRow[];
     return {
@@ -185,7 +214,6 @@ export class ContentProjectStore {
       assets: assets.map((asset) => ({
         assetId: asset.asset_id,
         name: asset.name,
-        description: asset.description,
         type: asset.mime_type,
         bytes: asset.data,
       })),

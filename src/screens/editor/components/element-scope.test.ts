@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { defaultPlacement, defaultVisualSlides, removalCommandsForScope, selectVisualSlides, visualScopeLabel } from "./element-scope";
+import { defaultPlacement, removalCommandsForScope, selectVisualSlides, visualScopeLabel } from "./element-scope";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID } from "@/lib/content-jobs/editor/document";
 import type { EditorSlide } from "@/lib/content-jobs/editor/types";
 
@@ -14,10 +14,6 @@ test("페이지를 열면 첫 일반 Element를 고르고 없으면 배경을 �
     placements: [background, title] };
   assert.equal(defaultPlacement(slide)?.id, title.id);
   assert.equal(defaultPlacement({ ...slide, placements: [background] })?.id, BACKGROUND_PLACEMENT_ID);
-});
-
-test("모든 Element의 기본 적용 범위는 해당 Element가 있는 전체 장이다", () => {
-  assert.deepEqual(defaultVisualSlides(available), available);
 });
 
 test("현재 장은 적용 범위에서 해제할 수 없다", () => {

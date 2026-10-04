@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import sharp from "sharp";
 import { openLocalDatabase } from "@/lib/local-db/database";
-import { AssetStore } from "@/lib/local-db/assets";
 import { ContentProjectStore } from "@/lib/local-db/projects/store";
 import { ContentJobRegistry } from "@/lib/content-jobs/workflow/registry";
 import { EditorService } from "@/lib/content-jobs/editor/service";
@@ -18,7 +17,7 @@ function fixture() {
   const database = openLocalDatabase(":memory:");
   const registry = new ContentJobRegistry();
   const job = registry.add({ structure: "sequential", aspectRatio: "4:5", slideCount: 3, outputLanguage: "English" });
-  return { database, registry, job, stores: { projects: new ContentProjectStore(database), assets: new AssetStore(database) } };
+  return { database, registry, job, stores: { projects: new ContentProjectStore(database) } };
 }
 
 test("MCP uses the full existing command schema and rejects unknown properties", () => {
@@ -47,7 +46,7 @@ test("local images, shapes and styles apply as one undo step; invalid batches le
     await assert.rejects(editWithLocalImages(f.registry, f.database, f.job.id, [...commands,
       { type: "remove_slide", slideId: "missing" }], 0), /commands\[3\]/);
     assert.deepEqual(f.registry.get(f.job.id), before);
-    assert.equal(f.stores.assets.list().length, 0);
+    assert.equal(Object.keys(f.registry.getRecord(f.job.id).imageData).length, 0);
     const updated = await editWithLocalImages(f.registry, f.database, f.job.id, commands, 0);
     assert.equal(updated.editor.revision, 1);
     assert.equal(f.registry.getRecord(f.job.id).editorHistory.length, 1);
@@ -57,7 +56,7 @@ test("local images, shapes and styles apply as one undo step; invalid batches le
     assert.deepEqual(undone.editor.document, before.editor.document);
     assert.equal(undone.assets.length, 1);
     await assert.rejects(editWithLocalImages(f.registry, f.database, f.job.id, commands, 0), /변경되었습니다/);
-    assert.equal(f.stores.assets.list().length, 1);
+    assert.equal(Object.keys(f.registry.getRecord(f.job.id).imageData).length, 1);
   } finally { f.database.close(); await rm(directory, { recursive: true, force: true }); }
 });
 

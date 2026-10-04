@@ -27,8 +27,8 @@ export async function renderArtwork(options: Options) {
     const element = elements.get(placement.elementId);
     if (element?.kind !== "text") return [];
     const style = { ...element.style, ...placement.styleOverride };
-    const font = canvasFont(style.fontFamily, style.fontWeight);
-    return [window.document.fonts.load(`${font.weight} ${style.fontSize}px ${font.family}`, placement.value || element.name)];
+    const font = canvasFont(style.fontFamily, style.fontWeight, style.fontStyle);
+    return [window.document.fonts.load(`${font.style} ${style.fontSize}px ${font.family}`, placement.value || element.name)];
   }));
   const images = await loadArtworkImages(slide.placements.flatMap((placement) => {
     const element = elements.get(placement.elementId);
@@ -87,11 +87,11 @@ export async function renderArtwork(options: Options) {
             group.add(new Konva.Text({ ...bounds, text: element.name, fontSize: 32, fill: "#777", align: "center", verticalAlign: "middle" }));
           }
         } else if (element.kind === "text" && (placement.value || showPlaceholders)) {
-          const font = canvasFont(style.fontFamily, style.fontWeight);
+          const font = canvasFont(style.fontFamily, style.fontWeight, style.fontStyle);
           // Measure the wrapped block before centering; a fixed Text height would crop excess lines.
           const text = new Konva.Text({ x: 10.8, width: Math.max(1, frame.width - 21.6),
             text: placement.value || element.name, fontSize: style.fontSize,
-            fontFamily: font.family, fontStyle: String(font.weight),
+            fontFamily: font.family, fontStyle: font.style,
             lineHeight: style.lineHeight, align: style.textAlign, verticalAlign: "top", padding: 0,
             fill: placement.value ? style.color : "#999", wrap: "word" });
           text.y((frame.height - text.height()) / 2);

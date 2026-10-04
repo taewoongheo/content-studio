@@ -26,8 +26,3 @@ export function uploadEditorImage(jobId: string, image: File, tabId?: string) {
     method: "POST", headers: tabId ? { "x-tab-id": tabId } : {}, body: form,
   }).then(readResponse);
 }
-export function attachStoredEditorImage(jobId: string, assetId: string, tabId?: string) {
-  return fetch(`/api/content-jobs/${encodeURIComponent(jobId)}/assets`, {
-    method: "POST", headers: { "Content-Type": "application/json", ...(tabId ? { "x-tab-id": tabId } : {}) }, body: JSON.stringify({ assetId }),
-  }).then(readResponse);
-}

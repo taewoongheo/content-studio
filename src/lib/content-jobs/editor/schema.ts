@@ -21,6 +21,7 @@ const style = object({
   fontSize: { type: "number", minimum: 8, maximum: 200 },
   lineHeight: { type: "number", minimum: 0.8, maximum: 3 },
   fontWeight: { type: "integer", minimum: 100, maximum: 900 },
+  fontStyle: { type: "string", enum: ["normal", "italic"] },
   textAlign: { type: "string", enum: ["left", "center", "right"] },
   borderRadius: { type: "number", minimum: 0, maximum: 100 },
   borderEnabled: { type: "boolean" },

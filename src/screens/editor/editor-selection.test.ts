@@ -24,16 +24,16 @@ test("선택한 장의 첫 일반 Element와 공유 범위를 찾는다", () => 
   const selection = resolveEditorSelection(document, "slide-2", null, null);
   assert.equal(selection.element?.id, "title");
   assert.deepEqual(selection.appliedSlides.map((slide) => slide.slideId), ["slide-2", "slide-3"]);
-  assert.deepEqual(selection.selectedSlideIds, ["slide-1", "slide-2", "slide-3", "slide-4"]);
+  assert.deepEqual(selection.selectedSlideIds, ["slide-2"]);
   assert.deepEqual(selection.scopeSlides.map((slide) => slide.hasElement), [false, true, true, false]);
   assert.equal(selection.visualTargets.length, 2);
 });
 
-test("일반 Element가 없는 장에서는 공통 배경과 전체 적용 범위를 선택한다", () => {
+test("일반 Element가 없는 장에서는 공통 배경을 고르고 현재 장만 적용한다", () => {
   const document = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
   const selection = resolveEditorSelection(document, "slide-1", null, null);
   assert.equal(selection.element?.id, BACKGROUND_ELEMENT_ID);
-  assert.deepEqual(selection.selectedSlideIds, document.slides.map((slide) => slide.id));
+  assert.deepEqual(selection.selectedSlideIds, ["slide-1"]);
 });
 
 test("Element가 없는 장도 복제 범위에 선택할 수 있다", () => {
@@ -43,4 +43,12 @@ test("Element가 없는 장도 복제 범위에 선택할 수 있다", () => {
     { key: `slide-2:${placementId}`, slideIds: ["slide-2", "slide-3", "slide-4"] });
   assert.deepEqual(selection.selectedSlideIds, ["slide-2", "slide-3", "slide-4"]);
   assert.equal(selection.visualTargets.length, 2);
+});
+
+test("슬라이드를 바꾸면 이전 장의 다중 선택을 가져오지 않고 현재 장만 선택한다", () => {
+  const document = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
+  const initial = resolveEditorSelection(document, "slide-2", null, null);
+  const selection = resolveEditorSelection(document, "slide-3", null,
+    { key: initial.scopeKey, slideIds: document.slides.map((slide) => slide.id) });
+  assert.deepEqual(selection.selectedSlideIds, ["slide-3"]);
 });

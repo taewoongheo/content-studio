@@ -27,7 +27,8 @@ export function ProjectTabs({ tabs, activeTabId, busy, onSelect, onClose, onRena
         </button>
         <Button variant="ghost" size="icon-sm" className="shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
           aria-label={`${tab.name} 이름 변경`} disabled={busy} onClick={() => onRename(tab)}><Pencil className="size-3" /></Button>
-        <Button variant="ghost" size="icon-sm" className="mr-1 shrink-0" aria-label={`${tab.name} 탭 닫기`} disabled={busy} onClick={() => onClose(tab)}><X className="size-3" /></Button>
+        <Button variant="ghost" size="icon-sm" className="mr-1 shrink-0" aria-label={`${tab.name} 탭 닫기`} aria-keyshortcuts={activeTabId === tab.tabId ? "Meta+W" : undefined}
+          title={activeTabId === tab.tabId ? "탭 닫기 (⌘W)" : "탭 닫기"} disabled={busy} onClick={() => onClose(tab)}><X className="size-3" /></Button>
       </div>)}
       <Button variant="ghost" size="icon-sm" className="mb-1 ml-1 shrink-0" aria-label="새 탭" disabled={busy} onClick={onNew}><Plus className="size-4" /></Button>
     </div>

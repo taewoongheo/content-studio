@@ -1,4 +1,5 @@
 import * as z from "zod/v4";
+import { compositionSchema, requiredCompositionSchema } from "@/lib/content-jobs/projects/composition";
 import { editorCommandsSchema } from "@/lib/content-jobs/editor/schema";
 
 const localImageSchema = {
@@ -18,9 +19,9 @@ export const editSchema = z.fromJSONSchema({
 export const projectSchema = z.strictObject({ projectId: z.string().min(1) });
 export const undoSchema = projectSchema.extend({ expectedTabId: z.string().min(1), expectedRevision: z.number().int().nonnegative() });
 export const previewSchema = projectSchema.extend({ slideId: z.string().min(1) });
-export const createSchema = z.strictObject({
-  name: z.string().trim().min(1).max(120).optional(), sourceProjectId: z.string().min(1).optional(),
-  aspectRatio: z.enum(["4:5", "1:1", "9:16"]).optional(),
-  structure: z.enum(["sequential", "repeating"]).optional(),
-  slideCount: z.number().int().min(2).max(20).optional(), outputLanguage: z.string().trim().min(1).optional(),
+export const cloneSchema = z.strictObject({
+  name: z.string().trim().min(1).max(120).optional(),
+  templateProjectId: z.string().min(1),
 });
+export const setCompositionSchema = projectSchema.extend({ composition: compositionSchema });
+export const registerTemplateSchema = projectSchema.extend({ composition: requiredCompositionSchema.optional() });

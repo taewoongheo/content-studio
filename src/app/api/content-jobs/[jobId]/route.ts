@@ -1,7 +1,7 @@
 import { closeProjectTab } from "@/lib/content-jobs/projects/lifecycle/close";
 import { contentJobEvents } from "@/lib/content-jobs/http/events";
 import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
-import { contentJobRegistry, editorService } from "@/lib/content-jobs/workflow/service";
+import { contentJobRegistry, editorService, projectAutosave } from "@/lib/content-jobs/workflow/service";
 import { isLocalRequest } from "@/lib/http/local-request";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,6 +31,7 @@ export async function POST(request: Request, context: Context) {
     const job = action === "editor_command"
       ? editorService.applyCommands(jobId, commands, expectedRevision as number)
       : editorService.undo(jobId, expectedRevision as number);
+    projectAutosave.schedule(job);
     return Response.json(job, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return contentJobErrorResponse(error); }
 }

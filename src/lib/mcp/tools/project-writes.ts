@@ -1,5 +1,4 @@
 import type Database from "better-sqlite3";
-import { AssetStore } from "@/lib/local-db/assets";
 import { ContentProjectStore } from "@/lib/local-db/projects/store";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import type { ContentJobRegistry } from "@/lib/content-jobs/workflow/registry";
@@ -11,10 +10,17 @@ import { editWithLocalImages, type LocalImageCommand } from "./images";
 export class McpProjectWrites {
   private readonly stores;
   constructor(private readonly registry: ContentJobRegistry, private readonly database: Database.Database) {
-    this.stores = { projects: new ContentProjectStore(database), assets: new AssetStore(database) };
+    this.stores = { projects: new ContentProjectStore(database) };
   }
-  create(input: Parameters<typeof createContentProject>[1]) {
-    return this.commit(() => createContentProject(this.registry, input, this.stores));
+  clone(input: { templateProjectId: string; name?: string }) {
+    let composition = "";
+    return this.commit(() => {
+      const template = this.stores.projects.getSummary(input.templateProjectId);
+      if (!template?.isTemplate || !template.composition.trim())
+        throw new Error("구성이 작성된 등록된 템플릿 프로젝트를 선택해 주세요.");
+      composition = template.composition;
+      return createContentProject(this.registry, { sourceProjectId: template.id, name: input.name }, this.stores);
+    }, changed => this.stores.projects.updateReuse(changed.id, { composition }));
   }
   edit(projectId: string, commands: Array<EditorCommand | LocalImageCommand>, expectedRevision: number, expectedTabId?: string) {
     if (expectedTabId) this.registry.requireTab(projectId, expectedTabId);
@@ -25,10 +31,11 @@ export class McpProjectWrites {
     if (expectedTabId) this.registry.requireTab(projectId, expectedTabId);
     return this.commit(() => new EditorService(this.registry).undo(projectId, expectedRevision));
   }
-  private commit(apply: () => ContentJobSnapshot) {
+  private commit(apply: () => ContentJobSnapshot, afterSave?: (changed: ContentJobSnapshot) => void) {
     return this.registry.transaction(() => this.database.transaction(() => {
       const changed = apply();
       saveContentProject(this.registry, changed.id, changed.name ?? "새 프로젝트", this.stores);
+      afterSave?.(changed);
       return this.registry.get(changed.id);
     })());
   }

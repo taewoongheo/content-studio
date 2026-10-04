@@ -6,7 +6,7 @@ import { EditorService } from "@/lib/content-jobs/editor/service";
 import type { EditorCommand } from "@/lib/content-jobs/editor/types";
 import { validateEditorCommands } from "@/lib/content-jobs/editor/schema";
 import { applyEditorCommands } from "@/lib/content-jobs/editor/document";
-import { AssetStore } from "@/lib/local-db/assets";
+import { createEditorImage } from "@/lib/content-jobs/editor/assets";
 import type Database from "better-sqlite3";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 
@@ -33,7 +33,7 @@ export async function readLocalImage(localPath: string) {
   } finally { await file.close(); }
 }
 
-/** Prepare files first; roll back new DB assets if the command batch fails. */
+/** Prepare files first; roll back project images if the command batch fails. */
 export async function editWithLocalImages(registry: ContentJobRegistry, database: Database.Database,
   projectId: string, commands: Array<EditorCommand | LocalImageCommand>, revision: number,
   commit: (apply: () => ContentJobSnapshot) => ContentJobSnapshot = (apply) => apply()) {
@@ -53,8 +53,7 @@ export async function editWithLocalImages(registry: ContentJobRegistry, database
   }
   return commit(() => database.transaction(() => {
     registry.requireTab(projectId, job.tabId);
-    const store = new AssetStore(database);
-    const imported = new Map([...prepared].map(([path, image]) => [path, store.create(image)]));
+    const imported = new Map([...prepared].map(([path, image]) => [path, createEditorImage(image)]));
     const resolved = commands.map((command): EditorCommand => command.type === "set_local_image"
       ? { type: "set_slot_value", slideId: command.slideId, placementId: command.placementId, value: imported.get(command.localPath)!.id }
       : command);

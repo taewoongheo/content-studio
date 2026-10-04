@@ -54,6 +54,7 @@ export function validElementDraft(draft: ElementDraft) {
     [x, y, width, height].every(Number.isFinite) && width > 0 && height > 0 &&
     draft.style.fontSize >= 8 && draft.style.fontSize <= 200 &&
     draft.style.lineHeight >= 0.8 && draft.style.lineHeight <= 3 &&
+    ["normal", "italic"].includes(draft.style.fontStyle ?? "normal") &&
     Number.isInteger(draft.style.fontWeight) && draft.style.fontWeight >= 100 && draft.style.fontWeight <= 900 &&
     draft.style.borderRadius >= 0 && draft.style.borderRadius <= 100 && validBorder(draft.style);
 }

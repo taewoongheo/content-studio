@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { ContentJobSnapshot, OpenProjectTab } from "@/lib/content-jobs/domain/types";
 import { DashboardContent } from "@/screens/dashboard/dashboard-content";
 import { EditorScreen, type EditorViewState, type EditorWorkspaceHandle } from "@/screens/editor/editor-screen";
@@ -39,6 +39,21 @@ export function WorkspaceScreen() {
       current.current = null; setJob(null); setInitialViewState(undefined); updateUrl(null, true);
     }
   });
+
+  const handleCloseShortcut = useEffectEvent((event: KeyboardEvent) => {
+    const closeKey = event.code === "KeyW" || event.key.toLowerCase() === "w";
+    if (!closeKey || !event.metaKey || event.ctrlKey || event.altKey || event.shiftKey || event.defaultPrevented) return;
+    const activeTab = tabs?.find(tab => tab.tabId === job?.tabId);
+    if (!activeTab) return;
+    event.preventDefault();
+    if (event.repeat || busy || chooser || lifecycle.closing || lifecycle.renaming) return;
+    lifecycle.close(activeTab);
+  });
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => handleCloseShortcut(event);
+    window.addEventListener("keydown", listener, true);
+    return () => window.removeEventListener("keydown", listener, true);
+  }, []);
 
   async function prepareSwitch() {
     if (!editor.current) return;
@@ -102,7 +117,7 @@ export function WorkspaceScreen() {
     {(error || connectionError) && <p role="alert" className="shrink-0 border-b px-4 py-2 text-sm text-destructive">{error || connectionError}</p>}
     <div className="relative min-h-0 flex-1 overflow-auto">
       {busy && <div className="absolute inset-0 z-40 cursor-wait bg-background/20" aria-label="탭 처리 중" />}
-      {job ? <EditorScreen key={job.tabId} ref={editor} initialJob={job} initialProjectName={job.savedRevision !== undefined ? job.name : undefined}
+      {job ? <EditorScreen key={job.tabId} ref={editor} initialJob={job}
         initialViewState={initialViewState} onNewJob={dashboard} />
         : <DashboardContent onOpen={select} onNew={() => setChooser(true)} />}
     </div>

@@ -6,9 +6,8 @@ import { join } from "node:path";
 import sharp from "sharp";
 import { openLocalDatabase } from "@/lib/local-db/database";
 import { ContentProjectStore } from "@/lib/local-db/projects/store";
-import { AssetStore } from "@/lib/local-db/assets";
 import { ContentJobRegistry } from "@/lib/content-jobs/workflow/registry";
-import { loadContentProject } from "@/lib/content-jobs/projects/service";
+import { createContentProject, saveContentProject, loadContentProject } from "@/lib/content-jobs/projects/service";
 import { contentProjectEvents } from "@/lib/content-jobs/projects/events";
 import { makeElementDefinition } from "@/lib/content-jobs/editor/elements/factory";
 import { McpProjectWrites } from "../tools/project-writes";
@@ -17,14 +16,20 @@ function fixture() {
   const database = openLocalDatabase(":memory:");
   const registry = new ContentJobRegistry();
   const writes = new McpProjectWrites(registry, database);
-  const stores = { projects: new ContentProjectStore(database), assets: new AssetStore(database) };
-  return { database, registry, writes, stores };
+  const stores = { projects: new ContentProjectStore(database) };
+  function seed(name: string) {
+    const job = createContentProject(registry, { name }, stores);
+    saveContentProject(registry, job.id, name, stores);
+    stores.projects.updateReuse(job.id, { composition: "도입 후 항목별 이미지와 짧은 설명을 반복한다.", isTemplate: true });
+    return registry.get(job.id);
+  }
+  return { database, registry, writes, stores, seed };
 }
 
 test("부분 색상을 저장·복구하고 잘못된 구간은 저장본을 바꾸지 않는다", async () => {
   const f = fixture();
   try {
-    const job = f.writes.create({ name: "Colors" });
+    const job = f.seed("Colors");
     const edited = await f.writes.edit(job.id, [
       { type: "add_element", element: makeElementDefinition({ id: "title", kind: "text" }) },
       { type: "place_element", slideId: "slide-1", elementId: "title", placementId: "title-1" },
@@ -45,7 +50,7 @@ test("부분 색상을 저장·복구하고 잘못된 구간은 저장본을 바
 test("MCP 생성·복제·편집·되돌리기는 최신 문서를 저장하고 새 메모리에서 복구한다", async () => {
   const f = fixture();
   try {
-    const source = f.writes.create({ name: "Back" });
+    const source = f.seed("Back");
     assert.equal(source.savedRevision, 0);
     assert.equal(f.stores.projects.list().length, 1);
     let notifications = 0;
@@ -57,7 +62,7 @@ test("MCP 생성·복제·편집·되돌리기는 최신 문서를 저장하고 
     const edited = await f.writes.edit(source.id, [{ type: "rename_slide", slideId: "slide-1", name: "New title" }], 0);
     assert.equal(edited.savedRevision, 1);
     assert.equal(notifications, 1);
-    const clone = f.writes.create({ sourceProjectId: source.id });
+    const clone = f.writes.clone({ templateProjectId: source.id });
     assert.deepEqual(clone.editor.document, edited.editor.document);
     assert.equal(f.stores.projects.list().length, 2);
     const restored = loadContentProject(new ContentJobRegistry(), clone.id, f.stores);
@@ -76,7 +81,7 @@ test("DB 저장 실패는 문서·revision·이력을 복구하고 화면과 목
   const abort = new AbortController();
   const reader = contentProjectEvents(abort.signal).body!.getReader();
   try {
-    const job = f.writes.create({ name: "Rollback" });
+    const job = f.seed("Rollback");
     await f.writes.edit(job.id, [{ type: "rename_slide", slideId: "slide-1", name: "Saved" }], 0);
     // Consume connection, creation, and edit notifications before testing a failed save.
     for (let i = 0; i < 3; i++) assert.equal((await reader.read()).done, false);
@@ -100,10 +105,11 @@ test("DB 저장 실패는 문서·revision·이력을 복구하고 화면과 목
 test("실패한 생성은 메모리의 새 작업을 제거한다", () => {
   const f = fixture();
   try {
+    const source = f.seed("Template");
     f.database.exec(`CREATE TRIGGER fail_create BEFORE INSERT ON content_projects BEGIN SELECT RAISE(ABORT, 'save failed'); END;`);
-    assert.throws(() => f.writes.create({ name: "Failed" }), /save failed/);
-    assert.equal(f.registry.list().length, 0);
-    assert.equal(f.stores.projects.list().length, 0);
+    assert.throws(() => f.writes.clone({ templateProjectId: source.id, name: "Failed" }), /save failed/);
+    assert.equal(f.registry.list().length, 1);
+    assert.equal(f.stores.projects.list().length, 1);
   } finally { f.database.close(); }
 });
 
@@ -113,7 +119,7 @@ test("이미지 포함 편집의 저장 실패도 신규 이미지 등록을 롤
   try {
     const path = join(directory, "image.png");
     await writeFile(path, await sharp({ create: { width: 10, height: 10, channels: 3, background: "red" } }).png().toBuffer());
-    const job = f.writes.create({ name: "Images" });
+    const job = f.seed("Images");
     const commands = [
       { type: "add_element" as const, element: makeElementDefinition({ id: "photo", kind: "image" }) },
       { type: "place_element" as const, slideId: "slide-1", elementId: "photo", placementId: "photo-1" },
@@ -121,13 +127,13 @@ test("이미지 포함 편집의 저장 실패도 신규 이미지 등록을 롤
     ];
     f.database.exec(`CREATE TRIGGER fail_save BEFORE UPDATE ON content_projects BEGIN SELECT RAISE(ABORT, 'save failed'); END;`);
     await assert.rejects(f.writes.edit(job.id, commands, 0), /save failed/);
-    assert.equal(f.stores.assets.list().length, 0);
+    assert.equal(Object.keys(f.registry.getRecord(job.id).imageData).length, 0);
     assert.deepEqual(f.registry.get(job.id), job);
     f.database.exec("DROP TRIGGER fail_save");
     const edited = await f.writes.edit(job.id, commands, 0);
     const fresh = loadContentProject(new ContentJobRegistry(), job.id, f.stores);
     assert.deepEqual(fresh.editor.document, edited.editor.document);
-    assert.ok(f.stores.assets.readImage(edited.assets[0].id));
+    assert.ok(f.stores.projects.get(job.id)?.assets[0].bytes.length);
     f.database.exec(`
       CREATE TRIGGER forbid_asset_update BEFORE UPDATE ON content_project_assets BEGIN SELECT RAISE(ABORT, 'rewrote image'); END;
       CREATE TRIGGER forbid_asset_delete BEFORE DELETE ON content_project_assets BEGIN SELECT RAISE(ABORT, 'deleted image'); END;
