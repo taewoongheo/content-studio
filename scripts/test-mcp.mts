@@ -60,7 +60,10 @@ try {
     return result;
   }
   const tools = (await client.listTools()).tools.map((tool) => tool.name);
-  assert.equal(tools.length, 7);
+  assert.deepEqual([...tools].sort(), [
+    "list_projects", "open_project", "create_project", "read_project",
+    "edit_project", "undo_project", "preview_slide",
+  ].sort(), "MCP must expose only the supported tools, without project deletion or tab close");
   assert.equal(tools.includes("add_image"), false);
   console.log("connected", tools);
 
