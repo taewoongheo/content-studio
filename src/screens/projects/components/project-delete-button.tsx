@@ -18,7 +18,7 @@ export function ProjectDeleteButton({ projectId, name, tabId, disabled, compact 
     finally { setDeleting(false); }
   }
   return <>
-    <Button variant={compact ? "ghost" : "outline"} size={compact ? "icon-sm" : "sm"} disabled={disabled || deleting}
+    <Button variant="destructive" size={compact ? "icon-sm" : "sm"} disabled={disabled || deleting}
       aria-label={compact ? `${name} 프로젝트 삭제` : "프로젝트 삭제"} onClick={() => { setError(""); setOpen(true); }}>
       <Trash2 className="size-4" aria-hidden="true" />{!compact && "프로젝트 삭제"}
     </Button>

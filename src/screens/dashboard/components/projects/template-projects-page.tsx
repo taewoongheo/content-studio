@@ -51,7 +51,7 @@ export function TemplateProjectsPage({ onOpen }: { onOpen: (projectId: string) =
         </Button>
         <ProjectReuseButton project={project} disabled={busy} size="sm" />
         {templateColumn ? <>
-          <Button type="button" variant="ghost" size="sm" disabled={busy}
+          <Button type="button" variant="destructive" size="sm" disabled={busy}
             aria-label={`${project.name} 템플릿 해제`} onClick={() => void designate(project.id, false)}>
             {updatingId === project.id ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <X aria-hidden="true" />}
             템플릿 해제
