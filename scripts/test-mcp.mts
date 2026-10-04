@@ -252,6 +252,7 @@ try {
     await listPage.getByRole("navigation", { name: "프로젝트 탭" }).getByRole("button", { name: "Colored clone", exact: true }).click();
     await listPage.waitForURL(url => url.searchParams.get("job") === colorClone.id);
     await page.getByRole("button", { name: "Colored clone 탭 닫기", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "저장 후 종료", exact: true }).click();
     await page.getByRole("button", { name: "Colored clone 탭 닫기", exact: true }).waitFor({ state: "detached" });
     await listPage.getByRole("heading", { name: "저장된 프로젝트", exact: true }).waitFor();
     assert.equal((await fetch(`${origin}/api/content-jobs/${colorClone.id}`)).status, 404);
@@ -280,6 +281,80 @@ try {
     await page.locator(`[data-tab-id="${blankJob.tabId}"]`).waitFor();
     await writeFile("/tmp/content-studio-project-tabs.png", await page.screenshot({ fullPage: true }));
     console.log("PASS global tabs, chooser reuse, text/background flush, view restoration, two-browser close and stale-tab rejection");
+
+    // A new editor is temporary until explicitly saved (or mutated through MCP).
+    async function savedIds() {
+      return (await fetch(`${origin}/api/content-projects`).then(response => response.json()) as Array<{ id: string }>).map(project => project.id);
+    }
+    const blankTab = tabBar.locator(`[data-project-tab="${blankJob.tabId}"]`);
+    await blankTab.getByRole("button", { name: /이름 변경$/ }).click();
+    await page.getByRole("dialog").getByLabel("프로젝트 이름", { exact: true }).fill("Temporary renamed");
+    await page.getByRole("dialog").getByRole("button", { name: "이름 변경", exact: true }).click();
+    await blankTab.getByRole("button", { name: "Temporary renamed", exact: true }).waitFor();
+    assert.equal((await savedIds()).includes(blankId), false);
+    await blankTab.getByRole("button", { name: /탭 닫기$/ }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "취소", exact: true }).click();
+    assert.equal((await fetch(`${origin}/api/content-jobs/${blankId}`)).status, 200);
+    await blankTab.getByRole("button", { name: /탭 닫기$/ }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "저장하지 않고 종료", exact: true }).click();
+    await blankTab.waitFor({ state: "detached" });
+    assert.equal((await savedIds()).includes(blankId), false);
+
+    async function newBlank() {
+      await tabBar.getByRole("button", { name: "새 탭", exact: true }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "새 편집기 시작", exact: true }).click();
+      await page.getByRole("dialog").waitFor({ state: "hidden" });
+      await page.getByRole("button", { name: "ZIP 내보내기" }).waitFor();
+      const projectId = new URL(page.url()).searchParams.get("job")!;
+      const project = await fetch(`${origin}/api/content-jobs/${projectId}`).then(response => response.json()) as Project;
+      await page.locator(`[data-tab-id="${project.tabId}"]`).waitFor();
+      return project;
+    }
+    const untouched = await newBlank();
+    await tabBar.locator(`[data-project-tab="${untouched.tabId}"]`).getByRole("button", { name: /탭 닫기$/ }).click();
+    await tabBar.locator(`[data-project-tab="${untouched.tabId}"]`).waitFor({ state: "detached" });
+    assert.equal((await savedIds()).includes(untouched.id), false);
+    assert.equal(await page.getByRole("dialog").count(), 0);
+
+    const temporary = await newBlank();
+    await page.getByRole("button", { name: "슬라이드 배경 선택", exact: true }).click();
+    await page.getByLabel("슬라이드 배경색", { exact: true }).fill("#456789");
+    await tabBar.locator(`[data-project-tab="${temporary.tabId}"]`).getByRole("button", { name: /탭 닫기$/ }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "저장 후 종료", exact: true }).click();
+    await tabBar.locator(`[data-project-tab="${temporary.tabId}"]`).waitFor({ state: "detached" });
+    assert.equal((await savedIds()).includes(temporary.id), true);
+    const savedTemporary = (await call("open_project", { projectId: temporary.id })).structuredContent as Project;
+    assert.equal(savedTemporary.editor.document.slides[0].backgroundColor, "#456789");
+    await tabBar.locator(`[data-project-tab="${savedTemporary.tabId}"]`).getByRole("button", { name: "새 프로젝트", exact: true }).click();
+    await page.locator(`[data-tab-id="${savedTemporary.tabId}"]`).waitFor();
+    await tabBar.locator(`[data-project-tab="${savedTemporary.tabId}"]`).getByRole("button", { name: /이름 변경$/ }).click();
+    await page.getByRole("dialog").getByLabel("프로젝트 이름", { exact: true }).fill("Saved renamed");
+    await page.getByRole("dialog").getByRole("button", { name: "이름 변경", exact: true }).click();
+    await page.getByRole("button", { name: "저장됨", exact: true }).waitFor();
+    await listPage.getByRole("heading", { name: "Saved renamed", exact: true }).waitFor();
+    await page.getByRole("button", { name: "프로젝트 삭제", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "삭제", exact: true }).click();
+    await tabBar.locator(`[data-project-tab="${savedTemporary.tabId}"]`).waitFor({ state: "detached" });
+    assert.equal((await savedIds()).includes(temporary.id), false);
+    await listPage.getByRole("heading", { name: "Saved renamed", exact: true }).waitFor({ state: "detached" });
+
+    const listDelete = (await call("create_project", { name: "Delete from list" })).structuredContent as Project;
+    await listPage.getByRole("button", { name: "Delete from list 프로젝트 삭제", exact: true }).click();
+    await listPage.getByRole("dialog").getByRole("button", { name: "삭제", exact: true }).click();
+    await tabBar.locator(`[data-project-tab="${listDelete.tabId}"]`).waitFor({ state: "detached" });
+    assert.equal((await savedIds()).includes(listDelete.id), false);
+    assert.equal((await fetch(`${origin}/api/content-jobs/${listDelete.id}`)).status, 404);
+    await tabBar.getByRole("button", { name: "Partial colors", exact: true }).click();
+    await page.locator(`[data-tab-id="${colorProject.tabId}"]`).waitFor();
+    const pageControls = await page.getByRole("navigation", { name: "페이지 선택", exact: true }).boundingBox();
+    const canvas = await page.locator('div[aria-label$="슬라이드 미리보기"]').boundingBox();
+    assert.ok(pageControls && canvas && pageControls.y >= canvas.y + canvas.height, "page controls must sit below the canvas");
+    await tabBar.getByRole("button", { name: "새 탭", exact: true }).scrollIntoViewIfNeeded();
+    const lastTab = await tabBar.locator("[data-project-tab]").last().boundingBox();
+    const plus = await tabBar.getByRole("button", { name: "새 탭", exact: true }).boundingBox();
+    assert.ok(lastTab && plus && plus.x - (lastTab.x + lastTab.width) <= 8, "plus belongs immediately after the last tab");
+    await writeFile("/tmp/content-studio-project-tabs.png", await page.screenshot({ fullPage: true }));
+    console.log("PASS rename, temporary drafts, cancel/save/discard close, header/list deletion and canvas/tab layout");
 
     console.log("PASS autosave status and live project-list refresh");
     console.log("PASS shared memory, clone independence, open/list, undo, revision conflict and cross-origin rejection");

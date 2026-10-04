@@ -4,10 +4,12 @@ import type { ContentJobSnapshot, OpenProjectTab } from "@/lib/content-jobs/doma
 import { DashboardContent } from "@/screens/dashboard/dashboard-content";
 import { EditorScreen, type EditorViewState, type EditorWorkspaceHandle } from "@/screens/editor/editor-screen";
 import { createContentJob, getContentJob } from "@/screens/content-job/api";
-import { loadContentProject } from "@/screens/projects/api";
+import { loadContentProject, renameProject } from "@/screens/projects/api";
 import { useOpenTabs } from "./use-open-tabs";
 import { closeTab } from "./api";
 import { ProjectTabs } from "./components/project-tabs";
+import { CloseTabDialog } from "./components/close-tab-dialog";
+import { RenameTabDialog } from "./components/rename-tab-dialog";
 import { NewTabDialog } from "./components/new-tab-dialog";
 
 function updateUrl(projectId: string | null, replace = false) {
@@ -21,6 +23,8 @@ export function WorkspaceScreen() {
   const [initialViewState, setInitialViewState] = useState<EditorViewState>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [closing, setClosing] = useState<OpenProjectTab | null>(null);
+  const [renaming, setRenaming] = useState<OpenProjectTab | null>(null);
   const [chooser, setChooser] = useState(false);
   const editor = useRef<EditorWorkspaceHandle>(null);
   const views = useRef(new Map<string, EditorViewState>());
@@ -29,6 +33,8 @@ export function WorkspaceScreen() {
   useEffect(() => { current.current = job; }, [job]);
 
   const { tabs, error: connectionError } = useOpenTabs(next => {
+    setClosing(previous => previous && next.some(tab => tab.tabId === previous.tabId) ? previous : null);
+    setRenaming(previous => previous && next.some(tab => tab.tabId === previous.tabId) ? previous : null);
     const active = current.current;
     if (active && !next.some(tab => tab.tabId === active.tabId)) {
       views.current.delete(active.tabId);
@@ -68,19 +74,45 @@ export function WorkspaceScreen() {
       current.current = next; setJob(next); setInitialViewState(undefined); setChooser(false); updateUrl(next.id);
     });
   }
+  async function finishClose(tab: OpenProjectTab) {
+    setClosing(null);
+    views.current.delete(tab.tabId);
+    if (job?.tabId === tab.tabId) {
+      const index = tabs?.findIndex(item => item.tabId === tab.tabId) ?? -1;
+      const neighbor = tabs?.[index + 1] ?? tabs?.[index - 1];
+      current.current = null; setJob(null);
+      if (neighbor) await showProject(neighbor.projectId); else updateUrl(null);
+    }
+  }
   function close(tab: OpenProjectTab) {
     void run(async () => {
       if (job?.tabId === tab.tabId) await prepareSwitch();
       const latest = await getContentJob(tab.projectId);
       if (latest.tabId !== tab.tabId) throw new Error("이 탭은 이미 종료되었습니다.");
-      await closeTab({ ...tab, revision: latest.editor.revision });
-      views.current.delete(tab.tabId);
-      if (job?.tabId === tab.tabId) {
-        const index = tabs?.findIndex(item => item.tabId === tab.tabId) ?? -1;
-        const neighbor = tabs?.[index + 1] ?? tabs?.[index - 1];
-        current.current = null; setJob(null);
-        if (neighbor) await showProject(neighbor.projectId); else updateUrl(null);
+      const target = { ...tab, revision: latest.editor.revision, name: latest.name ?? tab.name };
+      if (await closeTab(target)) setClosing(target);
+      else await finishClose(target);
+    });
+  }
+  function decideClose(decision: "save" | "discard") {
+    if (!closing) return;
+    void run(async () => {
+      try { await closeTab(closing, decision); }
+      catch (cause) {
+        const latest = await getContentJob(closing.projectId).catch(() => null);
+        if (latest?.tabId === closing.tabId) setClosing({ ...closing, revision: latest.editor.revision, name: latest.name ?? closing.name });
+        else setClosing(null);
+        throw cause;
       }
+      await finishClose(closing);
+    });
+  }
+  function rename(name: string) {
+    if (!renaming) return;
+    void run(async () => {
+      if (job?.tabId === renaming.tabId) await prepareSwitch();
+      await renameProject(renaming.projectId, name, renaming.tabId);
+      setRenaming(null);
     });
   }
 
@@ -109,7 +141,7 @@ export function WorkspaceScreen() {
 
   return <div className="flex h-svh min-h-0 flex-col bg-background text-foreground">
     <ProjectTabs tabs={tabs ?? []} activeTabId={job?.tabId} busy={busy}
-      onSelect={tab => select(tab.projectId)} onClose={close} onNew={() => setChooser(true)} onDashboard={dashboard} />
+      onSelect={tab => select(tab.projectId)} onClose={close} onRename={tab => { setError(""); setRenaming(tab); }} onNew={() => setChooser(true)} onDashboard={dashboard} />
     {(error || connectionError) && <p role="alert" className="shrink-0 border-b px-4 py-2 text-sm text-destructive">{error || connectionError}</p>}
     <div className="relative min-h-0 flex-1 overflow-auto">
       {busy && <div className="absolute inset-0 z-40 cursor-wait bg-background/20" aria-label="탭 처리 중" />}
@@ -117,6 +149,8 @@ export function WorkspaceScreen() {
         initialViewState={initialViewState} onNewJob={dashboard} />
         : <DashboardContent onOpen={next => select(next.id)} onNew={() => setChooser(true)} />}
     </div>
+    {closing && <CloseTabDialog tab={closing} busy={busy} error={error} onCancel={() => setClosing(null)} onDecision={decideClose} />}
+    {renaming && <RenameTabDialog key={renaming.tabId} tab={renaming} busy={busy} error={error} onCancel={() => setRenaming(null)} onRename={rename} />}
     <NewTabDialog tabs={tabs ?? []} open={chooser} busy={busy} onOpenChange={setChooser} onNew={create} onExisting={select} />
   </div>;
 }

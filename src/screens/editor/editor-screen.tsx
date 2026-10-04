@@ -25,6 +25,7 @@ import { SlideTabs } from "./components/slides/slide-tabs";
 import { ElementLayers } from "./components/layers/element-layers";
 import { createClipboardQueue, copyElement, pasteElement, type ElementClipboard } from "./components/clipboard/element-clipboard";
 import { useEditorShortcuts } from "./components/shortcuts/use-editor-shortcuts";
+import { ProjectDeleteButton } from "@/screens/projects/components/project-delete-button";
 import { ProjectPromptCopyButton } from "@/screens/projects/components/project-prompt-copy-button";
 
 async function readImageAspectRatio(file: File) {
@@ -320,6 +321,7 @@ export function EditorScreen({ ref, initialViewState, initialJob, initialProject
           <h1 className="truncate text-sm font-semibold">Content Studio <span className="font-normal text-muted-foreground">/ 슬라이드 편집기</span></h1>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+          <ProjectDeleteButton projectId={job.id} name={job.name ?? "새 프로젝트"} tabId={job.tabId} disabled={disabled} />
           <ProjectPromptCopyButton projectId={job.id} size="sm" disabled={disabled || !document}
             onBeforeCopy={async () => {
               if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
@@ -446,7 +448,16 @@ export function EditorScreen({ ref, initialViewState, initialJob, initialProject
             </aside>
 
           <section className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-background lg:col-start-2 lg:row-start-1 max-lg:order-1 max-lg:min-h-[620px] max-lg:border-b" aria-label="슬라이드 편집 영역">
-            <nav aria-label="페이지 선택" className="shrink-0 border-b px-4 py-3">
+
+            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted/20 p-5 sm:p-6">
+              <SlideCanvas key={slide.id} document={document} slide={slide} jobId={job.id}
+                selectedPlacementId={placement?.id ?? null} disabled={disabled} showGuides={showGuides} showOverflow={showOverflow}
+                selectionAppliesToAll={appliedSlides.length > 1 && appliedSlides.every((item) => selectedSlideIds.includes(item.slideId))}
+                lockImageAspectRatio={imageAspectRatioLocked}
+                onSelect={setPlacementId} onSelectBackground={() => setPlacementId(BACKGROUND_PLACEMENT_ID)}
+                onFrameChange={changeFrame} onDropImage={addDroppedImage} />
+            </div>
+            <nav aria-label="페이지 선택" className="shrink-0 border-t px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <h2 className="mr-1 text-sm font-semibold">페이지</h2>
@@ -479,14 +490,6 @@ export function EditorScreen({ ref, initialViewState, initialJob, initialProject
               <SlideTabs document={document} selectedSlideId={slide.id} disabled={disabled}
                 onSelect={(id) => { setSlideId(id); setPlacementId(null); }} onCommand={saveCommands} />
             </nav>
-            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted/20 p-5 sm:p-6">
-              <SlideCanvas key={slide.id} document={document} slide={slide} jobId={job.id}
-                selectedPlacementId={placement?.id ?? null} disabled={disabled} showGuides={showGuides} showOverflow={showOverflow}
-                selectionAppliesToAll={appliedSlides.length > 1 && appliedSlides.every((item) => selectedSlideIds.includes(item.slideId))}
-                lockImageAspectRatio={imageAspectRatioLocked}
-                onSelect={setPlacementId} onSelectBackground={() => setPlacementId(BACKGROUND_PLACEMENT_ID)}
-                onFrameChange={changeFrame} onDropImage={addDroppedImage} />
-            </div>
 
           </section>
 

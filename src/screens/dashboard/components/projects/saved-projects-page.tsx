@@ -7,6 +7,7 @@ import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import type { SavedProjectSummary } from "@/lib/local-db/projects/store";
 import { loadContentProject } from "@/screens/projects/api";
 import { useSavedProjects } from "@/screens/projects/use-saved-projects";
+import { ProjectDeleteButton } from "@/screens/projects/components/project-delete-button";
 import { ProjectPromptCopyButton } from "@/screens/projects/components/project-prompt-copy-button";
 
 const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
@@ -64,6 +65,7 @@ export function SavedProjectsPage({ onOpen }: {
                   열기
                 </Button>
                 <ProjectPromptCopyButton projectId={project.id} />
+                <ProjectDeleteButton projectId={project.id} name={project.name} compact disabled={openingId !== null} />
               </div>
             </article>
           ))}
