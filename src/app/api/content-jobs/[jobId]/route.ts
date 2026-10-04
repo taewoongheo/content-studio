@@ -1,4 +1,4 @@
-import { closeProjectTab } from "@/lib/content-jobs/projects/close";
+import { closeProjectTab } from "@/lib/content-jobs/projects/lifecycle/close";
 import { contentJobEvents } from "@/lib/content-jobs/http/events";
 import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
 import { contentJobRegistry, editorService } from "@/lib/content-jobs/workflow/service";
@@ -39,10 +39,12 @@ export async function DELETE(request: Request, context: Context) {
   if (!isLocalRequest(request, true)) return new Response(null, { status: 403 });
   try {
     const { jobId } = await context.params;
-    const { expectedTabId, expectedRevision } = await request.json();
+    const { expectedTabId, expectedRevision, decision = "check" } = await request.json();
     if (typeof expectedTabId !== "string" || !Number.isInteger(expectedRevision))
       return Response.json({ error: "현재 탭 ID와 revision이 필요합니다." }, { status: 400 });
-    closeProjectTab(contentJobRegistry, jobId, expectedTabId, expectedRevision);
+    if (!["check", "save", "discard"].includes(decision)) return Response.json({ error: "종료 방식을 확인해 주세요." }, { status: 400 });
+    const result = closeProjectTab(contentJobRegistry, jobId, expectedTabId, expectedRevision, undefined, undefined, decision);
+    if (result.requiresConfirmation) return Response.json(result);
     return new Response(null, { status: 204 });
   } catch (error) { return contentJobErrorResponse(error); }
 }

@@ -143,6 +143,23 @@ export class ContentProjectStore {
     return this.getSummary(input.id)!;
   }
 
+  getContent(id: string) {
+    const row = this.database.prepare("SELECT name, document_json, output_language FROM content_projects WHERE id = ?")
+      .get(id) as Pick<ProjectRow, "name" | "document_json" | "output_language"> | undefined;
+    return row ? { name: row.name, document: JSON.parse(row.document_json) as unknown, outputLanguage: row.output_language } : null;
+  }
+
+  rename(id: string, requestedName: string) {
+    const name = requestedName.trim();
+    if (!name || name.length > 120) throw new Error("프로젝트 이름을 120자 이하로 입력해 주세요.");
+    this.database.prepare("UPDATE content_projects SET name = ?, updated_at = ? WHERE id = ?")
+      .run(name, new Date().toISOString(), id);
+  }
+
+  delete(id: string) {
+    this.database.prepare("DELETE FROM content_projects WHERE id = ?").run(id);
+  }
+
   list(): SavedProjectSummary[] {
     const rows = this.database.prepare(`SELECT ${PROJECT_COLUMNS} FROM content_projects
       ORDER BY updated_at DESC, id DESC`).all() as ProjectRow[];

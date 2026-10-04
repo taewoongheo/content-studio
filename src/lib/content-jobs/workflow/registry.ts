@@ -25,9 +25,11 @@ export class ContentJobRegistry {
   add(input: ContentJobInput, id = this.createId()) {
     if (this.has(id)) return this.get(id);
     const timestamp = this.now().toISOString();
+    const document = createBlankDocument(input);
     const job: ContentJobRecord = {
       ...structuredClone(input), id, tabId: randomUUID(),
-      editor: { revision: 0, document: createBlankDocument(input) },
+      editor: { revision: 0, document },
+      initialState: { document: structuredClone(document), outputLanguage: input.outputLanguage },
       editorHistory: [], assets: [], createdAt: timestamp, updatedAt: timestamp,
     };
     this.remember(id);
