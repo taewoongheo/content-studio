@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import Database from "better-sqlite3";
 import { mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -36,4 +37,32 @@ test("게시 날짜와 외부 링크를 검증한다", () => {
   } finally {
     database.close();
   }
+});
+
+
+test("지원하지 않는 프로젝트 스키마는 데이터와 버전을 변경하지 않고 거부한다", () => {
+  const directory = mkdtempSync(join(tmpdir(), "studio-unsupported-db-"));
+  try {
+    for (const [index, columns, version] of [
+      [0, "", 4],
+      [1, ", composition TEXT NOT NULL DEFAULT ''", 4],
+      [2, ", is_template INTEGER NOT NULL DEFAULT 0", 7],
+    ] as const) {
+      const path = join(directory, `${index}.sqlite`);
+      const legacy = new Database(path);
+      legacy.exec(`CREATE TABLE content_projects (id TEXT PRIMARY KEY, document_json TEXT NOT NULL${columns});
+        INSERT INTO content_projects (id, document_json) VALUES ('saved', '{"slides":["original"]}');`);
+      legacy.pragma(`user_version = ${version}`);
+      const originalRows = legacy.prepare("SELECT * FROM content_projects").all();
+      const originalSchema = legacy.prepare("SELECT name, sql FROM sqlite_master ORDER BY name").all();
+      legacy.close();
+      assert.throws(() => openLocalDatabase(path), /지원하지 않는 프로젝트 DB 스키마/);
+      const unchanged = new Database(path);
+      try {
+        assert.equal(unchanged.pragma("user_version", { simple: true }), version);
+        assert.deepEqual(unchanged.prepare("SELECT * FROM content_projects").all(), originalRows);
+        assert.deepEqual(unchanged.prepare("SELECT name, sql FROM sqlite_master ORDER BY name").all(), originalSchema);
+      } finally { unchanged.close(); }
+    }
+  } finally { rmSync(directory, { recursive: true, force: true }); }
 });
