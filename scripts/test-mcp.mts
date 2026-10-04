@@ -244,6 +244,7 @@ try {
     assert.equal(await page.getByRole("checkbox", { name: "가이드", exact: true }).isChecked(), false);
     assert.equal(await page.getByRole("button", { name: /^2장 .*선택 및 순서 이동$/ }).getAttribute("aria-current"), "page");
     await page.getByRole("button", { name: "새 탭", exact: true }).click();
+    await writeFile("/tmp/content-studio-new-tab.png", await page.getByRole("dialog").screenshot());
     await page.getByRole("dialog").getByRole("button", { name: /Colored clone/ }).click();
     await page.getByRole("dialog").waitFor({ state: "hidden" });
     const openTabs = await fetch(`${origin}/api/content-jobs`).then(response => response.json()) as Array<{ projectId: string }>;
@@ -271,6 +272,12 @@ try {
     await page.getByRole("button", { name: "ZIP 내보내기" }).waitFor();
     const blankId = new URL(page.url()).searchParams.get("job");
     assert.ok(blankId && blankId !== colorClone.id);
+    const blankJob = await fetch(`${origin}/api/content-jobs/${blankId}`).then(response => response.json()) as Project;
+    await page.locator(`[data-tab-id="${blankJob.tabId}"]`).waitFor();
+    await page.goBack();
+    await page.locator(`[data-tab-id="${colorProject.tabId}"]`).waitFor();
+    await page.goForward();
+    await page.locator(`[data-tab-id="${blankJob.tabId}"]`).waitFor();
     await writeFile("/tmp/content-studio-project-tabs.png", await page.screenshot({ fullPage: true }));
     console.log("PASS global tabs, chooser reuse, text/background flush, view restoration, two-browser close and stale-tab rejection");
 
