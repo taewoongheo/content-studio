@@ -19,6 +19,7 @@ export type ElementStyle = {
   fontSize: number;
   lineHeight: number;
   fontWeight: number;
+  fontStyle?: "normal" | "italic";
   textAlign: "left" | "center" | "right";
   borderRadius: number;
   borderEnabled?: boolean;

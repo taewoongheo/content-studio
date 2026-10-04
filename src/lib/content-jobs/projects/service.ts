@@ -1,4 +1,4 @@
-import { validateEditorDocument } from "../editor/document";
+import { ensureSharedBackground, validateEditorDocument } from "../editor/document";
 import type { EditorDocument } from "../editor/types";
 import { ContentJobError, type ContentJobRegistry } from "../workflow/registry";
 import type { ContentJobRecord } from "../domain/types";
@@ -43,6 +43,7 @@ function parseDocument(value: unknown): EditorDocument {
   const document = value as EditorDocument;
   let errors: string[];
   try {
+    ensureSharedBackground(document);
     errors = validateEditorDocument(document);
   } catch {
     throw new Error("저장된 편집 문서가 올바르지 않습니다.");

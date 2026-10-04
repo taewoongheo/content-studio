@@ -20,9 +20,9 @@ export function ProjectPromptCopyButton({ projectId, disabled, size = "default",
         return;
       }
       await navigator.clipboard.writeText([
-        "Content Studio MCP로 새 콘텐츠를 만들어줘.",
+        "Content Studio MCP로 새 슬라이드 콘텐츠를 만들어줘.",
         `기준 프로젝트 ID: ${projectId}`,
-        "create_project의 sourceProjectId에 위 ID를 넣어 새 프로젝트를 만들어줘.",
+        "list_template_guides의 재사용 가이드와 목록 메타데이터만으로 위 ID의 템플릿 등록을 확인해줘. 등록되어 있으면 clone_project의 templateProjectId로 복제해줘. 미등록이면 우회 생성하지 말고 대시보드에서 템플릿 등록이 필요하다고 알려줘.",
         "기준 프로젝트의 레이아웃, 요소 역할, 공유 스타일을 유지하면서 새 주제에 맞게 내용을 교체해줘.",
         "새 주제를 지정하지 않았다면 먼저 물어봐줘.",
       ].join("\n"));

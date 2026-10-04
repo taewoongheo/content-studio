@@ -164,13 +164,20 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
                   {editorFont(draft.style.fontFamily).weights.map((weight) => <option key={weight} value={weight}>{weight}</option>)}
                 </select>
               </label>
+              <label className="flex h-10 items-center gap-2 text-xs font-medium">
+                <input type="checkbox" aria-label="이탤릭" checked={draft.style.fontStyle === "italic"}
+                  disabled={disabled} onChange={(event) => updateStyle("fontStyle", event.target.checked ? "italic" : "normal")} />
+                <span className="italic">이탤릭</span>
+              </label>
               <label className="grid gap-1.5 text-xs font-medium">글꼴 계열
                 <select aria-label="글꼴 계열" className="h-10 rounded-md border bg-background px-2 text-sm" value={draft.style.fontFamily} onChange={(event) => {
                   const fontFamily = event.target.value as ElementStyle["fontFamily"];
                   setDraft((current) => ({ ...current, style: { ...current.style, fontFamily,
                     fontWeight: supportedFontWeight(fontFamily, current.style.fontWeight) } }));
                 }}>
-                  {EDITOR_FONTS.map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}
+                  {["훅", "본문 제목", "본문", "Fallback"].map((group) => <optgroup key={group} label={group}>
+                    {EDITOR_FONTS.filter((font) => font.group === group).map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}
+                  </optgroup>)}
                 </select>
               </label>
               <div className="grid gap-1.5 text-xs font-medium">

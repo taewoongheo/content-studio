@@ -1,3 +1,4 @@
+import { retiredFontReplacement } from "./typography/fonts";
 import type { EditorDocument, ElementDefinition, ElementFrame } from "./types";
 
 export const BACKGROUND_ELEMENT_ID = "__background__";
@@ -15,7 +16,14 @@ function makeBackgroundElement(color: string): ElementDefinition {
 
 export function ensureSharedBackground(document: EditorDocument): EditorDocument {
   if (document.slides.length === 0) return document;
-  for (const element of document.elements) element.style.lineHeight ??= 1.2;
+  for (const element of document.elements) {
+    element.style.lineHeight ??= 1.2;
+    element.style.fontFamily = retiredFontReplacement(element.style.fontFamily) ?? element.style.fontFamily;
+  }
+  for (const slide of document.slides) for (const placement of slide.placements) {
+    const style = placement.styleOverride;
+    if (style?.fontFamily) style.fontFamily = retiredFontReplacement(style.fontFamily) ?? style.fontFamily;
+  }
   let background = document.elements.find((element) => element.id === BACKGROUND_ELEMENT_ID);
   if (background && background.kind !== "background") throw new Error("배경 Element ID가 다른 Element에 사용 중입니다.");
   if (!background) {

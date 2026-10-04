@@ -42,3 +42,10 @@ export function renameProject(id: string, name: string, expectedTabId?: string) 
 export function deleteProject(id: string, expectedTabId?: string) {
   return projectMutation(id, "DELETE", { expectedTabId });
 }
+
+export async function updateProjectReuse(id: string, input: { reuseGuide?: string; isTemplate?: boolean }) {
+  const response = await fetch(`/api/content-projects/${encodeURIComponent(id)}/reuse`, {
+    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
+  });
+  return readJson<SavedProjectSummary>(response);
+}

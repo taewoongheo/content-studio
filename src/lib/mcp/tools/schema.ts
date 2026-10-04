@@ -18,9 +18,8 @@ export const editSchema = z.fromJSONSchema({
 export const projectSchema = z.strictObject({ projectId: z.string().min(1) });
 export const undoSchema = projectSchema.extend({ expectedTabId: z.string().min(1), expectedRevision: z.number().int().nonnegative() });
 export const previewSchema = projectSchema.extend({ slideId: z.string().min(1) });
-export const createSchema = z.strictObject({
-  name: z.string().trim().min(1).max(120).optional(), sourceProjectId: z.string().min(1).optional(),
-  aspectRatio: z.enum(["4:5", "1:1", "9:16"]).optional(),
-  structure: z.enum(["sequential", "repeating"]).optional(),
-  slideCount: z.number().int().min(2).max(20).optional(), outputLanguage: z.string().trim().min(1).optional(),
+export const cloneSchema = z.strictObject({
+  name: z.string().trim().min(1).max(120).optional(),
+  templateProjectId: z.string().min(1),
 });
+export const reuseGuideSchema = projectSchema.extend({ reuseGuide: z.string().trim().max(4000) });

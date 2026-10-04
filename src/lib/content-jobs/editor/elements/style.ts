@@ -2,7 +2,7 @@ import type { ElementStyle } from "../types";
 
 /** Optional defaults keep previously saved visual documents compatible. */
 export function withBorderDefaults(style: ElementStyle) {
-  return { borderEnabled: false, borderColor: "#111111", borderWidth: 2, ...style };
+  return { fontStyle: "normal" as const, borderEnabled: false, borderColor: "#111111", borderWidth: 2, ...style };
 }
 
 export function validBorder(style: ElementStyle) {

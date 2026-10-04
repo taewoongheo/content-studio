@@ -27,6 +27,7 @@ function validStyle(style: ElementStyle) {
     (colorPattern.test(style.backgroundColor) || style.backgroundColor === "transparent") &&
     Number.isFinite(style.fontSize) && style.fontSize >= 8 && style.fontSize <= 200 &&
     Number.isFinite(style.lineHeight) && style.lineHeight >= 0.8 && style.lineHeight <= 3 &&
+    (style.fontStyle === undefined || ["normal", "italic"].includes(style.fontStyle)) &&
     Number.isInteger(style.fontWeight) && style.fontWeight >= 100 && style.fontWeight <= 900 &&
     ["left", "center", "right"].includes(style.textAlign) &&
     Number.isFinite(style.borderRadius) && style.borderRadius >= 0 && style.borderRadius <= 100 &&

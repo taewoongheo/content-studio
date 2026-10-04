@@ -7,6 +7,8 @@ export type SavedProjectSummary = {
   aspectRatio: string;
   slideCount: number;
   outputLanguage: string;
+  reuseGuide: string;
+  isTemplate: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -29,6 +31,8 @@ type ProjectRow = {
   aspect_ratio: string;
   slide_count: number;
   output_language: string;
+  reuse_guide: string;
+  is_template: number;
   document_json: string;
   created_at: string;
   updated_at: string;
@@ -41,7 +45,8 @@ type AssetRow = {
   data: Buffer;
 };
 
-const PROJECT_COLUMNS = "id, name, aspect_ratio, slide_count, output_language, document_json, created_at, updated_at";
+const SUMMARY_COLUMNS = "id, name, aspect_ratio, slide_count, output_language, reuse_guide, is_template, created_at, updated_at";
+const PROJECT_COLUMNS = `${SUMMARY_COLUMNS}, document_json`;
 
 function summary(row: ProjectRow): SavedProjectSummary {
   return {
@@ -50,6 +55,8 @@ function summary(row: ProjectRow): SavedProjectSummary {
     aspectRatio: row.aspect_ratio,
     slideCount: row.slide_count,
     outputLanguage: row.output_language,
+    reuseGuide: row.reuse_guide,
+    isTemplate: row.is_template === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -61,29 +68,55 @@ export class ContentProjectStore {
   }
 
   private ensureSchema() {
-    this.database.exec(`
-      CREATE TABLE IF NOT EXISTS content_projects (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        aspect_ratio TEXT NOT NULL,
-        slide_count INTEGER NOT NULL CHECK (slide_count > 0),
-        output_language TEXT NOT NULL,
-        document_json TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS content_projects_updated_at_idx
-        ON content_projects(updated_at DESC);
-      CREATE TABLE IF NOT EXISTS content_project_assets (
-        project_id TEXT NOT NULL REFERENCES content_projects(id) ON DELETE CASCADE,
-        asset_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        mime_type TEXT NOT NULL CHECK (mime_type IN ('image/png', 'image/jpeg', 'image/webp')),
-        byte_size INTEGER NOT NULL CHECK (byte_size > 0),
-        data BLOB NOT NULL,
-        PRIMARY KEY (project_id, asset_id)
-      );
-    `);
+    this.database.transaction(() => {
+      this.database.exec(`
+        CREATE TABLE IF NOT EXISTS content_projects (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          aspect_ratio TEXT NOT NULL,
+          slide_count INTEGER NOT NULL CHECK (slide_count > 0),
+          output_language TEXT NOT NULL,
+          document_json TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS content_projects_updated_at_idx
+          ON content_projects(updated_at DESC);
+        CREATE TABLE IF NOT EXISTS content_project_assets (
+          project_id TEXT NOT NULL REFERENCES content_projects(id) ON DELETE CASCADE,
+          asset_id TEXT NOT NULL,
+          name TEXT NOT NULL,
+          mime_type TEXT NOT NULL CHECK (mime_type IN ('image/png', 'image/jpeg', 'image/webp')),
+          byte_size INTEGER NOT NULL CHECK (byte_size > 0),
+          data BLOB NOT NULL,
+          PRIMARY KEY (project_id, asset_id)
+        );
+      `);
+      const columns = this.database.prepare("PRAGMA table_info(content_projects)").all() as Array<{ name: string }>;
+      if (!columns.some(column => column.name === "reuse_guide"))
+        this.database.exec("ALTER TABLE content_projects ADD COLUMN reuse_guide TEXT NOT NULL DEFAULT ''");
+      if (!columns.some(column => column.name === "is_template"))
+        this.database.exec("ALTER TABLE content_projects ADD COLUMN is_template INTEGER NOT NULL DEFAULT 0 CHECK (is_template IN (0, 1))");
+    })();
+  }
+
+  updateReuse(id: string, input: { reuseGuide?: string; isTemplate?: boolean }) {
+    return this.database.transaction(() => {
+      const project = this.getSummary(id);
+      if (!project) throw new Error("프로젝트를 찾을 수 없습니다.");
+      const reuseGuide = input.reuseGuide?.trim() ?? project.reuseGuide;
+      const isTemplate = input.isTemplate ?? project.isTemplate;
+      if (reuseGuide.length > 4000) throw new Error("재사용 가이드는 4000자 이하로 입력해 주세요.");
+      if (isTemplate && !reuseGuide) throw new Error("템플릿으로 등록하려면 재사용 가이드를 입력해 주세요.");
+      this.database.prepare("UPDATE content_projects SET reuse_guide = ?, is_template = ?, updated_at = ? WHERE id = ?")
+        .run(reuseGuide, isTemplate ? 1 : 0, new Date().toISOString(), id);
+      return this.getSummary(id)!;
+    })();
+  }
+
+  listTemplates(): SavedProjectSummary[] {
+    return (this.database.prepare(`SELECT ${SUMMARY_COLUMNS} FROM content_projects
+      WHERE is_template = 1 ORDER BY updated_at DESC, id DESC`).all() as ProjectRow[]).map(summary);
   }
 
   save(input: {
@@ -158,13 +191,13 @@ export class ContentProjectStore {
   }
 
   list(): SavedProjectSummary[] {
-    const rows = this.database.prepare(`SELECT ${PROJECT_COLUMNS} FROM content_projects
+    const rows = this.database.prepare(`SELECT ${SUMMARY_COLUMNS} FROM content_projects
       ORDER BY updated_at DESC, id DESC`).all() as ProjectRow[];
     return rows.map(summary);
   }
 
   getSummary(id: string): SavedProjectSummary | null {
-    const row = this.database.prepare(`SELECT ${PROJECT_COLUMNS} FROM content_projects WHERE id = ?`)
+    const row = this.database.prepare(`SELECT ${SUMMARY_COLUMNS} FROM content_projects WHERE id = ?`)
       .get(id) as ProjectRow | undefined;
     return row ? summary(row) : null;
   }

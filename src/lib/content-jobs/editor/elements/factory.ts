@@ -20,6 +20,6 @@ export function makeElementDefinition(input: {
     style: { color: "#111111", backgroundColor: isShape ? "#111111" : "transparent",
       fontSize: 36, lineHeight: 1.2, fontWeight: 700, textAlign: "center", borderRadius: 0,
       borderEnabled: isShape, borderColor: "#111111", borderWidth: 2,
-      fontFamily: "sans-serif", imageFit: "cover" },
+      fontFamily: input.kind === "text" ? "inter" : "sans-serif", imageFit: "cover" },
   };
 }

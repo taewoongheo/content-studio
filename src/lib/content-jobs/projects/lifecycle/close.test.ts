@@ -5,7 +5,7 @@ import { ContentProjectStore } from "@/lib/local-db/projects/store";
 import { ContentJobRegistry } from "../../workflow/registry";
 import { EditorService } from "../../editor/service";
 import { closeProjectTab } from "./close";
-import { createContentProject, loadContentProject } from "../service";
+import { createContentProject, saveContentProject, loadContentProject } from "../service";
 import { contentJobEvents } from "../../http/events";
 
 function fixture() {
@@ -73,7 +73,8 @@ test("이미지 준비 중 닫았다 재열면 이전 탭의 요청은 새 탭�
     const path = join(directory, "image.png");
     await writeFile(path, await sharp({ create: { width: 2, height: 2, channels: 3, background: "red" } }).png().toBuffer());
     const writes = new McpProjectWrites(f.registry, f.database);
-    const job = writes.create({ name: "Pending image" });
+    const job = createContentProject(f.registry, { name: "Pending image" }, f.stores);
+    saveContentProject(f.registry, job.id, "Pending image", f.stores);
     const pending = writes.edit(job.id, [
       { type: "add_element", element: makeElementDefinition({ id: "image", kind: "image" }) },
       { type: "place_element", slideId: "slide-1", elementId: "image", placementId: "image-1" },

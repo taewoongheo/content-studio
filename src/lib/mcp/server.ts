@@ -5,9 +5,10 @@ import type { EditorCommand } from "@/lib/content-jobs/editor/types";
 import { contentJobRegistry } from "@/lib/content-jobs/workflow/service";
 import { defaultProjectStores, loadContentProject } from "@/lib/content-jobs/projects/service";
 import { getLocalDatabase } from "@/lib/local-db/database";
-import { createSchema, editSchema, previewSchema, projectSchema, undoSchema } from "./tools/schema";
+import { cloneSchema, reuseGuideSchema, editSchema, previewSchema, projectSchema, undoSchema } from "./tools/schema";
 import type { LocalImageCommand } from "./tools/images";
 import { McpProjectWrites } from "./tools/project-writes";
+import { notifyProjectsChanged } from "@/lib/content-jobs/projects/events";
 import { previewSlide } from "./preview/render";
 
 const json = (data: Record<string, unknown>): CallToolResult => ({
@@ -23,7 +24,7 @@ const annotations = (readOnlyHint: boolean) => ({ readOnlyHint, destructiveHint:
 /** A fresh protocol instance per HTTP request; project state belongs to the app registry. */
 export function createStudioMcpServer(origin: string) {
   const server = new McpServer({ name: "content-studio", version: "0.1.0" }, {
-    instructions: "Read the target project before editing. Reuse a project by passing sourceProjectId to create_project; omit it for a blank project. Find and select local images with your filesystem tools, then use set_local_image inside edit_project. Edit batches are one undo step. English hook fonts: bebas-neue and anton (weight 400 only), oswald (200-700), barlow-condensed (100-900). sans-serif uses Geist and monospace uses Geist Mono (100-900). Projects are open tabs. Creation/clone/open adds a tab without switching the browser. Closed tabs reject edits; explicitly open and read again. Edit/undo require expectedTabId and expectedRevision from the latest read. Never write the app database directly.",
+    instructions: "For new slides, select a template using only list_template_guides metadata. Do not read full project JSON or previews to compare candidates. Creation requires clone_project with a registered templateProjectId; no templates means creation is unavailable. After selection, read the cloned project before editing. Preserve inherited hook/body styles and account badges while replacing content. Template registration references the original project: editing it changes the template. set_reuse_guide updates project metadata; it cannot register templates. Find and select local images with your filesystem tools, then use set_local_image inside edit_project. Edit batches are one undo step. Fonts: anton for hooks (400), space-grotesk for body headings (300-700, recommended 700), inter for body text (100-900, recommended 400-500), sans-serif for the Geist fallback (100-900). Text style fontStyle accepts normal or italic; Inter and Geist load true italics, Anton and Space Grotesk use a synthesized slant. Projects are open tabs. Creation/clone/open adds a tab without switching the browser. Closed tabs reject edits; explicitly open and read again. Edit/undo require expectedTabId and expectedRevision from the latest read. Never write the app database directly.",
   });
   const describe = (id: string) => {
     const job = contentJobRegistry.get(id);
@@ -38,6 +39,7 @@ export function createStudioMcpServer(origin: string) {
     for (const job of contentJobRegistry.list()) {
       entries.set(job.id, { id: job.id, name: job.name ?? entries.get(job.id)?.name ?? "새 프로젝트",
         aspectRatio: job.aspectRatio, slideCount: job.slideCount, outputLanguage: job.outputLanguage,
+        reuseGuide: entries.get(job.id)?.reuseGuide ?? "", isTemplate: entries.get(job.id)?.isTemplate ?? false,
         createdAt: job.createdAt, updatedAt: job.updatedAt, state: job.savedRevision === job.editor.revision ? "saved" : "draft", url: `${origin}/?job=${encodeURIComponent(job.id)}` });
     }
     return json({ projects: [...entries.values()] });
@@ -49,11 +51,23 @@ export function createStudioMcpServer(origin: string) {
     await loadContentProject(contentJobRegistry, projectId);
     return json(describe(projectId));
   }));
-  server.registerTool("create_project", {
-    description: "Create a new project and save it to the database before returning success. Optional sourceProjectId clones its current draft or saved document and assets, without modifying the source. With a source, omit blank-document settings. Without a source, defaults are sequential, 4:5, 6 slides, English. Returns a new ID and editor URL.",
-    inputSchema: createSchema, annotations: annotations(false),
-  }, (input) => guarded(async () => {
-    const job = new McpProjectWrites(contentJobRegistry, getLocalDatabase()).create(input);
+  server.registerTool("list_template_guides", {
+    description: "Return all registered template projects with reuse guides and summary metadata only. Select the closest template from this list, even without an exact format match. Do not read candidate document JSON or previews to choose. Empty list means new project creation is unavailable.",
+    inputSchema: z.strictObject({}), annotations: annotations(true),
+  }, () => guarded(() => json({ templates: defaultProjectStores().projects.listTemplates() })));
+  server.registerTool("set_reuse_guide", {
+    description: "Save a project's reuse guide: suitable slide types, reuse situations and visual structure. Does not register or unregister templates; manage registration in the dashboard. Can describe existing projects using their element roles. Keep guides current when the visual structure changes.",
+    inputSchema: reuseGuideSchema, annotations: annotations(false),
+  }, ({ projectId, reuseGuide }) => guarded(() => {
+    const project = defaultProjectStores().projects.updateReuse(projectId, { reuseGuide });
+    notifyProjectsChanged();
+    return json({ project });
+  }));
+  server.registerTool("clone_project", {
+    description: "Create and save a new project by cloning a registered template's current document and assets. templateProjectId is required and must come from list_template_guides. Preserves the source. No blank creation or cloning unregistered projects. New projects are not registered as templates.",
+    inputSchema: cloneSchema, annotations: annotations(false),
+  }, (input) => guarded(() => {
+    const job = new McpProjectWrites(contentJobRegistry, getLocalDatabase()).clone(input);
     return json(describe(job.id));
   }));
   server.registerTool("read_project", {
