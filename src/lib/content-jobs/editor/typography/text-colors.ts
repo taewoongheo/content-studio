@@ -1,12 +1,14 @@
 import type { TextColorRange } from "../types";
 
+export const MAX_TEXT_COLOR_RANGES = 200;
+
 const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 export function textBoundaries(text: string) {
   return new Set([...segmenter.segment(text)].map((part) => part.index).concat(text.length));
 }
 
 export function validTextColors(text: string, ranges: TextColorRange[]) {
-  if (!Array.isArray(ranges) || ranges.length > 200) return false;
+  if (!Array.isArray(ranges) || ranges.length > MAX_TEXT_COLOR_RANGES) return false;
   const boundaries = textBoundaries(text);
   let end = 0;
   return ranges.every((range) => {
@@ -48,9 +50,8 @@ export function setTextColor(text: string, ranges: TextColorRange[], start: numb
   return merge(next);
 }
 
-/** UTF-16 offsets, exclusive end. Keep unaffected text; inserted text inherits an enclosing color. */
-export function remapTextColors(before: string, after: string, ranges: TextColorRange[]) {
-  if (before === after) return ranges.map((range) => ({ ...range }));
+/** Find the changed span without splitting a grapheme in either text. */
+function changedTextSpan(before: string, after: string) {
   let start = 0;
   while (start < before.length && start < after.length && before[start] === after[start]) start++;
   const beforeBounds = textBoundaries(before), afterBounds = textBoundaries(after);
@@ -58,13 +59,24 @@ export function remapTextColors(before: string, after: string, ranges: TextColor
   let oldEnd = before.length, newEnd = after.length;
   while (oldEnd > start && newEnd > start && before[oldEnd - 1] === after[newEnd - 1]) { oldEnd--; newEnd--; }
   while (oldEnd < before.length && (!beforeBounds.has(oldEnd) || !afterBounds.has(newEnd))) { oldEnd++; newEnd++; }
+  return { start, oldEnd, newEnd, afterBounds };
+}
+
+/** UTF-16 offsets, exclusive end. Keep unaffected text; inserted text inherits an enclosing color. */
+export function remapTextColors(before: string, after: string, ranges: TextColorRange[]) {
+  if (before === after) return ranges.map((range) => ({ ...range }));
+  const { start, oldEnd, newEnd, afterBounds } = changedTextSpan(before, after);
   const delta = newEnd - oldEnd;
   const next = ranges.flatMap((range) => [
     { ...range, end: Math.min(range.end, start) },
     { ...range, start: Math.max(range.start, oldEnd) + delta, end: range.end + delta },
   ]);
-  const enclosing = ranges.find((range) => range.start <= start && range.end >= oldEnd &&
-    (oldEnd > start || (start > range.start && start < range.end)));
+  const isReplacement = oldEnd > start;
+  const enclosing = ranges.find((range) => {
+    const containsChangedSpan = range.start <= start && range.end >= oldEnd;
+    const insertionInsideColor = start > range.start && start < range.end;
+    return containsChangedSpan && (isReplacement || insertionInsideColor);
+  });
   if (enclosing && newEnd > start) next.push({ start, end: newEnd, color: enclosing.color });
   return merge(next).filter((range) => afterBounds.has(range.start) && afterBounds.has(range.end));
 }

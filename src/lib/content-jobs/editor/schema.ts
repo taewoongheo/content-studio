@@ -1,11 +1,12 @@
 import Ajv from "ajv";
+import { MAX_TEXT_COLOR_RANGES } from "./typography/text-colors";
 import { EDITOR_FONT_FAMILIES } from "./typography/fonts";
 import type { EditorCommand } from "./types";
 import { MAX_FRAME_COORDINATE, MAX_FRAME_DIMENSION } from "./types";
 
 const text = { type: "string" };
 const color = { type: "string", pattern: "^#[0-9a-fA-F]{6}$" };
-const textColors = { type: "array", maxItems: 200, items: object({
+const textColors = { type: "array", maxItems: MAX_TEXT_COLOR_RANGES, items: object({
   start: { type: "integer", minimum: 0 }, end: { type: "integer", minimum: 1 }, color,
 }) };
 const frame = object({
