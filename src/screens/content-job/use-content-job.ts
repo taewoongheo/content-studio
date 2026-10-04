@@ -13,6 +13,7 @@ export function useContentJob(initialJob: ContentJobSnapshot) {
     const events = new EventSource(
       `/api/content-jobs/${encodeURIComponent(initialJob.id)}`,
     );
+    events.addEventListener("closed", () => events.close());
     events.onmessage = (event) => {
       setJob(JSON.parse(event.data) as ContentJobSnapshot);
       setClientError("");
@@ -30,7 +31,7 @@ export function useContentJob(initialJob: ContentJobSnapshot) {
       setSubmitting(true);
       setClientError("");
       try {
-        const updated = await postContentJobAction(initialJob.id, body);
+        const updated = await postContentJobAction(initialJob.id, { ...body, expectedTabId: initialJob.tabId });
         setJob(updated);
         return updated;
       } catch (error) {
@@ -42,7 +43,7 @@ export function useContentJob(initialJob: ContentJobSnapshot) {
         setSubmitting(false);
       }
     },
-    [initialJob.id],
+    [initialJob.id, initialJob.tabId],
   );
 
   return { job, submitting, clientError, send };

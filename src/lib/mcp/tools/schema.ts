@@ -11,12 +11,12 @@ const commandSchema = editorCommandsSchema.properties.commands;
 export const editSchema = z.fromJSONSchema({
   type: "object", additionalProperties: false,
   properties: {
-    projectId: { type: "string", minLength: 1 }, expectedRevision: { type: "integer", minimum: 0 },
+    expectedTabId: { type: "string", minLength: 1 }, projectId: { type: "string", minLength: 1 }, expectedRevision: { type: "integer", minimum: 0 },
     commands: { ...commandSchema, minItems: 1, items: { oneOf: [...commandSchema.items.oneOf, localImageSchema] } },
-  }, required: ["projectId", "expectedRevision", "commands"],
+  }, required: ["projectId", "expectedTabId", "expectedRevision", "commands"],
 } as Parameters<typeof z.fromJSONSchema>[0]);
 export const projectSchema = z.strictObject({ projectId: z.string().min(1) });
-export const undoSchema = projectSchema.extend({ expectedRevision: z.number().int().nonnegative() });
+export const undoSchema = projectSchema.extend({ expectedTabId: z.string().min(1), expectedRevision: z.number().int().nonnegative() });
 export const previewSchema = projectSchema.extend({ slideId: z.string().min(1) });
 export const createSchema = z.strictObject({
   name: z.string().trim().min(1).max(120).optional(), sourceProjectId: z.string().min(1).optional(),

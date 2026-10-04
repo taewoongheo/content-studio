@@ -51,6 +51,10 @@ try {
   let recovery: Project | undefined;
   await client.connect(new StreamableHTTPClientTransport(new URL(`${origin}/mcp`)));
   async function call(name: string, args: Record<string, unknown>) {
+    if ((name === "edit_project" || name === "undo_project") && !args.expectedTabId) {
+      const current = await fetch(`${origin}/api/content-jobs/${args.projectId}`).then(response => response.json()) as Project;
+      args = { ...args, expectedTabId: current.tabId };
+    }
     const result = CallToolResultSchema.parse(await client.callTool({ name, arguments: args }));
     if (result.isError) throw new Error(JSON.stringify(result));
     return result;
@@ -88,7 +92,7 @@ try {
     await writeFile(localPath, await sharp({ create: {
       width: 60, height: 60, channels: 3, background: "#00FF00",
     } }).png().toBuffer());
-    const updated = (await call("edit_project", { projectId: id, expectedRevision: 0, commands: [
+    const updated = (await call("edit_project", { projectId: id, expectedTabId: created.tabId, expectedRevision: 0, commands: [
       { type: "add_element", element: { id: "title", name: "Title", role: "Main headline", kind: "text", frame, style } },
       { type: "place_element", slideId: "slide-1", elementId: "title", placementId: "title-1" },
       { type: "set_slot_value", slideId: "slide-1", placementId: "title-1", value: "CHEST ROUTINE" },
@@ -134,7 +138,7 @@ try {
     const listed = (await call("list_projects", {})).structuredContent as { projects: Array<{ id: string }> };
     assert.equal(listed.projects.filter((project) => project.id === cloned.id).length, 1);
     const invalid = await client.callTool({ name: "edit_project", arguments: {
-      projectId: id, expectedRevision: 0, commands: [{ type: "rename_slide", slideId: "slide-1", name: "stale" }],
+      projectId: id, expectedTabId: created.tabId, expectedRevision: 0, commands: [{ type: "rename_slide", slideId: "slide-1", name: "stale" }],
     } });
     assert.equal(invalid.isError, true);
     const denied = await fetch(`${origin}/mcp`, {
@@ -182,7 +186,7 @@ try {
     const colorUndo = (await call("undo_project", { projectId: colorProject.id, expectedRevision: colored.editor.revision })).structuredContent as Project;
     assert.equal(colorUndo.editor.document.slides[0].placements.find(p => p.id === "color-title-1")?.textColors, undefined);
     const invalidColor = await client.callTool({ name: "edit_project", arguments: { projectId: colorProject.id,
-      expectedRevision: colorUndo.editor.revision, commands: [{ type: "set_text_colors", slideId: "slide-1", placementId: "color-title-1",
+      expectedTabId: colorUndo.tabId, expectedRevision: colorUndo.editor.revision, commands: [{ type: "set_text_colors", slideId: "slide-1", placementId: "color-title-1",
         textColors: [{ start: 0, end: 1000, color: "#FF0000" }] }] } });
     assert.equal(invalidColor.isError, true);
     const afterInvalidColor = (await call("read_project", { projectId: colorProject.id })).structuredContent as Project;

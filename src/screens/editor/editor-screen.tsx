@@ -124,7 +124,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
     setDismissedIssue(null);
     try {
       if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
-      const updated = await uploadEditorImage(job.id, file);
+      const updated = await uploadEditorImage(job.id, file, job.tabId);
       const asset = updated.assets.at(-1);
       if (!asset) throw new Error("업로드한 이미지를 찾을 수 없습니다.");
       latestRevision.current = Math.max(latestRevision.current, updated.editor.revision);
@@ -154,7 +154,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
     setImageError("");
     setDismissedIssue(null);
     try {
-      const updated = await attachStoredEditorImage(job.id, assetId);
+      const updated = await attachStoredEditorImage(job.id, assetId, job.tabId);
       latestRevision.current = Math.max(latestRevision.current, updated.editor.revision);
       return addElement("image", assetId);
     } catch (error) {
@@ -171,7 +171,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
       if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
       const existingAssetIds = new Set(job.assets.map((asset) => asset.id));
       const [updated, imageAspectRatio] = await Promise.all([
-        uploadEditorImage(job.id, file),
+        uploadEditorImage(job.id, file, job.tabId),
         readImageAspectRatio(file),
       ]);
       const asset = updated.assets.find((candidate) => !existingAssetIds.has(candidate.id));
@@ -304,7 +304,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
             </select>
             <span>{job.slideCount}장</span>
           </label>
-          <ProjectSaveControl ref={projectSaveRef} jobId={job.id} revision={job.editor.revision}
+          <ProjectSaveControl ref={projectSaveRef} jobId={job.id} tabId={job.tabId} revision={job.editor.revision}
             currentProjectName={job.name} persistedRevision={job.savedRevision}
             getRevision={() => latestRevision.current}
             defaultName="새 콘텐츠"

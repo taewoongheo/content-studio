@@ -9,6 +9,7 @@ export type ContentJobInput = {
 };
 export type ContentJobRecord = ContentJobInput & {
   id: string;
+  tabId: string;
   name?: string;
   savedRevision?: number;
   editor: { revision: number; document: EditorDocument };
@@ -18,3 +19,5 @@ export type ContentJobRecord = ContentJobInput & {
   updatedAt: string;
 };
 export type ContentJobSnapshot = Omit<ContentJobRecord, "editorHistory">;
+
+export type OpenProjectTab = { tabId: string; projectId: string; name: string; revision: number; savedRevision?: number };

@@ -96,23 +96,25 @@ export function loadContentProject(
     type: asset.type,
     bytes: asset.bytes,
   }));
-  const created = registry.add({
-    structure: document.structure,
-    aspectRatio: document.aspectRatio,
-    slideCount: document.slides.length,
-    outputLanguage: project.outputLanguage,
-  }, project.id);
-  return registry.update(created.id, (job) => {
-    job.name = project.name;
-    job.editor.document = structuredClone(document);
-    job.editor.revision = 0;
-    job.savedRevision = 0;
-    job.assets = assets.map((asset) => ({
-      id: asset.id,
-      name: asset.name,
-      type: asset.type,
-      size: asset.size,
-    }));
+  return registry.transaction(() => {
+    const created = registry.add({
+      structure: document.structure,
+      aspectRatio: document.aspectRatio,
+      slideCount: document.slides.length,
+      outputLanguage: project.outputLanguage,
+    }, project.id);
+    return registry.update(created.id, (job) => {
+      job.name = project.name;
+      job.editor.document = structuredClone(document);
+      job.editor.revision = 0;
+      job.savedRevision = 0;
+      job.assets = assets.map((asset) => ({
+        id: asset.id,
+        name: asset.name,
+        type: asset.type,
+        size: asset.size,
+      }));
+    });
   });
 }
 
@@ -124,7 +126,7 @@ export function createContentProject(
   stores = defaultProjectStores(),
 ) {
   const source = input.sourceProjectId
-    ? loadContentProject(registry, input.sourceProjectId, stores) : null;
+    ? readCloneSource(registry, input.sourceProjectId, stores) : null;
   if (source && (input.aspectRatio || input.slideCount !== undefined || input.structure || input.outputLanguage))
     throw new ContentJobError("INVALID_OUTPUT", "복제할 때는 원본 설정을 사용합니다. 생성 후 편집해 주세요.");
   const created = registry.add(source ? {
@@ -141,4 +143,18 @@ export function createContentProject(
       job.assets = structuredClone(source.assets);
     }
   });
+}
+
+function readCloneSource(registry: ContentJobRegistry, projectId: string, stores: ReturnType<typeof defaultProjectStores>) {
+  if (registry.has(projectId)) return registry.get(projectId);
+  const saved = stores.projects.get(projectId);
+  if (!saved) throw new ContentJobError("JOB_NOT_FOUND", "저장된 프로젝트를 찾을 수 없습니다.");
+  const document = parseDocument(saved.document);
+  return { name: saved.name, structure: document.structure, aspectRatio: document.aspectRatio,
+    slideCount: document.slides.length, outputLanguage: saved.outputLanguage,
+    editor: { document }, assets: saved.assets.map(asset => {
+      const restored = stores.assets.restore({ id: asset.assetId, name: asset.name, description: asset.description,
+        type: asset.type, bytes: asset.bytes });
+      return { id: restored.id, name: restored.name, type: restored.type, size: restored.size };
+    }) };
 }

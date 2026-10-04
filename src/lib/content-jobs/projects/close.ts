@@ -1,0 +1,16 @@
+import { getLocalDatabase } from "@/lib/local-db/database";
+import type { ContentJobRegistry } from "../workflow/registry";
+import { ContentJobError } from "../workflow/registry";
+import { defaultProjectStores, saveContentProject } from "./service";
+
+/** Saving and eviction are synchronous and share rollback with the registry. */
+export function closeProjectTab(registry: ContentJobRegistry, projectId: string, tabId: string,
+  revision: number, database = getLocalDatabase(), stores = defaultProjectStores()) {
+  return registry.transaction(() => database.transaction(() => {
+    const job = registry.requireTab(projectId, tabId);
+    if (job.editor.revision !== revision) throw new ContentJobError("INVALID_STAGE", "탭의 내용이 변경되었습니다. 최신 상태를 확인하고 다시 닫아 주세요.");
+    const saved = saveContentProject(registry, projectId, job.name ?? "새 프로젝트", stores);
+    registry.remove(projectId);
+    return saved;
+  })());
+}

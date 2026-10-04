@@ -16,11 +16,13 @@ export class McpProjectWrites {
   create(input: Parameters<typeof createContentProject>[1]) {
     return this.commit(() => createContentProject(this.registry, input, this.stores));
   }
-  edit(projectId: string, commands: Array<EditorCommand | LocalImageCommand>, expectedRevision: number) {
+  edit(projectId: string, commands: Array<EditorCommand | LocalImageCommand>, expectedRevision: number, expectedTabId?: string) {
+    if (expectedTabId) this.registry.requireTab(projectId, expectedTabId);
     return editWithLocalImages(this.registry, this.database, projectId, commands, expectedRevision,
       (apply) => this.commit(apply));
   }
-  undo(projectId: string, expectedRevision: number) {
+  undo(projectId: string, expectedRevision: number, expectedTabId?: string) {
+    if (expectedTabId) this.registry.requireTab(projectId, expectedTabId);
     return this.commit(() => new EditorService(this.registry).undo(projectId, expectedRevision));
   }
   private commit(apply: () => ContentJobSnapshot) {

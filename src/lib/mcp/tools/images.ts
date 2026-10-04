@@ -52,6 +52,7 @@ export async function editWithLocalImages(registry: ContentJobRegistry, database
     }
   }
   return commit(() => database.transaction(() => {
+    registry.requireTab(projectId, job.tabId);
     const store = new AssetStore(database);
     const imported = new Map([...prepared].map(([path, image]) => [path, store.create(image)]));
     const resolved = commands.map((command): EditorCommand => command.type === "set_local_image"
