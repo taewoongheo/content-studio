@@ -1,5 +1,4 @@
 import type Database from "better-sqlite3";
-import { AssetStore } from "@/lib/local-db/assets";
 import { ContentProjectStore } from "@/lib/local-db/projects/store";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import type { ContentJobRegistry } from "@/lib/content-jobs/workflow/registry";
@@ -11,7 +10,7 @@ import { editWithLocalImages, type LocalImageCommand } from "./images";
 export class McpProjectWrites {
   private readonly stores;
   constructor(private readonly registry: ContentJobRegistry, private readonly database: Database.Database) {
-    this.stores = { projects: new ContentProjectStore(database), assets: new AssetStore(database) };
+    this.stores = { projects: new ContentProjectStore(database) };
   }
   create(input: Parameters<typeof createContentProject>[1]) {
     return this.commit(() => createContentProject(this.registry, input, this.stores));

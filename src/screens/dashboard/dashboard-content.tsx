@@ -4,7 +4,6 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { StudioSidebar } from "./components/studio-sidebar";
 import { PublishedContentPage } from "./components/published/published-content-page";
-import { AssetLibraryPage } from "./components/assets/asset-library-page";
 import { SavedProjectsPage } from "./components/projects/saved-projects-page";
 
 export function DashboardContent({ onOpen, onNew }: {
@@ -19,7 +18,6 @@ export function DashboardContent({ onOpen, onNew }: {
         <main id="main" tabIndex={-1} className="mx-auto w-full min-w-0 max-w-[1080px] flex-1 px-12 pt-12 pb-16 outline-none max-xl:p-8 max-md:px-5 max-md:pt-6">
           <TabsContent value="published" className="data-[hidden]:hidden"><PublishedContentPage /></TabsContent>
           <TabsContent value="projects" className="data-[hidden]:hidden"><SavedProjectsPage onOpen={onOpen} /></TabsContent>
-          <TabsContent value="assets" className="data-[hidden]:hidden"><AssetLibraryPage /></TabsContent>
         </main>
       </SidebarProvider>
     </Tabs>

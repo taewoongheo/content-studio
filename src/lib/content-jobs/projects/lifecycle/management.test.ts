@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { openLocalDatabase } from "@/lib/local-db/database";
-import { AssetStore } from "@/lib/local-db/assets";
 import { ContentProjectStore } from "@/lib/local-db/projects/store";
 import { ContentJobRegistry } from "../../workflow/registry";
 import { EditorService } from "../../editor/service";
@@ -12,7 +11,7 @@ import { deleteProject, hasUnsavedChanges, renameProject } from "./management";
 function fixture() {
   const database = openLocalDatabase(":memory:");
   const registry = new ContentJobRegistry();
-  const stores = { projects: new ContentProjectStore(database), assets: new AssetStore(database) };
+  const stores = { projects: new ContentProjectStore(database) };
   const job = registry.add({ structure: "sequential", aspectRatio: "4:5", slideCount: 2, outputLanguage: "English" });
   const editor = new EditorService(registry);
   return { database, registry, stores, job, editor };
@@ -109,17 +108,21 @@ test("delete removes the saved project and tab; DB failure rolls back the tab wi
 });
 
 
-test("project deletion cascades embedded assets while preserving the shared image library", () => {
+test("project deletion cascades its images while preserving another project’s copy", () => {
   const f = fixture();
   try {
     const bytes = Buffer.from("shared-image");
-    const asset = f.stores.assets.create({ name: "Shared", type: "image/png", bytes });
+    const asset = { id: "image", name: "Image" };
     f.stores.projects.save({ id: f.job.id, name: "With asset", aspectRatio: "4:5", slideCount: 2,
       outputLanguage: "English", document: f.job.editor.document,
-      assets: [{ assetId: asset.id, name: asset.name, description: "", type: "image/png", bytes }] });
+      assets: [{ assetId: asset.id, name: asset.name, type: "image/png", bytes }] });
+    f.stores.projects.save({ id: "other", name: "Other", aspectRatio: "4:5", slideCount: 2,
+      outputLanguage: "English", document: f.job.editor.document,
+      assets: [{ assetId: asset.id, name: asset.name, type: "image/png", bytes }] });
     deleteProject(f.registry, f.job.id, f.job.tabId, f.database, f.stores);
-    assert.deepEqual(f.database.prepare("SELECT * FROM content_project_assets").all(), []);
-    assert.deepEqual(f.stores.assets.readImage(asset.id)?.bytes, bytes);
+    assert.equal(f.stores.projects.get(f.job.id), null);
+    assert.deepEqual(f.stores.projects.get("other")?.assets[0].bytes, bytes);
+    assert.equal((f.database.prepare("SELECT COUNT(*) AS count FROM content_project_assets").get() as { count: number }).count, 1);
   } finally { f.database.close(); }
 });
 

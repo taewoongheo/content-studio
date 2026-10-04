@@ -30,7 +30,7 @@ export class ContentJobRegistry {
       ...structuredClone(input), id, tabId: randomUUID(),
       editor: { revision: 0, document },
       initialState: { document: structuredClone(document), outputLanguage: input.outputLanguage },
-      editorHistory: [], assets: [], createdAt: timestamp, updatedAt: timestamp,
+      editorHistory: [], assets: [], imageData: {}, createdAt: timestamp, updatedAt: timestamp,
     };
     this.remember(id);
     this.jobs.set(id, job);

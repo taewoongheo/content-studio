@@ -1,4 +1,4 @@
-import { addEditorAsset, attachStoredEditorAsset } from "@/lib/content-jobs/editor/assets";
+import { addEditorAsset } from "@/lib/content-jobs/editor/assets";
 import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
 import { contentJobRegistry } from "@/lib/content-jobs/workflow/service";
 import { isLocalRequest } from "@/lib/http/local-request";
@@ -12,16 +12,8 @@ export async function POST(request: Request, context: { params: Promise<{ jobId:
     const { jobId } = await context.params;
     const tabId = request.headers.get("x-tab-id") ?? contentJobRegistry.getRecord(jobId).tabId;
     contentJobRegistry.requireTab(jobId, tabId);
-    if (request.headers.get("content-type")?.includes("application/json")) {
-      const body: unknown = await request.json().catch(() => null);
-      const assetId = body && typeof body === "object" && "assetId" in body ? body.assetId : null;
-      if (typeof assetId !== "string" || !assetId.trim())
-        return Response.json({ error: "저장된 이미지를 선택해 주세요." }, { status: 400 });
-      contentJobRegistry.requireTab(jobId, tabId);
-      return Response.json(attachStoredEditorAsset(contentJobRegistry, jobId, assetId), {
-        headers: { "Cache-Control": "no-store" },
-      });
-    }
+    if (!request.headers.get("content-type")?.startsWith("multipart/form-data"))
+      return Response.json({ error: "이미지 파일을 업로드해 주세요." }, { status: 400 });
     const file = (await request.formData()).get("image");
     if (!(file instanceof File))
       return Response.json({ error: "이미지를 선택해 주세요." }, { status: 400 });

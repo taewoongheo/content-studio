@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { openLocalDatabase } from "@/lib/local-db/database";
-import { AssetStore } from "@/lib/local-db/assets";
 import { ContentProjectStore } from "@/lib/local-db/projects/store";
 import { ContentJobRegistry } from "../../workflow/registry";
 import { EditorService } from "../../editor/service";
@@ -12,7 +11,7 @@ import { contentJobEvents } from "../../http/events";
 function fixture() {
   const database = openLocalDatabase(":memory:");
   const registry = new ContentJobRegistry();
-  const stores = { projects: new ContentProjectStore(database), assets: new AssetStore(database) };
+  const stores = { projects: new ContentProjectStore(database) };
   return { database, registry, stores };
 }
 
@@ -85,6 +84,6 @@ test("이미지 준비 중 닫았다 재열면 이전 탭의 요청은 새 탭�
     await assert.rejects(pending, /종료/);
     assert.deepEqual(f.registry.get(job.id), reopened);
     assert.deepEqual(f.stores.projects.get(job.id)?.document, job.editor.document);
-    assert.equal(f.stores.assets.list().length, 0);
+    assert.equal(Object.keys(f.registry.getRecord(job.id).imageData).length, 0);
   } finally { f.database.close(); await rm(directory, { recursive: true, force: true }); }
 });

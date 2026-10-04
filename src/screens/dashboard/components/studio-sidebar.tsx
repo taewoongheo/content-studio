@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, FolderOpen, Images, Plus } from "lucide-react";
+import { CalendarDays, FolderOpen, Plus } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -59,14 +59,6 @@ export function StudioSidebar({
           >
             <FolderOpen aria-hidden="true" />
             <span>저장된 프로젝트</span>
-          </SidebarMenuButton>
-          <SidebarMenuButton
-            className="h-11"
-            isActive={activeTab === "assets"}
-            render={<TabsTrigger value="assets" className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent" />}
-          >
-            <Images aria-hidden="true" />
-            <span>이미지 에셋</span>
           </SidebarMenuButton>
         </TabsList>
       </SidebarContent>

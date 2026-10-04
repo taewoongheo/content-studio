@@ -1,5 +1,5 @@
 import type Database from "better-sqlite3";
-import type { ImageMimeType } from "../assets";
+import type { EditorAsset } from "../../content-jobs/domain/types";
 
 export type SavedProjectSummary = {
   id: string;
@@ -14,8 +14,7 @@ export type SavedProjectSummary = {
 export type SavedProjectAsset = {
   assetId: string;
   name: string;
-  description: string;
-  type: ImageMimeType;
+  type: EditorAsset["type"];
   bytes: Buffer;
 };
 
@@ -38,8 +37,7 @@ type ProjectRow = {
 type AssetRow = {
   asset_id: string;
   name: string;
-  description: string;
-  mime_type: ImageMimeType;
+  mime_type: EditorAsset["type"];
   data: Buffer;
 };
 
@@ -80,7 +78,6 @@ export class ContentProjectStore {
         project_id TEXT NOT NULL REFERENCES content_projects(id) ON DELETE CASCADE,
         asset_id TEXT NOT NULL,
         name TEXT NOT NULL,
-        description TEXT NOT NULL DEFAULT '',
         mime_type TEXT NOT NULL CHECK (mime_type IN ('image/png', 'image/jpeg', 'image/webp')),
         byte_size INTEGER NOT NULL CHECK (byte_size > 0),
         data BLOB NOT NULL,
@@ -125,18 +122,18 @@ export class ContentProjectStore {
       for (const asset of previous) if (!retained.has(asset.asset_id)) removeAsset.run(input.id, asset.asset_id);
       const insertAsset = this.database.prepare(`
         INSERT INTO content_project_assets
-          (project_id, asset_id, name, description, mime_type, byte_size, data)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+          (project_id, asset_id, name, mime_type, byte_size, data)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(project_id, asset_id) DO UPDATE SET
-          name = excluded.name, description = excluded.description, mime_type = excluded.mime_type,
+          name = excluded.name, mime_type = excluded.mime_type,
           byte_size = excluded.byte_size, data = excluded.data
-        WHERE name IS NOT excluded.name OR description IS NOT excluded.description
+        WHERE name IS NOT excluded.name
           OR mime_type IS NOT excluded.mime_type OR byte_size IS NOT excluded.byte_size OR data IS NOT excluded.data
       `);
       for (const asset of input.assets) {
         if (!asset.assetId.trim() || !asset.name.trim() || asset.bytes.byteLength === 0)
           throw new Error("프로젝트 이미지가 올바르지 않습니다.");
-        insertAsset.run(input.id, asset.assetId, asset.name, asset.description, asset.type,
+        insertAsset.run(input.id, asset.assetId, asset.name, asset.type,
           asset.bytes.byteLength, asset.bytes);
       }
     })();
@@ -176,7 +173,7 @@ export class ContentProjectStore {
     const row = this.database.prepare(`SELECT ${PROJECT_COLUMNS} FROM content_projects WHERE id = ?`)
       .get(id) as ProjectRow | undefined;
     if (!row) return null;
-    const assets = this.database.prepare(`SELECT asset_id, name, description, mime_type, data
+    const assets = this.database.prepare(`SELECT asset_id, name, mime_type, data
       FROM content_project_assets WHERE project_id = ? ORDER BY asset_id`)
       .all(id) as AssetRow[];
     return {
@@ -185,7 +182,6 @@ export class ContentProjectStore {
       assets: assets.map((asset) => ({
         assetId: asset.asset_id,
         name: asset.name,
-        description: asset.description,
         type: asset.mime_type,
         bytes: asset.data,
       })),

@@ -6,7 +6,6 @@ import { join } from "node:path";
 import sharp from "sharp";
 import { openLocalDatabase } from "@/lib/local-db/database";
 import { ContentProjectStore } from "@/lib/local-db/projects/store";
-import { AssetStore } from "@/lib/local-db/assets";
 import { ContentJobRegistry } from "@/lib/content-jobs/workflow/registry";
 import { loadContentProject } from "@/lib/content-jobs/projects/service";
 import { contentProjectEvents } from "@/lib/content-jobs/projects/events";
@@ -17,7 +16,7 @@ function fixture() {
   const database = openLocalDatabase(":memory:");
   const registry = new ContentJobRegistry();
   const writes = new McpProjectWrites(registry, database);
-  const stores = { projects: new ContentProjectStore(database), assets: new AssetStore(database) };
+  const stores = { projects: new ContentProjectStore(database) };
   return { database, registry, writes, stores };
 }
 
@@ -121,13 +120,13 @@ test("이미지 포함 편집의 저장 실패도 신규 이미지 등록을 롤
     ];
     f.database.exec(`CREATE TRIGGER fail_save BEFORE UPDATE ON content_projects BEGIN SELECT RAISE(ABORT, 'save failed'); END;`);
     await assert.rejects(f.writes.edit(job.id, commands, 0), /save failed/);
-    assert.equal(f.stores.assets.list().length, 0);
+    assert.equal(Object.keys(f.registry.getRecord(job.id).imageData).length, 0);
     assert.deepEqual(f.registry.get(job.id), job);
     f.database.exec("DROP TRIGGER fail_save");
     const edited = await f.writes.edit(job.id, commands, 0);
     const fresh = loadContentProject(new ContentJobRegistry(), job.id, f.stores);
     assert.deepEqual(fresh.editor.document, edited.editor.document);
-    assert.ok(f.stores.assets.readImage(edited.assets[0].id));
+    assert.ok(f.stores.projects.get(job.id)?.assets[0].bytes.length);
     f.database.exec(`
       CREATE TRIGGER forbid_asset_update BEFORE UPDATE ON content_project_assets BEGIN SELECT RAISE(ABORT, 'rewrote image'); END;
       CREATE TRIGGER forbid_asset_delete BEFORE DELETE ON content_project_assets BEGIN SELECT RAISE(ABORT, 'deleted image'); END;

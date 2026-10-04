@@ -8,7 +8,7 @@ import type { EditorCommand, ElementFrame, ElementKind } from "@/lib/content-job
 import { makeElementDefinition } from "@/lib/content-jobs/editor/elements/factory";
 import { slideActionCommand } from "@/lib/content-jobs/editor/slides/commands";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, getDuplicateTargets } from "@/lib/content-jobs/editor/document";
-import { attachStoredEditorImage, getContentJob, uploadEditorImage } from "@/screens/content-job/api";
+import { getContentJob, uploadEditorImage } from "@/screens/content-job/api";
 import { useContentJob } from "@/screens/content-job/use-content-job";
 import { ElementInspector, type ElementInspectorHandle } from "./components/inspector/element-inspector";
 import { ElementScopePicker } from "./components/element-scope-picker";
@@ -17,7 +17,6 @@ import { SlideCanvas } from "./components/canvas/slide-canvas";
 import { frameForDroppedImage } from "./components/canvas/frame/geometry";
 import { SlideBackground, type SlideBackgroundHandle } from "./components/inspector/slide-background";
 import { frameCommandsForScope } from "./components/canvas/frame/commands";
-import { ImageLibraryPicker } from "./components/library/image-library-picker";
 import { ProjectSaveControl, type ProjectSaveHandle } from "./components/projects/project-save-control";
 import { ExportControl } from "./components/export/export-control";
 import { resolveEditorSelection } from "./editor-selection";
@@ -66,13 +65,11 @@ export function EditorScreen({ ref, initialViewState, initialJob, initialProject
   const [dismissedIssue, setDismissedIssue] = useState<string | null>(null);
   const [showGuides, setShowGuides] = useState(initialViewState?.showGuides ?? true);
   const [showOverflow, setShowOverflow] = useState(initialViewState?.showOverflow ?? false);
-  const [showImageLibrary, setShowImageLibrary] = useState(false);
   const [unlockedImageRatios, setUnlockedImageRatios] = useState<Set<string>>(() => new Set(initialViewState?.unlockedImageRatios ?? []));
   const backgroundRef = useRef<SlideBackgroundHandle>(null);
   const activeWork = useRef(new Set<Promise<boolean>>());
   const inspectorRef = useRef<ElementInspectorHandle>(null);
   const projectSaveRef = useRef<ProjectSaveHandle>(null);
-  const imageLibraryButtonRef = useRef<HTMLButtonElement>(null);
   const latestRevision = useRef(job.editor.revision);
   const commandQueue = useRef<Promise<boolean>>(Promise.resolve(true));
   const failedCommands = useRef(0);
@@ -122,7 +119,6 @@ export function EditorScreen({ ref, initialViewState, initialJob, initialProject
     return operation;
   }
   const uploadImage = (file: File) => trackWork(uploadImageWork(file));
-  const addStoredImage = (id: string) => trackWork(addStoredImageWork(id));
   const addDroppedImage = (file: File, center: { x: number; y: number }) => trackWork(addDroppedImageWork(file, center));
 
   function changeImageAspectRatioLocked(locked: boolean) {
@@ -195,19 +191,6 @@ export function EditorScreen({ ref, initialViewState, initialJob, initialProject
     ]);
     if (saved) setPlacementId(newPlacementId);
     return saved;
-  }
-
-  async function addStoredImageWork(assetId: string) {
-    setImageError("");
-    setDismissedIssue(null);
-    try {
-      const updated = await attachStoredEditorImage(job.id, assetId, job.tabId);
-      latestRevision.current = Math.max(latestRevision.current, updated.editor.revision);
-      return addElement("image", assetId);
-    } catch (error) {
-      setImageError(error instanceof Error ? error.message : "저장된 이미지를 추가하지 못했습니다.");
-      return false;
-    }
   }
 
   async function addDroppedImageWork(file: File, center: { x: number; y: number }) {
@@ -413,10 +396,6 @@ export function EditorScreen({ ref, initialViewState, initialJob, initialProject
           </aside>
 
           <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden border-l px-3 py-3 lg:col-start-3 lg:row-start-1 max-lg:order-2 max-lg:h-80 max-lg:border-l-0 max-lg:border-t" aria-label="Element 레이어">
-              {showImageLibrary && <ImageLibraryPicker anchorRef={imageLibraryButtonRef} disabled={disabled}
-                onSelect={(asset) => addStoredImage(asset.id)}
-                onAddEmpty={() => addElement("image")}
-                onClose={() => { setShowImageLibrary(false); imageLibraryButtonRef.current?.focus(); }} />}
               <div className="flex shrink-0 flex-col items-stretch gap-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-sm font-semibold">Element</h2>
@@ -438,9 +417,7 @@ export function EditorScreen({ ref, initialViewState, initialJob, initialProject
                       title={`선택한 ${selectedSlideIds.length}장에서 제거`}><Trash2 className="size-3.5" aria-hidden="true" /></Button>
                   </div>}
                   <Button size="sm" variant="outline" disabled={disabled} onClick={() => void addElement("text")}>텍스트 추가</Button>
-                  <Button ref={imageLibraryButtonRef} size="sm" variant={showImageLibrary ? "secondary" : "outline"}
-                    aria-expanded={showImageLibrary} aria-controls="editor-image-library"
-                    onClick={() => setShowImageLibrary((current) => !current)}>이미지 추가</Button>
+                  <Button size="sm" variant="outline" disabled={disabled} onClick={() => void addElement("image")}>이미지 추가</Button>
                   <label className="sr-only" htmlFor="add-shape">도형 추가</label>
                   <select id="add-shape" defaultValue="" disabled={disabled} className="h-7 rounded-md border bg-background px-2 text-[0.8rem] font-medium" onChange={(event) => {
                     const kind = event.target.value as "rectangle" | "circle" | "triangle";
