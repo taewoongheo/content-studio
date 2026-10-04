@@ -8,10 +8,6 @@ export function defaultPlacement(slide: EditorSlide): PlacedElement | null {
 
 export type ScopeChoice = "current" | "all" | { slideId: string; checked: boolean };
 
-export function defaultVisualSlides(availableSlideIds: string[]) {
-  return [...availableSlideIds];
-}
-
 export function selectVisualSlides(
   currentSlideId: string,
   availableSlideIds: string[],

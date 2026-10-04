@@ -1,5 +1,5 @@
 import type { EditorDocument } from "@/lib/content-jobs/editor/types";
-import { defaultPlacement, defaultVisualSlides, selectVisualSlides } from "./components/element-scope";
+import { defaultPlacement, selectVisualSlides } from "./components/element-scope";
 import { slideLabel } from "./components/slides/slide-navigation";
 
 export { roleLabels } from "./components/slides/slide-navigation";
@@ -24,7 +24,7 @@ export function resolveEditorSelection(
   const selectedSlideIds = slide && placement
     ? selectVisualSlides(slide.id, scopeSlides.map((item) => item.slideId),
       scopeSelection?.key === scopeKey ? scopeSelection.slideIds
-        : defaultVisualSlides(scopeSlides.map((item) => item.slideId)),
+        : [slide.id],
       { slideId: slide.id, checked: true })
     : [];
   return { slide, placement, element, appliedSlides, scopeSlides, visualTargets, scopeKey, selectedSlideIds };
