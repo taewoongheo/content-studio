@@ -41,13 +41,13 @@ export function TemplateProjectsPage({ onOpen }: { onOpen: (projectId: string) =
         <p className="mt-1.5 text-xs text-muted-foreground">
           {project.aspectRatio} · {project.slideCount}장 · {project.outputLanguage} · {dateFormatter.format(new Date(project.updatedAt))}
         </p>
-        {project.reuseGuide ? <dl className="mt-3 grid gap-2 text-sm leading-relaxed">
+        {templateColumn && (project.reuseGuide ? <dl className="mt-3 grid gap-2 text-sm leading-relaxed">
           {REUSE_GUIDE_FIELDS.map(({ key, label }) => <div key={key}>
             <dt className="font-medium">{label}</dt>
             <dd className="whitespace-pre-wrap break-words text-muted-foreground">{project.reuseGuide?.[key] || "미작성"}</dd>
           </div>)}
           {!hasCompleteReuseGuide(project.reuseGuide) && <p className="text-xs text-muted-foreground">네 항목을 모두 작성해야 템플릿으로 사용할 수 있습니다.</p>}
-        </dl> : <p className="mt-3 text-sm text-muted-foreground">재사용 가이드를 작성해 템플릿으로 지정하세요.</p>}
+        </dl> : <p className="mt-3 text-sm text-muted-foreground">재사용 가이드를 작성해 템플릿으로 지정하세요.</p>)}
       </div>
       <div className="flex min-w-0 flex-wrap items-start gap-2">
         <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void openProject(project.id)}>
