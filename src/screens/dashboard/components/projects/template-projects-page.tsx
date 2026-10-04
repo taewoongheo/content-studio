@@ -7,7 +7,6 @@ import type { SavedProjectSummary } from "@/lib/local-db/projects/store";
 import { useSavedProjects } from "@/screens/projects/use-saved-projects";
 import { updateProjectReuse } from "@/screens/projects/api";
 import { ProjectDeleteButton } from "@/screens/projects/components/project-delete-button";
-import { ProjectPromptCopyButton } from "@/screens/projects/components/project-prompt-copy-button";
 import { ProjectReuseButton } from "./project-reuse-button";
 
 const dateFormatter = new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "short", day: "numeric" });
@@ -52,7 +51,6 @@ export function TemplateProjectsPage({ onOpen }: { onOpen: (projectId: string) =
         </Button>
         <ProjectReuseButton project={project} disabled={busy} size="sm" />
         {templateColumn ? <>
-          <ProjectPromptCopyButton projectId={project.id} disabled={busy} size="sm" />
           <Button type="button" variant="ghost" size="sm" disabled={busy}
             aria-label={`${project.name} 템플릿 해제`} onClick={() => void designate(project.id, false)}>
             {updatingId === project.id ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <X aria-hidden="true" />}

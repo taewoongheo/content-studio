@@ -25,7 +25,6 @@ import { ElementLayers } from "./components/layers/element-layers";
 import { createClipboardQueue, copyElement, pasteElement, type ElementClipboard } from "./components/clipboard/element-clipboard";
 import { useEditorShortcuts } from "./components/shortcuts/use-editor-shortcuts";
 import { ProjectDeleteButton } from "@/screens/projects/components/project-delete-button";
-import { ProjectPromptCopyButton } from "@/screens/projects/components/project-prompt-copy-button";
 
 async function readImageAspectRatio(file: File) {
   try {
@@ -323,11 +322,6 @@ export function EditorScreen({ ref, initialViewState, initialJob, onNewJob }: {
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <ProjectDeleteButton projectId={job.id} name={job.name ?? "새 프로젝트"} tabId={job.tabId} disabled={disabled} />
-          <ProjectPromptCopyButton projectId={job.id} size="sm" disabled={disabled || !document}
-            onBeforeCopy={async () => {
-              if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
-              return waitForCommands();
-            }} />
           <label className="flex items-center gap-2 text-xs">
             <span className="sr-only">화면 비율</span>
             <select aria-label="화면 비율" value={document?.aspectRatio ?? "4:5"} disabled={disabled}
