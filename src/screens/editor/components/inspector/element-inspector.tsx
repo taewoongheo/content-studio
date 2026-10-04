@@ -46,7 +46,7 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
   const previous = useRef({ element, placement });
   const commands = commandsFromDraft(draft, element, placement, slideId, visualTargets, selectedSlideIds);
   const valid = validElementDraft(draft);
-  const { saving, failed } = useAutosave(commands, !disabled && valid, onSave);
+  const { saving, failed, flushPending } = useAutosave(commands, !disabled && valid, onSave);
   const isShape = element.kind === "rectangle" || element.kind === "circle" || element.kind === "triangle";
 
   useEffect(() => {
@@ -58,8 +58,8 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
   }, [element, placement, draft, slideId, visualTargets, selectedSlideIds]);
 
   useImperativeHandle(ref, () => ({
-    flushPending: async () => commands.length === 0 || (valid && await onSave(commands)),
-  }), [commands, valid, onSave]);
+    flushPending,
+  }), [flushPending]);
 
   function updateFrame(key: keyof ElementFrame, percent: number) {
     setDraft((current) => ({ ...current, frame: element.kind === "image" && imageAspectRatioLocked &&

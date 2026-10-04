@@ -22,7 +22,7 @@ export function StudioSidebar({
     <Sidebar
       collapsible="none"
       className={
-        "sticky top-0 h-svh w-64 shrink-0 border-r max-md:static max-md:h-auto max-md:w-full max-md:border-r-0 max-md:border-b"
+        "sticky top-0 h-[calc(100svh-2.75rem)] w-64 shrink-0 border-r max-md:static max-md:h-auto max-md:w-full max-md:border-r-0 max-md:border-b"
       }
       aria-label="워크스페이스"
     >

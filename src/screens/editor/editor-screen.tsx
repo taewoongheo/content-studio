@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from "react";
 import { ArrowLeft, Copy, Plus, Trash2, Undo2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
@@ -15,7 +15,7 @@ import { ElementScopePicker } from "./components/element-scope-picker";
 import { removalCommandsForScope, selectVisualSlides, type ScopeChoice } from "./components/element-scope";
 import { SlideCanvas } from "./components/canvas/slide-canvas";
 import { frameForDroppedImage } from "./components/canvas/frame/geometry";
-import { SlideBackground } from "./components/inspector/slide-background";
+import { SlideBackground, type SlideBackgroundHandle } from "./components/inspector/slide-background";
 import { frameCommandsForScope } from "./components/canvas/frame/commands";
 import { ImageLibraryPicker } from "./components/library/image-library-picker";
 import { ProjectSaveControl, type ProjectSaveHandle } from "./components/projects/project-save-control";
@@ -43,21 +43,32 @@ function aspectRatioNumber(value: "4:5" | "1:1" | "9:16") {
   return width / height;
 }
 
-export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
+export type EditorViewState = {
+  slideId: string; placementId: string | null;
+  scopeSelection: { key: string; slideIds: string[] } | null;
+  showGuides: boolean; showOverflow: boolean; unlockedImageRatios: string[];
+};
+export type EditorWorkspaceHandle = { flushPending: () => Promise<boolean>; getViewState: () => EditorViewState };
+
+export function EditorScreen({ ref, initialViewState, initialJob, initialProjectName, onNewJob }: {
+  ref?: Ref<EditorWorkspaceHandle>;
+  initialViewState?: EditorViewState;
   initialJob: ContentJobSnapshot;
   initialProjectName?: string;
   onNewJob: () => void;
 }) {
   const { job, submitting, clientError, send } = useContentJob(initialJob);
-  const [slideId, setSlideId] = useState("slide-1");
-  const [placementId, setPlacementId] = useState<string | null>(null);
-  const [scopeSelection, setScopeSelection] = useState<{ key: string; slideIds: string[] } | null>(null);
+  const [slideId, setSlideId] = useState(initialViewState?.slideId ?? "slide-1");
+  const [placementId, setPlacementId] = useState<string | null>(initialViewState?.placementId ?? null);
+  const [scopeSelection, setScopeSelection] = useState<{ key: string; slideIds: string[] } | null>(initialViewState?.scopeSelection ?? null);
   const [imageError, setImageError] = useState("");
   const [dismissedIssue, setDismissedIssue] = useState<string | null>(null);
-  const [showGuides, setShowGuides] = useState(true);
-  const [showOverflow, setShowOverflow] = useState(false);
+  const [showGuides, setShowGuides] = useState(initialViewState?.showGuides ?? true);
+  const [showOverflow, setShowOverflow] = useState(initialViewState?.showOverflow ?? false);
   const [showImageLibrary, setShowImageLibrary] = useState(false);
-  const [unlockedImageRatios, setUnlockedImageRatios] = useState<Set<string>>(() => new Set());
+  const [unlockedImageRatios, setUnlockedImageRatios] = useState<Set<string>>(() => new Set(initialViewState?.unlockedImageRatios ?? []));
+  const backgroundRef = useRef<SlideBackgroundHandle>(null);
+  const activeWork = useRef(new Set<Promise<boolean>>());
   const inspectorRef = useRef<ElementInspectorHandle>(null);
   const projectSaveRef = useRef<ProjectSaveHandle>(null);
   const imageLibraryButtonRef = useRef<HTMLButtonElement>(null);
@@ -78,6 +89,28 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   const issue = clientError || imageError;
   const imageRatioKey = element?.kind === "image" ? element.id : "";
   const imageAspectRatioLocked = Boolean(imageRatioKey) && !unlockedImageRatios.has(imageRatioKey);
+
+  useImperativeHandle(ref, () => ({
+    flushPending: async () => {
+      await Promise.all([...activeWork.current]);
+      await commandQueue.current;
+      if (backgroundRef.current && !(await backgroundRef.current.flushPending())) return false;
+      if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
+      await commandQueue.current;
+      return true;
+    },
+    getViewState: () => ({ slideId: slide?.id ?? slideId, placementId: placement?.id ?? null,
+      scopeSelection, showGuides, showOverflow, unlockedImageRatios: [...unlockedImageRatios] }),
+  }));
+
+  function trackWork(operation: Promise<boolean>) {
+    activeWork.current.add(operation);
+    void operation.finally(() => activeWork.current.delete(operation));
+    return operation;
+  }
+  const uploadImage = (file: File) => trackWork(uploadImageWork(file));
+  const addStoredImage = (id: string) => trackWork(addStoredImageWork(id));
+  const addDroppedImage = (file: File, center: { x: number; y: number }) => trackWork(addDroppedImageWork(file, center));
 
   function changeImageAspectRatioLocked(locked: boolean) {
     if (!imageRatioKey) return;
@@ -118,7 +151,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
     return pending;
   }
 
-  async function uploadImage(file: File) {
+  async function uploadImageWork(file: File) {
     if (!slide || !placement) return false;
     setImageError("");
     setDismissedIssue(null);
@@ -150,7 +183,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
     return saved;
   }
 
-  async function addStoredImage(assetId: string) {
+  async function addStoredImageWork(assetId: string) {
     setImageError("");
     setDismissedIssue(null);
     try {
@@ -163,7 +196,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
     }
   }
 
-  async function addDroppedImage(file: File, center: { x: number; y: number }) {
+  async function addDroppedImageWork(file: File, center: { x: number; y: number }) {
     if (!document || !slide) return false;
     setImageError("");
     setDismissedIssue(null);
@@ -280,7 +313,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   }
 
   return (
-    <div className="flex h-svh min-h-0 flex-col overflow-hidden bg-background text-foreground max-lg:h-auto max-lg:min-h-svh max-lg:overflow-visible">
+    <div data-tab-id={job.tabId} className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground max-lg:h-auto max-lg:min-h-svh max-lg:overflow-visible">
       <header className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-3 border-b px-3 py-1.5 sm:px-4">
         <div className="flex min-w-0 items-center gap-3">
           <Button variant="ghost" size="icon-sm" onClick={onNewJob} aria-label="새 작업으로 돌아가기"><ArrowLeft className="size-4" /></Button>
@@ -334,7 +367,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
           <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden border-r px-4 py-4 max-lg:order-2 max-lg:min-h-[360px] max-lg:border-r-0 max-lg:border-t" aria-label="선택 항목 편집">
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {element?.kind === "background" && placement ? (
-                <SlideBackground
+                <SlideBackground ref={backgroundRef}
                   key={`${scopeKey}:${selectedSlideIds.join(",")}`}
                   color={slide.backgroundColor}
                   disabled={disabled}

@@ -81,6 +81,7 @@ try {
     await listPage.goto(origin);
     await listPage.getByRole("heading", { name: "MCP smoke", exact: true }).waitFor();
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+    page.on("pageerror", error => console.error("Browser error", error.message));
     await page.goto(created.url);
     await page.getByRole("button", { name: "ZIP 내보내기" }).waitFor();
     const frame = { x: 0.1, y: 0.2, width: 0.8, height: 0.2 };
@@ -210,8 +211,78 @@ try {
     }
     console.log("PASS selected text color UI, exact glyph-layout preservation, clone, undo and invalid ranges");
 
+    const tabBar = page.getByRole("navigation", { name: "프로젝트 탭", exact: true });
+    await tabBar.getByRole("button", { name: "Colored clone", exact: true }).click();
+    await page.waitForURL(url => url.searchParams.get("job") === colorClone.id);
+    await page.locator(`[data-tab-id="${colorClone.tabId}"]`).waitFor();
+    let editRequests = 0;
+    page.on("request", request => {
+      if (request.method() === "POST" && request.url().endsWith(`/api/content-jobs/${colorClone.id}`)) editRequests++;
+    });
+    await page.getByLabel("내용", { exact: true }).fill("FAST SWITCH");
+    await tabBar.getByRole("button", { name: "Partial colors", exact: true }).click();
+    await page.waitForURL(url => url.searchParams.get("job") === colorProject.id);
+    await page.locator(`[data-tab-id="${colorProject.tabId}"]`).waitFor();
+    const switchedClone = (await call("read_project", { projectId: colorClone.id })).structuredContent as Project;
+    assert.equal(switchedClone.editor.document.slides[0].placements.find(p => p.id === "color-title-1")?.value, "FAST SWITCH");
+    assert.equal(editRequests, 1, "flush and debounce must share one edit request");
+    await page.getByRole("button", { name: "슬라이드 배경 선택", exact: true }).click();
+    await page.getByLabel("슬라이드 배경색", { exact: true }).fill("#123456");
+    await tabBar.getByRole("button", { name: "Colored clone", exact: true }).click();
+    await page.waitForURL(url => url.searchParams.get("job") === colorClone.id);
+    await page.locator(`[data-tab-id="${colorClone.tabId}"]`).waitFor();
+    const switchedBackground = (await call("read_project", { projectId: colorProject.id })).structuredContent as Project;
+    assert.equal(switchedBackground.editor.document.slides[0].backgroundColor, "#123456");
+    await page.getByRole("button", { name: /^2장 .*선택 및 순서 이동$/ }).click();
+    await page.getByRole("checkbox", { name: "가이드", exact: true }).uncheck();
+    await tabBar.getByRole("button", { name: "Partial colors", exact: true }).click();
+    await page.waitForURL(url => url.searchParams.get("job") === colorProject.id);
+    await page.locator(`[data-tab-id="${colorProject.tabId}"]`).waitFor();
+    await tabBar.getByRole("button", { name: "Colored clone", exact: true }).click();
+    await page.waitForURL(url => url.searchParams.get("job") === colorClone.id);
+    await page.locator(`[data-tab-id="${colorClone.tabId}"]`).waitFor();
+    assert.equal(await page.getByRole("checkbox", { name: "가이드", exact: true }).isChecked(), false);
+    assert.equal(await page.getByRole("button", { name: /^2장 .*선택 및 순서 이동$/ }).getAttribute("aria-current"), "page");
+    await page.getByRole("button", { name: "새 탭", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: /Colored clone/ }).click();
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+    const openTabs = await fetch(`${origin}/api/content-jobs`).then(response => response.json()) as Array<{ projectId: string }>;
+    assert.equal(openTabs.filter(tab => tab.projectId === colorClone.id).length, 1);
+    await listPage.getByRole("navigation", { name: "프로젝트 탭" }).getByRole("button", { name: "Colored clone", exact: true }).click();
+    await listPage.waitForURL(url => url.searchParams.get("job") === colorClone.id);
+    await page.getByRole("button", { name: "Colored clone 탭 닫기", exact: true }).click();
+    await page.getByRole("button", { name: "Colored clone 탭 닫기", exact: true }).waitFor({ state: "detached" });
+    await listPage.getByRole("heading", { name: "저장된 프로젝트", exact: true }).waitFor();
+    assert.equal((await fetch(`${origin}/api/content-jobs/${colorClone.id}`)).status, 404);
+    const closedEdit = await client.callTool({ name: "edit_project", arguments: { projectId: colorClone.id,
+      expectedTabId: colorClone.tabId, expectedRevision: switchedClone.editor.revision,
+      commands: [{ type: "rename_slide", slideId: "slide-1", name: "Closed" }] } });
+    assert.equal(closedEdit.isError, true);
+    const reopenedClone = (await call("open_project", { projectId: colorClone.id })).structuredContent as Project;
+    assert.notEqual(reopenedClone.tabId, colorClone.tabId);
+    assert.deepEqual(reopenedClone.editor.document, switchedClone.editor.document);
+    const staleTabEdit = await client.callTool({ name: "edit_project", arguments: { projectId: colorClone.id,
+      expectedTabId: colorClone.tabId, expectedRevision: 0,
+      commands: [{ type: "rename_slide", slideId: "slide-1", name: "Old tab" }] } });
+    assert.equal(staleTabEdit.isError, true);
+    await page.getByRole("button", { name: "새 탭", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "새 편집기 시작", exact: true }).click();
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+    await page.getByRole("button", { name: "ZIP 내보내기" }).waitFor();
+    const blankId = new URL(page.url()).searchParams.get("job");
+    assert.ok(blankId && blankId !== colorClone.id);
+    await writeFile("/tmp/content-studio-project-tabs.png", await page.screenshot({ fullPage: true }));
+    console.log("PASS global tabs, chooser reuse, text/background flush, view restoration, two-browser close and stale-tab rejection");
+
     console.log("PASS autosave status and live project-list refresh");
     console.log("PASS shared memory, clone independence, open/list, undo, revision conflict and cross-origin rejection");
+  } catch (error) {
+    const pages = browser.contexts().flatMap(context => context.pages());
+    for (const [index, failedPage] of pages.entries()) {
+      console.log("failed page", index, await failedPage.locator("body").innerText());
+      await failedPage.screenshot({ path: `/tmp/studio-tabs-failure-${index}.png` });
+    }
+    throw error;
   } finally { await browser.close(); }
   assert.ok(recovery);
   await client.close();

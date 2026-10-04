@@ -60,3 +60,31 @@ test("저장 실패·revision 충돌은 탭과 문서·이력을 유지하고 �
     assert.equal(f.stores.projects.list().length, 0);
   } finally { f.database.close(); }
 });
+
+test("이미지 준비 중 닫았다 재열면 이전 탭의 요청은 새 탭과 DB 자산을 변경하지 않는다", async () => {
+  const { mkdtemp, writeFile, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { McpProjectWrites } = await import("@/lib/mcp/tools/project-writes");
+  const { makeElementDefinition } = await import("../editor/elements/factory");
+  const sharp = (await import("sharp")).default;
+  const f = fixture();
+  const directory = await mkdtemp(join(tmpdir(), "tab-race-"));
+  try {
+    const path = join(directory, "image.png");
+    await writeFile(path, await sharp({ create: { width: 2, height: 2, channels: 3, background: "red" } }).png().toBuffer());
+    const writes = new McpProjectWrites(f.registry, f.database);
+    const job = writes.create({ name: "Pending image" });
+    const pending = writes.edit(job.id, [
+      { type: "add_element", element: makeElementDefinition({ id: "image", kind: "image" }) },
+      { type: "place_element", slideId: "slide-1", elementId: "image", placementId: "image-1" },
+      { type: "set_local_image", slideId: "slide-1", placementId: "image-1", localPath: path },
+    ], 0, job.tabId);
+    closeProjectTab(f.registry, job.id, job.tabId, 0, f.database, f.stores);
+    const reopened = loadContentProject(f.registry, job.id, f.stores);
+    await assert.rejects(pending, /종료/);
+    assert.deepEqual(f.registry.get(job.id), reopened);
+    assert.deepEqual(f.stores.projects.get(job.id)?.document, job.editor.document);
+    assert.equal(f.stores.assets.list().length, 0);
+  } finally { f.database.close(); await rm(directory, { recursive: true, force: true }); }
+});

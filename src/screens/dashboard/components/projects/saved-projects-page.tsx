@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import type { SavedProjectSummary } from "@/lib/local-db/projects/store";
 import { loadContentProject } from "@/screens/projects/api";
-import { useSavedProjects } from "./use-saved-projects";
+import { useSavedProjects } from "@/screens/projects/use-saved-projects";
 import { ProjectPromptCopyButton } from "@/screens/projects/components/project-prompt-copy-button";
 
 const dateFormatter = new Intl.DateTimeFormat("ko-KR", {

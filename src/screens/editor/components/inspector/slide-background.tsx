@@ -1,26 +1,28 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useImperativeHandle, useState, type Ref } from "react";
 
-export function SlideBackground({ color, disabled, onSave }: {
+import { useAutosave } from "./use-autosave";
+
+export type SlideBackgroundHandle = { flushPending: () => Promise<boolean> };
+
+export function SlideBackground({ ref, color, disabled, onSave }: {
+  ref?: Ref<SlideBackgroundHandle>;
   color: string;
   disabled: boolean;
   onSave: (color: string) => Promise<boolean>;
 }) {
   const [draft, setDraft] = useState({ source: color, value: color });
-  const saveRef = useRef(onSave);
   if (draft.source !== color) setDraft({ source: color, value: color });
 
-  useEffect(() => { saveRef.current = onSave; }, [onSave]);
-  useEffect(() => {
-    if (disabled || draft.value === color) return;
-    const timer = window.setTimeout(() => void saveRef.current(draft.value), 350);
-    return () => window.clearTimeout(timer);
-  }, [color, disabled, draft.value]);
+  const { flushPending, failed } = useAutosave(draft.value === color ? [] : [draft.value], !disabled,
+    (colors) => onSave(colors[0]));
+  useImperativeHandle(ref, () => ({ flushPending }), [flushPending]);
 
   return (
     <div className="grid min-w-0 gap-5 p-4">
       <div className="text-sm font-semibold">배경</div>
+      {failed && <p role="alert" className="text-xs text-destructive">배경색을 반영하지 못했습니다.</p>}
       <label className="grid gap-2 text-sm font-medium">
         배경색
         <span className="flex items-center gap-3 rounded-lg border bg-background p-3">
