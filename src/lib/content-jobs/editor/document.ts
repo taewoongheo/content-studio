@@ -1,4 +1,6 @@
 import type { SlideshowStructure } from "../domain/types";
+import { EDITOR_FONT_FAMILIES } from "./typography/fonts";
+import { remapTextColors, validTextColors } from "./typography/text-colors";
 import { validBorder } from "./elements/style";
 import { MAX_FRAME_COORDINATE, MAX_FRAME_DIMENSION } from "./types";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_FRAME, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, syncBackgroundColors } from "./background";
@@ -28,7 +30,7 @@ function validStyle(style: ElementStyle) {
     Number.isInteger(style.fontWeight) && style.fontWeight >= 100 && style.fontWeight <= 900 &&
     ["left", "center", "right"].includes(style.textAlign) &&
     Number.isFinite(style.borderRadius) && style.borderRadius >= 0 && style.borderRadius <= 100 &&
-    ["sans-serif", "serif", "monospace"].includes(style.fontFamily) &&
+    EDITOR_FONT_FAMILIES.includes(style.fontFamily) &&
     ["cover", "contain"].includes(style.imageFit);
 }
 
@@ -76,6 +78,10 @@ export function validateEditorDocument(document: EditorDocument): string[] {
     if (!unique(slide.placements.map((placement) => placement.id)))
       errors.push(`${slide.id}의 배치 ID가 중복됩니다.`);
     for (const placement of slide.placements) {
+      if (placement.textColors !== undefined &&
+        (document.elements.find((element) => element.id === placement.elementId)?.kind !== "text" ||
+          !validTextColors(placement.value, placement.textColors)))
+        errors.push(`${slide.id}의 부분 텍스트 색상이 올바르지 않습니다.`);
       if (!knownElements.has(placement.elementId) ||
         (placement.frameOverride !== null && !validFrame(placement.frameOverride)))
         errors.push(`${slide.id}에 유효하지 않은 Element 배치가 있습니다.`);
@@ -177,7 +183,19 @@ export function applyEditorCommand(document: EditorDocument, command: EditorComm
     case "set_slot_value": {
       const placement = requirePlacement(requireSlide(next, command.slideId), command.placementId);
       if (placement.elementId === BACKGROUND_ELEMENT_ID) throw new Error("배경 Element에는 내용을 넣을 수 없습니다.");
+      if (command.textColors !== undefined || placement.textColors !== undefined) {
+        placement.textColors = command.textColors !== undefined ? structuredClone(command.textColors)
+          : remapTextColors(placement.value, command.value, placement.textColors ?? []);
+      }
       placement.value = command.value;
+      break;
+    }
+    case "set_text_colors": {
+      const placement = requirePlacement(requireSlide(next, command.slideId), command.placementId);
+      if (next.elements.find((element) => element.id === placement.elementId)?.kind !== "text")
+        throw new Error("부분 색상은 텍스트 배치에만 적용할 수 있습니다.");
+      if (!validTextColors(placement.value, command.textColors)) throw new Error("부분 색상 구간은 겹치지 않는 글자 범위와 HEX 색상이어야 합니다.");
+      placement.textColors = structuredClone(command.textColors);
       break;
     }
     case "update_visual":
@@ -259,6 +277,7 @@ export function applyEditorCommand(document: EditorDocument, command: EditorComm
         id: placement.elementId === BACKGROUND_ELEMENT_ID ? BACKGROUND_PLACEMENT_ID
           : `${command.newSlideId}-${placement.id}`,
         value: command.copyContent ? placement.value : "",
+        ...(placement.textColors !== undefined ? { textColors: command.copyContent ? placement.textColors : [] } : {}),
       }));
       next.slides.splice(afterIndex + 1, 0, slide);
       break;

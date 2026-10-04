@@ -1,4 +1,5 @@
 import type { SlideshowStructure } from "../domain/types";
+import type { EditorFontFamily } from "./typography/fonts";
 
 // Normalized document coordinates still allow elements far outside the slide.
 export const MAX_FRAME_COORDINATE = 10;
@@ -23,7 +24,7 @@ export type ElementStyle = {
   borderEnabled?: boolean;
   borderColor?: string;
   borderWidth?: number;
-  fontFamily: "sans-serif" | "serif" | "monospace";
+  fontFamily: EditorFontFamily;
   imageFit: "cover" | "contain";
 };
 export type ElementDefinition = {
@@ -38,9 +39,11 @@ export type PlacedElement = {
   id: string;
   elementId: string;
   value: string;
+  textColors?: TextColorRange[];
   frameOverride: ElementFrame | null;
   styleOverride: Partial<ElementStyle> | null;
 };
+export type TextColorRange = { start: number; end: number; color: string };
 export type EditorSlide = {
   id: string;
   name?: string;
@@ -61,7 +64,8 @@ export type EditorCommand =
   | { type: "rename_slide"; slideId: string; name: string }
   | { type: "reorder_layers"; slideId: string; placementIds: string[] }
   | { type: "set_slide_background"; slideId: string; color: string }
-  | { type: "set_slot_value"; slideId: string; placementId: string; value: string }
+  | { type: "set_slot_value"; slideId: string; placementId: string; value: string; textColors?: TextColorRange[] }
+  | { type: "set_text_colors"; slideId: string; placementId: string; textColors: TextColorRange[] }
   | { type: "update_visual"; scope: "common"; elementId: string; frame?: ElementFrame; style?: Partial<ElementStyle> }
   | { type: "update_visual"; scope: "local"; slideId: string; placementId: string; frame?: ElementFrame; style?: Partial<ElementStyle> }
   | { type: "update_element"; elementId: string; name?: string; role?: string }

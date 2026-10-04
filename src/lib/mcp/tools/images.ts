@@ -8,6 +8,7 @@ import { validateEditorCommands } from "@/lib/content-jobs/editor/schema";
 import { applyEditorCommands } from "@/lib/content-jobs/editor/document";
 import { AssetStore } from "@/lib/local-db/assets";
 import type Database from "better-sqlite3";
+import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 
 export type LocalImageCommand = { type: "set_local_image"; slideId: string; placementId: string; localPath: string };
 export async function readLocalImage(localPath: string) {
@@ -34,12 +35,13 @@ export async function readLocalImage(localPath: string) {
 
 /** Prepare files first; roll back new DB assets if the command batch fails. */
 export async function editWithLocalImages(registry: ContentJobRegistry, database: Database.Database,
-  projectId: string, commands: Array<EditorCommand | LocalImageCommand>, revision: number) {
+  projectId: string, commands: Array<EditorCommand | LocalImageCommand>, revision: number,
+  commit: (apply: () => ContentJobSnapshot) => ContentJobSnapshot = (apply) => apply()) {
   const job = registry.get(projectId);
   if (job.editor.revision !== revision)
     throw new ContentJobError("INVALID_STAGE", "편집 문서가 변경되었습니다. 다시 읽어 주세요.");
   if (!commands.some((command) => command.type === "set_local_image"))
-    return new EditorService(registry).applyCommands(projectId, commands, revision);
+    return commit(() => new EditorService(registry).applyCommands(projectId, commands, revision));
   const prepared = new Map<string, Awaited<ReturnType<typeof readLocalImage>>>();
   for (const [index, command] of commands.entries()) {
     if (command.type !== "set_local_image") continue;
@@ -49,7 +51,7 @@ export async function editWithLocalImages(registry: ContentJobRegistry, database
       throw new ContentJobError("INVALID_OUTPUT", `commands[${index}] (${command.localPath}): ${error instanceof Error ? error.message : "파일 읽기 실패"}`);
     }
   }
-  return database.transaction(() => {
+  return commit(() => database.transaction(() => {
     const store = new AssetStore(database);
     const imported = new Map([...prepared].map(([path, image]) => [path, store.create(image)]));
     const resolved = commands.map((command): EditorCommand => command.type === "set_local_image"
@@ -72,5 +74,5 @@ export async function editWithLocalImages(registry: ContentJobRegistry, database
       catch (error) { throw new ContentJobError("INVALID_OUTPUT", `commands[${index}]: ${error instanceof Error ? error.message : "편집 실패"}`); }
     }
     return new EditorService(registry).applyCommands(projectId, resolved, revision, [...imported.values()]);
-  })();
+  })());
 }

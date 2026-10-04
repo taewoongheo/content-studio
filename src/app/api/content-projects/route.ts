@@ -4,12 +4,14 @@ import { contentJobRegistry } from "@/lib/content-jobs/workflow/service";
 import { isLocalRequest } from "@/lib/http/local-request";
 import { getLocalDatabase } from "@/lib/local-db/database";
 import { ContentProjectStore } from "@/lib/local-db/projects/store";
+import { contentProjectEvents } from "@/lib/content-jobs/projects/events";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export function GET(request: Request) {
   if (!isLocalRequest(request)) return new Response(null, { status: 403 });
+  if (request.headers.get("accept")?.includes("text/event-stream")) return contentProjectEvents(request.signal);
   return Response.json(new ContentProjectStore(getLocalDatabase()).list(), {
     headers: { "Cache-Control": "no-store" },
   });

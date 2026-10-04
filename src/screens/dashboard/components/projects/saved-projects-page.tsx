@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FolderOpen, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import type { SavedProjectSummary } from "@/lib/local-db/projects/store";
-import { listContentProjects, loadContentProject } from "@/screens/projects/api";
+import { loadContentProject } from "@/screens/projects/api";
+import { useSavedProjects } from "./use-saved-projects";
 import { ProjectPromptCopyButton } from "@/screens/projects/components/project-prompt-copy-button";
 
 const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
@@ -19,19 +20,8 @@ const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
 export function SavedProjectsPage({ onOpen }: {
   onOpen: (job: ContentJobSnapshot, projectName: string) => void;
 }) {
-  const [projects, setProjects] = useState<SavedProjectSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { projects, loading, error, setError } = useSavedProjects();
   const [openingId, setOpeningId] = useState<string | null>(null);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    let active = true;
-    void listContentProjects()
-      .then((items) => { if (active) setProjects(items); })
-      .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : "프로젝트를 불러오지 못했습니다."); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, []);
 
   async function openProject(project: SavedProjectSummary) {
     setOpeningId(project.id);

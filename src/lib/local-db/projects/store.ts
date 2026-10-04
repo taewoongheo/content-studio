@@ -118,11 +118,20 @@ export class ContentProjectStore {
           document_json = excluded.document_json,
           updated_at = excluded.updated_at
       `).run(input.id, name, input.aspectRatio, input.slideCount, input.outputLanguage, document, now, now);
-      this.database.prepare("DELETE FROM content_project_assets WHERE project_id = ?").run(input.id);
+      const retained = new Set(input.assets.map((asset) => asset.assetId));
+      const previous = this.database.prepare("SELECT asset_id FROM content_project_assets WHERE project_id = ?")
+        .all(input.id) as Array<{ asset_id: string }>;
+      const removeAsset = this.database.prepare("DELETE FROM content_project_assets WHERE project_id = ? AND asset_id = ?");
+      for (const asset of previous) if (!retained.has(asset.asset_id)) removeAsset.run(input.id, asset.asset_id);
       const insertAsset = this.database.prepare(`
         INSERT INTO content_project_assets
           (project_id, asset_id, name, description, mime_type, byte_size, data)
         VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(project_id, asset_id) DO UPDATE SET
+          name = excluded.name, description = excluded.description, mime_type = excluded.mime_type,
+          byte_size = excluded.byte_size, data = excluded.data
+        WHERE name IS NOT excluded.name OR description IS NOT excluded.description
+          OR mime_type IS NOT excluded.mime_type OR byte_size IS NOT excluded.byte_size OR data IS NOT excluded.data
       `);
       for (const asset of input.assets) {
         if (!asset.assetId.trim() || !asset.name.trim() || asset.bytes.byteLength === 0)

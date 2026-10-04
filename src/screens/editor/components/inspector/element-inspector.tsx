@@ -10,6 +10,9 @@ import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import type { EditorCommand, ElementDefinition, ElementFrame, ElementStyle, PlacedElement } from "@/lib/content-jobs/editor/types";
 import { commandsFromDraft, draftWithFontSize, frameWithLockedDimension, makeElementDraft, validElementDraft, type VisualTarget } from "./element-draft";
 import { useAutosave } from "./use-autosave";
+import { EDITOR_FONTS, editorFont, supportedFontWeight } from "@/lib/content-jobs/editor/typography/fonts";
+import { remapTextColors } from "@/lib/content-jobs/editor/typography/text-colors";
+import { TextContentControl } from "./text/text-content-control";
 
 type Props = {
   ref?: Ref<ElementInspectorHandle>;
@@ -80,7 +83,10 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
         <label className="grid gap-1.5 text-sm"><span className="font-medium">이름</span><Input value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} /></label>
         <label className="grid gap-1.5 text-sm"><span className="font-medium">역할·의미</span><Textarea value={draft.role} onChange={(event) => setDraft((current) => ({ ...current, role: event.target.value }))} /></label>
         {element.kind === "text" ? (
-          <label className="grid gap-1.5 text-sm"><span className="font-medium">내용</span><Textarea value={draft.value} onChange={(event) => setDraft((current) => ({ ...current, value: event.target.value }))} /></label>
+          <TextContentControl value={draft.value} textColors={draft.textColors} baseColor={draft.style.color} disabled={disabled}
+            onChange={(value) => setDraft((current) => ({ ...current, value,
+              textColors: remapTextColors(current.value, value, current.textColors) }))}
+            onColorsChange={(textColors) => setDraft((current) => ({ ...current, textColors }))} />
         ) : element.kind === "image" ? (
           <div className="grid gap-3">
             {currentImage && <div className="grid gap-1.5 text-sm">
@@ -151,10 +157,20 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
                 onChange={(value) => setDraft((current) => draftWithFontSize(current, value))} />
               <NumberField label="줄 높이" value={draft.style.lineHeight} step={0.1} min={0.8} max={3}
                 onChange={(value) => updateStyle("lineHeight", value)} />
-              <NumberField label="글자 굵기" value={draft.style.fontWeight} onChange={(value) => updateStyle("fontWeight", value)} />
+              <label className="grid gap-1.5 text-xs font-medium">글자 굵기
+                <select aria-label="글자 굵기" className="h-10 rounded-md border bg-background px-2 text-sm"
+                  value={supportedFontWeight(draft.style.fontFamily, draft.style.fontWeight)}
+                  onChange={(event) => updateStyle("fontWeight", Number(event.target.value))}>
+                  {editorFont(draft.style.fontFamily).weights.map((weight) => <option key={weight} value={weight}>{weight}</option>)}
+                </select>
+              </label>
               <label className="grid gap-1.5 text-xs font-medium">글꼴 계열
-                <select className="h-10 rounded-md border bg-background px-2 text-sm" value={draft.style.fontFamily} onChange={(event) => updateStyle("fontFamily", event.target.value as ElementStyle["fontFamily"])}>
-                  <option value="sans-serif">고딕</option><option value="serif">명조</option><option value="monospace">고정폭</option>
+                <select aria-label="글꼴 계열" className="h-10 rounded-md border bg-background px-2 text-sm" value={draft.style.fontFamily} onChange={(event) => {
+                  const fontFamily = event.target.value as ElementStyle["fontFamily"];
+                  setDraft((current) => ({ ...current, style: { ...current.style, fontFamily,
+                    fontWeight: supportedFontWeight(fontFamily, current.style.fontWeight) } }));
+                }}>
+                  {EDITOR_FONTS.map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}
                 </select>
               </label>
               <div className="grid gap-1.5 text-xs font-medium">

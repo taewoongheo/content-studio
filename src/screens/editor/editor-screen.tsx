@@ -287,12 +287,6 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
           <h1 className="truncate text-sm font-semibold">Content Studio <span className="font-normal text-muted-foreground">/ 슬라이드 편집기</span></h1>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <label className="flex items-center gap-2 text-xs">
-            <input type="checkbox" checked={showOverflow}
-              onChange={(event) => setShowOverflow(event.target.checked)}
-              className="size-4 accent-primary" />
-            잘린 영역 표시
-          </label>
           <ProjectPromptCopyButton projectId={job.id} size="sm" disabled={disabled || !document}
             onBeforeCopy={async () => {
               if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
@@ -311,6 +305,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
             <span>{job.slideCount}장</span>
           </label>
           <ProjectSaveControl ref={projectSaveRef} jobId={job.id} revision={job.editor.revision}
+            currentProjectName={job.name} persistedRevision={job.savedRevision}
             getRevision={() => latestRevision.current}
             defaultName="새 콘텐츠"
             initialProjectName={initialProjectName} disabled={disabled || !document}
@@ -434,11 +429,18 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
                     onClick={() => void removeSlide()}><Trash2 className="size-3.5" aria-hidden="true" /></Button>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button type="button" variant={showGuides ? "secondary" : "ghost"} size="sm"
-                    aria-pressed={showGuides} onClick={() => setShowGuides((current) => !current)}
-                    title="중앙선과 어두운 안전 영역 경계에 Element가 맞춰집니다.">
-                    가이드 {showGuides ? "켜짐" : "꺼짐"}
-                  </Button>
+                  <label className="flex items-center gap-2 text-xs">
+                    <input type="checkbox" checked={showGuides}
+                      onChange={(event) => setShowGuides(event.target.checked)}
+                      className="size-4 accent-primary" />
+                    가이드
+                  </label>
+                  <label className="flex items-center gap-2 text-xs">
+                    <input type="checkbox" checked={showOverflow}
+                      onChange={(event) => setShowOverflow(event.target.checked)}
+                      className="size-4 accent-primary" />
+                    잘린 영역 표시
+                  </label>
                 </div>
               </div>
               <SlideTabs document={document} selectedSlideId={slide.id} disabled={disabled}

@@ -85,7 +85,7 @@ test("clone uses current draft, leaves original untouched and starts independent
     assert.notEqual(draftClone.id, blank.id);
     assert.deepEqual(draftClone.editor.document, blank.editor.document);
     const count = f.registry.list().length;
-    await assert.rejects(createContentProject(f.registry, { sourceProjectId: "missing" }, f.stores));
+    assert.throws(() => createContentProject(f.registry, { sourceProjectId: "missing" }, f.stores));
     assert.equal(f.registry.list().length, count);
   } finally { f.database.close(); }
 });

@@ -20,13 +20,25 @@ if (!address || typeof address === "string") throw new Error("No test port");
 const port = address.port;
 await new Promise<void>((resolve, reject) => portServer.close((error) => error ? reject(error) : resolve()));
 const origin = `http://127.0.0.1:${port}`;
-const app = spawn("pnpm", [process.argv.includes("--production") ? "start" : "dev", "--port", String(port)], {
-  env: { ...process.env, CONTENT_STUDIO_DB_PATH: join(directory, "test.sqlite") },
-  stdio: ["ignore", "pipe", "pipe"], detached: true,
-});
 let serverLog = "";
-app.stdout.on("data", (chunk) => { serverLog += chunk; });
-app.stderr.on("data", (chunk) => { serverLog += chunk; });
+function startApp() {
+  const child = spawn("pnpm", [process.argv.includes("--production") ? "start" : "dev", "--port", String(port)], {
+    env: { ...process.env, CONTENT_STUDIO_DB_PATH: join(directory, "test.sqlite") },
+    stdio: ["ignore", "pipe", "pipe"], detached: true,
+  });
+  child.stdout.on("data", (chunk) => { serverLog += chunk; });
+  child.stderr.on("data", (chunk) => { serverLog += chunk; });
+  return child;
+}
+let app = startApp();
+async function waitForApp() {
+  const deadline = Date.now() + 60_000;
+  while (true) {
+    try { if ((await fetch(`${origin}/mcp`)).status === 405) return; } catch { /* starting */ }
+    if (app.exitCode !== null || Date.now() > deadline) throw new Error(`Server did not start: ${serverLog}`);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+}
 const stop = () => {
   if (app.pid) {
     try { process.kill(-app.pid, "SIGTERM"); } catch { /* already stopped */ }
@@ -35,12 +47,8 @@ const stop = () => {
 process.once("SIGINT", stop);
 const client = new Client({ name: "studio-smoke", version: "1.0.0" });
 try {
-  const deadline = Date.now() + 60_000;
-  while (true) {
-    try { if ((await fetch(`${origin}/mcp`)).status === 405) break; } catch { /* starting */ }
-    if (app.exitCode !== null || Date.now() > deadline) throw new Error(`Server did not start: ${serverLog}`);
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
+  await waitForApp();
+  let recovery: Project | undefined;
   await client.connect(new StreamableHTTPClientTransport(new URL(`${origin}/mcp`)));
   async function call(name: string, args: Record<string, unknown>) {
     const result = CallToolResultSchema.parse(await client.callTool({ name, arguments: args }));
@@ -65,6 +73,9 @@ try {
 
   const browser = await chromium.launch();
   try {
+    const listPage = await browser.newPage();
+    await listPage.goto(origin);
+    await listPage.getByRole("heading", { name: "MCP smoke", exact: true }).waitFor();
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
     await page.goto(created.url);
     await page.getByRole("button", { name: "ZIP 내보내기" }).waitFor();
@@ -88,6 +99,8 @@ try {
       { type: "update_visual", scope: "common", elementId: "title", style: { color: "#FF0000" } },
     ] })).structuredContent as Project;
     await page.getByRole("button", { name: /Live MCP.*선택/ }).waitFor();
+    await page.getByRole("button", { name: "저장됨", exact: true }).waitFor();
+    assert.equal(updated.savedRevision, updated.editor.revision);
     console.log("UI received MCP edit via SSE, revision", updated.editor.revision);
     const preview = await call("preview_slide", { projectId: id, slideId: "slide-1" });
     const png = preview.content.find((content) => content.type === "image");
@@ -101,6 +114,7 @@ try {
     console.log("preview", meta.width, meta.height, bytes.length);
 
     const cloned = (await call("create_project", { sourceProjectId: id, name: "Clone" })).structuredContent as Project;
+    await listPage.getByRole("heading", { name: "Clone", exact: true }).waitFor();
     assert.notEqual(cloned.id, id);
     assert.equal(cloned.editor.document.slides[0].name, "Live MCP");
     const undone = (await call("undo_project", { projectId: id, expectedRevision: 1 })).structuredContent as Project;
@@ -115,6 +129,8 @@ try {
     assert.equal(save.status, 201);
     const opened = (await call("open_project", { projectId: cloned.id })).structuredContent as Project;
     assert.equal(opened.name, "Saved clone");
+    await listPage.getByRole("heading", { name: "Saved clone", exact: true }).waitFor();
+    recovery = (await call("create_project", { sourceProjectId: cloned.id, name: "Restart recovery" })).structuredContent as Project;
     const listed = (await call("list_projects", {})).structuredContent as { projects: Array<{ id: string }> };
     assert.equal(listed.projects.filter((project) => project.id === cloned.id).length, 1);
     const invalid = await client.callTool({ name: "edit_project", arguments: {
@@ -125,8 +141,95 @@ try {
       method: "POST", headers: { origin: "https://example.com", "content-type": "application/json" }, body: "{}",
     });
     assert.equal(denied.status, 403);
+    const colorProject = (await call("create_project", { name: "Partial colors" })).structuredContent as Project;
+    const colorText = "BUILD A BIGGER\nCHEST ROUTINE";
+    const colorStart = colorText.indexOf("CHEST");
+    await call("edit_project", { projectId: colorProject.id, expectedRevision: 0, commands: [
+      { type: "add_element", element: { id: "color-title", name: "Color title", role: "Hook", kind: "text",
+        frame: { x: 0.1, y: 0.15, width: 0.8, height: 0.5 }, style: { ...style, fontSize: 150, color: "#000000" } } },
+      { type: "place_element", slideId: "slide-1", elementId: "color-title", placementId: "color-title-1" },
+      { type: "set_slot_value", slideId: "slide-1", placementId: "color-title-1", value: colorText },
+    ] });
+    const beforeColors = await call("preview_slide", { projectId: colorProject.id, slideId: "slide-1" });
+    await page.goto(`${origin}/?job=${colorProject.id}`);
+    await page.getByRole("button", { name: "Color title Element 선택 및 레이어 순서 이동", exact: true }).click();
+    const content = page.getByLabel("내용", { exact: true });
+    await content.evaluate((input, start) => {
+      const textarea = input as HTMLTextAreaElement;
+      textarea.focus(); textarea.setSelectionRange(start, start);
+    }, colorStart);
+    for (let i = 0; i < 5; i++) await content.press("Shift+ArrowRight");
+    const applied = page.waitForResponse(response => response.url().endsWith(`/api/content-jobs/${colorProject.id}`)
+      && response.request().method() === "POST");
+    await page.getByRole("button", { name: "선택 색상 적용", exact: true }).click();
+    assert.equal((await applied).status(), 200);
+    const colored = (await call("read_project", { projectId: colorProject.id })).structuredContent as Project;
+    assert.deepEqual(colored.editor.document.slides[0].placements.find(p => p.id === "color-title-1")?.textColors,
+      [{ start: colorStart, end: colorStart + 5, color: "#FF0000" }]);
+    const afterColors = await call("preview_slide", { projectId: colorProject.id, slideId: "slide-1" });
+    async function pixels(result: Awaited<ReturnType<typeof call>>) {
+      const image = result.content.find(item => item.type === "image");
+      assert.ok(image?.type === "image");
+      return sharp(Buffer.from(image.data, "base64")).removeAlpha().raw().toBuffer();
+    }
+    const beforePixels = await pixels(beforeColors), afterPixels = await pixels(afterColors);
+    const ink = (data: Buffer) => Buffer.from(Array.from({ length: data.length / 3 }, (_, i) =>
+      Math.min(data[i * 3], data[i * 3 + 1], data[i * 3 + 2])));
+    assert.deepEqual(ink(afterPixels), ink(beforePixels), "color changes must preserve glyph positions, wrapping and alignment");
+    assert.ok(afterPixels.some((value, i) => i % 3 === 0 && value > 200 && afterPixels[i + 1] < 30), "selected word must contain red ink");
+    const colorClone = (await call("create_project", { sourceProjectId: colorProject.id, name: "Colored clone" })).structuredContent as Project;
+    assert.deepEqual(colorClone.editor.document, colored.editor.document);
+    const colorUndo = (await call("undo_project", { projectId: colorProject.id, expectedRevision: colored.editor.revision })).structuredContent as Project;
+    assert.equal(colorUndo.editor.document.slides[0].placements.find(p => p.id === "color-title-1")?.textColors, undefined);
+    const invalidColor = await client.callTool({ name: "edit_project", arguments: { projectId: colorProject.id,
+      expectedRevision: colorUndo.editor.revision, commands: [{ type: "set_text_colors", slideId: "slide-1", placementId: "color-title-1",
+        textColors: [{ start: 0, end: 1000, color: "#FF0000" }] }] } });
+    assert.equal(invalidColor.isError, true);
+    const afterInvalidColor = (await call("read_project", { projectId: colorProject.id })).structuredContent as Project;
+    assert.deepEqual(afterInvalidColor.editor.document, colorUndo.editor.document);
+    let colorRevision = colorUndo.editor.revision;
+    for (const textAlign of ["left", "right"]) {
+      const wrappedText = "AVATAR VERYLONGWORDWITHOUTSPACES\nCHEST ROUTINE";
+      const plain = (await call("edit_project", { projectId: colorProject.id, expectedRevision: colorRevision, commands: [
+        { type: "update_visual", scope: "local", slideId: "slide-1", placementId: "color-title-1",
+          frame: { x: 0.1, y: 0.15, width: 0.4, height: 0.7 }, style: { textAlign } },
+        { type: "set_slot_value", slideId: "slide-1", placementId: "color-title-1", value: wrappedText, textColors: [] },
+      ] })).structuredContent as Project;
+      const plainPreview = await pixels(await call("preview_slide", { projectId: colorProject.id, slideId: "slide-1" }));
+      const ranged = (await call("edit_project", { projectId: colorProject.id, expectedRevision: plain.editor.revision, commands: [
+        { type: "set_text_colors", slideId: "slide-1", placementId: "color-title-1",
+          textColors: [{ start: 2, end: wrappedText.length - 2, color: "#FF0000" }] },
+      ] })).structuredContent as Project;
+      const rangedPreview = await pixels(await call("preview_slide", { projectId: colorProject.id, slideId: "slide-1" }));
+      assert.deepEqual(ink(rangedPreview), ink(plainPreview), `${textAlign} alignment and forced word wrapping must preserve glyph layout`);
+      colorRevision = ranged.editor.revision;
+    }
+    console.log("PASS selected text color UI, exact glyph-layout preservation, clone, undo and invalid ranges");
+
+    console.log("PASS autosave status and live project-list refresh");
     console.log("PASS shared memory, clone independence, open/list, undo, revision conflict and cross-origin rejection");
   } finally { await browser.close(); }
+  assert.ok(recovery);
+  await client.close();
+  stop();
+  if (app.exitCode === null && app.signalCode === null) await new Promise((resolve) => app.once("exit", resolve));
+  serverLog = "";
+  app = startApp();
+  await waitForApp();
+  assert.equal((await fetch(`${origin}/api/content-jobs/${recovery.id}`)).status, 404);
+  await client.connect(new StreamableHTTPClientTransport(new URL(`${origin}/mcp`)));
+  const restored = (await call("open_project", { projectId: recovery.id })).structuredContent as Project;
+  assert.deepEqual(restored.editor.document, recovery.editor.document);
+  assert.equal(restored.assets.length, recovery.assets.length);
+  assert.equal(restored.savedRevision, 0);
+  assert.equal(restored.name, recovery.name);
+  const preview = await call("preview_slide", { projectId: restored.id, slideId: "slide-1" });
+  const restoredPng = preview.content.find((item) => item.type === "image");
+  assert.ok(restoredPng?.type === "image");
+  const restoredPixel = await sharp(Buffer.from(restoredPng.data, "base64"))
+    .extract({ left: 540, top: 800, width: 1, height: 1 }).removeAlpha().raw().toBuffer();
+  assert.deepEqual([...restoredPixel], [0, 255, 0]);
+  console.log("PASS real server restart restores the autosaved document and images");
 } finally {
   await client.close();
   stop();
