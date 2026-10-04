@@ -22,7 +22,7 @@ export function contentJobEvents(
           cleanup();
         }
       };
-      unsubscribe = registry.subscribe(jobId, send);
+
       const abort = () => {
         if (closed) return;
         cleanup();
@@ -38,6 +38,10 @@ export function contentJobEvents(
         unsubscribe();
         signal.removeEventListener("abort", abort);
       };
+      unsubscribe = registry.subscribe(jobId, send, () => {
+        if (!closed) { try { controller.enqueue(encoder.encode("event: closed\ndata: {}\n\n")); } catch { /* Already cancelled. */ } }
+        abort();
+      });
       signal.addEventListener("abort", abort, { once: true });
       if (signal.aborted) {
         abort();

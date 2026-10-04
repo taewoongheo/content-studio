@@ -8,13 +8,14 @@ function defaultStore() {
 }
 
 export async function addEditorAsset(registry: ContentJobRegistry, jobId: string, file: File, store?: AssetStore) {
-  registry.getRecord(jobId);
+  const tabId = registry.getRecord(jobId).tabId;
   if (!(file.type in imageTypes) || file.size === 0 || file.size > MAX_UPLOAD_IMAGE_BYTES)
     throw new ContentJobError("INVALID_OUTPUT", "PNG, JPG, WebP 이미지를 10MB 이하로 추가해 주세요.");
   const type = file.type as keyof typeof imageTypes;
   const bytes = new Uint8Array(await file.arrayBuffer());
   if (!validSignature(type, bytes))
     throw new ContentJobError("INVALID_OUTPUT", "이미지 파일 형식을 확인해 주세요.");
+  registry.requireTab(jobId, tabId);
   const asset = (store ?? defaultStore()).create({ name: file.name || `image${imageTypes[type]}`, type, bytes });
   registry.update(jobId, (current) => {
     current.assets.push({ id: asset.id, name: asset.name, type: asset.type, size: asset.size });

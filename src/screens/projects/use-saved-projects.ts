@@ -5,12 +5,13 @@ import type { SavedProjectSummary } from "@/lib/local-db/projects/store";
 import { listContentProjects } from "@/screens/projects/api";
 
 /** Coalesce save notifications and reconnects so older requests cannot overwrite newer lists. */
-export function useSavedProjects() {
+export function useSavedProjects(enabled = true) {
   const [projects, setProjects] = useState<SavedProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (!enabled) return;
     let active = true;
     let refreshing = false;
     let requested = false;
@@ -37,7 +38,7 @@ export function useSavedProjects() {
     const onFocus = () => { void refresh(); };
     window.addEventListener("focus", onFocus);
     return () => { active = false; events.close(); window.removeEventListener("focus", onFocus); };
-  }, []);
+  }, [enabled]);
 
   return { projects, loading, error, setError };
 }

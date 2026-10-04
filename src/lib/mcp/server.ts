@@ -23,7 +23,7 @@ const annotations = (readOnlyHint: boolean) => ({ readOnlyHint, destructiveHint:
 /** A fresh protocol instance per HTTP request; project state belongs to the app registry. */
 export function createStudioMcpServer(origin: string) {
   const server = new McpServer({ name: "content-studio", version: "0.1.0" }, {
-    instructions: "Read the target project before editing. Reuse a project by passing sourceProjectId to create_project; omit it for a blank project. Find and select local images with your filesystem tools, then use set_local_image inside edit_project. Edit batches are one undo step. English hook fonts: bebas-neue and anton (weight 400 only), oswald (200-700), barlow-condensed (100-900). sans-serif uses Geist and monospace uses Geist Mono (100-900). Never write the app database directly.",
+    instructions: "Read the target project before editing. Reuse a project by passing sourceProjectId to create_project; omit it for a blank project. Find and select local images with your filesystem tools, then use set_local_image inside edit_project. Edit batches are one undo step. English hook fonts: bebas-neue and anton (weight 400 only), oswald (200-700), barlow-condensed (100-900). sans-serif uses Geist and monospace uses Geist Mono (100-900). Projects are open tabs. Creation/clone/open adds a tab without switching the browser. Closed tabs reject edits; explicitly open and read again. Edit/undo require expectedTabId and expectedRevision from the latest read. Never write the app database directly.",
   });
   const describe = (id: string) => {
     const job = contentJobRegistry.get(id);
@@ -61,17 +61,17 @@ export function createStudioMcpServer(origin: string) {
     inputSchema: projectSchema, annotations: annotations(true),
   }, ({ projectId }) => guarded(() => json(describe(projectId))));
   server.registerTool("edit_project", {
-    description: "Apply an ordered command batch atomically as one undo step and save it to the database before returning success. Use expectedRevision from read/edit/undo; on conflict re-read. update_visual common changes the shared definition AND clears matching local overrides on all placements; local changes only the specified slide placement. Rectangle/circle/triangle/text/image are elements: add_element then place_element. set_local_image loads a PNG/JPG/WebP absolute localPath (max 10MB) into an existing image placement, including one created earlier in this batch. set_text_colors replaces a text placement’s color ranges (start/end are UTF-16 offsets, end exclusive, grapheme boundaries, sorted and non-overlapping; [] clears colors). set_slot_value optionally accepts textColors for an atomic text/color replacement; otherwise existing ranges adjust to the text edit. Non-background placements render back-to-front; the background sentinel must be last in reorder_layers. No separate image-upload tool is needed.",
+    description: "Apply an ordered command batch atomically as one undo step and save it to the database before returning success. Use expectedTabId and expectedRevision from read/edit/undo; on conflict re-read. update_visual common changes the shared definition AND clears matching local overrides on all placements; local changes only the specified slide placement. Rectangle/circle/triangle/text/image are elements: add_element then place_element. set_local_image loads a PNG/JPG/WebP absolute localPath (max 10MB) into an existing image placement, including one created earlier in this batch. set_text_colors replaces a text placement’s color ranges (start/end are UTF-16 offsets, end exclusive, grapheme boundaries, sorted and non-overlapping; [] clears colors). set_slot_value optionally accepts textColors for an atomic text/color replacement; otherwise existing ranges adjust to the text edit. Non-background placements render back-to-front; the background sentinel must be last in reorder_layers. No separate image-upload tool is needed.",
     inputSchema: editSchema, annotations: annotations(false),
   }, (raw) => guarded(async () => {
-    const { projectId, commands, expectedRevision } = raw as { projectId: string; commands: Array<EditorCommand | LocalImageCommand>; expectedRevision: number };
-    const job = await new McpProjectWrites(contentJobRegistry, getLocalDatabase()).edit(projectId, commands, expectedRevision);
+    const { projectId, commands, expectedRevision, expectedTabId } = raw as { projectId: string; commands: Array<EditorCommand | LocalImageCommand>; expectedRevision: number; expectedTabId: string };
+    const job = await new McpProjectWrites(contentJobRegistry, getLocalDatabase()).edit(projectId, commands, expectedRevision, expectedTabId);
     return json({ ...job, url: `${origin}/?job=${encodeURIComponent(job.id)}` });
   }));
   server.registerTool("undo_project", {
-    description: "Undo the last edit batch, including text, styles and image placement. Imported assets remain available. Saves the restored document before returning success with the new document and revision.",
+    description: "Undo the last edit batch, including text, styles and image placement. Imported assets remain available. Saves the restored document before returning success with the new document and revision. Include expectedTabId from the latest read.",
     inputSchema: undoSchema, annotations: annotations(false),
-  }, ({ projectId, expectedRevision }) => guarded(() => json({ ...new McpProjectWrites(contentJobRegistry, getLocalDatabase()).undo(projectId, expectedRevision) })));
+  }, ({ projectId, expectedRevision, expectedTabId }) => guarded(() => json({ ...new McpProjectWrites(contentJobRegistry, getLocalDatabase()).undo(projectId, expectedRevision, expectedTabId) })));
   server.registerTool("preview_slide", {
     description: "See one slide as a PNG rendered by the same renderer as the editor/export. Uses a snapshot and returns its revision. Does not save the project.",
     inputSchema: previewSchema, annotations: annotations(true),

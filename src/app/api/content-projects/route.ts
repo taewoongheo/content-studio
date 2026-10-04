@@ -23,9 +23,10 @@ export async function POST(request: Request) {
     const body: unknown = await request.json();
     if (!body || typeof body !== "object")
       return Response.json({ error: "프로젝트 정보를 확인해 주세요." }, { status: 400 });
-    const { jobId, name } = body as Record<string, unknown>;
+    const { jobId, name, expectedTabId } = body as Record<string, unknown>;
     if (typeof jobId !== "string" || typeof name !== "string" || !name.trim() || name.trim().length > 120)
       return Response.json({ error: "프로젝트 이름을 120자 이하로 입력해 주세요." }, { status: 400 });
+    if (typeof expectedTabId === "string") contentJobRegistry.requireTab(jobId, expectedTabId);
     return Response.json(await saveContentProject(contentJobRegistry, jobId, name), {
       status: 201,
       headers: { "Cache-Control": "no-store" },

@@ -19,15 +19,15 @@ export function getContentJob(jobId: string) {
     headers: { Accept: "application/json" }, cache: "no-store",
   }).then(readResponse);
 }
-export function uploadEditorImage(jobId: string, image: File) {
+export function uploadEditorImage(jobId: string, image: File, tabId?: string) {
   const form = new FormData();
   form.set("image", image);
   return fetch(`/api/content-jobs/${encodeURIComponent(jobId)}/assets`, {
-    method: "POST", body: form,
+    method: "POST", headers: tabId ? { "x-tab-id": tabId } : {}, body: form,
   }).then(readResponse);
 }
-export function attachStoredEditorImage(jobId: string, assetId: string) {
+export function attachStoredEditorImage(jobId: string, assetId: string, tabId?: string) {
   return fetch(`/api/content-jobs/${encodeURIComponent(jobId)}/assets`, {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ assetId }),
+    method: "POST", headers: { "Content-Type": "application/json", ...(tabId ? { "x-tab-id": tabId } : {}) }, body: JSON.stringify({ assetId }),
   }).then(readResponse);
 }

@@ -3,10 +3,9 @@
 import { useState } from "react";
 import { FolderOpen, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import type { SavedProjectSummary } from "@/lib/local-db/projects/store";
-import { loadContentProject } from "@/screens/projects/api";
-import { useSavedProjects } from "./use-saved-projects";
+import { useSavedProjects } from "@/screens/projects/use-saved-projects";
+import { ProjectDeleteButton } from "@/screens/projects/components/project-delete-button";
 import { ProjectPromptCopyButton } from "@/screens/projects/components/project-prompt-copy-button";
 
 const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
@@ -18,7 +17,7 @@ const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
 });
 
 export function SavedProjectsPage({ onOpen }: {
-  onOpen: (job: ContentJobSnapshot, projectName: string) => void;
+  onOpen: (projectId: string) => Promise<void>;
 }) {
   const { projects, loading, error, setError } = useSavedProjects();
   const [openingId, setOpeningId] = useState<string | null>(null);
@@ -27,7 +26,7 @@ export function SavedProjectsPage({ onOpen }: {
     setOpeningId(project.id);
     setError("");
     try {
-      onOpen(await loadContentProject(project.id), project.name);
+      await onOpen(project.id);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "프로젝트를 열지 못했습니다.");
     } finally {
@@ -64,6 +63,7 @@ export function SavedProjectsPage({ onOpen }: {
                   열기
                 </Button>
                 <ProjectPromptCopyButton projectId={project.id} />
+                <ProjectDeleteButton projectId={project.id} name={project.name} compact disabled={openingId !== null} />
               </div>
             </article>
           ))}

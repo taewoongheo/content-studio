@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useImperativeHandle, useMemo, useRef, useState, type Ref } from "react";
 import { ArrowLeft, Copy, Plus, Trash2, Undo2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
@@ -15,7 +15,7 @@ import { ElementScopePicker } from "./components/element-scope-picker";
 import { removalCommandsForScope, selectVisualSlides, type ScopeChoice } from "./components/element-scope";
 import { SlideCanvas } from "./components/canvas/slide-canvas";
 import { frameForDroppedImage } from "./components/canvas/frame/geometry";
-import { SlideBackground } from "./components/inspector/slide-background";
+import { SlideBackground, type SlideBackgroundHandle } from "./components/inspector/slide-background";
 import { frameCommandsForScope } from "./components/canvas/frame/commands";
 import { ImageLibraryPicker } from "./components/library/image-library-picker";
 import { ProjectSaveControl, type ProjectSaveHandle } from "./components/projects/project-save-control";
@@ -25,6 +25,7 @@ import { SlideTabs } from "./components/slides/slide-tabs";
 import { ElementLayers } from "./components/layers/element-layers";
 import { createClipboardQueue, copyElement, pasteElement, type ElementClipboard } from "./components/clipboard/element-clipboard";
 import { useEditorShortcuts } from "./components/shortcuts/use-editor-shortcuts";
+import { ProjectDeleteButton } from "@/screens/projects/components/project-delete-button";
 import { ProjectPromptCopyButton } from "@/screens/projects/components/project-prompt-copy-button";
 
 async function readImageAspectRatio(file: File) {
@@ -43,26 +44,38 @@ function aspectRatioNumber(value: "4:5" | "1:1" | "9:16") {
   return width / height;
 }
 
-export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
+export type EditorViewState = {
+  slideId: string; placementId: string | null;
+  scopeSelection: { key: string; slideIds: string[] } | null;
+  showGuides: boolean; showOverflow: boolean; unlockedImageRatios: string[];
+};
+export type EditorWorkspaceHandle = { flushPending: () => Promise<boolean>; getViewState: () => EditorViewState };
+
+export function EditorScreen({ ref, initialViewState, initialJob, initialProjectName, onNewJob }: {
+  ref?: Ref<EditorWorkspaceHandle>;
+  initialViewState?: EditorViewState;
   initialJob: ContentJobSnapshot;
   initialProjectName?: string;
   onNewJob: () => void;
 }) {
   const { job, submitting, clientError, send } = useContentJob(initialJob);
-  const [slideId, setSlideId] = useState("slide-1");
-  const [placementId, setPlacementId] = useState<string | null>(null);
-  const [scopeSelection, setScopeSelection] = useState<{ key: string; slideIds: string[] } | null>(null);
+  const [slideId, setSlideId] = useState(initialViewState?.slideId ?? "slide-1");
+  const [placementId, setPlacementId] = useState<string | null>(initialViewState?.placementId ?? null);
+  const [scopeSelection, setScopeSelection] = useState<{ key: string; slideIds: string[] } | null>(initialViewState?.scopeSelection ?? null);
   const [imageError, setImageError] = useState("");
   const [dismissedIssue, setDismissedIssue] = useState<string | null>(null);
-  const [showGuides, setShowGuides] = useState(true);
-  const [showOverflow, setShowOverflow] = useState(false);
+  const [showGuides, setShowGuides] = useState(initialViewState?.showGuides ?? true);
+  const [showOverflow, setShowOverflow] = useState(initialViewState?.showOverflow ?? false);
   const [showImageLibrary, setShowImageLibrary] = useState(false);
-  const [unlockedImageRatios, setUnlockedImageRatios] = useState<Set<string>>(() => new Set());
+  const [unlockedImageRatios, setUnlockedImageRatios] = useState<Set<string>>(() => new Set(initialViewState?.unlockedImageRatios ?? []));
+  const backgroundRef = useRef<SlideBackgroundHandle>(null);
+  const activeWork = useRef(new Set<Promise<boolean>>());
   const inspectorRef = useRef<ElementInspectorHandle>(null);
   const projectSaveRef = useRef<ProjectSaveHandle>(null);
   const imageLibraryButtonRef = useRef<HTMLButtonElement>(null);
   const latestRevision = useRef(job.editor.revision);
-  const commandQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const commandQueue = useRef<Promise<boolean>>(Promise.resolve(true));
+  const failedCommands = useRef(0);
   const clipboard = useRef<ElementClipboard | null>(null);
   const [enqueueClipboard] = useState(createClipboardQueue);
   const latestDocument = useRef(job.editor.document);
@@ -78,6 +91,39 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   const issue = clientError || imageError;
   const imageRatioKey = element?.kind === "image" ? element.id : "";
   const imageAspectRatioLocked = Boolean(imageRatioKey) && !unlockedImageRatios.has(imageRatioKey);
+
+  async function waitForCommands() {
+    let successful = true;
+    let queued: Promise<boolean>;
+    do {
+      queued = commandQueue.current;
+      successful = (await queued) && successful;
+    } while (queued !== commandQueue.current);
+    return successful;
+  }
+
+  useImperativeHandle(ref, () => ({
+    flushPending: async () => {
+      const failuresBeforeFlush = failedCommands.current;
+      const workResults = await Promise.all([...activeWork.current]);
+      const commandsSaved = await waitForCommands();
+      if (workResults.includes(false) || !commandsSaved || failedCommands.current !== failuresBeforeFlush) return false;
+      if (backgroundRef.current && !(await backgroundRef.current.flushPending())) return false;
+      if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
+      return (await waitForCommands()) && failedCommands.current === failuresBeforeFlush;
+    },
+    getViewState: () => ({ slideId: slide?.id ?? slideId, placementId: placement?.id ?? null,
+      scopeSelection, showGuides, showOverflow, unlockedImageRatios: [...unlockedImageRatios] }),
+  }));
+
+  function trackWork(operation: Promise<boolean>) {
+    activeWork.current.add(operation);
+    void operation.finally(() => activeWork.current.delete(operation));
+    return operation;
+  }
+  const uploadImage = (file: File) => trackWork(uploadImageWork(file));
+  const addStoredImage = (id: string) => trackWork(addStoredImageWork(id));
+  const addDroppedImage = (file: File, center: { x: number; y: number }) => trackWork(addDroppedImageWork(file, center));
 
   function changeImageAspectRatioLocked(locked: boolean) {
     if (!imageRatioKey) return;
@@ -111,20 +157,21 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
         return true;
       } catch {
         setDismissedIssue(null);
+        failedCommands.current++;
         return false;
       }
     });
-    commandQueue.current = pending.then(() => undefined);
+    commandQueue.current = pending;
     return pending;
   }
 
-  async function uploadImage(file: File) {
+  async function uploadImageWork(file: File) {
     if (!slide || !placement) return false;
     setImageError("");
     setDismissedIssue(null);
     try {
       if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
-      const updated = await uploadEditorImage(job.id, file);
+      const updated = await uploadEditorImage(job.id, file, job.tabId);
       const asset = updated.assets.at(-1);
       if (!asset) throw new Error("업로드한 이미지를 찾을 수 없습니다.");
       latestRevision.current = Math.max(latestRevision.current, updated.editor.revision);
@@ -150,11 +197,11 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
     return saved;
   }
 
-  async function addStoredImage(assetId: string) {
+  async function addStoredImageWork(assetId: string) {
     setImageError("");
     setDismissedIssue(null);
     try {
-      const updated = await attachStoredEditorImage(job.id, assetId);
+      const updated = await attachStoredEditorImage(job.id, assetId, job.tabId);
       latestRevision.current = Math.max(latestRevision.current, updated.editor.revision);
       return addElement("image", assetId);
     } catch (error) {
@@ -163,7 +210,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
     }
   }
 
-  async function addDroppedImage(file: File, center: { x: number; y: number }) {
+  async function addDroppedImageWork(file: File, center: { x: number; y: number }) {
     if (!document || !slide) return false;
     setImageError("");
     setDismissedIssue(null);
@@ -171,7 +218,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
       if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
       const existingAssetIds = new Set(job.assets.map((asset) => asset.id));
       const [updated, imageAspectRatio] = await Promise.all([
-        uploadEditorImage(job.id, file),
+        uploadEditorImage(job.id, file, job.tabId),
         readImageAspectRatio(file),
       ]);
       const asset = updated.assets.find((candidate) => !existingAssetIds.has(candidate.id));
@@ -280,18 +327,18 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
   }
 
   return (
-    <div className="flex h-svh min-h-0 flex-col overflow-hidden bg-background text-foreground max-lg:h-auto max-lg:min-h-svh max-lg:overflow-visible">
+    <div data-tab-id={job.tabId} className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground max-lg:h-auto max-lg:min-h-svh max-lg:overflow-visible">
       <header className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-3 border-b px-3 py-1.5 sm:px-4">
         <div className="flex min-w-0 items-center gap-3">
           <Button variant="ghost" size="icon-sm" onClick={onNewJob} aria-label="새 작업으로 돌아가기"><ArrowLeft className="size-4" /></Button>
           <h1 className="truncate text-sm font-semibold">Content Studio <span className="font-normal text-muted-foreground">/ 슬라이드 편집기</span></h1>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+          <ProjectDeleteButton projectId={job.id} name={job.name ?? "새 프로젝트"} tabId={job.tabId} disabled={disabled} />
           <ProjectPromptCopyButton projectId={job.id} size="sm" disabled={disabled || !document}
             onBeforeCopy={async () => {
               if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
-              await commandQueue.current;
-              return true;
+              return waitForCommands();
             }} />
           <label className="flex items-center gap-2 text-xs">
             <span className="sr-only">화면 비율</span>
@@ -304,15 +351,14 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
             </select>
             <span>{job.slideCount}장</span>
           </label>
-          <ProjectSaveControl ref={projectSaveRef} jobId={job.id} revision={job.editor.revision}
+          <ProjectSaveControl ref={projectSaveRef} jobId={job.id} tabId={job.tabId} revision={job.editor.revision}
             currentProjectName={job.name} persistedRevision={job.savedRevision}
             getRevision={() => latestRevision.current}
             defaultName="새 콘텐츠"
             initialProjectName={initialProjectName} disabled={disabled || !document}
             onBeforeSave={async () => {
               if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
-              await commandQueue.current;
-              return true;
+              return waitForCommands();
             }} />
           {document && <ExportControl jobId={job.id} disabled={disabled}
             onBeforeExport={prepareExport} onError={(message) => { setDismissedIssue(null); setImageError(message); }} />}
@@ -334,7 +380,7 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
           <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden border-r px-4 py-4 max-lg:order-2 max-lg:min-h-[360px] max-lg:border-r-0 max-lg:border-t" aria-label="선택 항목 편집">
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {element?.kind === "background" && placement ? (
-                <SlideBackground
+                <SlideBackground ref={backgroundRef}
                   key={`${scopeKey}:${selectedSlideIds.join(",")}`}
                   color={slide.backgroundColor}
                   disabled={disabled}
@@ -413,7 +459,16 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
             </aside>
 
           <section className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-background lg:col-start-2 lg:row-start-1 max-lg:order-1 max-lg:min-h-[620px] max-lg:border-b" aria-label="슬라이드 편집 영역">
-            <nav aria-label="페이지 선택" className="shrink-0 border-b px-4 py-3">
+
+            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted/20 p-5 sm:p-6">
+              <SlideCanvas key={slide.id} document={document} slide={slide} jobId={job.id}
+                selectedPlacementId={placement?.id ?? null} disabled={disabled} showGuides={showGuides} showOverflow={showOverflow}
+                selectionAppliesToAll={appliedSlides.length > 1 && appliedSlides.every((item) => selectedSlideIds.includes(item.slideId))}
+                lockImageAspectRatio={imageAspectRatioLocked}
+                onSelect={setPlacementId} onSelectBackground={() => setPlacementId(BACKGROUND_PLACEMENT_ID)}
+                onFrameChange={changeFrame} onDropImage={addDroppedImage} />
+            </div>
+            <nav aria-label="페이지 선택" className="shrink-0 border-t px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <h2 className="mr-1 text-sm font-semibold">페이지</h2>
@@ -446,14 +501,6 @@ export function EditorScreen({ initialJob, initialProjectName, onNewJob }: {
               <SlideTabs document={document} selectedSlideId={slide.id} disabled={disabled}
                 onSelect={(id) => { setSlideId(id); setPlacementId(null); }} onCommand={saveCommands} />
             </nav>
-            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted/20 p-5 sm:p-6">
-              <SlideCanvas key={slide.id} document={document} slide={slide} jobId={job.id}
-                selectedPlacementId={placement?.id ?? null} disabled={disabled} showGuides={showGuides} showOverflow={showOverflow}
-                selectionAppliesToAll={appliedSlides.length > 1 && appliedSlides.every((item) => selectedSlideIds.includes(item.slideId))}
-                lockImageAspectRatio={imageAspectRatioLocked}
-                onSelect={setPlacementId} onSelectBackground={() => setPlacementId(BACKGROUND_PLACEMENT_ID)}
-                onFrameChange={changeFrame} onDropImage={addDroppedImage} />
-            </div>
 
           </section>
 

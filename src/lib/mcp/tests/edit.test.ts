@@ -22,11 +22,11 @@ function fixture() {
 }
 
 test("MCP uses the full existing command schema and rejects unknown properties", () => {
-  assert.equal(editSchema.safeParse({ projectId: "p", expectedRevision: 0, commands: [
+  assert.equal(editSchema.safeParse({ projectId: "p", expectedTabId: "t", expectedRevision: 0, commands: [
     { type: "update_visual", scope: "common", elementId: "title", style: { color: "#FF0000" } },
     { type: "set_local_image", slideId: "s", placementId: "image", localPath: "/tmp/image.png" },
   ] }).success, true);
-  assert.equal(editSchema.safeParse({ projectId: "p", expectedRevision: 0, commands: [
+  assert.equal(editSchema.safeParse({ projectId: "p", expectedTabId: "t", expectedRevision: 0, commands: [
     { type: "update_visual", scope: "common", elementId: "title", style: { invented: true } },
   ] }).success, false);
 });

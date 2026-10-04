@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -51,12 +51,19 @@ try {
   let recovery: Project | undefined;
   await client.connect(new StreamableHTTPClientTransport(new URL(`${origin}/mcp`)));
   async function call(name: string, args: Record<string, unknown>) {
+    if ((name === "edit_project" || name === "undo_project") && !args.expectedTabId) {
+      const current = await fetch(`${origin}/api/content-jobs/${args.projectId}`).then(response => response.json()) as Project;
+      args = { ...args, expectedTabId: current.tabId };
+    }
     const result = CallToolResultSchema.parse(await client.callTool({ name, arguments: args }));
     if (result.isError) throw new Error(JSON.stringify(result));
     return result;
   }
   const tools = (await client.listTools()).tools.map((tool) => tool.name);
-  assert.equal(tools.length, 7);
+  assert.deepEqual([...tools].sort(), [
+    "list_projects", "open_project", "create_project", "read_project",
+    "edit_project", "undo_project", "preview_slide",
+  ].sort(), "MCP must expose only the supported tools, without project deletion or tab close");
   assert.equal(tools.includes("add_image"), false);
   console.log("connected", tools);
 
@@ -77,6 +84,7 @@ try {
     await listPage.goto(origin);
     await listPage.getByRole("heading", { name: "MCP smoke", exact: true }).waitFor();
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+    page.on("pageerror", error => console.error("Browser error", error.message));
     await page.goto(created.url);
     await page.getByRole("button", { name: "ZIP 내보내기" }).waitFor();
     const frame = { x: 0.1, y: 0.2, width: 0.8, height: 0.2 };
@@ -88,7 +96,7 @@ try {
     await writeFile(localPath, await sharp({ create: {
       width: 60, height: 60, channels: 3, background: "#00FF00",
     } }).png().toBuffer());
-    const updated = (await call("edit_project", { projectId: id, expectedRevision: 0, commands: [
+    const updated = (await call("edit_project", { projectId: id, expectedTabId: created.tabId, expectedRevision: 0, commands: [
       { type: "add_element", element: { id: "title", name: "Title", role: "Main headline", kind: "text", frame, style } },
       { type: "place_element", slideId: "slide-1", elementId: "title", placementId: "title-1" },
       { type: "set_slot_value", slideId: "slide-1", placementId: "title-1", value: "CHEST ROUTINE" },
@@ -134,7 +142,7 @@ try {
     const listed = (await call("list_projects", {})).structuredContent as { projects: Array<{ id: string }> };
     assert.equal(listed.projects.filter((project) => project.id === cloned.id).length, 1);
     const invalid = await client.callTool({ name: "edit_project", arguments: {
-      projectId: id, expectedRevision: 0, commands: [{ type: "rename_slide", slideId: "slide-1", name: "stale" }],
+      projectId: id, expectedTabId: created.tabId, expectedRevision: 0, commands: [{ type: "rename_slide", slideId: "slide-1", name: "stale" }],
     } });
     assert.equal(invalid.isError, true);
     const denied = await fetch(`${origin}/mcp`, {
@@ -182,7 +190,7 @@ try {
     const colorUndo = (await call("undo_project", { projectId: colorProject.id, expectedRevision: colored.editor.revision })).structuredContent as Project;
     assert.equal(colorUndo.editor.document.slides[0].placements.find(p => p.id === "color-title-1")?.textColors, undefined);
     const invalidColor = await client.callTool({ name: "edit_project", arguments: { projectId: colorProject.id,
-      expectedRevision: colorUndo.editor.revision, commands: [{ type: "set_text_colors", slideId: "slide-1", placementId: "color-title-1",
+      expectedTabId: colorUndo.tabId, expectedRevision: colorUndo.editor.revision, commands: [{ type: "set_text_colors", slideId: "slide-1", placementId: "color-title-1",
         textColors: [{ start: 0, end: 1000, color: "#FF0000" }] }] } });
     assert.equal(invalidColor.isError, true);
     const afterInvalidColor = (await call("read_project", { projectId: colorProject.id })).structuredContent as Project;
@@ -206,8 +214,257 @@ try {
     }
     console.log("PASS selected text color UI, exact glyph-layout preservation, clone, undo and invalid ranges");
 
+    const tabBar = page.getByRole("navigation", { name: "프로젝트 탭", exact: true });
+    await tabBar.getByRole("button", { name: "Colored clone", exact: true }).click();
+    await page.waitForURL(url => url.searchParams.get("job") === colorClone.id);
+    await page.locator(`[data-tab-id="${colorClone.tabId}"]`).waitFor();
+    let editRequests = 0;
+    page.on("request", request => {
+      if (request.method() === "POST" && request.url().endsWith(`/api/content-jobs/${colorClone.id}`)) editRequests++;
+    });
+    await page.getByLabel("내용", { exact: true }).fill("FAST SWITCH");
+    await tabBar.getByRole("button", { name: "Partial colors", exact: true }).click();
+    await page.waitForURL(url => url.searchParams.get("job") === colorProject.id);
+    await page.locator(`[data-tab-id="${colorProject.tabId}"]`).waitFor();
+    const switchedClone = (await call("read_project", { projectId: colorClone.id })).structuredContent as Project;
+    assert.equal(switchedClone.editor.document.slides[0].placements.find(p => p.id === "color-title-1")?.value, "FAST SWITCH");
+    assert.equal(editRequests, 1, "flush and debounce must share one edit request");
+    await page.getByRole("button", { name: "슬라이드 배경 선택", exact: true }).click();
+    await page.getByLabel("슬라이드 배경색", { exact: true }).fill("#123456");
+    await tabBar.getByRole("button", { name: "Colored clone", exact: true }).click();
+    await page.waitForURL(url => url.searchParams.get("job") === colorClone.id);
+    await page.locator(`[data-tab-id="${colorClone.tabId}"]`).waitFor();
+    const switchedBackground = (await call("read_project", { projectId: colorProject.id })).structuredContent as Project;
+    assert.equal(switchedBackground.editor.document.slides[0].backgroundColor, "#123456");
+    await page.getByRole("button", { name: /^2장 .*선택 및 순서 이동$/ }).click();
+    await page.getByRole("checkbox", { name: "가이드", exact: true }).uncheck();
+    await tabBar.getByRole("button", { name: "Partial colors", exact: true }).click();
+    await page.waitForURL(url => url.searchParams.get("job") === colorProject.id);
+    await page.locator(`[data-tab-id="${colorProject.tabId}"]`).waitFor();
+    await tabBar.getByRole("button", { name: "Colored clone", exact: true }).click();
+    await page.waitForURL(url => url.searchParams.get("job") === colorClone.id);
+    await page.locator(`[data-tab-id="${colorClone.tabId}"]`).waitFor();
+    assert.equal(await page.getByRole("checkbox", { name: "가이드", exact: true }).isChecked(), false);
+    assert.equal(await page.getByRole("button", { name: /^2장 .*선택 및 순서 이동$/ }).getAttribute("aria-current"), "page");
+    await page.getByRole("button", { name: "새 탭", exact: true }).click();
+    await writeFile("/tmp/content-studio-new-tab.png", await page.getByRole("dialog").screenshot());
+    await page.getByRole("dialog").getByRole("button", { name: /Colored clone/ }).click();
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+    const openTabs = await fetch(`${origin}/api/content-jobs`).then(response => response.json()) as Array<{ projectId: string }>;
+    assert.equal(openTabs.filter(tab => tab.projectId === colorClone.id).length, 1);
+    await listPage.getByRole("navigation", { name: "프로젝트 탭" }).getByRole("button", { name: "Colored clone", exact: true }).click();
+    await listPage.waitForURL(url => url.searchParams.get("job") === colorClone.id);
+    await page.getByRole("button", { name: "Colored clone 탭 닫기", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "저장 후 종료", exact: true }).click();
+    await page.getByRole("button", { name: "Colored clone 탭 닫기", exact: true }).waitFor({ state: "detached" });
+    await listPage.getByRole("heading", { name: "저장된 프로젝트", exact: true }).waitFor();
+    assert.equal((await fetch(`${origin}/api/content-jobs/${colorClone.id}`)).status, 404);
+    const closedEdit = await client.callTool({ name: "edit_project", arguments: { projectId: colorClone.id,
+      expectedTabId: colorClone.tabId, expectedRevision: switchedClone.editor.revision,
+      commands: [{ type: "rename_slide", slideId: "slide-1", name: "Closed" }] } });
+    assert.equal(closedEdit.isError, true);
+    const reopenedClone = (await call("open_project", { projectId: colorClone.id })).structuredContent as Project;
+    assert.notEqual(reopenedClone.tabId, colorClone.tabId);
+    assert.deepEqual(reopenedClone.editor.document, switchedClone.editor.document);
+    const staleTabEdit = await client.callTool({ name: "edit_project", arguments: { projectId: colorClone.id,
+      expectedTabId: colorClone.tabId, expectedRevision: 0,
+      commands: [{ type: "rename_slide", slideId: "slide-1", name: "Old tab" }] } });
+    assert.equal(staleTabEdit.isError, true);
+    await page.getByRole("button", { name: "새 탭", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "새 편집기 시작", exact: true }).click();
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+    await page.getByRole("button", { name: "ZIP 내보내기" }).waitFor();
+    const blankId = new URL(page.url()).searchParams.get("job");
+    assert.ok(blankId && blankId !== colorClone.id);
+    const blankJob = await fetch(`${origin}/api/content-jobs/${blankId}`).then(response => response.json()) as Project;
+    await page.locator(`[data-tab-id="${blankJob.tabId}"]`).waitFor();
+    await page.goBack();
+    await page.locator(`[data-tab-id="${colorProject.tabId}"]`).waitFor();
+    await page.goForward();
+    await page.locator(`[data-tab-id="${blankJob.tabId}"]`).waitFor();
+    await writeFile("/tmp/content-studio-project-tabs.png", await page.screenshot({ fullPage: true }));
+    console.log("PASS global tabs, chooser reuse, text/background flush, view restoration, two-browser close and stale-tab rejection");
+
+    // A new editor is temporary until explicitly saved (or mutated through MCP).
+    async function savedIds() {
+      return (await fetch(`${origin}/api/content-projects`).then(response => response.json()) as Array<{ id: string }>).map(project => project.id);
+    }
+    const blankTab = tabBar.locator(`[data-project-tab="${blankJob.tabId}"]`);
+    await blankTab.getByRole("button", { name: /이름 변경$/ }).click();
+    await page.getByRole("dialog").getByLabel("프로젝트 이름", { exact: true }).fill("Temporary renamed");
+    await page.getByRole("dialog").getByRole("button", { name: "이름 변경", exact: true }).click();
+    await blankTab.getByRole("button", { name: "Temporary renamed", exact: true }).waitFor();
+    assert.equal((await savedIds()).includes(blankId), false);
+    await blankTab.getByRole("button", { name: /탭 닫기$/ }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "취소", exact: true }).click();
+    assert.equal((await fetch(`${origin}/api/content-jobs/${blankId}`)).status, 200);
+    await blankTab.getByRole("button", { name: /탭 닫기$/ }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "저장하지 않고 종료", exact: true }).click();
+    await blankTab.waitFor({ state: "detached" });
+    assert.equal((await savedIds()).includes(blankId), false);
+
+    async function newBlank() {
+      await tabBar.getByRole("button", { name: "새 탭", exact: true }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "새 편집기 시작", exact: true }).click();
+      await page.getByRole("dialog").waitFor({ state: "hidden" });
+      await page.getByRole("button", { name: "ZIP 내보내기" }).waitFor();
+      const projectId = new URL(page.url()).searchParams.get("job")!;
+      const project = await fetch(`${origin}/api/content-jobs/${projectId}`).then(response => response.json()) as Project;
+      await page.locator(`[data-tab-id="${project.tabId}"]`).waitFor();
+      return project;
+    }
+    const untouched = await newBlank();
+    await tabBar.locator(`[data-project-tab="${untouched.tabId}"]`).getByRole("button", { name: /탭 닫기$/ }).click();
+    await tabBar.locator(`[data-project-tab="${untouched.tabId}"]`).waitFor({ state: "detached" });
+    assert.equal((await savedIds()).includes(untouched.id), false);
+    assert.equal(await page.getByRole("dialog").count(), 0);
+
+    const temporary = await newBlank();
+    await page.getByRole("button", { name: "슬라이드 배경 선택", exact: true }).click();
+    await page.getByLabel("슬라이드 배경색", { exact: true }).fill("#456789");
+    await tabBar.locator(`[data-project-tab="${temporary.tabId}"]`).getByRole("button", { name: /탭 닫기$/ }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "저장 후 종료", exact: true }).click();
+    await tabBar.locator(`[data-project-tab="${temporary.tabId}"]`).waitFor({ state: "detached" });
+    assert.equal((await savedIds()).includes(temporary.id), true);
+    const savedTemporary = (await call("open_project", { projectId: temporary.id })).structuredContent as Project;
+    assert.equal(savedTemporary.editor.document.slides[0].backgroundColor, "#456789");
+    await tabBar.locator(`[data-project-tab="${savedTemporary.tabId}"]`).getByRole("button", { name: "새 프로젝트", exact: true }).click();
+    await page.locator(`[data-tab-id="${savedTemporary.tabId}"]`).waitFor();
+    await tabBar.locator(`[data-project-tab="${savedTemporary.tabId}"]`).getByRole("button", { name: /이름 변경$/ }).click();
+    await page.getByRole("dialog").getByLabel("프로젝트 이름", { exact: true }).fill("Saved renamed");
+    await page.getByRole("dialog").getByRole("button", { name: "이름 변경", exact: true }).click();
+    await page.getByRole("button", { name: "저장됨", exact: true }).waitFor();
+    await listPage.getByRole("heading", { name: "Saved renamed", exact: true }).waitFor();
+    await page.getByRole("button", { name: "프로젝트 삭제", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "삭제", exact: true }).click();
+    await tabBar.locator(`[data-project-tab="${savedTemporary.tabId}"]`).waitFor({ state: "detached" });
+    assert.equal((await savedIds()).includes(temporary.id), false);
+    await listPage.getByRole("heading", { name: "Saved renamed", exact: true }).waitFor({ state: "detached" });
+
+    const listDelete = (await call("create_project", { name: "Delete from list" })).structuredContent as Project;
+    await listPage.getByRole("button", { name: "Delete from list 프로젝트 삭제", exact: true }).click();
+    await listPage.getByRole("dialog").getByRole("button", { name: "삭제", exact: true }).click();
+    await tabBar.locator(`[data-project-tab="${listDelete.tabId}"]`).waitFor({ state: "detached" });
+    assert.equal((await savedIds()).includes(listDelete.id), false);
+    assert.equal((await fetch(`${origin}/api/content-jobs/${listDelete.id}`)).status, 404);
+    await tabBar.getByRole("button", { name: "Partial colors", exact: true }).click();
+    await page.locator(`[data-tab-id="${colorProject.tabId}"]`).waitFor();
+    const pageControls = await page.getByRole("navigation", { name: "페이지 선택", exact: true }).boundingBox();
+    const canvas = await page.locator('div[aria-label$="슬라이드 미리보기"]').boundingBox();
+    assert.ok(pageControls && canvas && pageControls.y >= canvas.y + canvas.height, "page controls must sit below the canvas");
+    await tabBar.getByRole("button", { name: "새 탭", exact: true }).scrollIntoViewIfNeeded();
+    const lastTab = await tabBar.locator("[data-project-tab]").last().boundingBox();
+    const plus = await tabBar.getByRole("button", { name: "새 탭", exact: true }).boundingBox();
+    assert.ok(lastTab && plus && plus.x - (lastTab.x + lastTab.width) <= 8, "plus belongs immediately after the last tab");
+    await writeFile("/tmp/content-studio-project-tabs.png", await page.screenshot({ fullPage: true }));
+    console.log("PASS rename, temporary drafts, cancel/save/discard close, header/list deletion and canvas/tab layout");
+
+    // Malformed mutation bodies are client errors and must not alter a project.
+    for (const [path, method] of [
+      [`/api/content-jobs/${colorProject.id}`, "DELETE"],
+      [`/api/content-projects/${colorProject.id}`, "PATCH"],
+      [`/api/content-projects/${colorProject.id}`, "DELETE"],
+    ]) {
+      for (const body of [null, [], "invalid", 12]) {
+        const response = await fetch(`${origin}${path}`, { method,
+          headers: { origin, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        assert.equal(response.status, 400);
+      }
+    }
+
+    // The dashboard delegates a single project load to the workspace.
+    await tabBar.getByRole("button", { name: "대시보드", exact: true }).click();
+    await page.getByRole("heading", { name: "저장된 프로젝트", exact: true }).waitFor();
+    let openRequests = 0;
+    page.on("request", request => {
+      if (request.method() === "POST" && request.url().endsWith(`/api/content-projects/${colorProject.id}`)) openRequests++;
+    });
+    await page.getByRole("listitem").filter({ has: page.getByRole("heading", { name: "Partial colors", exact: true }) })
+      .getByRole("button", { name: "열기", exact: true }).click();
+    await page.locator(`[data-tab-id="${colorProject.tabId}"]`).waitFor();
+    assert.equal(openRequests, 1);
+
+    // A new edit arriving while the first explicit flush is in flight must also be sent.
+    await page.getByRole("button", { name: "Color title Element 선택", exact: true }).click();
+    const editUrl = `${origin}/api/content-jobs/${colorProject.id}`;
+    let releaseEdit!: () => void;
+    let editStarted!: () => void;
+    const editGate = new Promise<void>(resolve => { releaseEdit = resolve; });
+    const editSeen = new Promise<void>(resolve => { editStarted = resolve; });
+    let interceptedEdits = 0;
+    await page.route(editUrl, async route => {
+      if (route.request().method() !== "POST") return route.continue();
+      interceptedEdits++;
+      if (interceptedEdits === 1) { editStarted(); await editGate; }
+      await route.continue();
+    });
+    await page.getByLabel("이름", { exact: true }).fill("First during flush");
+    await tabBar.getByRole("button", { name: "Colored clone", exact: true }).click();
+    await editSeen;
+    await page.getByLabel("이름", { exact: true }).fill("Latest during flush");
+    releaseEdit();
+    await page.locator(`[data-tab-id="${reopenedClone.tabId}"]`).waitFor();
+    await page.unroute(editUrl);
+    const flushedName = (await call("read_project", { projectId: colorProject.id })).structuredContent as Project;
+    assert.equal(flushedName.editor.document.elements.find(element => element.id === "color-title")?.name, "Latest during flush");
+    assert.equal(interceptedEdits, 2);
+    await tabBar.getByRole("button", { name: "Partial colors", exact: true }).click();
+    await page.locator(`[data-tab-id="${colorProject.tabId}"]`).waitFor();
+
+    // Failed queued commands stop the switch and leave the editor available for retry.
+    let releaseFailedCommand!: () => void;
+    let failedCommandStarted!: () => void;
+    const failedCommandGate = new Promise<void>(resolve => { releaseFailedCommand = resolve; });
+    const failedCommandSeen = new Promise<void>(resolve => { failedCommandStarted = resolve; });
+    await page.route(editUrl, async route => {
+      if (route.request().method() !== "POST") return route.continue();
+      failedCommandStarted(); await failedCommandGate;
+      await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "Injected command failure" }) });
+    });
+    await page.getByLabel("화면 비율", { exact: true }).selectOption("1:1");
+    await failedCommandSeen;
+    await tabBar.getByRole("button", { name: "Colored clone", exact: true }).click();
+    releaseFailedCommand();
+    await page.getByText("입력 중인 변경을 반영하지 못했습니다. 현재 탭을 확인해 주세요.", { exact: true }).waitFor();
+    assert.equal(new URL(page.url()).searchParams.get("job"), colorProject.id);
+    await page.unroute(editUrl);
+    const retryResponse = page.waitForResponse(response => response.url() === editUrl && response.request().method() === "POST");
+    await page.getByLabel("화면 비율", { exact: true }).selectOption("1:1");
+    assert.equal((await retryResponse).status(), 200);
+
+    // A failed in-flight image operation must also prevent switching away.
+    const assetUrl = `${editUrl}/assets`;
+    let releaseImage!: () => void;
+    let imageStarted!: () => void;
+    const imageGate = new Promise<void>(resolve => { releaseImage = resolve; });
+    const imageSeen = new Promise<void>(resolve => { imageStarted = resolve; });
+    await page.route(assetUrl, async route => {
+      imageStarted(); await imageGate;
+      await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "Injected image failure" }) });
+    });
+    const imageBytes = [...await readFile(localPath)];
+    await page.locator('div[aria-label$="슬라이드 미리보기"]').evaluate((element, bytes) => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([new Uint8Array(bytes)], "test.png", { type: "image/png" }));
+      element.dispatchEvent(new DragEvent("drop", { bubbles: true, dataTransfer: transfer }));
+    }, imageBytes);
+    await imageSeen;
+    await tabBar.getByRole("button", { name: "Colored clone", exact: true }).click();
+    releaseImage();
+    await page.getByText("입력 중인 변경을 반영하지 못했습니다. 현재 탭을 확인해 주세요.", { exact: true }).waitFor();
+    assert.equal(new URL(page.url()).searchParams.get("job"), colorProject.id);
+    await page.unroute(assetUrl);
+    console.log("PASS malformed JSON, one dashboard load, newer input during flush and failed command/image switch guards");
+
     console.log("PASS autosave status and live project-list refresh");
     console.log("PASS shared memory, clone independence, open/list, undo, revision conflict and cross-origin rejection");
+  } catch (error) {
+    const pages = browser.contexts().flatMap(context => context.pages());
+    for (const [index, failedPage] of pages.entries()) {
+      console.log("failed page", index, await failedPage.locator("body").innerText());
+      await failedPage.screenshot({ path: `/tmp/studio-tabs-failure-${index}.png` });
+    }
+    throw error;
   } finally { await browser.close(); }
   assert.ok(recovery);
   await client.close();

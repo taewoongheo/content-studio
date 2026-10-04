@@ -17,9 +17,10 @@ import { saveContentProject } from "@/screens/projects/api";
 
 export type ProjectSaveHandle = { saveAutomatically: () => Promise<boolean> };
 
-export function ProjectSaveControl({ ref, jobId, revision, getRevision, defaultName, initialProjectName, currentProjectName, persistedRevision, disabled, onBeforeSave }: {
+export function ProjectSaveControl({ ref, jobId, tabId, revision, getRevision, defaultName, initialProjectName, currentProjectName, persistedRevision, disabled, onBeforeSave }: {
   ref?: Ref<ProjectSaveHandle>;
   jobId: string;
+  tabId: string;
   revision: number;
   getRevision: () => number;
   defaultName: string;
@@ -42,7 +43,7 @@ export function ProjectSaveControl({ ref, jobId, revision, getRevision, defaultN
     setError("");
     try {
       if (!(await onBeforeSave())) return false;
-      const project = await saveContentProject(jobId, name);
+      const project = await saveContentProject(jobId, name, tabId);
       setProjectName(project.name);
       setDraftName(project.name);
       setSavedRevision(getRevision());

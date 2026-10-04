@@ -222,7 +222,7 @@ export function SlideCanvas({
   return (
     <div
       ref={canvasRef}
-      className={`relative mx-auto h-[85%] w-auto max-h-[85%] max-w-full ${showOverflow ? "overflow-visible" : "overflow-hidden"} border bg-white shadow-sm ${selectedPlacementId === BACKGROUND_PLACEMENT_ID ? `ring-2 ${selectionRing} ring-offset-2` : ""}`}
+      className={`relative mx-auto h-[90%] w-auto max-h-[90%] max-w-full ${showOverflow ? "overflow-visible" : "overflow-hidden"} border bg-white shadow-sm ${selectedPlacementId === BACKGROUND_PLACEMENT_ID ? `ring-2 ${selectionRing} ring-offset-2` : ""}`}
       style={{
         aspectRatio: document.aspectRatio.replace(":", "/"),
         containerType: "inline-size",

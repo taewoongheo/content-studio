@@ -12,11 +12,11 @@ export function listContentProjects() {
     .then((response) => readJson<SavedProjectSummary[]>(response));
 }
 
-export function saveContentProject(jobId: string, name: string) {
+export function saveContentProject(jobId: string, name: string, tabId?: string) {
   return fetch("/api/content-projects", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jobId, name }),
+    body: JSON.stringify({ jobId, name, expectedTabId: tabId }),
   }).then((response) => readJson<SavedProjectSummary>(response));
 }
 
@@ -25,4 +25,20 @@ export function loadContentProject(projectId: string) {
     method: "POST",
   })
     .then((response) => readJson<ContentJobSnapshot>(response));
+}
+
+async function projectMutation(id: string, method: "PATCH" | "DELETE", body: Record<string, unknown>) {
+  const response = await fetch(`/api/content-projects/${encodeURIComponent(id)}`, {
+    method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const result = await response.json().catch(() => null);
+    throw new Error(result?.error ?? "프로젝트를 변경하지 못했습니다.");
+  }
+}
+export function renameProject(id: string, name: string, expectedTabId?: string) {
+  return projectMutation(id, "PATCH", { name, expectedTabId });
+}
+export function deleteProject(id: string, expectedTabId?: string) {
+  return projectMutation(id, "DELETE", { expectedTabId });
 }
