@@ -12,7 +12,7 @@ export function ProjectTabs({ tabs, activeTabId, busy, onSelect, onClose, onRena
     <Button variant="ghost" size="icon-sm" className="mb-1 mr-1 shrink-0" aria-label="대시보드" disabled={busy} onClick={onDashboard}><LayoutDashboard className="size-4" /></Button>
     <div className="flex h-full min-w-0 flex-1 items-end overflow-x-auto">
       {tabs.map(tab => <div data-project-tab={tab.tabId} key={tab.tabId}
-        className={`group relative flex h-10 w-52 shrink-0 items-center ${activeTabId === tab.tabId ? "-mb-px rounded-t-lg border border-b-background bg-background" : "border-r border-border hover:bg-background/50"}`}>
+        className={`group relative -mb-px flex h-10 w-52 shrink-0 items-center rounded-t-lg border ${activeTabId === tab.tabId ? "border-b-background bg-background" : "border-b-muted bg-muted hover:bg-background/50"}`}>
         <button type="button" aria-label={tab.name} aria-describedby={(tab.savedRevision ?? 0) !== tab.revision ? `unsaved-${tab.tabId}` : undefined}
           aria-current={activeTabId === tab.tabId ? "page" : undefined} disabled={busy}
           title="더블 클릭 또는 F2로 프로젝트 이름 변경"
