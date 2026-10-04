@@ -2,14 +2,13 @@
 import { useState } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
 import { StudioSidebar } from "./components/studio-sidebar";
 import { PublishedContentPage } from "./components/published/published-content-page";
 import { AssetLibraryPage } from "./components/assets/asset-library-page";
 import { SavedProjectsPage } from "./components/projects/saved-projects-page";
 
 export function DashboardContent({ onOpen, onNew }: {
-  onOpen: (job: ContentJobSnapshot) => void; onNew: () => void;
+  onOpen: (projectId: string) => Promise<void>; onNew: () => void;
 }) {
   const [tab, setTab] = useState("projects");
   return (

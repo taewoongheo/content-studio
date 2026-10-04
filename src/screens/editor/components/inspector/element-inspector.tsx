@@ -46,7 +46,7 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
   const previous = useRef({ element, placement });
   const commands = commandsFromDraft(draft, element, placement, slideId, visualTargets, selectedSlideIds);
   const valid = validElementDraft(draft);
-  const { saving, failed, flushPending } = useAutosave(commands, !disabled && valid, onSave);
+  const { saving, failed, flushPending } = useAutosave(commands, { valid, paused: disabled }, onSave);
   const isShape = element.kind === "rectangle" || element.kind === "circle" || element.kind === "triangle";
 
   useEffect(() => {

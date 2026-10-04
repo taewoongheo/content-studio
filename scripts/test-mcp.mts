@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -358,6 +358,103 @@ try {
     assert.ok(lastTab && plus && plus.x - (lastTab.x + lastTab.width) <= 8, "plus belongs immediately after the last tab");
     await writeFile("/tmp/content-studio-project-tabs.png", await page.screenshot({ fullPage: true }));
     console.log("PASS rename, temporary drafts, cancel/save/discard close, header/list deletion and canvas/tab layout");
+
+    // Malformed mutation bodies are client errors and must not alter a project.
+    for (const [path, method] of [
+      [`/api/content-jobs/${colorProject.id}`, "DELETE"],
+      [`/api/content-projects/${colorProject.id}`, "PATCH"],
+      [`/api/content-projects/${colorProject.id}`, "DELETE"],
+    ]) {
+      for (const body of [null, [], "invalid", 12]) {
+        const response = await fetch(`${origin}${path}`, { method,
+          headers: { origin, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        assert.equal(response.status, 400);
+      }
+    }
+
+    // The dashboard delegates a single project load to the workspace.
+    await tabBar.getByRole("button", { name: "대시보드", exact: true }).click();
+    await page.getByRole("heading", { name: "저장된 프로젝트", exact: true }).waitFor();
+    let openRequests = 0;
+    page.on("request", request => {
+      if (request.method() === "POST" && request.url().endsWith(`/api/content-projects/${colorProject.id}`)) openRequests++;
+    });
+    await page.getByRole("listitem").filter({ has: page.getByRole("heading", { name: "Partial colors", exact: true }) })
+      .getByRole("button", { name: "열기", exact: true }).click();
+    await page.locator(`[data-tab-id="${colorProject.tabId}"]`).waitFor();
+    assert.equal(openRequests, 1);
+
+    // A new edit arriving while the first explicit flush is in flight must also be sent.
+    await page.getByRole("button", { name: "Color title Element 선택", exact: true }).click();
+    const editUrl = `${origin}/api/content-jobs/${colorProject.id}`;
+    let releaseEdit!: () => void;
+    let editStarted!: () => void;
+    const editGate = new Promise<void>(resolve => { releaseEdit = resolve; });
+    const editSeen = new Promise<void>(resolve => { editStarted = resolve; });
+    let interceptedEdits = 0;
+    await page.route(editUrl, async route => {
+      if (route.request().method() !== "POST") return route.continue();
+      interceptedEdits++;
+      if (interceptedEdits === 1) { editStarted(); await editGate; }
+      await route.continue();
+    });
+    await page.getByLabel("이름", { exact: true }).fill("First during flush");
+    await tabBar.getByRole("button", { name: "Colored clone", exact: true }).click();
+    await editSeen;
+    await page.getByLabel("이름", { exact: true }).fill("Latest during flush");
+    releaseEdit();
+    await page.locator(`[data-tab-id="${reopenedClone.tabId}"]`).waitFor();
+    await page.unroute(editUrl);
+    const flushedName = (await call("read_project", { projectId: colorProject.id })).structuredContent as Project;
+    assert.equal(flushedName.editor.document.elements.find(element => element.id === "color-title")?.name, "Latest during flush");
+    assert.equal(interceptedEdits, 2);
+    await tabBar.getByRole("button", { name: "Partial colors", exact: true }).click();
+    await page.locator(`[data-tab-id="${colorProject.tabId}"]`).waitFor();
+
+    // Failed queued commands stop the switch and leave the editor available for retry.
+    let releaseFailedCommand!: () => void;
+    let failedCommandStarted!: () => void;
+    const failedCommandGate = new Promise<void>(resolve => { releaseFailedCommand = resolve; });
+    const failedCommandSeen = new Promise<void>(resolve => { failedCommandStarted = resolve; });
+    await page.route(editUrl, async route => {
+      if (route.request().method() !== "POST") return route.continue();
+      failedCommandStarted(); await failedCommandGate;
+      await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "Injected command failure" }) });
+    });
+    await page.getByLabel("화면 비율", { exact: true }).selectOption("1:1");
+    await failedCommandSeen;
+    await tabBar.getByRole("button", { name: "Colored clone", exact: true }).click();
+    releaseFailedCommand();
+    await page.getByText("입력 중인 변경을 반영하지 못했습니다. 현재 탭을 확인해 주세요.", { exact: true }).waitFor();
+    assert.equal(new URL(page.url()).searchParams.get("job"), colorProject.id);
+    await page.unroute(editUrl);
+    const retryResponse = page.waitForResponse(response => response.url() === editUrl && response.request().method() === "POST");
+    await page.getByLabel("화면 비율", { exact: true }).selectOption("1:1");
+    assert.equal((await retryResponse).status(), 200);
+
+    // A failed in-flight image operation must also prevent switching away.
+    const assetUrl = `${editUrl}/assets`;
+    let releaseImage!: () => void;
+    let imageStarted!: () => void;
+    const imageGate = new Promise<void>(resolve => { releaseImage = resolve; });
+    const imageSeen = new Promise<void>(resolve => { imageStarted = resolve; });
+    await page.route(assetUrl, async route => {
+      imageStarted(); await imageGate;
+      await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "Injected image failure" }) });
+    });
+    const imageBytes = [...await readFile(localPath)];
+    await page.locator('div[aria-label$="슬라이드 미리보기"]').evaluate((element, bytes) => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([new Uint8Array(bytes)], "test.png", { type: "image/png" }));
+      element.dispatchEvent(new DragEvent("drop", { bubbles: true, dataTransfer: transfer }));
+    }, imageBytes);
+    await imageSeen;
+    await tabBar.getByRole("button", { name: "Colored clone", exact: true }).click();
+    releaseImage();
+    await page.getByText("입력 중인 변경을 반영하지 못했습니다. 현재 탭을 확인해 주세요.", { exact: true }).waitFor();
+    assert.equal(new URL(page.url()).searchParams.get("job"), colorProject.id);
+    await page.unroute(assetUrl);
+    console.log("PASS malformed JSON, one dashboard load, newer input during flush and failed command/image switch guards");
 
     console.log("PASS autosave status and live project-list refresh");
     console.log("PASS shared memory, clone independence, open/list, undo, revision conflict and cross-origin rejection");

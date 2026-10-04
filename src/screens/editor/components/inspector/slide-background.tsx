@@ -15,7 +15,7 @@ export function SlideBackground({ ref, color, disabled, onSave }: {
   const [draft, setDraft] = useState({ source: color, value: color });
   if (draft.source !== color) setDraft({ source: color, value: color });
 
-  const { flushPending, failed } = useAutosave(draft.value === color ? [] : [draft.value], !disabled,
+  const { flushPending, failed } = useAutosave(draft.value === color ? [] : [draft.value], { valid: true, paused: disabled },
     (colors) => onSave(colors[0]));
   useImperativeHandle(ref, () => ({ flushPending }), [flushPending]);
 

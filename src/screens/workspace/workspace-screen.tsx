@@ -50,9 +50,9 @@ export function WorkspaceScreen() {
     const next = await loadContentProject(projectId);
     current.current = next; setJob(next); setInitialViewState(views.current.get(next.tabId)); setChooser(false); updateUrl(next.id, replace);
   }
-  function select(projectId: string) {
+  async function select(projectId: string) {
     if (job?.id === projectId) { setChooser(false); return; }
-    void run(async () => { await prepareSwitch(); await showProject(projectId); });
+    await run(async () => { await prepareSwitch(); await showProject(projectId); });
   }
   function dashboard() {
     void run(async () => { await prepareSwitch(); current.current = null; setJob(null); updateUrl(null); });
@@ -104,7 +104,7 @@ export function WorkspaceScreen() {
       {busy && <div className="absolute inset-0 z-40 cursor-wait bg-background/20" aria-label="탭 처리 중" />}
       {job ? <EditorScreen key={job.tabId} ref={editor} initialJob={job} initialProjectName={job.savedRevision !== undefined ? job.name : undefined}
         initialViewState={initialViewState} onNewJob={dashboard} />
-        : <DashboardContent onOpen={next => select(next.id)} onNew={() => setChooser(true)} />}
+        : <DashboardContent onOpen={select} onNew={() => setChooser(true)} />}
     </div>
     {lifecycle.closing && <CloseTabDialog tab={lifecycle.closing} busy={busy} error={error} onCancel={lifecycle.cancelClose} onDecision={lifecycle.decideClose} />}
     {lifecycle.renaming && <RenameTabDialog key={lifecycle.renaming.tabId} tab={lifecycle.renaming} busy={busy} error={error} onCancel={lifecycle.cancelRename} onRename={lifecycle.rename} />}

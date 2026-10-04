@@ -19,7 +19,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
   if (!isLocalRequest(request, true)) return new Response(null, { status: 403 });
   try {
     const { projectId } = await context.params;
-    const { name, expectedTabId } = await request.json();
+    const body: unknown = await request.json();
+    if (!body || typeof body !== "object" || Array.isArray(body))
+      return Response.json({ error: "프로젝트 정보를 확인해 주세요." }, { status: 400 });
+    const { name, expectedTabId } = body as Record<string, unknown>;
     if (typeof name !== "string" || (expectedTabId !== undefined && typeof expectedTabId !== "string"))
       return Response.json({ error: "프로젝트 정보를 확인해 주세요." }, { status: 400 });
     renameProject(contentJobRegistry, projectId, name, expectedTabId);
@@ -30,7 +33,10 @@ export async function DELETE(request: Request, context: { params: Promise<{ proj
   if (!isLocalRequest(request, true)) return new Response(null, { status: 403 });
   try {
     const { projectId } = await context.params;
-    const { expectedTabId } = await request.json();
+    const body: unknown = await request.json();
+    if (!body || typeof body !== "object" || Array.isArray(body))
+      return Response.json({ error: "프로젝트 정보를 확인해 주세요." }, { status: 400 });
+    const { expectedTabId } = body as Record<string, unknown>;
     if (expectedTabId !== undefined && typeof expectedTabId !== "string")
       return Response.json({ error: "탭 정보를 확인해 주세요." }, { status: 400 });
     deleteProject(contentJobRegistry, projectId, expectedTabId);

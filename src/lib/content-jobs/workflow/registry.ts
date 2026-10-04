@@ -88,9 +88,9 @@ export class ContentJobRegistry {
     if (onClose) { closed.add(onClose); this.closeListeners.set(id, closed); }
     return () => {
       if (onClose) closed.delete(onClose);
-      if (!closed.size) this.closeListeners.delete(id);
+      if (!closed.size && this.closeListeners.get(id) === closed) this.closeListeners.delete(id);
       listeners.delete(listener);
-      if (!listeners.size) this.listeners.delete(id);
+      if (!listeners.size && this.listeners.get(id) === listeners) this.listeners.delete(id);
     };
   }
   private snapshot(job: ContentJobRecord): ContentJobSnapshot {

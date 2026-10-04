@@ -39,11 +39,14 @@ export async function DELETE(request: Request, context: Context) {
   if (!isLocalRequest(request, true)) return new Response(null, { status: 403 });
   try {
     const { jobId } = await context.params;
-    const { expectedTabId, expectedRevision, decision = "check" } = await request.json();
+    const body: unknown = await request.json();
+    if (!body || typeof body !== "object" || Array.isArray(body))
+      return Response.json({ error: "잘못된 요청입니다." }, { status: 400 });
+    const { expectedTabId, expectedRevision, decision = "check" } = body as Record<string, unknown>;
     if (typeof expectedTabId !== "string" || !Number.isInteger(expectedRevision))
       return Response.json({ error: "현재 탭 ID와 revision이 필요합니다." }, { status: 400 });
-    if (!["check", "save", "discard"].includes(decision)) return Response.json({ error: "종료 방식을 확인해 주세요." }, { status: 400 });
-    const result = closeProjectTab(contentJobRegistry, jobId, expectedTabId, expectedRevision, undefined, undefined, decision);
+    if (decision !== "check" && decision !== "save" && decision !== "discard") return Response.json({ error: "종료 방식을 확인해 주세요." }, { status: 400 });
+    const result = closeProjectTab(contentJobRegistry, jobId, expectedTabId, expectedRevision as number, undefined, undefined, decision);
     if (result.requiresConfirmation) return Response.json(result);
     return new Response(null, { status: 204 });
   } catch (error) { return contentJobErrorResponse(error); }

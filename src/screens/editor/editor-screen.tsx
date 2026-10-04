@@ -74,7 +74,8 @@ export function EditorScreen({ ref, initialViewState, initialJob, initialProject
   const projectSaveRef = useRef<ProjectSaveHandle>(null);
   const imageLibraryButtonRef = useRef<HTMLButtonElement>(null);
   const latestRevision = useRef(job.editor.revision);
-  const commandQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const commandQueue = useRef<Promise<boolean>>(Promise.resolve(true));
+  const failedCommands = useRef(0);
   const clipboard = useRef<ElementClipboard | null>(null);
   const [enqueueClipboard] = useState(createClipboardQueue);
   const latestDocument = useRef(job.editor.document);
@@ -91,14 +92,25 @@ export function EditorScreen({ ref, initialViewState, initialJob, initialProject
   const imageRatioKey = element?.kind === "image" ? element.id : "";
   const imageAspectRatioLocked = Boolean(imageRatioKey) && !unlockedImageRatios.has(imageRatioKey);
 
+  async function waitForCommands() {
+    let successful = true;
+    let queued: Promise<boolean>;
+    do {
+      queued = commandQueue.current;
+      successful = (await queued) && successful;
+    } while (queued !== commandQueue.current);
+    return successful;
+  }
+
   useImperativeHandle(ref, () => ({
     flushPending: async () => {
-      await Promise.all([...activeWork.current]);
-      await commandQueue.current;
+      const failuresBeforeFlush = failedCommands.current;
+      const workResults = await Promise.all([...activeWork.current]);
+      const commandsSaved = await waitForCommands();
+      if (workResults.includes(false) || !commandsSaved || failedCommands.current !== failuresBeforeFlush) return false;
       if (backgroundRef.current && !(await backgroundRef.current.flushPending())) return false;
       if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
-      await commandQueue.current;
-      return true;
+      return (await waitForCommands()) && failedCommands.current === failuresBeforeFlush;
     },
     getViewState: () => ({ slideId: slide?.id ?? slideId, placementId: placement?.id ?? null,
       scopeSelection, showGuides, showOverflow, unlockedImageRatios: [...unlockedImageRatios] }),
@@ -145,10 +157,11 @@ export function EditorScreen({ ref, initialViewState, initialJob, initialProject
         return true;
       } catch {
         setDismissedIssue(null);
+        failedCommands.current++;
         return false;
       }
     });
-    commandQueue.current = pending.then(() => undefined);
+    commandQueue.current = pending;
     return pending;
   }
 
@@ -325,8 +338,7 @@ export function EditorScreen({ ref, initialViewState, initialJob, initialProject
           <ProjectPromptCopyButton projectId={job.id} size="sm" disabled={disabled || !document}
             onBeforeCopy={async () => {
               if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
-              await commandQueue.current;
-              return true;
+              return waitForCommands();
             }} />
           <label className="flex items-center gap-2 text-xs">
             <span className="sr-only">화면 비율</span>
@@ -346,8 +358,7 @@ export function EditorScreen({ ref, initialViewState, initialJob, initialProject
             initialProjectName={initialProjectName} disabled={disabled || !document}
             onBeforeSave={async () => {
               if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
-              await commandQueue.current;
-              return true;
+              return waitForCommands();
             }} />
           {document && <ExportControl jobId={job.id} disabled={disabled}
             onBeforeExport={prepareExport} onError={(message) => { setDismissedIssue(null); setImageError(message); }} />}
