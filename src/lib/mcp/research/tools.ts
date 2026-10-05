@@ -12,7 +12,7 @@ const jobSchema = z.strictObject({ jobId: z.uuid() });
 const annotations = { readOnlyHint: false, destructiveHint: false, openWorldHint: true };
 export function registerResearchTools(server: McpServer, registry: CollectionRegistry = researchRegistry) {
   server.registerTool("list_account_posts", {
-    description: "Start a bounded anonymous account-post collection. YouTube collects community posts. Declare your research purpose and use criteria from AGENTS.md or the user's request; creation does not require research. Returns jobId/sessionId; use get_collection_job for results. Instagram/TikTok anonymous feeds may be blocked or unavailable. No comments are fetched. Reuse sessionId for cursor pagination. Never assume missing metrics satisfy criteria.",
+    description: "Start a bounded anonymous account-post collection. YouTube collects community posts. Declare your research purpose and follow AGENTS.md and docs/research-guidelines.md, with explicit user instructions taking precedence. For creation without a reference, begin research before selecting a template. Returns jobId/sessionId; use get_collection_job for results. Instagram/TikTok anonymous feeds may be blocked or unavailable. No comments are fetched. Reuse sessionId for cursor pagination. Never assume missing metrics satisfy criteria.",
     inputSchema: z.strictObject({ accountUrl: z.url(), limit: z.number().int().min(1).max(30).default(10),
       criteria: criteriaSchema.optional(), cursor: z.string().max(200).optional(), sessionId: z.uuid().optional() }), annotations,
   }, input => guarded(() => json(registry.start({ source: socialSource(input.accountUrl, "account"),

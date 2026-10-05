@@ -8,4 +8,3 @@ export function guarded(operation: () => Promise<CallToolResult> | CallToolResul
   }));
 }
 export const annotations = (readOnlyHint: boolean) => ({ readOnlyHint, destructiveHint: false, openWorldHint: false });
-
