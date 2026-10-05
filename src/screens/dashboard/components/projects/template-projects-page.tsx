@@ -39,13 +39,13 @@ export function TemplateProjectsPage({ onOpen }: { onOpen: (projectId: string) =
         <p className="mt-1.5 text-xs text-muted-foreground">
           {project.aspectRatio} · {project.slideCount}장 · {project.outputLanguage} · {dateFormatter.format(new Date(project.updatedAt))}
         </p>
-        <details className="group mt-3 text-sm leading-relaxed">
+        {project.composition.trim() && <details className="group mt-3 text-sm leading-relaxed">
           <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
             <ChevronRight className="size-4 shrink-0 group-open:rotate-90" aria-hidden="true" />
             구성
           </summary>
-          <p className="mt-2 whitespace-pre-wrap break-words text-muted-foreground">{project.composition || "구성을 작성해 주세요."}</p>
-        </details>
+          <p className="mt-2 whitespace-pre-wrap break-words text-muted-foreground">{project.composition}</p>
+        </details>}
       </div>
       <div className="flex min-w-0 flex-wrap items-start gap-2">
         <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void openProject(project.id)}>
