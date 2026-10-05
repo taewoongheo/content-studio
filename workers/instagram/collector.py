@@ -38,7 +38,8 @@ def normalize(post):
         "publishedLabel": None,
         "collectedAt": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
         "metrics": {"likeCount": nonnegative(node.get("like_count")),
-                    "viewCount": nonnegative(node.get("view_count", node.get("play_count"))),
+                    "viewCount": nonnegative(node.get("view_count")) if node.get("view_count") is not None
+                                 else nonnegative(node.get("play_count")),
                     "saveCount": None, "commentCount": nonnegative(node.get("comment_count")),
                     "shareCount": None},
         "media": media,

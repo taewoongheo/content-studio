@@ -1,0 +1,33 @@
+{
+  "version": "v1.1.1",
+  "assets": {
+    "captcha-bypass-cli-linux-arm64": {
+      "url": "https://github.com/Hiram-Wong/captcha-bypass/releases/download/v1.1.1/captcha-bypass-cli-linux-arm64",
+      "sha256": "eebf828f927a095726eda25679911ceb0521fac6187c608c52fe872e25b681f2"
+    },
+    "captcha-bypass-cli-linux-x64": {
+      "url": "https://github.com/Hiram-Wong/captcha-bypass/releases/download/v1.1.1/captcha-bypass-cli-linux-x64",
+      "sha256": "25ce0588bd0c243c7b62410368a63cacaaceec0c1ccab8a09125cf05410d4e0c"
+    },
+    "captcha-bypass-cli-mac-arm64": {
+      "url": "https://github.com/Hiram-Wong/captcha-bypass/releases/download/v1.1.1/captcha-bypass-cli-mac-arm64",
+      "sha256": "4c864ac416c2e4553759a62ad2d8afd7e56b179c0fdeead57b55284030bbbe0c"
+    },
+    "captcha-bypass-cli-mac-x64": {
+      "url": "https://github.com/Hiram-Wong/captcha-bypass/releases/download/v1.1.1/captcha-bypass-cli-mac-x64",
+      "sha256": "acfacd4c95d7c99817a6274f181724a7c4b5bcecd6d4447b9b7c1102664bbe94"
+    },
+    "captcha-bypass-cli-win-arm64.exe": {
+      "url": "https://github.com/Hiram-Wong/captcha-bypass/releases/download/v1.1.1/captcha-bypass-cli-win-arm64.exe",
+      "sha256": "34a13ffea6e6fdfb4e6ddad836267bf1db26165a7c2f24370978251e9d0e47f9"
+    },
+    "captcha-bypass-cli-win-x64.exe": {
+      "url": "https://github.com/Hiram-Wong/captcha-bypass/releases/download/v1.1.1/captcha-bypass-cli-win-x64.exe",
+      "sha256": "902a55ac2ad3b6dbd3415f2e27afcdcc5c9fadb885f660876c4fd0fe8399ab9f"
+    },
+    "models.zip": {
+      "url": "https://github.com/Hiram-Wong/captcha-bypass/releases/download/v1.1.1/models.zip",
+      "sha256": "4869633769b7322d8e2a0e9f81c35810e6c8d180636109c1eda3c95e0939491a"
+    }
+  }
+}
