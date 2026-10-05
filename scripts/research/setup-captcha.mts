@@ -3,11 +3,12 @@ import { chmod, mkdir, rename, writeFile } from "node:fs/promises";
 import { dirname, join, resolve, sep } from "node:path";
 import JSZip from "jszip";
 import release from "./captcha-release.json";
+import { researchRuntimeDirectory } from "../../src/lib/research/runtime";
 
 const platform = ({ darwin: "mac", linux: "linux", win32: "win" } as Record<string, string>)[process.platform];
 if (!platform || !["arm64", "x64"].includes(process.arch)) throw new Error("The local CAPTCHA engine has no pinned release for this platform.");
 const binaryName = `captcha-bypass-cli-${platform}-${process.arch}${process.platform === "win32" ? ".exe" : ""}`;
-const directory = resolve(process.cwd(), "data/research/captcha");
+const directory = join(researchRuntimeDirectory(), "captcha");
 await mkdir(directory, { recursive: true });
 async function download(name: string) {
   const asset = (release.assets as Record<string, { url: string; sha256: string }>)[name];

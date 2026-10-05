@@ -4,6 +4,7 @@ import { join } from "node:path";
 import * as z from "zod/v4";
 import { postSchema } from "../domain/schema";
 import { CollectionBlocked, type Collector } from "../collection/types";
+import { researchRuntimeDirectory } from "../runtime";
 
 const responseSchema = z.union([
   z.object({ ok: z.literal(true), posts: z.array(postSchema), hasMore: z.boolean() }),
@@ -12,12 +13,13 @@ const responseSchema = z.union([
 
 export const collectInstagram: Collector = async (request, context) => {
   if (request.cursor) throw new CollectionBlocked("unsupported", "Instagram anonymous account continuation is not supported.");
-  const executable = process.env.CONTENT_STUDIO_RESEARCH_PYTHON ?? join(process.cwd(), "data/research/python", process.platform === "win32" ? "Scripts/python.exe" : "bin/python");
+  const executable = process.env.CONTENT_STUDIO_RESEARCH_PYTHON ?? join(researchRuntimeDirectory(), "python", process.platform === "win32" ? "Scripts/python.exe" : "bin/python");
   try { await access(executable); } catch {
     throw new CollectionBlocked("setup_required", "Run pnpm setup:research to install the isolated Instagram collector.");
   }
   const raw = await new Promise<string>((resolve, reject) => {
-    const child = spawn(executable, [join(process.cwd(), "workers/instagram/collector.py")], { stdio: ["pipe", "pipe", "pipe"], shell: false });
+    // Installed runtime executables are deliberately not bundled by Next.
+    const child = spawn(/* turbopackIgnore: true */ executable, [join(process.cwd(), "workers/instagram/collector.py")], { stdio: ["pipe", "pipe", "pipe"], shell: false });
     let output = "", settled = false;
     const finish = (error?: Error) => {
       if (settled) return;
@@ -33,6 +35,7 @@ export const collectInstagram: Collector = async (request, context) => {
     });
     // Consume logs, but never return third-party diagnostic strings or headers.
     child.stderr.resume();
+    child.stdin.once("error", () => finish(new CollectionBlocked("source_error", "The Python collector stopped before accepting its request.")));
     child.once("error", () => finish(new CollectionBlocked("setup_required", "The Python collector could not start.")));
     child.once("close", code => finish(code === 0 ? undefined : new CollectionBlocked("source_error", "The Python collector exited unsuccessfully.")));
     context.signal.addEventListener("abort", cancel, { once: true });

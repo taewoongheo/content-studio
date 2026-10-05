@@ -7,6 +7,7 @@ import { displayedCount } from "../collectors/youtube";
 test("solver recognition cannot move outside the challenge control", () => {
   const geometry = { backgroundX: 10, pieceX: 15, trackWidth: 300, handleWidth: 30 };
   assert.equal(solutionDistance({ x: 105 }, "slider", geometry), 100);
+  assert.equal(solutionDistance({ x: 210 }, "slider", { ...geometry, imageScale: 0.5 }), 100);
   assert.equal(solutionDistance({ cw: 180 }, "rotate", geometry), 135);
   assert.throws(() => solutionDistance({ x: 9999 }, "slider", geometry));
   assert.throws(() => solutionDistance({ cw: NaN }, "rotate", geometry));

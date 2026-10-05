@@ -29,12 +29,15 @@ export function normalizeTikTok(raw: unknown, sourceUrl: string): SocialPost {
 export const collectTikTok: Collector = async (request, context) => {
   const page = await context.getPage();
   if (request.kind === "account") {
+    if (request.cursor) throw new CollectionBlocked("unsupported", "TikTok anonymous account continuation is not supported.");
     const response = await page.goto(request.source.url, { waitUntil: "domcontentloaded" });
     const block = await browserBlock(page, response?.status());
     if (block) throw block;
     // A public creator embed exposes a limited recent sample, not a full feed.
     const embed = await page.context().request.get(`https://www.tiktok.com/embed/@${request.source.id}`, { timeout: 15_000 });
     if (embed.status() === 429) throw new CollectionBlocked("rate_limited", "TikTok creator embed returned HTTP 429.");
+    if (embed.status() === 401 || embed.status() === 403) throw new CollectionBlocked("access_denied", `TikTok creator embed returned HTTP ${embed.status()}; no CAPTCHA was confirmed.`);
+    if (!embed.ok()) throw new CollectionBlocked("source_error", `TikTok creator embed returned HTTP ${embed.status()}.`);
     const html = await embed.text();
     const stateText = html.match(/<script[^>]*id=["']__FRONTITY_CONNECT_STATE__["'][^>]*>([\s\S]*?)<\/script>/)?.[1];
     if (!stateText) throw new CollectionBlocked("unsupported", "TikTok did not expose a usable anonymous creator feed. Direct post URL collection remains available.");
@@ -43,7 +46,7 @@ export const collectTikTok: Collector = async (request, context) => {
     if (!entries.length) throw new CollectionBlocked("empty_response", "The public creator embed contained no posts.");
     return { posts: entries.slice(0, request.limit).filter(item => item.id).map(item => ({
       id: item.id!, platform: "tiktok", url: `https://www.tiktok.com/@${request.source.id}/video/${item.id}`,
-      author: request.source.id, text: item.desc ?? "", format: "video", publishedAt: null,
+      author: request.source.id, text: item.desc ?? "", format: "mixed", publishedAt: null,
       publishedLabel: null, collectedAt: new Date().toISOString(), media: [], metrics: { ...emptyMetrics(), viewCount: item.playCount ?? null },
     })), nextCursor: null, warnings: ["Creator embeds provide a limited recent sample; read individual posts to confirm format and media."] };
   }
