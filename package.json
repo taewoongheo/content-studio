@@ -12,7 +12,8 @@
     "setup:research": "tsx scripts/setup-research.mts",
     "setup:captcha": "tsx scripts/research/setup-captcha.mts",
     "test:research": "tsx scripts/research/smoke.mts",
-    "test:search": "tsx scripts/research/search-smoke.mts"
+    "test:search": "tsx scripts/research/search-smoke.mts",
+    "test:research-accounts": "tsx scripts/research/dashboard-smoke.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

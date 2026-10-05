@@ -25,7 +25,7 @@ const origin = `http://127.0.0.1:${port}`;
 let serverLog = "";
 function startApp() {
   const child = spawn("pnpm", [process.argv.includes("--production") ? "start" : "dev", "--port", String(port)], {
-    env: { ...process.env, CONTENT_STUDIO_DB_PATH: join(directory, "test.sqlite") },
+    env: { ...process.env, CONTENT_STUDIO_DB_PATH: join(directory, "test.sqlite"), CONTENT_STUDIO_RESEARCH_RUNTIME_DIR: join(directory, "research") },
     stdio: ["ignore", "pipe", "pipe"], detached: true,
   });
   child.stdout.on("data", (chunk) => { serverLog += chunk; });
