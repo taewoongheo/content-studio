@@ -81,6 +81,8 @@ try {
   assert.deepEqual([...tools].sort(), [
     "list_projects", "list_template_guides", "set_reuse_guide", "register_template", "unregister_template", "open_project", "clone_project", "read_project",
     "edit_project", "undo_project", "preview_slide",
+    "list_account_posts", "read_social_post", "read_post_images", "get_collection_job",
+    "solve_collection_captcha", "open_collection_browser", "resume_collection", "close_collection_session",
   ].sort(), "MCP must expose only the supported tools, without project deletion or tab close");
   assert.equal(tools.includes("add_image"), false);
   console.log("connected", tools);
