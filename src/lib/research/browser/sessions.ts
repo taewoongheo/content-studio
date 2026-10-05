@@ -5,12 +5,13 @@ type Session = { browser: Browser; page: Page };
 export class ResearchBrowsers {
   private sessions = new Map<string, Session>();
   private pending = new Map<string, Promise<Page>>();
+  constructor(private launch: () => Promise<Browser> = () => chromium.launch({ headless: false })) {}
   async page(id: string) {
     const existing = this.sessions.get(id);
     if (existing && !existing.page.isClosed()) return existing.page;
     const pending = this.pending.get(id);
     if (pending) return pending;
-    if (this.sessions.size + this.pending.size >= 3)
+    if (this.sessions.size + this.pending.size - (existing ? 1 : 0) >= 3)
       throw new CollectionBlocked("source_error", "Close an existing collection session before opening another browser.");
     const creation = this.create(id);
     this.pending.set(id, creation);
@@ -19,11 +20,22 @@ export class ResearchBrowsers {
   private async create(id: string) {
     // A dedicated visible browser can be operated by native computer use without
     // replacing the collection session. Never open a user's existing profile.
+    const existing = this.sessions.get(id);
+    if (existing) {
+      await existing.browser.close();
+      this.sessions.delete(id);
+    }
     let browser: Browser;
-    try { browser = await chromium.launch({ headless: false }); }
+    try { browser = await this.launch(); }
     catch { throw new CollectionBlocked("setup_required", "Install the Playwright Chromium browser: pnpm exec playwright install chromium"); }
-    const context = await browser.newContext();
-    const page = await context.newPage();
+    let page: Page;
+    try {
+      const context = await browser.newContext();
+      page = await context.newPage();
+    } catch (error) {
+      await browser.close().catch(() => undefined);
+      throw error;
+    }
     page.setDefaultTimeout(10_000);
     page.setDefaultNavigationTimeout(20_000);
     this.sessions.set(id, { browser, page });

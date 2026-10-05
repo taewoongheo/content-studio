@@ -29,8 +29,10 @@ export async function recognizeCaptcha(type: "slider" | "rotate", background: Bu
       child.once("error", () => finish(new Error("Local CAPTCHA engine could not start.")));
       child.once("close", code => finish(code === 0 ? undefined : new Error("Local CAPTCHA recognition failed.")));
     });
-    const response = JSON.parse(output) as { code?: number; data?: unknown };
-    if (response.code !== 0 || !response.data) throw new Error("The local CAPTCHA engine returned no recognition result.");
+    let response: { code?: number; data?: unknown } | null;
+    try { response = JSON.parse(output); }
+    catch { throw new Error("The local CAPTCHA engine returned invalid JSON."); }
+    if (!response || response.code !== 0 || !response.data) throw new Error("The local CAPTCHA engine returned no recognition result.");
     return response.data;
   } finally { running = false; if (directory) await rm(directory, { recursive: true, force: true }); }
 }

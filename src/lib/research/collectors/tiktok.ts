@@ -44,7 +44,7 @@ export const collectTikTok: Collector = async (request, context) => {
     const state = JSON.parse(stateText) as { source?: { data?: Record<string, { videoList?: Array<{ id?: string; desc?: string; author?: string; playCount?: number }> }> } };
     const entries = Object.values(state.source?.data ?? {}).flatMap(value => value.videoList ?? []);
     if (!entries.length) throw new CollectionBlocked("empty_response", "The public creator embed contained no posts.");
-    return { posts: entries.slice(0, request.limit).filter(item => item.id).map(item => ({
+    return { posts: entries.filter(item => item.id).slice(0, request.limit).map(item => ({
       id: item.id!, platform: "tiktok", url: `https://www.tiktok.com/@${request.source.id}/video/${item.id}`,
       author: request.source.id, text: item.desc ?? "", format: "mixed", publishedAt: null,
       publishedLabel: null, collectedAt: new Date().toISOString(), media: [], metrics: { ...emptyMetrics(), viewCount: item.playCount ?? null },
