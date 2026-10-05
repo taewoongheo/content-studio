@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FolderOpen, LayoutTemplate, LoaderCircle, X } from "lucide-react";
+import { ChevronRight, FolderOpen, LayoutTemplate, LoaderCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SavedProjectSummary } from "@/lib/local-db/projects/store";
 import { useSavedProjects } from "@/screens/projects/use-saved-projects";
@@ -39,10 +39,13 @@ export function TemplateProjectsPage({ onOpen }: { onOpen: (projectId: string) =
         <p className="mt-1.5 text-xs text-muted-foreground">
           {project.aspectRatio} · {project.slideCount}장 · {project.outputLanguage} · {dateFormatter.format(new Date(project.updatedAt))}
         </p>
-        {templateColumn && <div className="mt-3 text-sm leading-relaxed">
-          <p className="font-medium">구성</p>
-          <p className="whitespace-pre-wrap break-words text-muted-foreground">{project.composition || "구성을 작성해 주세요."}</p>
-        </div>}
+        <details className="group mt-3 text-sm leading-relaxed">
+          <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+            <ChevronRight className="size-4 shrink-0 group-open:rotate-90" aria-hidden="true" />
+            구성
+          </summary>
+          <p className="mt-2 whitespace-pre-wrap break-words text-muted-foreground">{project.composition || "구성을 작성해 주세요."}</p>
+        </details>
       </div>
       <div className="flex min-w-0 flex-wrap items-start gap-2">
         <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void openProject(project.id)}>
