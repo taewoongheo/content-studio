@@ -40,13 +40,13 @@ export const collectInstagram: Collector = async (request, context) => {
     child.once("close", code => finish(code === 0 ? undefined : new CollectionBlocked("source_error", "The Python collector exited unsuccessfully.")));
     context.signal.addEventListener("abort", cancel, { once: true });
     if (context.signal.aborted) cancel();
-    else child.stdin.end(JSON.stringify({ kind: request.kind, id: request.source.id, limit: request.limit }));
+    else child.stdin.end(JSON.stringify({ kind: request.kind, id: request.source.id, limit: request.limit, cookies: context.authState?.cookies ?? [] }));
   });
   let response: z.infer<typeof responseSchema>;
   try { response = responseSchema.parse(JSON.parse(raw)); } catch {
     throw new CollectionBlocked("source_error", "The Instagram collector returned an invalid metadata response.");
   }
-  if (!response.ok) throw new CollectionBlocked(response.reason, `Anonymous Instagram collection failed (${response.errorType}). No CAPTCHA was confirmed.`);
+  if (!response.ok) throw new CollectionBlocked(response.reason, `Instagram collection failed (${response.errorType}). No CAPTCHA was confirmed.`);
   return { posts: response.posts, nextCursor: null,
     warnings: response.hasMore ? ["This is a bounded account sample; anonymous continuation is not supported."] : [] };
 };

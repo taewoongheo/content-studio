@@ -9,7 +9,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { chromium } from "playwright";
 import sharp from "sharp";
-import { solveCaptcha } from "../../src/lib/research/browser/captcha";
+import { solveCaptcha } from "../../src/lib/research/browser/captcha/captcha";
 
 const directory = await mkdtemp(join(tmpdir(), "studio-research-smoke-"));
 const listener = createServer();

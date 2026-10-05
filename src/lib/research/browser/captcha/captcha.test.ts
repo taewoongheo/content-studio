@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { solutionDistance } from "./captcha";
-import { normalizeTikTok } from "../collectors/tiktok";
-import { displayedCount } from "../collectors/youtube";
+import { normalizeTikTok } from "../../collectors/tiktok";
+import { displayedCount } from "../../collectors/youtube";
 
 test("solver recognition cannot move outside the challenge control", () => {
   const geometry = { backgroundX: 10, pieceX: 15, trackWidth: 300, handleWidth: 30 };

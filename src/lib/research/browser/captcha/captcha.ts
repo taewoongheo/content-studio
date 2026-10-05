@@ -1,6 +1,6 @@
 import type { Locator, Page } from "playwright";
 import sharp from "sharp";
-import { browserBlock } from "./sessions";
+import { browserBlock } from "../blocks";
 import { recognizeCaptcha } from "./engine";
 
 export type CaptchaOptions = { type: "slider" | "rotate"; backgroundSelector: string;

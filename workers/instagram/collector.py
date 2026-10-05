@@ -1,4 +1,4 @@
-"""Anonymous metadata only. JSON request on stdin, one JSON result on stdout."""
+"""Metadata only; optional local authenticated web cookies. JSON request on stdin, one JSON result on stdout."""
 import contextlib
 import datetime
 import itertools
@@ -48,6 +48,11 @@ def normalize(post):
 
 def collect(request):
     loader = instaloader.Instaloader(max_connection_attempts=1, request_timeout=12, quiet=True)
+    for cookie in request.get("cookies", []):
+        domain = cookie.get("domain", "").lstrip(".")
+        if domain == "instagram.com" or domain.endswith(".instagram.com"):
+            loader.context._session.cookies.set(cookie["name"], cookie["value"],
+                                                domain=cookie["domain"], path=cookie.get("path", "/"))
     if request["kind"] == "post":
         posts = [normalize(instaloader.Post.from_shortcode(loader.context, request["id"]))]
         return {"posts": posts, "hasMore": False}

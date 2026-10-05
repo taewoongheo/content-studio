@@ -1,6 +1,6 @@
 import * as z from "zod/v4";
 import { emptyMetrics, type SocialPost } from "../domain/schema";
-import { browserBlock } from "../browser/sessions";
+import { browserBlock } from "../browser/blocks";
 import { CollectionBlocked, type Collector } from "../collection/types";
 
 const address = z.object({ url_list: z.array(z.url()).default([]), width: z.number().optional(), height: z.number().optional() });

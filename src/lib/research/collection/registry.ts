@@ -1,3 +1,5 @@
+import type { AccountManager } from "../accounts/manager";
+import type { AccountPlatform } from "../accounts/types";
 import { randomUUID } from "node:crypto";
 import { ResearchBrowsers } from "../browser/sessions";
 import { evaluateCriteria } from "../domain/schema";
@@ -13,8 +15,9 @@ export class CollectionRegistry {
   private jobs = new Map<string, Job>();
   private sessions = new Map<string, Session>();
   private expirationTimer?: NodeJS.Timeout;
-  readonly browsers = new ResearchBrowsers();
-  constructor(private collect: Collector, private onClose: (sessionId: string) => void = () => {}) {}
+  readonly browsers: ResearchBrowsers;
+  constructor(private collect: Collector, private onClose: (sessionId: string) => void = () => {},
+    private accounts?: AccountManager) { this.browsers = accounts?.browsers ?? new ResearchBrowsers(); }
   start(request: CollectionRequest, sessionId?: string) {
     this.expire();
     if (this.jobs.size >= 64) throw new Error("Close collection sessions before starting more jobs.");
@@ -34,16 +37,46 @@ export class CollectionRegistry {
     return this.snapshot(job.id);
   }
   private async run(job: Job) {
+    const platform = job.request.source.platform;
+    const authenticatedPlatform = platform === "youtube" ? undefined : platform as AccountPlatform;
+    let release: (() => void) | undefined;
+    let timer: NodeJS.Timeout | undefined;
+    this.browsers.hold(job.sessionId);
     try {
-      const result = await this.collect(job.request, { sessionId: job.sessionId, signal: job.controller.signal,
-        getPage: () => this.browsers.page(job.sessionId) });
-      if (job.controller.signal.aborted) return;
+      if (authenticatedPlatform && this.accounts) {
+        if (job.request.kind === "search") this.accounts.require(authenticatedPlatform);
+        release = this.accounts.acquire(authenticatedPlatform, job.id, () => {
+          job.controller.abort(); job.status = "cancelled";
+          void this.browsers.close(job.sessionId).catch(() => undefined);
+          job.block = { reason: "login_required", message: "The account was disconnected in Dashboard → Settings." };
+        });
+      }
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new CollectionBlocked("timeout", "The research operation exceeded 60 seconds."));
+          job.controller.abort(); void this.browsers.close(job.sessionId).catch(() => undefined);
+        }, 60_000); timer.unref();
+      });
+      const result = await Promise.race([timeout, this.collect(job.request, {
+        sessionId: job.sessionId, signal: job.controller.signal,
+        authState: authenticatedPlatform ? this.accounts?.store.load(authenticatedPlatform) : undefined,
+        getPage: () => this.browsers.page(job.sessionId, authenticatedPlatform),
+      })]);
+      if (job.status === "cancelled") return;
       job.result = result; job.status = "complete";
+      await this.browsers.save(job.sessionId).catch(() => undefined);
     } catch (error) {
-      if (job.controller.signal.aborted) return;
+      if (job.status === "cancelled") return;
       job.status = "blocked";
       job.block = error instanceof CollectionBlocked ? { reason: error.reason, message: error.message } :
         { reason: "source_error", message: "The source did not return usable data. No CAPTCHA was confirmed." };
+      if (job.block.reason === "login_required" && authenticatedPlatform && this.accounts?.store.status(authenticatedPlatform).status === "connected")
+        await this.accounts.rejected(authenticatedPlatform).catch(() => undefined);
+    } finally {
+      clearTimeout(timer); release?.();
+      this.browsers.release(job.sessionId, job.block?.reason === "captcha_required");
+      if (job.status !== "complete" && job.block?.reason !== "captcha_required")
+        await this.browsers.close(job.sessionId).catch(() => undefined);
     }
   }
   snapshot(id: string) {
@@ -53,7 +86,10 @@ export class CollectionRegistry {
     const session = this.sessions.get(job.sessionId);
     if (session) session.touchedAt = Date.now();
     return { jobId: job.id, sessionId: job.sessionId, status: job.status, attempt: job.attempt,
-      sourceUrl: job.request.source.url, criteria: job.request.criteria ?? {},
+      sourceUrl: job.request.source.url, kind: job.request.kind,
+      ...(job.request.search ? { search: job.request.search } : {}),
+      ...(job.request.source.platform !== "youtube" && this.accounts ? { account: this.accounts.status(job.request.source.platform) } : {}),
+      criteria: job.request.criteria ?? {},
       ...(job.block ? { block: job.block } : {}),
       ...(job.result ? { ...job.result, posts: job.result.posts.map(post => ({ ...post,
         criteriaEvaluation: evaluateCriteria(post, job.request.criteria) })) } : {}),
@@ -74,8 +110,8 @@ export class CollectionRegistry {
     this.snapshot(id);
     const job = this.jobs.get(id)!;
     if (job.status === "running") throw new Error("Wait until the collection stops before taking browser control.");
-    if (job.request.source.platform !== "tiktok")
-      throw new Error("Browser handoff currently supports TikTok sessions. Instagram uses its separate Python HTTP session and YouTube uses InnerTube.");
+    if (job.request.source.platform === "youtube" || (job.request.source.platform === "instagram" && job.request.kind !== "search"))
+      throw new Error("Browser handoff supports TikTok and Instagram search. Instagram collection uses Python HTTP and YouTube uses InnerTube.");
     const page = this.browsers.peek(job.sessionId);
     if (!page || page.isClosed()) throw new Error("The collection browser is closed; the original session cannot be handed off.");
     await page.bringToFront();
