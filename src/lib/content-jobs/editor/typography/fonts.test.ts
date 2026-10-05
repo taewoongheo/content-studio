@@ -3,10 +3,11 @@ import test from "node:test";
 import { createBlankDocument, applyEditorCommands, ensureSharedBackground, validateEditorDocument } from "../document";
 import { makeElementDefinition } from "../elements/factory";
 import { validateEditorCommands } from "../schema";
+import { supportedFontWeight } from "./fonts";
 
 test("목적별 폰트와 이탤릭은 편집 명령·문서 검증·JSON 왕복에서 지원하고 알 수 없는 폰트는 거부한다", () => {
   const document = createBlankDocument({ structure: "sequential", aspectRatio: "4:5", slideCount: 3 });
-  for (const family of ["anton", "inter", "space-grotesk", "sans-serif"] as const) {
+  for (const family of ["oswald", "inter", "space-grotesk", "sans-serif"] as const) {
     const element = makeElementDefinition({ id: family, kind: "text" });
     element.style.fontFamily = family;
     element.style.fontStyle = "italic";
@@ -20,7 +21,7 @@ test("목적별 폰트와 이탤릭은 편집 명령·문서 검증·JSON 왕복
 });
 
 test("제거된 폰트와 알 수 없는 기울임 스타일을 새 편집 명령으로 받지 않는다", () => {
-  for (const fontFamily of ["bebas-neue", "oswald", "barlow-condensed", "source-sans-3", "serif", "monospace"]) {
+  for (const fontFamily of ["bebas-neue", "anton", "barlow-condensed", "source-sans-3", "serif", "monospace"]) {
     assert.equal(validateEditorCommands({ commands: [{ type: "update_visual", scope: "common", elementId: "title", style: { fontFamily } }] }).ok, false);
   }
   assert.equal(validateEditorCommands({ commands: [{ type: "update_visual", scope: "common", elementId: "title", style: { fontStyle: "oblique" } }] }).ok, false);
@@ -49,10 +50,15 @@ test("이전 프로젝트의 제거된 폰트는 정의와 장별 덮어쓰기 �
     { type: "place_element", elementId: "old", slideId: "slide-1", placementId: "old-1" },
   ]);
   const old = doc.elements.find(e => e.id === "old")!;
-  old.style.fontFamily = "bebas-neue" as typeof old.style.fontFamily;
+  old.style.fontFamily = "anton" as typeof old.style.fontFamily;
   doc.slides[0].placements.find(p => p.id === "old-1")!.styleOverride = { fontFamily: "monospace" as typeof old.style.fontFamily };
   ensureSharedBackground(doc);
-  assert.equal(old.style.fontFamily, "anton");
+  assert.equal(old.style.fontFamily, "oswald");
   assert.equal(doc.slides[0].placements.find(p => p.id === "old-1")?.styleOverride?.fontFamily, "sans-serif");
   assert.deepEqual(validateEditorDocument(doc), []);
+});
+
+test("훅 폰트는 기존 Anton 굵기에서도 Oswald Bold로 렌더링한다", () => {
+  assert.equal(supportedFontWeight("oswald", 400), 700);
+  assert.equal(supportedFontWeight("oswald", 700), 700);
 });

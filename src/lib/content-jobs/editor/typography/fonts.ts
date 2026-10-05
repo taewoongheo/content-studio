@@ -1,6 +1,6 @@
 const allWeights = [100, 200, 300, 400, 500, 600, 700, 800, 900] as const;
 export const EDITOR_FONTS = [
-  { value: "anton", label: "Anton", group: "훅", variable: "--font-anton", fallback: "sans-serif", weights: [400] },
+  { value: "oswald", label: "Oswald Bold", group: "훅", variable: "--font-oswald", fallback: "sans-serif", weights: [700] },
   { value: "inter", label: "Inter", group: "본문", variable: "--font-inter", fallback: "sans-serif", weights: allWeights },
   { value: "space-grotesk", label: "Space Grotesk", group: "본문 제목", variable: "--font-space-grotesk", fallback: "sans-serif", weights: [300, 400, 500, 600, 700] },
   { value: "sans-serif", label: "Geist · 기본 대체", group: "Fallback", variable: "--font-geist-sans", fallback: "sans-serif", weights: allWeights },
@@ -17,7 +17,7 @@ export function supportedFontWeight(family: EditorFontFamily, requested: number)
 
 /** Read older projects with retired fonts; new commands only accept the current catalog. */
 export function retiredFontReplacement(family: string): EditorFontFamily | undefined {
-  if (["bebas-neue", "oswald", "barlow-condensed"].includes(family)) return "anton";
+  if (["anton", "bebas-neue", "barlow-condensed"].includes(family)) return "oswald";
   if (family === "source-sans-3") return "inter";
   if (["serif", "monospace"].includes(family)) return "sans-serif";
 }
