@@ -1,4 +1,4 @@
-import { normalizeTikTok } from "../../collectors/tiktok";
+import { normalizeTikTok } from "../../collectors/platforms/tiktok";
 import type { SocialPost } from "../../domain/schema";
 import type { SocialAccount } from "../types";
 
@@ -37,5 +37,5 @@ export function parseTikTokSearch(payload: unknown) {
     try { return [normalizeTikTok(normalized, `https://www.tiktok.com/@${username}/${photo ? "photo" : "video"}/${id}`)]; }
     catch { return []; }
   });
-  return { accounts, posts, recognized: Array.isArray(data.user_list) || Array.isArray(data.item_list) || Array.isArray(data.itemList) || Array.isArray(data.data) };
+  return { accounts, posts, recognized: Array.isArray(data.user_list) || Array.isArray(data.item_list) || Array.isArray(data.itemList) || (Array.isArray(data.data) && (data.data.length === 0 || rawItems.length > 0)) };
 }

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { Page } from "playwright";
 import { collectTikTok } from "./tiktok";
-import { socialSource } from "../domain/source";
+import { socialSource } from "../../domain/source";
 
 test("account sampling ignores missing IDs before applying the requested limit", async () => {
   const state = { source: { data: { creator: { videoList: [{ desc: "missing" }, { id: "1" }, { id: "2" }, { id: "3" }] } } } };

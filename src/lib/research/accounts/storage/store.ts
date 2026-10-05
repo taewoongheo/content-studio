@@ -3,13 +3,11 @@ import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import * as z from "zod/v4";
 import { researchRuntimeDirectory } from "../../runtime";
-import { loginCookie, platformState, type AuthState } from "./cookies";
+import { loginCookie, platformState, storedCookieSchema, type AuthState } from "./cookies";
 import { accountPlatforms, type AccountPlatform, type AccountStatus } from "../types";
 
-const cookieSchema = z.object({ name: z.string(), value: z.string(), domain: z.string(), path: z.string(),
-  expires: z.number(), httpOnly: z.boolean(), secure: z.boolean(), sameSite: z.enum(["Strict", "Lax", "None"]) });
 const storedSchema = z.object({ updatedAt: z.iso.datetime(), reason: z.enum(["rejected", "invalid"]).nullable(),
-  state: z.object({ cookies: z.array(cookieSchema).max(1000),
+  state: z.object({ cookies: z.array(storedCookieSchema).max(1000),
     origins: z.array(z.object({ origin: z.string(), localStorage: z.array(z.object({ name: z.string(), value: z.string() })) })).max(100) }).nullable() });
 type Stored = z.infer<typeof storedSchema>;
 
@@ -23,8 +21,9 @@ export class AccountStore {
     const file = this.path(platform);
     if (!existsSync(file)) return;
     try {
-      if (readFileSync(file).byteLength > 2_000_000) throw new Error("size");
-      return storedSchema.parse(JSON.parse(readFileSync(file, "utf8")));
+      const bytes = readFileSync(file);
+      if (bytes.byteLength > 2_000_000) throw new Error("size");
+      return storedSchema.parse(JSON.parse(bytes.toString("utf8")));
     } catch { return { updatedAt: new Date(this.now()).toISOString(), state: null, reason: "invalid" }; }
   }
   private write(platform: AccountPlatform, value: Stored) {

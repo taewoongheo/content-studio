@@ -39,6 +39,7 @@ export class CollectionRegistry {
   private async run(job: Job) {
     const platform = job.request.source.platform;
     const authenticatedPlatform = platform === "youtube" ? undefined : platform as AccountPlatform;
+    const authVersion = authenticatedPlatform ? this.accounts?.store.version(authenticatedPlatform) : undefined;
     let release: (() => void) | undefined;
     let timer: NodeJS.Timeout | undefined;
     this.browsers.hold(job.sessionId);
@@ -60,6 +61,7 @@ export class CollectionRegistry {
       const result = await Promise.race([timeout, this.collect(job.request, {
         sessionId: job.sessionId, signal: job.controller.signal,
         authState: authenticatedPlatform ? this.accounts?.store.load(authenticatedPlatform) : undefined,
+        persistAuthState: state => { if (authenticatedPlatform && this.accounts) this.accounts.store.save(authenticatedPlatform, state, authVersion); },
         getPage: () => this.browsers.page(job.sessionId, authenticatedPlatform),
       })]);
       if (job.status === "cancelled") return;

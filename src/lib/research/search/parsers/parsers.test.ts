@@ -33,3 +33,8 @@ test("Instagram SERP normalizes nested accounts and carousel without inventing v
   assert.equal(evaluateCriteria(result.posts[0], { minViews: 100000 }).status, "unverified");
   assert.equal(parseInstagramSearch({ unrelated: { username: "suggested" } }).recognized, false);
 });
+test("Instagram home-feed media cannot be mistaken for native keyword search results", () => {
+  const result = parseInstagramSearch({ data: { feed: { items: [{ code: "FEED", media_type: 1, user: { username: "suggested" },
+    image_versions2: { candidates: [{ url: "https://cdn.cdninstagram.com/feed.jpg" }] } }] } } });
+  assert.equal(result.recognized, false); assert.deepEqual(result.posts, []); assert.deepEqual(result.accounts, []);
+});

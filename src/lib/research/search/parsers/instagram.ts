@@ -32,24 +32,35 @@ function post(raw: ObjectValue): SocialPost | undefined {
 }
 export function parseInstagramSearch(payload: unknown) {
   const accounts = new Map<string, SocialAccount>(), posts = new Map<string, SocialPost>();
-  let recognized = false, visited = 0;
+  let visited = 0;
+  const containers: unknown[] = [];
+  const root = object(payload);
+  if (Array.isArray(root.users)) containers.push({ users: root.users });
+  if (root.media_grid) containers.push({ media_grid: root.media_grid });
+  function findSerp(value: unknown, depth: number) {
+    if (depth > 5) return;
+    for (const [key, child] of Object.entries(object(value))) {
+      if (/fbsearch.*(?:serp|topsearch)/i.test(key)) containers.push(child);
+      else if (child && typeof child === "object" && !Array.isArray(child)) findSerp(child, depth + 1);
+    }
+  }
+  findSerp(payload, 0);
   // SERP GraphQL responses nest users/media in sections. Walk only a bounded
   // response and normalize actual media records, never infer post text from UI.
   function walk(value: unknown, depth: number) {
     if (depth > 14 || ++visited > 5000) return;
     if (Array.isArray(value)) { value.slice(0, 100).forEach(item => walk(item, depth + 1)); return; }
     const node = object(value);
-    if (Array.isArray(node.users) || node.media_grid || node.xdt_api__v1__fbsearch__web__top_serp) recognized = true;
     const username = text(node.username);
     if (/^[A-Za-z0-9_.]+$/.test(username)) {
       accounts.set(username, { id: String(node.pk ?? node.id ?? username), platform: "instagram", username,
         name: text(node.full_name), url: `https://www.instagram.com/${username}/`, followerCount: count(node.follower_count) });
     }
     if ((node.code || node.shortcode) && (node.media_type || node.image_versions2 || node.carousel_media)) {
-      const normalized = post(node); if (normalized) { recognized = true; posts.set(normalized.id, normalized); }
+      const normalized = post(node); if (normalized) posts.set(normalized.id, normalized);
     }
     Object.values(node).forEach(item => { if (item && typeof item === "object") walk(item, depth + 1); });
   }
-  walk(payload, 0);
-  return { accounts: [...accounts.values()], posts: [...posts.values()], recognized };
+  containers.forEach(container => walk(container, 0));
+  return { accounts: [...accounts.values()], posts: [...posts.values()], recognized: containers.length > 0 };
 }

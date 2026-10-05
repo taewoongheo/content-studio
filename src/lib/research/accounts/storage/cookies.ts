@@ -1,3 +1,4 @@
+import * as z from "zod/v4";
 import type { BrowserContext } from "playwright";
 import type { AccountPlatform } from "../types";
 
@@ -22,3 +23,6 @@ export function platformState(state: AuthState, platform: AccountPlatform): Auth
     }),
   };
 }
+
+export const storedCookieSchema = z.object({ name: z.string(), value: z.string(), domain: z.string(), path: z.string(),
+  expires: z.number(), httpOnly: z.boolean(), secure: z.boolean(), sameSite: z.enum(["Strict", "Lax", "None"]) });
