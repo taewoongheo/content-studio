@@ -42,3 +42,7 @@ next-env.d.ts
 
 # optional project-local SQLite path
 /data/
+
+# Python collector bytecode
+__pycache__/
+*.pyc
