@@ -1,4 +1,5 @@
 import type { EditorDocument } from "@/lib/content-jobs/editor/types";
+import { BACKGROUND_ELEMENT_ID } from "@/lib/content-jobs/editor/document";
 import { defaultPlacement, selectVisualSlides } from "./components/element-scope";
 import { slideLabel } from "./components/slides/slide-navigation";
 
@@ -24,7 +25,7 @@ export function resolveEditorSelection(
   const selectedSlideIds = slide && placement
     ? selectVisualSlides(slide.id, scopeSlides.map((item) => item.slideId),
       scopeSelection?.key === scopeKey ? scopeSelection.slideIds
-        : [slide.id],
+        : element?.id === BACKGROUND_ELEMENT_ID ? [slide.id] : appliedSlides.map((item) => item.slideId),
       { slideId: slide.id, checked: true })
     : [];
   return { slide, placement, element, appliedSlides, scopeSlides, visualTargets, scopeKey, selectedSlideIds };
