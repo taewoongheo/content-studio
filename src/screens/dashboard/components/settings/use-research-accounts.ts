@@ -7,7 +7,7 @@ export function useResearchAccounts() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<AccountPlatform | null>(null);
   const controller = useRef<AbortController | null>(null);
-  const refreshing = useRef(false), mutating = useRef(false), version = useRef(0);
+  const refreshing = useRef<AbortSignal | null>(null), mutating = useRef(false), version = useRef(0);
   const update = useCallback(async (response: Response, signal: AbortSignal, expectedVersion: number) => {
     const body = await response.json() as { accounts?: AccountStatus[]; error?: string };
     if (!response.ok || !body.accounts) throw new Error(body.error ?? "연결 상태를 불러오지 못했습니다.");
@@ -15,11 +15,14 @@ export function useResearchAccounts() {
   }, []);
   const refresh = useCallback(async () => {
     const signal = controller.current?.signal, revision = version.current;
-    if (!signal || signal.aborted || refreshing.current || mutating.current || document.visibilityState === "hidden") return;
-    refreshing.current = true;
+    if (!signal || signal.aborted || (refreshing.current && !refreshing.current.aborted) || mutating.current || document.visibilityState === "hidden") return;
+    refreshing.current = signal;
     try { await update(await fetch("/api/research/accounts", { cache: "no-store", signal }), signal, revision); }
     catch (cause) { if (!signal.aborted && revision === version.current) setError(cause instanceof Error ? cause.message : "연결 상태를 불러오지 못했습니다."); }
-    finally { refreshing.current = false; }
+    finally {
+      // A cancelled effect must not clear the replacement effect's active request.
+      if (refreshing.current === signal) refreshing.current = null;
+    }
   }, [update]);
   useEffect(() => {
     const lifetime = new AbortController(); controller.current = lifetime;
