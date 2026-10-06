@@ -26,8 +26,8 @@ export function accountHandlers(accounts: AccountManager) {
         return Response.json({ accounts: accounts.list() }, { headers: { "Cache-Control": "no-store" } });
       } catch (error) {
         if (error instanceof SafariImportError) return Response.json({ error: error.message, reason: error.reason }, { status: 409 });
-        return Response.json({ error: input.action === "finish" ? "브라우저에서 로그인을 완료해 주세요. 창을 닫았다면 다시 열어 주세요." :
-          "계정 연결을 처리하지 못했습니다. 진행 중인 작업과 Chromium 설치 상태를 확인해 주세요." }, { status: 409 });
+        return Response.json({ error: input.action === "finish" ? "Safari에서 로그인한 뒤 Safari를 종료하고 다시 시도해 주세요." :
+          "계정 연결을 처리하지 못했습니다. 진행 중인 작업과 Safari 실행 상태를 확인해 주세요." }, { status: 409 });
       }
     },
   };

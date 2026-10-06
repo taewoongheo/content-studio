@@ -39,16 +39,15 @@ const browsers = new ResearchBrowsers(async () => {
   };
   return browser;
 }, store, 25);
-const accounts = new AccountManager(store, browsers);
+const accounts = new AccountManager(store, browsers, async platform => ({ cookies: [{ name: "sessionid", value: "fixture-session", domain: `.${platform}.com`, path: "/", expires: -1,
+  httpOnly: true, secure: true, sameSite: "Lax" }], origins: [] }), async () => undefined);
 try {
-  // Exercise the actual browser → local credentials → subsequent browser path.
+  // Simulate Safari login/import, then exercise actual Chromium cookie restoration.
   await accounts.startLogin("tiktok");
-  const loginPage = (await launched[0].contexts()[0].pages())[0];
-  await loginPage.context().addCookies([{ name: "sessionid", value: "fixture-session", domain: ".tiktok.com", path: "/", expires: Date.now() / 1000 + 3600 }]);
-  await loginPage.goto("https://www.tiktok.com/foryou");
+  assert.equal(launched.length, 0);
   await accounts.finishLogin("tiktok");
   assert.equal(store.status("tiktok").status, "connected");
-  assert.equal(launched[0].isConnected(), false);
+  assert.equal(launched.length, 0);
   for (let cycle = 0; cycle < 3; cycle++) {
     const id = `fixture-${cycle}`; browsers.hold(id);
     const type = cycle === 1 ? "accounts" : "posts";
@@ -83,6 +82,6 @@ try {
   await accounts.startLogin("instagram"); await accounts.cancelLogin("instagram");
   assert.equal(launched.at(-1)!.isConnected(), false);
   await accounts.disconnect("tiktok"); assert.equal(store.status("tiktok").status, "disconnected");
-  console.log("PASS synthetic browser login, cookie restore, native result parsing, rejected-session classification and repeated idle process cleanup");
+  console.log("PASS synthetic Safari login, Chromium cookie restore, native result parsing, rejected-session classification and repeated idle process cleanup");
   console.log("Browsers launched:", launched.length, "remaining connected:", launched.filter(browser => browser.isConnected()).length);
 } finally { await browsers.closeAll(); await rm(directory, { recursive: true, force: true }); }

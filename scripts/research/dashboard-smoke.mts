@@ -69,7 +69,7 @@ try {
   assert.equal((disconnected.accounts as Array<{ status: string }>)[0].status, "disconnected");
   if (process.platform === "darwin") {
     await page.getByRole("button", { name: "Safari에서 가져오기", exact: true }).nth(1).click();
-    await page.getByRole("button", { name: "다시 로그인", exact: true }).waitFor();
+    await page.getByRole("button", { name: "계정 변경", exact: true }).waitFor();
     const imported = await call("get_research_accounts");
     assert.equal((imported.accounts as Array<{ status: string }>)[1].status, "connected");
     assert.equal(JSON.stringify(imported).includes("safari-fixture-session"), false);

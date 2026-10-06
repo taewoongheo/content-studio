@@ -12,6 +12,25 @@ import type { AuthState } from "../storage/cookies";
 
 const state: AuthState = { cookies: [{ name: "sessionid", value: "synthetic-safari-secret", domain: ".instagram.com", path: "/",
   expires: -1, httpOnly: true, secure: true, sameSite: "Lax" }], origins: [] };
+test("login opens Safari and completion imports cookies; failed completion keeps the login retryable", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "safari-login-"));
+  let opens = 0, permitted = false;
+  const browsers = { async closePlatform() {} } as unknown as ResearchBrowsers;
+  const accounts = new AccountManager(new AccountStore(directory), browsers, async () => {
+    if (!permitted) throw new SafariImportError("permission_required"); return state;
+  }, async platform => { assert.equal(platform, "instagram"); opens++; });
+  try {
+    assert.equal((await accounts.startLogin("instagram")).status, "logging_in"); assert.equal(opens, 1);
+    assert.throws(() => accounts.acquire("instagram", "job", () => undefined));
+    await assert.rejects(accounts.finishLogin("instagram"), SafariImportError);
+    assert.equal(accounts.status("instagram").status, "logging_in");
+    permitted = true;
+    assert.equal((await accounts.finishLogin("instagram")).status, "connected");
+    assert.equal(accounts.status("instagram").status, "connected");
+    await accounts.startLogin("instagram"); await accounts.cancelLogin("instagram");
+    assert.equal(accounts.status("instagram").status, "connected");
+  } finally { await accounts.cancelLogin("instagram"); rmSync(directory, { recursive: true, force: true }); }
+});
 test("Safari imports filter unrelated domains, reject expired sessions, and sanitize errors", () => {
   const cookies = [...state.cookies, { ...state.cookies[0], domain: ".instagram.com.attacker.example" }];
   assert.deepEqual(parseSafariState(JSON.stringify({ ok: true, cookies }), "instagram"), state);
