@@ -66,7 +66,7 @@ test("Safari import excludes overlapping connection changes and releases the loc
     const importing = accounts.importSafari("instagram");
     await assert.rejects(accounts.importSafari("instagram"), SafariImportError);
     assert.throws(() => accounts.acquire("instagram", "job", () => undefined));
-    await assert.rejects(accounts.disconnect("instagram"));
+    await assert.rejects(accounts.disconnect("instagram"), error => error instanceof SafariImportError && error.reason === "busy");
     fail(new SafariImportError("source_error")); await assert.rejects(importing);
     accounts.acquire("instagram", "next-job", () => undefined)();
   } finally { rmSync(directory, { recursive: true, force: true }); }

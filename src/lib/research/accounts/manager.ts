@@ -62,7 +62,7 @@ export class AccountManager {
     } finally { this.changing.delete(platform); }
   }
   async disconnect(platform: AccountPlatform) {
-    if (this.changing.has(platform)) throw new Error("계정 연결을 처리 중입니다. 잠시 후 다시 시도해 주세요.");
+    if (this.changing.has(platform)) throw new SafariImportError("busy");
     this.changing.add(platform);
     try {
       this.store.disconnect(platform); // Invalidate versions before any context can save old cookies.

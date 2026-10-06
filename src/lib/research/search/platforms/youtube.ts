@@ -7,7 +7,8 @@ export async function searchYouTube(input: SearchInput, context: CollectorContex
     fetch: (url, init) => fetch(url, { ...init, signal: AbortSignal.any([context.signal, AbortSignal.timeout(20_000)]) }) });
   const result = await youtube.search(input.query, { type: input.type === "accounts" ? "channel" : "video" });
   const accounts: SocialAccount[] = [], posts: SocialPost[] = [];
-  for (const node of result.results.slice(0, input.limit)) {
+  for (const node of result.results) {
+    if (accounts.length + posts.length >= input.limit) break;
     if (node instanceof YTNodes.Channel) accounts.push({ id: node.id, platform: "youtube", username: node.author.name,
       name: node.author.name, url: `https://www.youtube.com/channel/${node.id}`, followerCount: null });
     if (node instanceof YTNodes.Video) posts.push({ id: node.id, platform: "youtube", url: `https://www.youtube.com/watch?v=${node.id}`,
