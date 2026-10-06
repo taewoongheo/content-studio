@@ -16,7 +16,7 @@ export function TextContentControl({ value, textColors, baseColor, disabled, onC
   onColorsChange: (ranges: TextColorRange[]) => void;
 }) {
   const [selection, setSelection] = useState<{ start: number; end: number; value: string } | null>(null);
-  const [color, setColor] = useState("#FF0000");
+  const [color, setColor] = useState("#DC0000");
   const selected = selection?.value === value && selection.end > selection.start ? selection : null;
   function apply(color: string | null) {
     if (selected) onColorsChange(setTextColor(value, textColors, selected.start, selected.end, color));
