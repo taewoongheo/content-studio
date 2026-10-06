@@ -1,10 +1,12 @@
-import { realpathSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { isAbsolute } from "node:path";
 
 // Keep Python environments and native models outside Next's source graph.
-// Like the local database, these belong to the workspace beside the app.
+// Like the database, their location must not depend on the launch directory.
 export function researchRuntimeDirectory() {
-  return process.env.CONTENT_STUDIO_RESEARCH_RUNTIME_DIR
-    ? resolve(process.env.CONTENT_STUDIO_RESEARCH_RUNTIME_DIR)
-    : join(dirname(realpathSync(process.cwd())), ".content-studio-research");
+  const override = process.env.CONTENT_STUDIO_RESEARCH_RUNTIME_DIR;
+  if (override) {
+    if (!isAbsolute(override)) throw new Error("CONTENT_STUDIO_RESEARCH_RUNTIME_DIR는 절대 경로여야 합니다.");
+    return override;
+  }
+  return "/Users/taewoongheo/Projects/content-studio-workspace/.content-studio-research";
 }

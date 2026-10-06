@@ -1,12 +1,16 @@
 import Database from "better-sqlite3";
-import { mkdirSync, realpathSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { mkdirSync } from "node:fs";
+import { dirname, isAbsolute } from "node:path";
 
 const SCHEMA_VERSION = 7;
 
 export function defaultDatabasePath() {
-  if (process.env.CONTENT_STUDIO_DB_PATH) return process.env.CONTENT_STUDIO_DB_PATH;
-  return join(dirname(realpathSync(process.cwd())), "content-studio.sqlite");
+  const override = process.env.CONTENT_STUDIO_DB_PATH;
+  if (override) {
+    if (override !== ":memory:" && !isAbsolute(override)) throw new Error("CONTENT_STUDIO_DB_PATH는 절대 경로여야 합니다.");
+    return override;
+  }
+  return "/Users/taewoongheo/Projects/content-studio-workspace/content-studio.sqlite";
 }
 
 export function openLocalDatabase(path = defaultDatabasePath()) {

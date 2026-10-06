@@ -57,6 +57,7 @@ pnpm dev
 - 앱은 Next.js·React 기반의 로컬 시각 편집기다. Codex 실행과 AI 대화는 외부 에이전트가 담당한다.
 - DB·편집 상태·리서치 작업은 로컬 단일 서버 프로세스를 기준으로 한다. 여러 서버 프로세스나 서버리스 배포를 지원한다고 가정하지 않는다.
 - 기존 작업 트리의 브랜치·미커밋 변경을 먼저 확인하고 관련 없는 변경을 보존한다.
+- 개발은 원본 폴더 `/Users/taewoongheo/Projects/content-studio-workspace/content-studio`에서 `feat/*` 브랜치를 만들어 진행한다. 사용자가 별도로 요청하지 않으면 새 worktree나 작업 폴더를 만들지 않는다.
 
 ## 프로젝트와 편집 상태
 
@@ -156,7 +157,8 @@ url = "http://127.0.0.1:3000/mcp"
 
 ## 저장 데이터와 구현 경계
 
-- SQLite 기본 위치는 앱 소스 폴더의 상위 워크스페이스에 있는 `content-studio.sqlite`이다. 검증용 DB는 `CONTENT_STUDIO_DB_PATH`로 분리한다.
+- SQLite 기본 위치는 `/Users/taewoongheo/Projects/content-studio-workspace/content-studio.sqlite`로 고정한다. 실행 폴더·브랜치·포트에 따라 경로를 바꾸거나 새 DB를 만들지 않는다. 검증용 DB는 `CONTENT_STUDIO_DB_PATH`의 절대 경로로만 분리한다.
+- 리서치 로그인 상태·Python 환경·모델도 `/Users/taewoongheo/Projects/content-studio-workspace/.content-studio-research`를 공유한다. `CONTENT_STUDIO_RESEARCH_RUNTIME_DIR`을 설정한다면 절대 경로를 사용한다.
 - 프로젝트 문서와 사용 이미지 바이트·메타데이터를 프로젝트별로 저장한다. 사용 이미지는 `content_project_assets`에서 관리한다. 외부 파일 이동·삭제는 저장된 프로젝트에 영향을 주지 않는다.
 - 복제는 문서와 이미지 사본을 함께 복제하고, 프로젝트 삭제는 해당 프로젝트의 이미지 사본도 삭제한다. 공용 이미지·캐릭터 라이브러리를 전제로 구현하지 않는다.
 - 편집 중 문서·이미지·되돌리기 이력은 서버 메모리에 유지한다. API와 MCP가 같은 작업 레지스트리와 저장 로직을 사용한다.
