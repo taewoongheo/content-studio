@@ -226,7 +226,7 @@ try {
     assert.equal((await applied).status(), 200);
     const colored = (await call("read_project", { projectId: colorProject.id })).structuredContent as Project;
     assert.deepEqual(colored.editor.document.slides[0].placements.find(p => p.id === "color-title-1")?.textColors,
-      [{ start: colorStart, end: colorStart + 5, color: "#FF0000" }]);
+      [{ start: colorStart, end: colorStart + 5, color: "#DC0000" }]);
     const afterColors = await call("preview_slide", { projectId: colorProject.id, slideId: "slide-1" });
     async function pixels(result: Awaited<ReturnType<typeof call>>) {
       const image = result.content.find(item => item.type === "image");
