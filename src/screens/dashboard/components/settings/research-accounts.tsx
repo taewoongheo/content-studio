@@ -11,7 +11,8 @@ export function ResearchAccounts({ state }: { state: ReturnType<typeof useResear
       <p className="mt-2 text-sm text-muted-foreground">리서치에 사용할 플랫폼 계정을 연결하세요.</p></header>
     <section aria-labelledby="research-accounts-heading">
       <h2 id="research-accounts-heading" className="border-b pb-4 text-base font-semibold">리서치 계정 연결</h2>
-      <p className="mt-4 text-sm leading-relaxed text-muted-foreground">로그인 창에서 직접 로그인하면 이후 검색과 수집에 사용합니다. YouTube는 계정 연결 없이 사용할 수 있습니다.</p>
+      <p className="mt-4 text-sm leading-relaxed text-muted-foreground">로그인 창에서 직접 로그인하거나 Safari에 저장된 로그인 상태를 가져오세요. YouTube는 계정 연결 없이 사용할 수 있습니다.</p>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Safari에서 가져오려면 macOS의 Safari 기본 프로필에서 로그인한 뒤 Safari를 완전히 종료해 주세요. 선택한 플랫폼의 쿠키만 이 앱에 저장하며, 이후 검색은 Chromium에서 실행합니다.</p>
       {state.error && <p role="alert" className="mt-4 text-sm text-destructive">{state.error}</p>}
       {!state.accounts.length && !state.error && <p role="status" className="py-6 text-sm text-muted-foreground">연결 상태를 불러오는 중…</p>}
       <div className="mt-2 divide-y">
@@ -31,8 +32,11 @@ export function ResearchAccounts({ state }: { state: ReturnType<typeof useResear
                 <Button variant="outline" disabled={state.busy !== null} onClick={() => void state.act(platform, "cancel")}>취소</Button>
               </> : <>
                 <Button variant="outline" disabled={state.busy !== null} onClick={() => void state.act(platform, "login")}>
-                  {state.busy === platform ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : <ExternalLink aria-hidden="true" />}
+                  {state.busy === platform && state.busyAction === "login" ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : <ExternalLink aria-hidden="true" />}
                   {account.status === "disconnected" ? "로그인" : "다시 로그인"}
+                </Button>
+                <Button variant="outline" disabled={state.busy !== null} onClick={() => void state.act(platform, "import_safari")}>
+                  {state.busy === platform && state.busyAction === "import_safari" ? <><LoaderCircle aria-hidden="true" className="animate-spin" />가져오는 중…</> : "Safari에서 가져오기"}
                 </Button>
                 {account.status !== "disconnected" && <Button variant="ghost" disabled={state.busy !== null} onClick={() => void state.act(platform, "disconnect")}>연결 해제</Button>}
               </>}

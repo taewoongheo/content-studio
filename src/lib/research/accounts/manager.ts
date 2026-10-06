@@ -5,6 +5,8 @@ import { loginCookie } from "./storage/cookies";
 import { ResearchBrowsers } from "../browser/sessions";
 import { browserBlock } from "../browser/blocks";
 import { CollectionBlocked } from "../collection/types";
+import { importSafariState } from "./import/safari";
+import { SafariImportError } from "./import/errors";
 
 type Login = { id: string; timer: NodeJS.Timeout };
 const LOGIN_TIMEOUT_MS = 10 * 60_000;
@@ -12,7 +14,8 @@ export class AccountManager {
   private logins = new Map<AccountPlatform, Login>();
   private changing = new Set<AccountPlatform>();
   private operations = new Map<AccountPlatform, { id: string; cancel: () => void }>();
-  constructor(readonly store = new AccountStore(), readonly browsers = new ResearchBrowsers(undefined, store)) {}
+  constructor(readonly store = new AccountStore(), readonly browsers = new ResearchBrowsers(undefined, store),
+    private readonly safariReader = importSafariState) {}
   list() { return accountPlatforms.map(platform => this.status(platform)); }
   status(platform: AccountPlatform) {
     const login = this.logins.get(platform);
@@ -76,6 +79,18 @@ export class AccountManager {
     if (!login) return;
     clearTimeout(login.timer); this.logins.delete(platform);
     await this.browsers.close(login.id);
+  }
+  async importSafari(platform: AccountPlatform) {
+    if (this.changing.has(platform) || this.operations.has(platform) || this.logins.has(platform))
+      throw new SafariImportError("busy");
+    this.changing.add(platform);
+    try {
+      // Read and validate before closing contexts or replacing an existing connection.
+      const state = await this.safariReader(platform);
+      await this.browsers.closePlatform(platform);
+      if (!this.store.save(platform, state)) throw new SafariImportError("cookies_missing");
+      return this.status(platform);
+    } finally { this.changing.delete(platform); }
   }
   async disconnect(platform: AccountPlatform) {
     if (this.changing.has(platform)) throw new Error("계정 연결을 처리 중입니다. 잠시 후 다시 시도해 주세요.");

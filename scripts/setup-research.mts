@@ -14,5 +14,6 @@ const directory = join(researchRuntimeDirectory(), "python");
 await mkdir(directory, { recursive: true });
 await run(process.env.CONTENT_STUDIO_PYTHON_BOOTSTRAP ?? "python3", ["-m", "venv", directory]);
 await run(join(directory, process.platform === "win32" ? "Scripts/python.exe" : "bin/python"),
-  ["-m", "pip", "install", "-r", join(process.cwd(), "workers/instagram/requirements.txt")]);
+  ["-m", "pip", "install", "-r", join(process.cwd(), "workers/instagram/requirements.txt"),
+    "-r", join(process.cwd(), "workers/accounts/requirements.txt")]);
 console.log("Research Python environment is ready. Node.js starts the collector when needed.");

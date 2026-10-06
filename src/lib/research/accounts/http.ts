@@ -2,7 +2,8 @@ import * as z from "zod/v4";
 import { isLocalRequest } from "@/lib/http/local-request";
 import type { AccountManager } from "./manager";
 import { accountPlatforms } from "./types";
-const actionSchema = z.strictObject({ platform: z.enum(accountPlatforms), action: z.enum(["login", "finish", "cancel", "disconnect"]) });
+import { SafariImportError } from "./import/errors";
+const actionSchema = z.strictObject({ platform: z.enum(accountPlatforms), action: z.enum(["login", "finish", "cancel", "disconnect", "import_safari"]) });
 export function accountHandlers(accounts: AccountManager) {
   return {
     GET(request: Request) {
@@ -21,8 +22,10 @@ export function accountHandlers(accounts: AccountManager) {
         if (input.action === "finish") await accounts.finishLogin(input.platform);
         if (input.action === "cancel") await accounts.cancelLogin(input.platform);
         if (input.action === "disconnect") await accounts.disconnect(input.platform);
+        if (input.action === "import_safari") await accounts.importSafari(input.platform);
         return Response.json({ accounts: accounts.list() }, { headers: { "Cache-Control": "no-store" } });
-      } catch {
+      } catch (error) {
+        if (error instanceof SafariImportError) return Response.json({ error: error.message, reason: error.reason }, { status: 409 });
         return Response.json({ error: input.action === "finish" ? "브라우저에서 로그인을 완료해 주세요. 창을 닫았다면 다시 열어 주세요." :
           "계정 연결을 처리하지 못했습니다. 진행 중인 작업과 Chromium 설치 상태를 확인해 주세요." }, { status: 409 });
       }

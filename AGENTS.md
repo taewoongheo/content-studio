@@ -174,7 +174,7 @@ pnpm setup:research
 pnpm setup:captcha
 ```
 
-- Instagram 설치에는 시스템 Python 3와 pip/venv가 필요하다. `setup:research`는 앱 상위 워크스페이스의 `.content-studio-research/python`에 Instaloader 4.15.3을 설치한다. Node가 JSON 입력으로 Python 워커를 실행하므로 별도 Python 서버가 필요하지 않다.
+- Python 도구 설치에는 시스템 Python 3와 pip/venv가 필요하다. `setup:research`는 앱 상위 워크스페이스의 `.content-studio-research/python`에 Instaloader 4.15.3과 browser-cookie3 0.20.1을 설치한다. Node가 Python 워커를 실행하므로 별도 Python 서버가 필요하지 않다.
 - YouTube.js와 Playwright는 npm 의존성이다. TikTok 수집은 설치된 Chromium을 사용한다. 오픈소스 저장소 전체를 앱에 복사하지 않고 어댑터로 연결한다.
 - CAPTCHA는 선택 설치다. `setup:captcha`는 captcha-bypass v1.1.1의 플랫폼별 실행 파일·모델을 다운로드하고 `scripts/research/captcha-release.json`의 SHA-256을 검증한다. 자산은 `.content-studio-research/captcha`에 둔다. 유료 CAPTCHA 서비스나 API 키를 사용하지 않는다.
 - 설치와 앱 실행에 동일한 `CONTENT_STUDIO_RESEARCH_RUNTIME_DIR`을 지정하면 런타임 위치를 변경할 수 있다. 실행 파일은 `CONTENT_STUDIO_RESEARCH_PYTHON`, `CONTENT_STUDIO_CAPTCHA_EXECUTABLE`의 절대 경로로 지정할 수 있다. CAPTCHA 모델은 실행 파일과 함께 설치한다. 설치용 Python 명령은 `CONTENT_STUDIO_PYTHON_BOOTSTRAP`으로 변경한다.
@@ -183,6 +183,9 @@ pnpm setup:captcha
 ### 로그인 계정 연결
 
 - 대시보드 **설정 → 리서치 계정 연결**에서 TikTok·Instagram 로그인 창을 연다. 사용자가 전용 Chromium 창에서 직접 로그인·인증하고 대시보드의 **로그인 완료**를 눌러 저장한다. 비밀번호·쿠키·토큰을 채팅으로 요구하지 않는다.
+- macOS에서는 **Safari에서 가져오기**로 Safari 기본 프로필의 로그인 쿠키를 연결할 수 있다. Safari에서 해당 플랫폼에 로그인하고 완전히 종료한 뒤 사용한다. 가져오기는 명시적인 대시보드 동작에서만 실행하며 상태 폴링·MCP에서 Safari 파일을 자동으로 읽지 않는다.
+- Safari 가져오기는 `workers/accounts/safari.py`가 로컬 쿠키 파일을 읽고 선택한 플랫폼 도메인의 유효 쿠키만 private pipe로 전달한다. `accounts/import`에서 검증한 뒤 기존 세션 저장소에 저장하고 다음 Chromium 컨텍스트에서 복원한다. Safari를 검색 브라우저로 사용하거나 개인 Chrome 프로필을 변경하지 않는다. 기존 컨텍스트는 저장 전에 닫으며 진행 중인 검색·로그인과 동시에 가져오지 않는다.
+- 파일 접근 거부·도구 미설치·로그인 쿠키 없음은 값이 제거된 오류로 표시한다. 서버 실행 앱의 macOS 권한 변경은 사용자가 직접 판단하고 수행한다. 별도 Safari 프로필·비공개 창·메모리에만 남은 쿠키는 지원하지 않으며 browser-cookie3가 제공하지 않는 SameSite는 Lax로 변환한다. 가져오기 성공은 유효 쿠키의 로컬 저장을 의미하며 플랫폼의 실제 인증 성공을 보장하지 않는다.
 - 저장하는 것은 쿠키와 웹 저장소 인증 상태다. 사용자 브라우저의 프로필을 가져오거나 비밀번호를 저장하지 않는다. 소스 밖 런타임의 `accounts/{platform}.json`에 원자적으로 저장하고 디렉터리는 0700, 파일은 0600으로 제한한다. 인증 파일을 Git·프로젝트 DB·API/MCP 응답에 넣지 않는다.
 - 연결 상태는 저장된 인증 쿠키를 기준으로 한다. 실제 검색 가능성까지 보증하지 않는다. 쿠키의 명시적 만료 또는 플랫폼의 명시적 로그인 요구 시 `login_required`로 표시한다. 일반 403·빈 검색 결과·요청 제한만으로 세션 만료를 단정하지 않는다.
 - 로그인 창은 최대 10분 유지하며 취소·저장·연결 해제·시간 초과 때 종료한다. 연결 해제는 해당 플랫폼의 진행 작업을 취소하고 쿠키와 전용 컨텍스트를 제거한다.
@@ -226,7 +229,7 @@ pnpm setup:captcha
 | TikTok | 검색은 로그인 Chromium의 내부 검색 응답, URL 수집은 공식 플레이어·공개 프로필·creator embed | 계정·게시물 키워드 검색. creator embed 계정 수집은 제한된 최근 표본. 페이지네이션 미지원 |
 | YouTube | YouTube.js의 InnerTube 검색·커뮤니티 피드 | 검색은 채널·영상이며 커뮤니티 게시물 직접 검색은 아님. 채널을 찾은 뒤 커뮤니티 목록 조회. 계정 피드 페이지네이션 지원. 개별 커뮤니티 게시물은 출처 채널 필요 |
 
-- 공개 페이지와 비공식 인터페이스 변경에 영향을 받는다. 사용자가 연결한 로그인 세션만 사용하며 프록시는 자동으로 사용하지 않는다. Safari·사용자 Chrome 프로필은 사용하지 않는다.
+- 공개 페이지와 비공식 인터페이스 변경에 영향을 받는다. 사용자가 연결한 로그인 세션만 사용하며 프록시는 자동으로 사용하지 않는다. 검색은 전용 Chromium에서 실행한다. Safari는 명시적인 쿠키 가져오기 출처로만 사용하며 사용자 Chrome 프로필은 사용하지 않는다.
 - `block.reason`은 `captcha_required`, `login_required`, `rate_limited`, `access_denied`, `empty_response`, `unsupported`, `setup_required`, `timeout`, `not_found`, `source_error` 등을 구분한다. 401·403·빈 응답만으로 CAPTCHA라고 판단하지 않는다.
 - TikTok의 전용 브라우저는 사용자의 기존 프로필과 별개다. 필요하면 `open_collection_browser`로 기존 창을 computer use에 넘긴다. 새 브라우저를 열면 원래 수집 세션에 반영되지 않는다.
 - 로컬 CAPTCHA 도구는 확인된 도전만 처리한다. 컨트롤·원본 이미지가 인식되지 않거나 모델이 없으면 `unsupported_challenge`·`solver_unavailable` 등을 반환한다. `challenge_cleared`는 화면에서 도전이 사라진 상태이며 `resume_collection`의 수집 성공으로 복구를 확인한다. 실제 TikTok CAPTCHA 해결 성공률은 아직 검증하지 않았다.

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer } from "node:net";
@@ -15,12 +15,16 @@ await new Promise<void>(resolve => listener.close(() => resolve()));
 const origin = `http://127.0.0.1:${address.port}`;
 const runtime = join(directory, "research"), accountDir = join(runtime, "accounts");
 await mkdir(accountDir, { recursive: true });
+// Exercise the real worker pipe without touching the user's Safari files.
+const fixturePython = join(runtime, "fixture-python");
+await writeFile(fixturePython, `#!${process.execPath}\nconsole.log(JSON.stringify({ ok: true, cookies: [{ name: "sessionid", value: "safari-fixture-session", domain: ".instagram.com", path: "/", expires: -1, httpOnly: true, secure: true, sameSite: "Lax" }] }));\n`, { mode: 0o700 });
 await writeFile(join(accountDir, "tiktok.json"), JSON.stringify({ updatedAt: new Date().toISOString(), reason: null,
   state: { cookies: [{ name: "sessionid", value: "fixture-session", domain: ".tiktok.com", path: "/", expires: 1,
     httpOnly: true, secure: true, sameSite: "None" }], origins: [] } }), { mode: 0o600 });
 let logs = "";
 const app = spawn("pnpm", ["start", "--port", String(address.port)], { detached: true, stdio: ["ignore", "pipe", "pipe"],
-  env: { ...process.env, CONTENT_STUDIO_DB_PATH: join(directory, "test.sqlite"), CONTENT_STUDIO_RESEARCH_RUNTIME_DIR: runtime } });
+  env: { ...process.env, CONTENT_STUDIO_DB_PATH: join(directory, "test.sqlite"), CONTENT_STUDIO_RESEARCH_RUNTIME_DIR: runtime,
+    CONTENT_STUDIO_RESEARCH_PYTHON: fixturePython } });
 app.stdout.on("data", value => { logs += value; }); app.stderr.on("data", value => { logs += value; });
 const browser = await chromium.launch({ headless: true });
 const client = new Client({ name: "search-dashboard-test", version: "1" });
@@ -40,6 +44,7 @@ try {
   await page.getByRole("heading", { name: "TikTok", exact: true }).waitFor();
   assert.equal(await page.getByRole("button", { name: "다시 로그인", exact: true }).count(), 1);
   assert.equal(await page.getByRole("button", { name: "로그인", exact: true }).count(), 1);
+  assert.equal(await page.getByRole("button", { name: "Safari에서 가져오기", exact: true }).count(), 2);
   await page.screenshot({ path: "/tmp/content-studio-account-settings-desktop.png", fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false);
@@ -62,6 +67,18 @@ try {
   await page.getByRole("button", { name: "다시 로그인", exact: true }).waitFor({ state: "detached" });
   const disconnected = await call("get_research_accounts");
   assert.equal((disconnected.accounts as Array<{ status: string }>)[0].status, "disconnected");
+  if (process.platform === "darwin") {
+    await page.getByRole("button", { name: "Safari에서 가져오기", exact: true }).nth(1).click();
+    await page.getByRole("button", { name: "다시 로그인", exact: true }).waitFor();
+    const imported = await call("get_research_accounts");
+    assert.equal((imported.accounts as Array<{ status: string }>)[1].status, "connected");
+    assert.equal(JSON.stringify(imported).includes("safari-fixture-session"), false);
+    const saved = JSON.parse(await readFile(join(accountDir, "instagram.json"), "utf8"));
+    const restored = await browser.newContext({ storageState: saved.state });
+    try { assert.equal((await restored.cookies("https://www.instagram.com"))[0].value, "safari-fixture-session"); }
+    finally { await restored.close(); }
+    console.log("PASS Safari dashboard import, private worker pipe, redacted MCP status and Chromium cookie restoration (synthetic cookies)");
+  }
   if (process.argv.includes("--live-youtube")) {
     const search = await call("search_social_candidates", { platform: "youtube", query: "gym tips", type: "accounts", limit: 3 });
     const deadline = Date.now() + 30_000;

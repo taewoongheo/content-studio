@@ -1,11 +1,12 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AccountPlatform, AccountStatus } from "@/lib/research/accounts/types";
-type Action = "login" | "finish" | "cancel" | "disconnect";
+type Action = "login" | "finish" | "cancel" | "disconnect" | "import_safari";
 export function useResearchAccounts() {
   const [accounts, setAccounts] = useState<AccountStatus[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<AccountPlatform | null>(null);
+  const [busyAction, setBusyAction] = useState<Action | null>(null);
   const controller = useRef<AbortController | null>(null);
   const refreshing = useRef<AbortSignal | null>(null), mutating = useRef(false), version = useRef(0);
   const update = useCallback(async (response: Response, signal: AbortSignal, expectedVersion: number) => {
@@ -35,11 +36,11 @@ export function useResearchAccounts() {
     const signal = controller.current?.signal;
     if (!signal || signal.aborted || mutating.current) return;
     mutating.current = true; const revision = ++version.current;
-    setBusy(platform); setError("");
+    setBusy(platform); setBusyAction(action); setError("");
     try { await update(await fetch("/api/research/accounts", { method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ platform, action }), signal }), signal, revision); }
     catch (cause) { if (!signal.aborted) setError(cause instanceof Error ? cause.message : "계정 연결에 실패했습니다."); }
-    finally { mutating.current = false; if (!signal.aborted) setBusy(null); }
+    finally { mutating.current = false; if (!signal.aborted) { setBusy(null); setBusyAction(null); } }
   }
-  return { accounts, error, busy, act, refresh };
+  return { accounts, error, busy, busyAction, act, refresh };
 }
