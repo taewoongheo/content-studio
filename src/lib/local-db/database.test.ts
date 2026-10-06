@@ -1,15 +1,27 @@
 import assert from "node:assert/strict";
 import Database from "better-sqlite3";
-import { mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import test from "node:test";
 import { defaultDatabasePath, openLocalDatabase } from "./database";
 import { PublishedPostStore } from "./published-posts";
 
-test("기본 DB는 프로젝트의 상위 workspace에 둔다", () => {
-  if (process.env.CONTENT_STUDIO_DB_PATH) return;
-  assert.equal(defaultDatabasePath(), join(dirname(realpathSync(process.cwd())), "content-studio.sqlite"));
+test("DB 경로는 실행 폴더가 바뀌어도 고정되며 상대 경로 설정은 거부한다", () => {
+  const originalDirectory = process.cwd(), originalPath = process.env.CONTENT_STUDIO_DB_PATH;
+  try {
+    delete process.env.CONTENT_STUDIO_DB_PATH;
+    process.chdir(tmpdir());
+    assert.equal(defaultDatabasePath(), "/Users/taewoongheo/Projects/content-studio-workspace/content-studio.sqlite");
+    process.env.CONTENT_STUDIO_DB_PATH = "different.sqlite";
+    assert.throws(defaultDatabasePath, /절대 경로/);
+    process.env.CONTENT_STUDIO_DB_PATH = join(tmpdir(), "isolated-test.sqlite");
+    assert.equal(defaultDatabasePath(), join(tmpdir(), "isolated-test.sqlite"));
+  } finally {
+    process.chdir(originalDirectory);
+    if (originalPath === undefined) delete process.env.CONTENT_STUDIO_DB_PATH;
+    else process.env.CONTENT_STUDIO_DB_PATH = originalPath;
+  }
 });
 
 test("DB를 다시 열어도 게시 기록이 유지되고 공용 라이브러리 테이블을 만들지 않는다", () => {

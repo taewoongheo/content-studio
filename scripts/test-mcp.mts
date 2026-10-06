@@ -25,7 +25,7 @@ const origin = `http://127.0.0.1:${port}`;
 let serverLog = "";
 function startApp() {
   const child = spawn("pnpm", [process.argv.includes("--production") ? "start" : "dev", "--port", String(port)], {
-    env: { ...process.env, CONTENT_STUDIO_DB_PATH: join(directory, "test.sqlite") },
+    env: { ...process.env, CONTENT_STUDIO_DB_PATH: join(directory, "test.sqlite"), CONTENT_STUDIO_RESEARCH_RUNTIME_DIR: join(directory, "research") },
     stdio: ["ignore", "pipe", "pipe"], detached: true,
   });
   child.stdout.on("data", (chunk) => { serverLog += chunk; });
@@ -81,7 +81,7 @@ try {
   assert.deepEqual([...tools].sort(), [
     "list_projects", "list_template_guides", "set_reuse_guide", "register_template", "unregister_template", "open_project", "clone_project", "read_project",
     "edit_project", "undo_project", "preview_slide",
-    "list_account_posts", "read_social_post", "read_post_images", "get_collection_job",
+    "search_social_candidates", "get_research_accounts", "list_account_posts", "read_social_post", "read_post_images", "get_collection_job",
     "solve_collection_captcha", "open_collection_browser", "resume_collection", "close_collection_session",
   ].sort(), "MCP must expose only the supported tools, without project deletion or tab close");
   assert.equal(tools.includes("add_image"), false);
@@ -226,7 +226,7 @@ try {
     assert.equal((await applied).status(), 200);
     const colored = (await call("read_project", { projectId: colorProject.id })).structuredContent as Project;
     assert.deepEqual(colored.editor.document.slides[0].placements.find(p => p.id === "color-title-1")?.textColors,
-      [{ start: colorStart, end: colorStart + 5, color: "#FF0000" }]);
+      [{ start: colorStart, end: colorStart + 5, color: "#DC0000" }]);
     const afterColors = await call("preview_slide", { projectId: colorProject.id, slideId: "slide-1" });
     async function pixels(result: Awaited<ReturnType<typeof call>>) {
       const image = result.content.find(item => item.type === "image");

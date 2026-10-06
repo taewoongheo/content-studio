@@ -14,6 +14,54 @@ import { createContentProject, loadContentProject, saveContentProject } from "./
 
 const pngHeader = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
+test("이미 열린 문서의 이전 폰트를 정의와 장별 덮어쓰기에서 변환하고 저장한다", () => {
+  const database = openLocalDatabase(":memory:");
+  try {
+    const projects = new ContentProjectStore(database);
+    const registry = new ContentJobRegistry();
+    const job = registry.add({ structure: "sequential", aspectRatio: "4:5", slideCount: 2, outputLanguage: "English" });
+    registry.update(job.id, record => {
+      const document = record.editor.document!;
+      const hook = makeElementDefinition({ id: "hook_title", kind: "text" });
+      hook.style.fontFamily = "anton" as typeof hook.style.fontFamily;
+      document.elements.push(hook);
+      document.slides[0].placements.push({ id: "hook-title", elementId: hook.id, value: "Hook",
+        frameOverride: null, styleOverride: { fontFamily: "anton" as typeof hook.style.fontFamily } });
+      record.editor.revision = 1;
+      record.saveError = "편집 문서를 저장할 수 없습니다: Element hook_title의 정의가 올바르지 않습니다.";
+    });
+    const original = structuredClone(registry.getRecord(job.id).editor.document!);
+    registry.getRecord(job.id).editorHistory.push(original);
+    saveContentProject(registry, job.id, "Font migration", { projects });
+    const persisted = projects.get(job.id)!.document as typeof original;
+    assert.equal(persisted.elements.find(element => element.id === "hook_title")!.style.fontFamily, "oswald");
+    assert.equal(persisted.slides[0].placements.find(placement => placement.id === "hook-title")!.styleOverride!.fontFamily, "oswald");
+    assert.deepEqual(registry.get(job.id).editor.document, persisted);
+    assert.deepEqual(registry.getRecord(job.id).editorHistory, [original]);
+    assert.equal(registry.get(job.id).savedRevision, 1);
+    assert.equal(registry.get(job.id).saveError, undefined);
+  } finally { database.close(); }
+});
+
+test("변환 후에도 올바르지 않은 문서는 저장하지 않고 현재 초안을 보존한다", () => {
+  const database = openLocalDatabase(":memory:");
+  try {
+    const projects = new ContentProjectStore(database);
+    const registry = new ContentJobRegistry();
+    const job = registry.add({ structure: "sequential", aspectRatio: "4:5", slideCount: 2, outputLanguage: "English" });
+    registry.update(job.id, record => {
+      const hook = makeElementDefinition({ id: "hook_title", kind: "text" });
+      hook.style.fontFamily = "anton" as typeof hook.style.fontFamily;
+      hook.style.fontSize = 300;
+      record.editor.document!.elements.push(hook);
+    });
+    const before = registry.get(job.id);
+    assert.throws(() => saveContentProject(registry, job.id, "Invalid", { projects }), /Element hook_title의 정의가 올바르지 않습니다/);
+    assert.equal(projects.get(job.id), null);
+    assert.deepEqual(registry.get(job.id), before);
+  } finally { database.close(); }
+});
+
 
 test("프로젝트는 시각 문서와 사용 이미지만 저장하고 새 편집 세션으로 불러온다", async () => {
   const directory = mkdtempSync(join(tmpdir(), "content-studio-project-test-"));

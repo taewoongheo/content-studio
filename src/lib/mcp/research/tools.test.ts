@@ -20,7 +20,7 @@ test("MCP rejects off-platform URLs, shares job state across protocol instances 
   const first = await connect(), second = await connect();
   try {
     const tools = (await first.client.listTools()).tools;
-    assert.equal(tools.length, 8);
+    assert.equal(tools.length, 10);
     assert.equal(tools.some(tool => /comments|reply/.test(tool.name)), false);
     assert.equal(tools.find(tool => tool.name === "read_social_post")?.annotations?.openWorldHint, true);
     const bad = await first.client.callTool({ name: "read_social_post", arguments: { url: "https://localhost/post/1" } });

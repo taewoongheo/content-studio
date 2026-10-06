@@ -67,9 +67,10 @@ export function saveContentProject(
   stores = defaultProjectStores(),
 ) {
   const record = registry.getRecord(jobId);
-  const document = record.editor.document;
-  if (!document)
+  const sourceDocument = record.editor.document;
+  if (!sourceDocument)
     throw new ContentJobError("INVALID_STAGE", "편집 문서가 준비된 뒤 저장해 주세요.");
+  const document = ensureSharedBackground(structuredClone(sourceDocument));
   const errors = validateEditorDocument(document);
   if (errors.length > 0)
     throw new ContentJobError("INVALID_OUTPUT", `편집 문서를 저장할 수 없습니다: ${errors[0]}`);
@@ -82,7 +83,12 @@ export function saveContentProject(
     document,
     assets: projectAssetIds(document).map((assetId) => readProjectAsset(assetId, record)),
   });
-  registry.update(jobId, (job) => { job.name = saved.name; job.savedRevision = job.editor.revision; delete job.saveError; });
+  registry.update(jobId, (job) => {
+    job.editor.document = document;
+    job.name = saved.name;
+    job.savedRevision = job.editor.revision;
+    delete job.saveError;
+  });
   registry.afterCommit(notifyProjectsChanged);
   return saved;
 }

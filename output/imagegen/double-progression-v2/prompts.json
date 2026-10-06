@@ -1,0 +1,68 @@
+{
+  "pairs": [
+    {
+      "src": "/Users/taewoongheo/.codex/generated_images/01a110c9-da78-7de1-a528-d6110f64eaa3/exec-98a2fabd-283b-4ce4-bbb0-242a918a7c0b.png",
+      "dst": "/Users/taewoongheo/Projects/content-studio-workspace/content-studio/output/imagegen/double-progression-v2/01-cover.png"
+    },
+    {
+      "src": "/Users/taewoongheo/.codex/generated_images/01a110c9-da78-7de1-a528-d6110f64eaa3/exec-0dffa09e-e662-457c-9f1e-ce43ed4e20a2.png",
+      "dst": "/Users/taewoongheo/Projects/content-studio-workspace/content-studio/output/imagegen/double-progression-v2/02-example.png"
+    },
+    {
+      "src": "/Users/taewoongheo/.codex/generated_images/01a110c9-da78-7de1-a528-d6110f64eaa3/exec-842ad427-56c3-4047-8fdd-16e07c5b0db3.png",
+      "dst": "/Users/taewoongheo/Projects/content-studio-workspace/content-studio/output/imagegen/double-progression-v2/03-range.png"
+    },
+    {
+      "src": "/Users/taewoongheo/.codex/generated_images/01a110c9-da78-7de1-a528-d6110f64eaa3/exec-ac6501b8-8b7a-41bf-9cdf-18bca2c8dfa6.png",
+      "dst": "/Users/taewoongheo/Projects/content-studio-workspace/content-studio/output/imagegen/double-progression-v2/04-reps.png"
+    },
+    {
+      "src": "/Users/taewoongheo/.codex/generated_images/01a110c9-da78-7de1-a528-d6110f64eaa3/exec-ca789f3a-55c2-4851-b66f-a00096923ee6.png",
+      "dst": "/Users/taewoongheo/Projects/content-studio-workspace/content-studio/output/imagegen/double-progression-v2/05-load.png"
+    },
+    {
+      "src": "/Users/taewoongheo/.codex/generated_images/01a110c9-da78-7de1-a528-d6110f64eaa3/exec-0a8ad8d2-9cee-4985-a4b9-f8ae150869f5.png",
+      "dst": "/Users/taewoongheo/Projects/content-studio-workspace/content-studio/output/imagegen/double-progression-v2/06-log.png"
+    }
+  ],
+  "base": "Use case: illustration-story. Asset: transparent character cutout for fitness carousel. Official references: image 1 turnaround controls exaggerated body proportions, enormous muscles, clothing, black shorts and black sneakers; image 2 face/eyewear has priority for head and black wraparound sunglasses. Match exactly the illustrated outline thickness and softly shaded muscle style. Bald pale faceless bodybuilder, NO mouth, nose and ears only faint shading. Unshadowed skin exactly #DDD6D2, no white highlight or rim light, very shallow soft shadows, no veins or realistic muscle fibers. One character in ONE pose, no montage, no repeated stages. Props charcoal/black. Full subject and props visible with breathing room, no cropping. Genuinely transparent background, no ground plane, no text, numbers, logos or watermarks. Do not copy labels or multiple views from references. ",
+  "scenes": [
+    [
+      "01-cover",
+      "Single full-body character, front three-quarter view. EXACTLY TWO ARMS: his LEFT shoulder connects to his LEFT upper arm and LEFT forearm, LEFT hand holding a black small weight plate beside left hip. His RIGHT shoulder connects to RIGHT upper arm and bent RIGHT forearm, RIGHT hand resting at chin in a thoughtful pose. BOTH arms fully visible. No hand or arm behind back, no third arm, no extra shoulder or detached limb. One simple thoughtful pose. No activation color."
+    ],
+    [
+      "02-example",
+      "Single full-body character seated on a small charcoal flat gym bench, relaxed after lifting, looking at an open black training notebook held in left hand, right hand writing with a pen. Notebook pages have faint abstract horizontal lines only, no text or digits. No dumbbells, no activation color."
+    ],
+    [
+      "03-range",
+      "Single character seated upright on a charcoal flat bench in a stable seated dumbbell curl pose, upper arms vertical close to torso, forearms raised about 45 degrees above horizontal, both hands naturally wrapping black dumbbell handles. Feet planted, all bench and dumbbells visible. Biceps only highlighted solid #E5725C following anatomical boundary with shallow shading. One pose only."
+    ],
+    [
+      "04-reps",
+      "Single character standing in stable three-quarter side view, performing one controlled dumbbell curl, working elbow close to torso flexed roughly 90 degrees, wrist neutral, five fingers around black dumbbell grip; other arm relaxed at side. Working biceps only #E5725C, rest unchanged. Full body and dumbbell visible."
+    ],
+    [
+      "05-load",
+      "Single full-body character standing beside a compact charcoal horizontal dumbbell rack, picking up one slightly larger black dumbbell from rack with one hand while other hand rests gently on rack. Rack holds three pairs neatly, believable support geometry and correct hand grip. Shows selecting a heavier weight, not exercise execution. No activation color."
+    ],
+    [
+      "06-log",
+      "Single full-body character standing in frontal three-quarter view, looking down at black smartphone held in left hand, right index finger touching the FRONT touchscreen facing HIM. We see only the BACK of the phone: solid black rear casing, small camera lenses near top corner, NO screen or pale rectangles visible on the rear casing. Correct device orientation: screen faces character, opaque black back faces viewer. Exactly TWO arms with correct fingers. No activation color. Crisp alpha cutout, zero opacity in all empty surrounding space."
+    ]
+  ],
+  "refs": [
+    "/Users/taewoongheo/Projects/liftcode-workspace/tiktok/캐릭터 이미지 생성 가이드/캐릭터_턴어라운드.png",
+    "/Users/taewoongheo/Projects/liftcode-workspace/tiktok/캐릭터 이미지 생성 가이드/얼굴_썬글라스.png"
+  ],
+  "mode": "built-in image_gen",
+  "prompts": [
+    "Use case: illustration-story. Asset: transparent character cutout for fitness carousel. Official references: image 1 turnaround controls exaggerated body proportions, enormous muscles, clothing, black shorts and black sneakers; image 2 face/eyewear has priority for head and black wraparound sunglasses. Match exactly the illustrated outline thickness and softly shaded muscle style. Bald pale faceless bodybuilder, NO mouth, nose and ears only faint shading. Unshadowed skin exactly #DDD6D2, no white highlight or rim light, very shallow soft shadows, no veins or realistic muscle fibers. One character in ONE pose, no montage, no repeated stages. Props charcoal/black. Full subject and props visible with breathing room, no cropping. Genuinely transparent background, no ground plane, no text, numbers, logos or watermarks. Do not copy labels or multiple views from references. Anatomy constraint: exactly TWO arms and TWO hands total. Single full-body character, front three-quarter view. EXACTLY TWO ARMS: his LEFT shoulder connects to his LEFT upper arm and LEFT forearm, LEFT hand holding a black small weight plate beside left hip. His RIGHT shoulder connects to RIGHT upper arm and bent RIGHT forearm, RIGHT hand resting at chin in a thoughtful pose. BOTH arms fully visible. No hand or arm behind back, no third arm, no extra shoulder or detached limb. One simple thoughtful pose. No activation color.",
+    "Use case: illustration-story. Asset: transparent character cutout for fitness carousel. Official references: image 1 turnaround controls exaggerated body proportions, enormous muscles, clothing, black shorts and black sneakers; image 2 face/eyewear has priority for head and black wraparound sunglasses. Match exactly the illustrated outline thickness and softly shaded muscle style. Bald pale faceless bodybuilder, NO mouth, nose and ears only faint shading. Unshadowed skin exactly #DDD6D2, no white highlight or rim light, very shallow soft shadows, no veins or realistic muscle fibers. One character in ONE pose, no montage, no repeated stages. Props charcoal/black. Full subject and props visible with breathing room, no cropping. Genuinely transparent background, no ground plane, no text, numbers, logos or watermarks. Do not copy labels or multiple views from references. Anatomy constraint: exactly TWO arms and TWO hands total. Single full-body character seated on a small charcoal flat gym bench, relaxed after lifting, looking at an open black training notebook held in left hand, right hand writing with a pen. Notebook pages have faint abstract horizontal lines only, no text or digits. No dumbbells, no activation color.",
+    "Use case: illustration-story. Asset: transparent character cutout for fitness carousel. Official references: image 1 turnaround controls exaggerated body proportions, enormous muscles, clothing, black shorts and black sneakers; image 2 face/eyewear has priority for head and black wraparound sunglasses. Match exactly the illustrated outline thickness and softly shaded muscle style. Bald pale faceless bodybuilder, NO mouth, nose and ears only faint shading. Unshadowed skin exactly #DDD6D2, no white highlight or rim light, very shallow soft shadows, no veins or realistic muscle fibers. One character in ONE pose, no montage, no repeated stages. Props charcoal/black. Full subject and props visible with breathing room, no cropping. Genuinely transparent background, no ground plane, no text, numbers, logos or watermarks. Do not copy labels or multiple views from references. Anatomy constraint: exactly TWO arms and TWO hands total. Single character seated upright on a charcoal flat bench in a stable seated dumbbell curl pose, upper arms vertical close to torso, forearms raised about 45 degrees above horizontal, both hands naturally wrapping black dumbbell handles. Feet planted, all bench and dumbbells visible. Biceps only highlighted solid #E5725C following anatomical boundary with shallow shading. One pose only.",
+    "Use case: illustration-story. Asset: transparent character cutout for fitness carousel. Official references: image 1 turnaround controls exaggerated body proportions, enormous muscles, clothing, black shorts and black sneakers; image 2 face/eyewear has priority for head and black wraparound sunglasses. Match exactly the illustrated outline thickness and softly shaded muscle style. Bald pale faceless bodybuilder, NO mouth, nose and ears only faint shading. Unshadowed skin exactly #DDD6D2, no white highlight or rim light, very shallow soft shadows, no veins or realistic muscle fibers. One character in ONE pose, no montage, no repeated stages. Props charcoal/black. Full subject and props visible with breathing room, no cropping. Genuinely transparent background, no ground plane, no text, numbers, logos or watermarks. Do not copy labels or multiple views from references. Anatomy constraint: exactly TWO arms and TWO hands total. Single character standing in stable three-quarter side view, performing one controlled dumbbell curl, working elbow close to torso flexed roughly 90 degrees, wrist neutral, five fingers around black dumbbell grip; other arm relaxed at side. Working biceps only #E5725C, rest unchanged. Full body and dumbbell visible.",
+    "Use case: illustration-story. Asset: transparent character cutout for fitness carousel. Official references: image 1 turnaround controls exaggerated body proportions, enormous muscles, clothing, black shorts and black sneakers; image 2 face/eyewear has priority for head and black wraparound sunglasses. Match exactly the illustrated outline thickness and softly shaded muscle style. Bald pale faceless bodybuilder, NO mouth, nose and ears only faint shading. Unshadowed skin exactly #DDD6D2, no white highlight or rim light, very shallow soft shadows, no veins or realistic muscle fibers. One character in ONE pose, no montage, no repeated stages. Props charcoal/black. Full subject and props visible with breathing room, no cropping. Genuinely transparent background, no ground plane, no text, numbers, logos or watermarks. Do not copy labels or multiple views from references. Anatomy constraint: exactly TWO arms and TWO hands total. Single full-body character standing beside a compact charcoal horizontal dumbbell rack, picking up one slightly larger black dumbbell from rack with one hand while other hand rests gently on rack. Rack holds three pairs neatly, believable support geometry and correct hand grip. Shows selecting a heavier weight, not exercise execution. No activation color.",
+    "Use case: illustration-story. Asset: transparent character cutout for fitness carousel. Official references: image 1 turnaround controls exaggerated body proportions, enormous muscles, clothing, black shorts and black sneakers; image 2 face/eyewear has priority for head and black wraparound sunglasses. Match exactly the illustrated outline thickness and softly shaded muscle style. Bald pale faceless bodybuilder, NO mouth, nose and ears only faint shading. Unshadowed skin exactly #DDD6D2, no white highlight or rim light, very shallow soft shadows, no veins or realistic muscle fibers. One character in ONE pose, no montage, no repeated stages. Props charcoal/black. Full subject and props visible with breathing room, no cropping. Genuinely transparent background, no ground plane, no text, numbers, logos or watermarks. Do not copy labels or multiple views from references. Single full-body character standing in frontal three-quarter view, looking down at black smartphone held in left hand, right index finger touching the FRONT touchscreen facing HIM. We see only the BACK of the phone: solid black rear casing, small camera lenses near top corner, NO screen or pale rectangles visible on the rear casing. Correct device orientation: screen faces character, opaque black back faces viewer. Exactly TWO arms with correct fingers. No activation color. Crisp alpha cutout, zero opacity in all empty surrounding space."
+  ]
+}

@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { access, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
-import { researchRuntimeDirectory } from "../runtime";
+import { researchRuntimeDirectory } from "../../runtime";
 
 let running = false;
 export async function recognizeCaptcha(type: "slider" | "rotate", background: Buffer, piece: Buffer): Promise<unknown | null> {

@@ -9,7 +9,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { chromium } from "playwright";
 import sharp from "sharp";
-import { solveCaptcha } from "../../src/lib/research/browser/captcha";
+import { solveCaptcha } from "../../src/lib/research/browser/captcha/captcha";
 
 const directory = await mkdtemp(join(tmpdir(), "studio-research-smoke-"));
 const listener = createServer();
@@ -79,7 +79,7 @@ try {
     const job = await collect("list_account_posts", { accountUrl, limit: 3 });
     assert.ok(["complete", "blocked"].includes(job.status));
     console.log("OBSERVED anonymous account collection", { accountUrl, status: job.status, reason: job.block?.reason, count: job.posts?.length });
-    if (accountUrl.includes("tiktok")) {
+    if (accountUrl.includes("tiktok") && (job.status === "complete" || job.block?.reason === "captcha_required")) {
       const browser = await call("open_collection_browser", { jobId: job.jobId });
       assert.equal((browser.structuredContent as { sessionId: string }).sessionId, job.sessionId);
       assert.ok(browser.content.some(item => item.type === "image"));

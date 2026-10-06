@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Innertube, YTNodes } from "youtubei.js";
-import { emptyMetrics, type SocialPost } from "../domain/schema";
-import { CollectionBlocked, type Collector } from "../collection/types";
+import { emptyMetrics, type SocialPost } from "../../domain/schema";
+import { CollectionBlocked, type Collector } from "../../collection/types";
 
 type Feed = Awaited<ReturnType<Innertube["getPost"]>>;
 type Continuation = { sessionId: string; accountUrl: string; feed: Feed; remaining: SocialPost[] };
