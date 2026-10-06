@@ -1,5 +1,7 @@
 export const accountPlatforms = ["tiktok", "instagram"] as const;
 export type AccountPlatform = typeof accountPlatforms[number];
+export const accountActions = ["login", "finish", "cancel", "disconnect", "import_safari"] as const;
+export type AccountAction = typeof accountActions[number];
 export type AccountStatus = {
   platform: AccountPlatform;
   status: "disconnected" | "connected" | "login_required" | "logging_in";

@@ -1,9 +1,9 @@
 import * as z from "zod/v4";
 import { isLocalRequest } from "@/lib/http/local-request";
 import type { AccountManager } from "./manager";
-import { accountPlatforms } from "./types";
+import { accountActions, accountPlatforms } from "./types";
 import { SafariImportError } from "./import/errors";
-const actionSchema = z.strictObject({ platform: z.enum(accountPlatforms), action: z.enum(["login", "finish", "cancel", "disconnect", "import_safari"]) });
+const actionSchema = z.strictObject({ platform: z.enum(accountPlatforms), action: z.enum(accountActions) });
 export function accountHandlers(accounts: AccountManager) {
   return {
     GET(request: Request) {
