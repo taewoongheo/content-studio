@@ -8,7 +8,7 @@ export function ProjectTabs({ tabs, activeTabId, busy, onSelect, onClose, onRena
   onSelect: (tab: OpenProjectTab) => void; onClose: (tab: OpenProjectTab) => void; onRename: (tab: OpenProjectTab) => void;
   onNew: () => void; onDashboard: () => void;
 }) {
-  return <nav aria-label="프로젝트 탭" className="flex h-11 shrink-0 items-end border-b bg-muted px-2">
+  return <nav aria-label="프로젝트 탭" aria-keyshortcuts="Meta+[ Meta+]" title="이전 탭 ⌘[ · 다음 탭 ⌘]" className="flex h-11 shrink-0 items-end border-b bg-muted px-2">
     <Button variant="ghost" size="icon-sm" className="mb-1 mr-1 shrink-0" aria-label="대시보드" disabled={busy} onClick={onDashboard}><LayoutDashboard className="size-4" /></Button>
     <div className="flex h-full min-w-0 flex-1 items-end overflow-x-auto">
       {tabs.map(tab => <div data-project-tab={tab.tabId} key={tab.tabId}

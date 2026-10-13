@@ -59,6 +59,8 @@ export function EditorScreen({ ref, initialViewState, initialJob, onNewJob }: {
   const [slideId, setSlideId] = useState(initialViewState?.slideId ?? "slide-1");
   const [placementId, setPlacementId] = useState<string | null>(initialViewState?.placementId ?? null);
   const [scopeSelection, setScopeSelection] = useState<{ key: string; slideIds: string[] } | null>(initialViewState?.scopeSelection ?? null);
+  const [changingScope, setChangingScope] = useState(false);
+  const scopeChangeRunning = useRef(false);
   const [imageError, setImageError] = useState("");
   const [dismissedIssue, setDismissedIssue] = useState<string | null>(null);
   const [showGuides, setShowGuides] = useState(initialViewState?.showGuides ?? true);
@@ -261,9 +263,35 @@ export function EditorScreen({ ref, initialViewState, initialJob, onNewJob }: {
     if (pasted && await saveCommands(pasted.commands)) setPlacementId(pasted.destinationPlacementId);
   }
 
+  async function changeVisualScope(choice: ScopeChoice) {
+    if (!slide || !placement || disabled || scopeChangeRunning.current) return;
+    const next = selectVisualSlides(slide.id, scopeSlides.map((item) => item.slideId), selectedSlideIds, choice);
+    if (next.join() === selectedSlideIds.join()) return;
+    scopeChangeRunning.current = true;
+    setChangingScope(true);
+    try {
+      await trackWork((async () => {
+        if (backgroundRef.current && !(await backgroundRef.current.flushPending())) return false;
+        if (inspectorRef.current && !(await inspectorRef.current.flushPending())) return false;
+        setScopeSelection({ key: scopeKey, slideIds: next });
+        return true;
+      })());
+    } finally {
+      scopeChangeRunning.current = false;
+      setChangingScope(false);
+    }
+  }
+
   useEditorShortcuts((shortcut) => {
     if (shortcut === "save") {
       void projectSaveRef.current?.saveAutomatically();
+      return true;
+    }
+    if (shortcut === "toggle-scope") {
+      if (!slide || !placement) return false;
+      if (!disabled && !scopeChangeRunning.current && scopeSlides.length > 1) {
+        void changeVisualScope(selectedSlideIds.length === scopeSlides.length ? "current" : "all");
+      }
       return true;
     }
     if (!document || (disabled && shortcut !== "copy")) return false;
@@ -291,14 +319,6 @@ export function EditorScreen({ ref, initialViewState, initialJob, onNewJob }: {
     if (commands.length === 0) return;
     const saved = await saveCommands(commands);
     if (saved) setPlacementId(null);
-  }
-
-  async function changeVisualScope(choice: ScopeChoice) {
-    if (!slide || !placement) return;
-    const next = selectVisualSlides(slide.id, scopeSlides.map((item) => item.slideId), selectedSlideIds, choice);
-    if (next.join() === selectedSlideIds.join()) return;
-    if (!disabled && inspectorRef.current && !(await inspectorRef.current.flushPending())) return;
-    setScopeSelection({ key: scopeKey, slideIds: next });
   }
 
   async function changeFrame(targetPlacementId: string, frame: ElementFrame) {
@@ -399,7 +419,7 @@ export function EditorScreen({ ref, initialViewState, initialJob, onNewJob }: {
                     slides={scopeSlides}
                     selectedSlideIds={selectedSlideIds}
                     isBackground={element.kind === "background"}
-                    disabled={false}
+                    disabled={disabled || changingScope}
                     onChange={changeVisualScope}
                   />}
                 </div>

@@ -12,6 +12,7 @@ import { ProjectTabs } from "./components/project-tabs";
 import { CloseTabDialog } from "./components/close-tab-dialog";
 import { RenameTabDialog } from "./components/rename-tab-dialog";
 import { NewTabDialog } from "./components/new-tab-dialog";
+import { adjacentTab, workspaceShortcut } from "./shortcuts/workspace-shortcut";
 
 function updateUrl(projectId: string | null, replace = false) {
   const url = new URL(window.location.href);
@@ -40,21 +41,6 @@ export function WorkspaceScreen() {
     }
   });
 
-  const handleCloseShortcut = useEffectEvent((event: KeyboardEvent) => {
-    const closeKey = event.code === "KeyW" || event.key.toLowerCase() === "w";
-    if (!closeKey || !event.metaKey || event.ctrlKey || event.altKey || event.shiftKey || event.defaultPrevented) return;
-    const activeTab = tabs?.find(tab => tab.tabId === job?.tabId);
-    if (!activeTab) return;
-    event.preventDefault();
-    if (event.repeat || busy || chooser || lifecycle.closing || lifecycle.renaming) return;
-    lifecycle.close(activeTab);
-  });
-  useEffect(() => {
-    const listener = (event: KeyboardEvent) => handleCloseShortcut(event);
-    window.addEventListener("keydown", listener, true);
-    return () => window.removeEventListener("keydown", listener, true);
-  }, []);
-
   async function prepareSwitch() {
     if (!editor.current) return;
     if (!(await editor.current.flushPending())) throw new Error("입력 중인 변경을 반영하지 못했습니다. 현재 탭을 확인해 주세요.");
@@ -69,6 +55,26 @@ export function WorkspaceScreen() {
     if (job?.id === projectId) { setChooser(false); return; }
     await run(async () => { await prepareSwitch(); await showProject(projectId); });
   }
+  const handleWorkspaceShortcut = useEffectEvent((event: KeyboardEvent) => {
+    const shortcut = workspaceShortcut(event);
+    if (!shortcut || event.defaultPrevented) return;
+    const activeTab = tabs?.find(tab => tab.tabId === job?.tabId);
+    if (!activeTab) return;
+    event.preventDefault();
+    if (event.repeat || busy || chooser || lifecycle.closing || lifecycle.renaming ||
+      document.querySelector("[role='dialog'], [role='alertdialog']")) return;
+    if (shortcut === "close") lifecycle.close(activeTab);
+    else {
+      const neighbor = adjacentTab(tabs ?? [], activeTab.tabId, shortcut);
+      if (neighbor) void select(neighbor.projectId);
+    }
+  });
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => handleWorkspaceShortcut(event);
+    window.addEventListener("keydown", listener, true);
+    return () => window.removeEventListener("keydown", listener, true);
+  }, []);
+
   function dashboard() {
     void run(async () => { await prepareSwitch(); current.current = null; setJob(null); updateUrl(null); });
   }

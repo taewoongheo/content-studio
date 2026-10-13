@@ -215,6 +215,23 @@ try {
     await page.goto(`${origin}/?job=${colorProject.id}`);
     await page.getByRole("button", { name: "Color title Element 선택 및 레이어 순서 이동", exact: true }).click();
     const content = page.getByLabel("내용", { exact: true });
+    const scopeToggle = page.getByRole("button", { name: "전체 적용", exact: true });
+    assert.equal(await scopeToggle.getAttribute("aria-pressed"), "false");
+    await scopeToggle.click();
+    await page.getByRole("button", { name: "전체 적용", exact: true, pressed: true }).waitFor();
+    await page.getByRole("button", { name: "전체 적용 · 6/6장", exact: true }).waitFor();
+    await content.press("Meta+d");
+    await page.getByRole("button", { name: "전체 적용", exact: true, pressed: false }).waitFor();
+    await content.press("Meta+d");
+    await page.getByRole("button", { name: "전체 적용", exact: true, pressed: true }).waitFor();
+    const repeatCanceled = await content.evaluate(input => !input.dispatchEvent(new KeyboardEvent("keydown", {
+      key: "d", code: "KeyD", metaKey: true, repeat: true, bubbles: true, cancelable: true,
+    })));
+    assert.equal(repeatCanceled, true);
+    assert.equal(await scopeToggle.getAttribute("aria-pressed"), "true");
+    await scopeToggle.click();
+    await page.getByRole("button", { name: "전체 적용", exact: true, pressed: false }).waitFor();
+    console.log("PASS all-slide toggle, Cmd+D from text input and canceled key repeat");
     await content.evaluate((input, start) => {
       const textarea = input as HTMLTextAreaElement;
       textarea.focus(); textarea.setSelectionRange(start, start);
@@ -276,7 +293,7 @@ try {
       if (request.method() === "POST" && request.url().endsWith(`/api/content-jobs/${colorClone.id}`)) editRequests++;
     });
     await page.getByLabel("내용", { exact: true }).fill("FAST SWITCH");
-    await tabBar.getByRole("button", { name: "Partial colors", exact: true }).click();
+    await page.getByLabel("내용", { exact: true }).press("Meta+[");
     await page.waitForURL(url => url.searchParams.get("job") === colorProject.id);
     await page.locator(`[data-tab-id="${colorProject.tabId}"]`).waitFor();
     const switchedClone = (await call("read_project", { projectId: colorClone.id })).structuredContent as Project;
@@ -284,7 +301,7 @@ try {
     assert.equal(editRequests, 1, "flush and debounce must share one edit request");
     await page.getByRole("button", { name: "슬라이드 배경 선택", exact: true }).click();
     await page.getByLabel("슬라이드 배경색", { exact: true }).fill("#123456");
-    await tabBar.getByRole("button", { name: "Colored clone", exact: true }).click();
+    await page.getByLabel("슬라이드 배경색", { exact: true }).press("Meta+]");
     await page.waitForURL(url => url.searchParams.get("job") === colorClone.id);
     await page.locator(`[data-tab-id="${colorClone.tabId}"]`).waitFor();
     const switchedBackground = (await call("read_project", { projectId: colorProject.id })).structuredContent as Project;
