@@ -1,0 +1,62 @@
+[
+  {
+    "name": "close_collection_session",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"sessionId\":\"ddcceb84-300f-4e0c-9c15-a10abf0dfb7f\",\"closed\":true}"
+        }
+      ],
+      "structuredContent": {
+        "sessionId": "ddcceb84-300f-4e0c-9c15-a10abf0dfb7f",
+        "closed": true
+      }
+    }
+  },
+  {
+    "name": "close_collection_session",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"sessionId\":\"31d4e13c-0212-4666-a3c6-ce48e67af14f\",\"closed\":true}"
+        }
+      ],
+      "structuredContent": {
+        "sessionId": "31d4e13c-0212-4666-a3c6-ce48e67af14f",
+        "closed": true
+      }
+    }
+  },
+  {
+    "name": "close_collection_session",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"sessionId\":\"1928b07e-ef10-413c-8cf1-455d89be251f\",\"closed\":true}"
+        }
+      ],
+      "structuredContent": {
+        "sessionId": "1928b07e-ef10-413c-8cf1-455d89be251f",
+        "closed": true
+      }
+    }
+  },
+  {
+    "name": "close_collection_session",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"sessionId\":\"24504003-d34f-4c33-b115-2854c6ea71a0\",\"closed\":true}"
+        }
+      ],
+      "structuredContent": {
+        "sessionId": "24504003-d34f-4c33-b115-2854c6ea71a0",
+        "closed": true
+      }
+    }
+  }
+]

@@ -1,0 +1,1440 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"id\":\"bda1be0f-3788-445a-b283-70b0cce9f4c5\",\"tabId\":\"138d9b6c-9880-4624-b690-94e87abc2fc4\",\"name\":\"11 Upper-Back Exercises, Ranked\",\"savedRevision\":1,\"structure\":\"sequential\",\"aspectRatio\":\"4:5\",\"slideCount\":12,\"outputLanguage\":\"English\",\"editor\":{\"revision\":1,\"document\":{\"version\":1,\"structure\":\"sequential\",\"aspectRatio\":\"4:5\",\"elements\":[{\"id\":\"__background__\",\"name\":\"배경\",\"role\":\"슬라이드 전체의 바탕색\",\"kind\":\"background\",\"frame\":{\"x\":0,\"y\":0,\"width\":1,\"height\":1},\"style\":{\"color\":\"#111111\",\"backgroundColor\":\"#ffffff\",\"fontSize\":36,\"lineHeight\":1.2,\"fontWeight\":400,\"textAlign\":\"center\",\"borderRadius\":0,\"fontFamily\":\"sans-serif\",\"imageFit\":\"cover\"}},{\"id\":\"brand\",\"name\":\"brand\",\"role\":\"brand\",\"kind\":\"text\",\"frame\":{\"x\":0.051,\"y\":0.925,\"width\":0.14760173900648563,\"height\":0.039511944808712014},\"style\":{\"color\":\"#FFFFFF\",\"backgroundColor\":\"transparent\",\"fontSize\":25,\"lineHeight\":1.2,\"fontWeight\":700,\"textAlign\":\"center\",\"borderRadius\":0,\"fontFamily\":\"inter\",\"imageFit\":\"contain\"}},{\"id\":\"title\",\"name\":\"title\",\"role\":\"title\",\"kind\":\"text\",\"frame\":{\"x\":0.055,\"y\":0.205,\"width\":0.89,\"height\":0.1},\"style\":{\"color\":\"#303030\",\"backgroundColor\":\"transparent\",\"fontSize\":64,\"lineHeight\":1.05,\"fontWeight\":700,\"textAlign\":\"center\",\"borderRadius\":0,\"fontFamily\":\"space-grotesk\",\"imageFit\":\"contain\"}},{\"id\":\"body\",\"name\":\"body\",\"role\":\"body\",\"kind\":\"text\",\"frame\":{\"x\":0.0819,\"y\":0.2838,\"width\":0.8361485282588554,\"height\":0.10459547294600605},\"style\":{\"color\":\"#303030\",\"backgroundColor\":\"transparent\",\"fontSize\":34,\"lineHeight\":1.25,\"fontWeight\":400,\"textAlign\":\"center\",\"borderRadius\":0,\"fontFamily\":\"inter\",\"imageFit\":\"contain\"}},{\"id\":\"rankbg\",\"name\":\"rankbg\",\"role\":\"rankbg\",\"kind\":\"circle\",\"frame\":{\"x\":0.465,\"y\":0.145,\"width\":0.07,\"height\":0.056},\"style\":{\"color\":\"#303030\",\"backgroundColor\":\"#00BE6B\",\"fontSize\":36,\"lineHeight\":1.2,\"fontWeight\":400,\"textAlign\":\"center\",\"borderRadius\":0,\"borderEnabled\":true,\"borderColor\":\"#26734D\",\"borderWidth\":1,\"fontFamily\":\"sans-serif\",\"imageFit\":\"contain\"}},{\"id\":\"rank\",\"name\":\"rank\",\"role\":\"rank\",\"kind\":\"text\",\"frame\":{\"x\":0.3507,\"y\":0.115,\"width\":0.29862447437816264,\"height\":0.08965733508181767},\"style\":{\"color\":\"#e32400\",\"backgroundColor\":\"transparent\",\"fontSize\":82,\"lineHeight\":1,\"fontWeight\":700,\"textAlign\":\"center\",\"borderRadius\":0,\"fontFamily\":\"space-grotesk\",\"imageFit\":\"contain\"}},{\"id\":\"art\",\"name\":\"art\",\"role\":\"art\",\"kind\":\"image\",\"frame\":{\"x\":-0.004,\"y\":0.3962,\"width\":1.0079466894733091,\"height\":0.7297166315069274},\"style\":{\"color\":\"#303030\",\"backgroundColor\":\"transparent\",\"fontSize\":36,\"lineHeight\":1.2,\"fontWeight\":400,\"textAlign\":\"center\",\"borderRadius\":0,\"fontFamily\":\"sans-serif\",\"imageFit\":\"contain\"}},{\"id\":\"tile\",\"name\":\"tile\",\"role\":\"tile\",\"kind\":\"rectangle\",\"frame\":{\"x\":0.335,\"y\":0.45,\"width\":0.12,\"height\":0.096},\"style\":{\"color\":\"#303030\",\"backgroundColor\":\"transparent\",\"fontSize\":36,\"lineHeight\":1.2,\"fontWeight\":400,\"textAlign\":\"center\",\"borderRadius\":18,\"borderEnabled\":true,\"borderColor\":\"#222222\",\"borderWidth\":3,\"fontFamily\":\"sans-serif\",\"imageFit\":\"contain\"}},{\"id\":\"letter\",\"name\":\"letter\",\"role\":\"letter\",\"kind\":\"text\",\"frame\":{\"x\":0.335,\"y\":0.45,\"width\":0.12,\"height\":0.096},\"style\":{\"color\":\"#F3F1E9\",\"backgroundColor\":\"transparent\",\"fontSize\":76,\"lineHeight\":1,\"fontWeight\":400,\"textAlign\":\"center\",\"borderRadius\":0,\"fontFamily\":\"oswald\",\"imageFit\":\"contain\"}},{\"id\":\"tier\",\"name\":\"tier\",\"role\":\"tier\",\"kind\":\"text\",\"frame\":{\"x\":0.48,\"y\":0.45,\"width\":0.25,\"height\":0.096},\"style\":{\"color\":\"#303030\",\"backgroundColor\":\"transparent\",\"fontSize\":64,\"lineHeight\":1,\"fontWeight\":700,\"textAlign\":\"center\",\"borderRadius\":0,\"fontFamily\":\"space-grotesk\",\"imageFit\":\"contain\"}},{\"id\":\"hook\",\"name\":\"hook\",\"role\":\"hook\",\"kind\":\"text\",\"frame\":{\"x\":0.021,\"y\":0.177,\"width\":0.9580215237687977,\"height\":0.1474428416671418},\"style\":{\"color\":\"#303030\",\"backgroundColor\":\"transparent\",\"fontSize\":110,\"lineHeight\":1.04,\"fontWeight\":400,\"textAlign\":\"center\",\"borderRadius\":0,\"fontFamily\":\"oswald\",\"imageFit\":\"contain\"}},{\"id\":\"intro\",\"name\":\"intro\",\"role\":\"intro\",\"kind\":\"text\",\"frame\":{\"x\":0.15,\"y\":0.2,\"width\":0.7,\"height\":0.17},\"style\":{\"color\":\"#303030\",\"backgroundColor\":\"transparent\",\"fontSize\":67,\"lineHeight\":1.05,\"fontWeight\":700,\"textAlign\":\"center\",\"borderRadius\":0,\"fontFamily\":\"space-grotesk\",\"imageFit\":\"contain\"}},{\"id\":\"brand-badge\",\"name\":\"LIFTCODE badge\",\"role\":\"brand-badge\",\"kind\":\"rectangle\",\"frame\":{\"x\":0.0341,\"y\":0.9212,\"width\":0.1791746846268976,\"height\":0.04581218997662352},\"style\":{\"color\":\"#303030\",\"backgroundColor\":\"#111111\",\"fontSize\":30,\"lineHeight\":1.2,\"fontWeight\":400,\"textAlign\":\"left\",\"borderRadius\":99,\"fontFamily\":\"oswald\",\"imageFit\":\"contain\"}},{\"id\":\"cover-subtitle\",\"name\":\"Ranked exercise subtitle\",\"role\":\"subtitle\",\"kind\":\"text\",\"frame\":{\"x\":0.1073,\"y\":0.3491,\"width\":0.7854393842206543,\"height\":0.04920462968242203},\"style\":{\"color\":\"#303030\",\"backgroundColor\":\"transparent\",\"fontSize\":35,\"lineHeight\":1.2,\"fontWeight\":400,\"textAlign\":\"center\",\"borderRadius\":0,\"fontFamily\":\"inter\",\"imageFit\":\"contain\"}},{\"id\":\"9f04e401-34db-4add-a9f2-f12360408d6b\",\"name\":\"hook 복사본\",\"role\":\"hook\",\"kind\":\"text\",\"frame\":{\"x\":0.0906,\"y\":0.2371,\"width\":0.8424203549283729,\"height\":0.14541878100233765},\"style\":{\"color\":\"#e32400\",\"backgroundColor\":\"transparent\",\"fontSize\":130,\"lineHeight\":1.04,\"fontWeight\":400,\"textAlign\":\"center\",\"borderRadius\":0,\"fontFamily\":\"oswald\",\"imageFit\":\"contain\"}}],\"slides\":[{\"id\":\"slide-1\",\"role\":\"hook\",\"backgroundColor\":\"#FFFFFF\",\"placements\":[{\"id\":\"hook\",\"elementId\":\"hook\",\"value\":\"UPPER BACK EXERCISES\\nRANKED\",\"frameOverride\":{\"x\":0.03,\"y\":0.13,\"width\":0.94,\"height\":0.22},\"styleOverride\":{\"lineHeight\":1.04,\"fontSize\":104},\"textColors\":[{\"start\":21,\"end\":27,\"color\":\"#e32400\"}]},{\"id\":\"art\",\"elementId\":\"art\",\"value\":\"99c01c8b-60ec-438a-afd2-31df69e18f12\",\"frameOverride\":{\"x\":0.05,\"y\":0.43,\"width\":0.9,\"height\":0.68},\"styleOverride\":null},{\"id\":\"brand-badge\",\"elementId\":\"brand-badge\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"brand\",\"elementId\":\"brand\",\"value\":\"LIFTCODE\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"__background-placement__\",\"elementId\":\"__background__\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":{\"backgroundColor\":\"#FFFFFF\"}},{\"id\":\"cover-subtitle\",\"elementId\":\"cover-subtitle\",\"value\":\"11 exercises. Which one takes the top spot?\",\"frameOverride\":{\"x\":0.07,\"y\":0.35,\"width\":0.86,\"height\":0.06},\"styleOverride\":{\"fontSize\":33},\"textColors\":[]}],\"name\":\"11 Upper-Back Exercises, Ranked\"},{\"id\":\"slide-7\",\"role\":\"body\",\"backgroundColor\":\"#FFFFFF\",\"placements\":[{\"id\":\"rank\",\"elementId\":\"rank\",\"value\":\"#11\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"title\",\"elementId\":\"title\",\"value\":\"Face Pulls\",\"frameOverride\":null,\"styleOverride\":{\"fontSize\":64,\"lineHeight\":1.02},\"textColors\":[]},{\"id\":\"body\",\"elementId\":\"body\",\"value\":\"Useful as an accessory, but not our first pick\\nfor heavy upper-back work. Loading can get awkward.\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"art\",\"elementId\":\"art\",\"value\":\"ff6bdc0f-ffad-4bc4-9558-7a95283d3aa9\",\"frameOverride\":{\"x\":0.19,\"y\":0.42,\"width\":0.72,\"height\":0.49},\"styleOverride\":{\"imageFit\":\"contain\"}},{\"id\":\"brand-badge\",\"elementId\":\"brand-badge\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"brand\",\"elementId\":\"brand\",\"value\":\"LIFTCODE\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"__background-placement__\",\"elementId\":\"__background__\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":{\"backgroundColor\":\"#FFFFFF\"}}],\"name\":\"#11 Face Pulls\"},{\"id\":\"slide-8\",\"role\":\"body\",\"backgroundColor\":\"#FFFFFF\",\"placements\":[{\"id\":\"rank\",\"elementId\":\"rank\",\"value\":\"#10\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"title\",\"elementId\":\"title\",\"value\":\"Suspension Row\",\"frameOverride\":null,\"styleOverride\":{\"fontSize\":64,\"lineHeight\":1.02},\"textColors\":[]},{\"id\":\"body\",\"elementId\":\"body\",\"value\":\"A simple place to start with bodyweight rows.\\nProgression takes more setup as you get stronger.\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"art\",\"elementId\":\"art\",\"value\":\"19386fcc-c3c7-4bf2-8a31-ed814e2c280b\",\"frameOverride\":{\"x\":0.06,\"y\":0.43,\"width\":0.88,\"height\":0.47},\"styleOverride\":{\"imageFit\":\"contain\"}},{\"id\":\"brand-badge\",\"elementId\":\"brand-badge\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"brand\",\"elementId\":\"brand\",\"value\":\"LIFTCODE\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"__background-placement__\",\"elementId\":\"__background__\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":{\"backgroundColor\":\"#FFFFFF\"}}],\"name\":\"#10 Suspension Row\"},{\"id\":\"slide-10\",\"role\":\"body\",\"backgroundColor\":\"#FFFFFF\",\"placements\":[{\"id\":\"rank\",\"elementId\":\"rank\",\"value\":\"#9\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"title\",\"elementId\":\"title\",\"value\":\"DB Bent-Over Row\",\"frameOverride\":null,\"styleOverride\":{\"fontSize\":64,\"lineHeight\":1.02},\"textColors\":[]},{\"id\":\"body\",\"elementId\":\"body\",\"value\":\"Two free weights, no chest support.\\nIt's easy to let body movement take over the rep.\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"art\",\"elementId\":\"art\",\"value\":\"1c0cdaa2-943a-4914-8458-50d0b0332c19\",\"frameOverride\":{\"x\":0.12,\"y\":0.42,\"width\":0.76,\"height\":0.48},\"styleOverride\":{\"imageFit\":\"contain\"}},{\"id\":\"brand-badge\",\"elementId\":\"brand-badge\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"brand\",\"elementId\":\"brand\",\"value\":\"LIFTCODE\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"__background-placement__\",\"elementId\":\"__background__\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":{\"backgroundColor\":\"#FFFFFF\"}}],\"name\":\"#9 DB Bent-Over Row\"},{\"id\":\"slide-11\",\"role\":\"body\",\"backgroundColor\":\"#FFFFFF\",\"placements\":[{\"id\":\"rank\",\"elementId\":\"rank\",\"value\":\"#8\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"title\",\"elementId\":\"title\",\"value\":\"Seal Row\",\"frameOverride\":null,\"styleOverride\":{\"fontSize\":64,\"lineHeight\":1.02},\"textColors\":[]},{\"id\":\"body\",\"elementId\":\"body\",\"value\":\"Chest support is a plus. The trade-off?\\nBench height and clearance can make setup awkward.\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"art\",\"elementId\":\"art\",\"value\":\"cdbdb122-d027-49ab-bfda-c06bb995b6fd\",\"frameOverride\":{\"x\":0.045,\"y\":0.45,\"width\":0.91,\"height\":0.43},\"styleOverride\":{\"imageFit\":\"contain\"}},{\"id\":\"brand-badge\",\"elementId\":\"brand-badge\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"brand\",\"elementId\":\"brand\",\"value\":\"LIFTCODE\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"__background-placement__\",\"elementId\":\"__background__\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":{\"backgroundColor\":\"#FFFFFF\"}}],\"name\":\"#8 Seal Row\"},{\"id\":\"slide-12\",\"role\":\"body\",\"backgroundColor\":\"#FFFFFF\",\"placements\":[{\"id\":\"rank\",\"elementId\":\"rank\",\"value\":\"#7\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"title\",\"elementId\":\"title\",\"value\":\"Barbell Bent-Over Row\",\"frameOverride\":null,\"styleOverride\":{\"fontSize\":64,\"lineHeight\":1.02},\"textColors\":[]},{\"id\":\"body\",\"elementId\":\"body\",\"value\":\"A classic row with more demand on your torso.\\nAs the weight climbs, keep momentum in check.\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"art\",\"elementId\":\"art\",\"value\":\"c978985e-413f-4134-aa27-7642ac78c2a3\",\"frameOverride\":{\"x\":0.09,\"y\":0.42,\"width\":0.82,\"height\":0.49},\"styleOverride\":{\"imageFit\":\"contain\"}},{\"id\":\"brand-badge\",\"elementId\":\"brand-badge\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"brand\",\"elementId\":\"brand\",\"value\":\"LIFTCODE\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"__background-placement__\",\"elementId\":\"__background__\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":{\"backgroundColor\":\"#FFFFFF\"}}],\"name\":\"#7 Barbell Bent-Over Row\"},{\"id\":\"slide-13\",\"role\":\"body\",\"backgroundColor\":\"#FFFFFF\",\"placements\":[{\"id\":\"rank\",\"elementId\":\"rank\",\"value\":\"#6\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"title\",\"elementId\":\"title\",\"value\":\"Wide-Grip Cable Row\",\"frameOverride\":null,\"styleOverride\":{\"fontSize\":64,\"lineHeight\":1.02},\"textColors\":[]},{\"id\":\"body\",\"elementId\":\"body\",\"value\":\"A solid option, but your torso still needs to brace.\\nHeavier reps can turn into rocking without control.\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"art\",\"elementId\":\"art\",\"value\":\"950ea549-49f1-4ade-b775-4d293a0b3ddd\",\"frameOverride\":{\"x\":0.06,\"y\":0.43,\"width\":0.88,\"height\":0.49},\"styleOverride\":{\"imageFit\":\"contain\"}},{\"id\":\"brand-badge\",\"elementId\":\"brand-badge\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"brand\",\"elementId\":\"brand\",\"value\":\"LIFTCODE\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"__background-placement__\",\"elementId\":\"__background__\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":{\"backgroundColor\":\"#FFFFFF\"}}],\"name\":\"#6 Wide-Grip Cable Row\"},{\"id\":\"slide-15\",\"role\":\"body\",\"backgroundColor\":\"#FFFFFF\",\"placements\":[{\"id\":\"rank\",\"elementId\":\"rank\",\"value\":\"#5\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"title\",\"elementId\":\"title\",\"value\":\"Dumbbell Upper Row\",\"frameOverride\":null,\"styleOverride\":{\"fontSize\":64,\"lineHeight\":1.02},\"textColors\":[]},{\"id\":\"body\",\"elementId\":\"body\",\"value\":\"Chest support helps keep the reps steady.\\nSetup can be fiddly, but a bench and dumbbells work.\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"art\",\"elementId\":\"art\",\"value\":\"8cba2002-a0ba-4195-aca4-2f27dee7ff00\",\"frameOverride\":{\"x\":0.07,\"y\":0.44,\"width\":0.86,\"height\":0.46},\"styleOverride\":{\"imageFit\":\"contain\"}},{\"id\":\"brand-badge\",\"elementId\":\"brand-badge\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"brand\",\"elementId\":\"brand\",\"value\":\"LIFTCODE\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"__background-placement__\",\"elementId\":\"__background__\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":{\"backgroundColor\":\"#FFFFFF\"}}],\"name\":\"#5 Dumbbell Upper Row\"},{\"id\":\"slide-16\",\"role\":\"body\",\"backgroundColor\":\"#FFFFFF\",\"placements\":[{\"id\":\"rank\",\"elementId\":\"rank\",\"value\":\"#4\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"title\",\"elementId\":\"title\",\"value\":\"Smith Machine Rows\",\"frameOverride\":null,\"styleOverride\":{\"fontSize\":64,\"lineHeight\":1.02},\"textColors\":[]},{\"id\":\"body\",\"elementId\":\"body\",\"value\":\"The guided bar takes balance out of the equation.\\nYou still need to hold your torso in position.\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"art\",\"elementId\":\"art\",\"value\":\"edc1d068-1d20-459f-8f80-9fa26dc07f79\",\"frameOverride\":{\"x\":0.16,\"y\":0.435,\"width\":0.68,\"height\":0.475},\"styleOverride\":{\"imageFit\":\"contain\"}},{\"id\":\"brand-badge\",\"elementId\":\"brand-badge\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"brand\",\"elementId\":\"brand\",\"value\":\"LIFTCODE\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"__background-placement__\",\"elementId\":\"__background__\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":{\"backgroundColor\":\"#FFFFFF\"}}],\"name\":\"#4 Smith Machine Rows\"},{\"id\":\"slide-17\",\"role\":\"body\",\"backgroundColor\":\"#FFFFFF\",\"placements\":[{\"id\":\"rank\",\"elementId\":\"rank\",\"value\":\"#3\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"title\",\"elementId\":\"title\",\"value\":\"Chest-Supported\\nMachine Row\",\"frameOverride\":{\"x\":0.055,\"y\":0.192,\"width\":0.89,\"height\":0.118},\"styleOverride\":{\"fontSize\":56,\"lineHeight\":1.02},\"textColors\":[]},{\"id\":\"body\",\"elementId\":\"body\",\"value\":\"Chest support and a guided path keep things simple.\\nEasy weight changes help you track your progress.\",\"frameOverride\":{\"x\":0.05,\"y\":0.32,\"width\":0.9,\"height\":0.092},\"styleOverride\":{\"fontSize\":32,\"lineHeight\":1.25},\"textColors\":[]},{\"id\":\"art\",\"elementId\":\"art\",\"value\":\"6e123f72-23e8-418c-a16f-df95089fda03\",\"frameOverride\":{\"x\":0.1,\"y\":0.45,\"width\":0.8,\"height\":0.46},\"styleOverride\":{\"imageFit\":\"contain\"}},{\"id\":\"brand-badge\",\"elementId\":\"brand-badge\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"brand\",\"elementId\":\"brand\",\"value\":\"LIFTCODE\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"__background-placement__\",\"elementId\":\"__background__\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":{\"backgroundColor\":\"#FFFFFF\"}}],\"name\":\"#3 Chest-Supported Machine Row\"},{\"id\":\"slide-19\",\"role\":\"body\",\"backgroundColor\":\"#FFFFFF\",\"placements\":[{\"id\":\"rank\",\"elementId\":\"rank\",\"value\":\"#2\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"title\",\"elementId\":\"title\",\"value\":\"Chest-Supported\\nT-Bar Row\",\"frameOverride\":{\"x\":0.055,\"y\":0.192,\"width\":0.89,\"height\":0.118},\"styleOverride\":{\"fontSize\":56,\"lineHeight\":1.02},\"textColors\":[]},{\"id\":\"body\",\"elementId\":\"body\",\"value\":\"A strong pick for a stable, heavy row.\\nKeep your chest on the pad and build the load steadily.\",\"frameOverride\":{\"x\":0.05,\"y\":0.32,\"width\":0.9,\"height\":0.092},\"styleOverride\":{\"fontSize\":32,\"lineHeight\":1.25},\"textColors\":[]},{\"id\":\"art\",\"elementId\":\"art\",\"value\":\"b7c8e9ee-1f72-4907-9be2-f1b17f2fe69a\",\"frameOverride\":{\"x\":0.11,\"y\":0.45,\"width\":0.78,\"height\":0.46},\"styleOverride\":{\"imageFit\":\"contain\"}},{\"id\":\"brand-badge\",\"elementId\":\"brand-badge\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"brand\",\"elementId\":\"brand\",\"value\":\"LIFTCODE\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"__background-placement__\",\"elementId\":\"__background__\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":{\"backgroundColor\":\"#FFFFFF\"}}],\"name\":\"#2 Chest-Supported T-Bar Row\"},{\"id\":\"slide-20\",\"role\":\"cta\",\"backgroundColor\":\"#FFFFFF\",\"placements\":[{\"id\":\"rank\",\"elementId\":\"rank\",\"value\":\"#1\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"title\",\"elementId\":\"title\",\"value\":\"Kelso Shrugs\",\"frameOverride\":null,\"styleOverride\":{\"fontSize\":64,\"lineHeight\":1.02},\"textColors\":[]},{\"id\":\"body\",\"elementId\":\"body\",\"value\":\"Our top pick for focused shoulder-blade movement.\\nKeep your arms straight and squeeze your blades together.\",\"frameOverride\":null,\"styleOverride\":null,\"textColors\":[]},{\"id\":\"art\",\"elementId\":\"art\",\"value\":\"10a9ed94-c592-4afa-b04e-fb375ed089b8\",\"frameOverride\":{\"x\":0.045,\"y\":0.44,\"width\":0.91,\"height\":0.46},\"styleOverride\":{\"imageFit\":\"contain\"}},{\"id\":\"brand-badge\",\"elementId\":\"brand-badge\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"brand\",\"elementId\":\"brand\",\"value\":\"LIFTCODE\",\"frameOverride\":null,\"styleOverride\":null},{\"id\":\"__background-placement__\",\"elementId\":\"__background__\",\"value\":\"\",\"frameOverride\":null,\"styleOverride\":{\"backgroundColor\":\"#FFFFFF\"}}],\"name\":\"#1 Kelso Shrugs\"}]}},\"assets\":[{\"id\":\"1ccd8e66-e09e-447e-95cd-3155f7f57373\",\"name\":\"Dumbbell Preacher Curl.png\",\"type\":\"image/png\",\"size\":1080514},{\"id\":\"1e1bc1fc-f52f-4fdf-9517-229d06baca1b\",\"name\":\"Spider Curl.png\",\"type\":\"image/png\",\"size\":834257},{\"id\":\"25a2f698-1e6f-498c-9578-c9d912d0cf7d\",\"name\":\"pose-01.png\",\"type\":\"image/png\",\"size\":1422595},{\"id\":\"5c408476-a905-49a5-ad4d-1625a906fc28\",\"name\":\"Seated Dumbbell Curl.png\",\"type\":\"image/png\",\"size\":904077},{\"id\":\"5eb9da6d-aeeb-48d0-ad55-202918445f96\",\"name\":\"incline-dumbbell-curl.png\",\"type\":\"image/png\",\"size\":876727},{\"id\":\"60da5a74-0751-4bd6-9635-65faf798a9bd\",\"name\":\"preacher-curl.png\",\"type\":\"image/png\",\"size\":1034953},{\"id\":\"71976e28-3c8c-4b10-b368-b74d21675cb0\",\"name\":\"Waiter Curl.png\",\"type\":\"image/png\",\"size\":1308969},{\"id\":\"7b1157e8-d5e2-4c86-a1bf-0d87a1429187\",\"name\":\"EZ Bar Preacher Curl.png\",\"type\":\"image/png\",\"size\":1041046},{\"id\":\"7d29c6a4-a3fd-403c-9049-7ec2331a8baa\",\"name\":\"Reverse Curl.png\",\"type\":\"image/png\",\"size\":1378016},{\"id\":\"b0297742-15ba-4667-b1b4-baab9b841f73\",\"name\":\"Bayesian Curl.png\",\"type\":\"image/png\",\"size\":866904},{\"id\":\"d1474752-882d-4d4f-a67f-e67ae6532cea\",\"name\":\"Chin Up.png\",\"type\":\"image/png\",\"size\":1401569},{\"id\":\"e54a5116-b8b1-4c04-b267-1aec111b3e60\",\"name\":\"cable-curl.png\",\"type\":\"image/png\",\"size\":1557090},{\"id\":\"e729cab7-2354-4204-8a3b-8557e4c91512\",\"name\":\"Standing EZ Bar Curl.png\",\"type\":\"image/png\",\"size\":1394545},{\"id\":\"ed0a20ec-d8f1-4032-95aa-47c9e2759a0e\",\"name\":\"hammer-curl.png\",\"type\":\"image/png\",\"size\":1367416},{\"id\":\"99c01c8b-60ec-438a-afd2-31df69e18f12\",\"name\":\"cover.webp\",\"type\":\"image/webp\",\"size\":808406},{\"id\":\"ff6bdc0f-ffad-4bc4-9558-7a95283d3aa9\",\"name\":\"face-pull.png\",\"type\":\"image/png\",\"size\":570769},{\"id\":\"19386fcc-c3c7-4bf2-8a31-ed814e2c280b\",\"name\":\"suspension-row.png\",\"type\":\"image/png\",\"size\":769039},{\"id\":\"1c0cdaa2-943a-4914-8458-50d0b0332c19\",\"name\":\"dumbbell-bent-over-row.png\",\"type\":\"image/png\",\"size\":778508},{\"id\":\"cdbdb122-d027-49ab-bfda-c06bb995b6fd\",\"name\":\"seal-row.png\",\"type\":\"image/png\",\"size\":1539505},{\"id\":\"c978985e-413f-4134-aa27-7642ac78c2a3\",\"name\":\"barbell-bent-over-row.png\",\"type\":\"image/png\",\"size\":1054603},{\"id\":\"950ea549-49f1-4ade-b775-4d293a0b3ddd\",\"name\":\"wide-cable-row.webp\",\"type\":\"image/webp\",\"size\":648856},{\"id\":\"8cba2002-a0ba-4195-aca4-2f27dee7ff00\",\"name\":\"chest-supported-dumbbell-row.png\",\"type\":\"image/png\",\"size\":1033165},{\"id\":\"edc1d068-1d20-459f-8f80-9fa26dc07f79\",\"name\":\"smith-machine-row.png\",\"type\":\"image/png\",\"size\":1239420},{\"id\":\"6e123f72-23e8-418c-a16f-df95089fda03\",\"name\":\"chest-supported-machine-row.png\",\"type\":\"image/png\",\"size\":1364868},{\"id\":\"b7c8e9ee-1f72-4907-9be2-f1b17f2fe69a\",\"name\":\"chest-supported-t-bar-row.webp\",\"type\":\"image/webp\",\"size\":549866},{\"id\":\"10a9ed94-c592-4afa-b04e-fb375ed089b8\",\"name\":\"kelso-shrug.webp\",\"type\":\"image/webp\",\"size\":861896}],\"createdAt\":\"2026-10-13T04:13:50.744Z\",\"updatedAt\":\"2026-10-13T04:19:53.641Z\",\"url\":\"http://127.0.0.1:3000/?job=bda1be0f-3788-445a-b283-70b0cce9f4c5\"}"
+    }
+  ],
+  "structuredContent": {
+    "id": "bda1be0f-3788-445a-b283-70b0cce9f4c5",
+    "tabId": "138d9b6c-9880-4624-b690-94e87abc2fc4",
+    "name": "11 Upper-Back Exercises, Ranked",
+    "savedRevision": 1,
+    "structure": "sequential",
+    "aspectRatio": "4:5",
+    "slideCount": 12,
+    "outputLanguage": "English",
+    "editor": {
+      "revision": 1,
+      "document": {
+        "version": 1,
+        "structure": "sequential",
+        "aspectRatio": "4:5",
+        "elements": [
+          {
+            "id": "__background__",
+            "name": "배경",
+            "role": "슬라이드 전체의 바탕색",
+            "kind": "background",
+            "frame": {
+              "x": 0,
+              "y": 0,
+              "width": 1,
+              "height": 1
+            },
+            "style": {
+              "color": "#111111",
+              "backgroundColor": "#ffffff",
+              "fontSize": 36,
+              "lineHeight": 1.2,
+              "fontWeight": 400,
+              "textAlign": "center",
+              "borderRadius": 0,
+              "fontFamily": "sans-serif",
+              "imageFit": "cover"
+            }
+          },
+          {
+            "id": "brand",
+            "name": "brand",
+            "role": "brand",
+            "kind": "text",
+            "frame": {
+              "x": 0.051,
+              "y": 0.925,
+              "width": 0.14760173900648563,
+              "height": 0.039511944808712014
+            },
+            "style": {
+              "color": "#FFFFFF",
+              "backgroundColor": "transparent",
+              "fontSize": 25,
+              "lineHeight": 1.2,
+              "fontWeight": 700,
+              "textAlign": "center",
+              "borderRadius": 0,
+              "fontFamily": "inter",
+              "imageFit": "contain"
+            }
+          },
+          {
+            "id": "title",
+            "name": "title",
+            "role": "title",
+            "kind": "text",
+            "frame": {
+              "x": 0.055,
+              "y": 0.205,
+              "width": 0.89,
+              "height": 0.1
+            },
+            "style": {
+              "color": "#303030",
+              "backgroundColor": "transparent",
+              "fontSize": 64,
+              "lineHeight": 1.05,
+              "fontWeight": 700,
+              "textAlign": "center",
+              "borderRadius": 0,
+              "fontFamily": "space-grotesk",
+              "imageFit": "contain"
+            }
+          },
+          {
+            "id": "body",
+            "name": "body",
+            "role": "body",
+            "kind": "text",
+            "frame": {
+              "x": 0.0819,
+              "y": 0.2838,
+              "width": 0.8361485282588554,
+              "height": 0.10459547294600605
+            },
+            "style": {
+              "color": "#303030",
+              "backgroundColor": "transparent",
+              "fontSize": 34,
+              "lineHeight": 1.25,
+              "fontWeight": 400,
+              "textAlign": "center",
+              "borderRadius": 0,
+              "fontFamily": "inter",
+              "imageFit": "contain"
+            }
+          },
+          {
+            "id": "rankbg",
+            "name": "rankbg",
+            "role": "rankbg",
+            "kind": "circle",
+            "frame": {
+              "x": 0.465,
+              "y": 0.145,
+              "width": 0.07,
+              "height": 0.056
+            },
+            "style": {
+              "color": "#303030",
+              "backgroundColor": "#00BE6B",
+              "fontSize": 36,
+              "lineHeight": 1.2,
+              "fontWeight": 400,
+              "textAlign": "center",
+              "borderRadius": 0,
+              "borderEnabled": true,
+              "borderColor": "#26734D",
+              "borderWidth": 1,
+              "fontFamily": "sans-serif",
+              "imageFit": "contain"
+            }
+          },
+          {
+            "id": "rank",
+            "name": "rank",
+            "role": "rank",
+            "kind": "text",
+            "frame": {
+              "x": 0.3507,
+              "y": 0.115,
+              "width": 0.29862447437816264,
+              "height": 0.08965733508181767
+            },
+            "style": {
+              "color": "#e32400",
+              "backgroundColor": "transparent",
+              "fontSize": 82,
+              "lineHeight": 1,
+              "fontWeight": 700,
+              "textAlign": "center",
+              "borderRadius": 0,
+              "fontFamily": "space-grotesk",
+              "imageFit": "contain"
+            }
+          },
+          {
+            "id": "art",
+            "name": "art",
+            "role": "art",
+            "kind": "image",
+            "frame": {
+              "x": -0.004,
+              "y": 0.3962,
+              "width": 1.0079466894733091,
+              "height": 0.7297166315069274
+            },
+            "style": {
+              "color": "#303030",
+              "backgroundColor": "transparent",
+              "fontSize": 36,
+              "lineHeight": 1.2,
+              "fontWeight": 400,
+              "textAlign": "center",
+              "borderRadius": 0,
+              "fontFamily": "sans-serif",
+              "imageFit": "contain"
+            }
+          },
+          {
+            "id": "tile",
+            "name": "tile",
+            "role": "tile",
+            "kind": "rectangle",
+            "frame": {
+              "x": 0.335,
+              "y": 0.45,
+              "width": 0.12,
+              "height": 0.096
+            },
+            "style": {
+              "color": "#303030",
+              "backgroundColor": "transparent",
+              "fontSize": 36,
+              "lineHeight": 1.2,
+              "fontWeight": 400,
+              "textAlign": "center",
+              "borderRadius": 18,
+              "borderEnabled": true,
+              "borderColor": "#222222",
+              "borderWidth": 3,
+              "fontFamily": "sans-serif",
+              "imageFit": "contain"
+            }
+          },
+          {
+            "id": "letter",
+            "name": "letter",
+            "role": "letter",
+            "kind": "text",
+            "frame": {
+              "x": 0.335,
+              "y": 0.45,
+              "width": 0.12,
+              "height": 0.096
+            },
+            "style": {
+              "color": "#F3F1E9",
+              "backgroundColor": "transparent",
+              "fontSize": 76,
+              "lineHeight": 1,
+              "fontWeight": 400,
+              "textAlign": "center",
+              "borderRadius": 0,
+              "fontFamily": "oswald",
+              "imageFit": "contain"
+            }
+          },
+          {
+            "id": "tier",
+            "name": "tier",
+            "role": "tier",
+            "kind": "text",
+            "frame": {
+              "x": 0.48,
+              "y": 0.45,
+              "width": 0.25,
+              "height": 0.096
+            },
+            "style": {
+              "color": "#303030",
+              "backgroundColor": "transparent",
+              "fontSize": 64,
+              "lineHeight": 1,
+              "fontWeight": 700,
+              "textAlign": "center",
+              "borderRadius": 0,
+              "fontFamily": "space-grotesk",
+              "imageFit": "contain"
+            }
+          },
+          {
+            "id": "hook",
+            "name": "hook",
+            "role": "hook",
+            "kind": "text",
+            "frame": {
+              "x": 0.021,
+              "y": 0.177,
+              "width": 0.9580215237687977,
+              "height": 0.1474428416671418
+            },
+            "style": {
+              "color": "#303030",
+              "backgroundColor": "transparent",
+              "fontSize": 110,
+              "lineHeight": 1.04,
+              "fontWeight": 400,
+              "textAlign": "center",
+              "borderRadius": 0,
+              "fontFamily": "oswald",
+              "imageFit": "contain"
+            }
+          },
+          {
+            "id": "intro",
+            "name": "intro",
+            "role": "intro",
+            "kind": "text",
+            "frame": {
+              "x": 0.15,
+              "y": 0.2,
+              "width": 0.7,
+              "height": 0.17
+            },
+            "style": {
+              "color": "#303030",
+              "backgroundColor": "transparent",
+              "fontSize": 67,
+              "lineHeight": 1.05,
+              "fontWeight": 700,
+              "textAlign": "center",
+              "borderRadius": 0,
+              "fontFamily": "space-grotesk",
+              "imageFit": "contain"
+            }
+          },
+          {
+            "id": "brand-badge",
+            "name": "LIFTCODE badge",
+            "role": "brand-badge",
+            "kind": "rectangle",
+            "frame": {
+              "x": 0.0341,
+              "y": 0.9212,
+              "width": 0.1791746846268976,
+              "height": 0.04581218997662352
+            },
+            "style": {
+              "color": "#303030",
+              "backgroundColor": "#111111",
+              "fontSize": 30,
+              "lineHeight": 1.2,
+              "fontWeight": 400,
+              "textAlign": "left",
+              "borderRadius": 99,
+              "fontFamily": "oswald",
+              "imageFit": "contain"
+            }
+          },
+          {
+            "id": "cover-subtitle",
+            "name": "Ranked exercise subtitle",
+            "role": "subtitle",
+            "kind": "text",
+            "frame": {
+              "x": 0.1073,
+              "y": 0.3491,
+              "width": 0.7854393842206543,
+              "height": 0.04920462968242203
+            },
+            "style": {
+              "color": "#303030",
+              "backgroundColor": "transparent",
+              "fontSize": 35,
+              "lineHeight": 1.2,
+              "fontWeight": 400,
+              "textAlign": "center",
+              "borderRadius": 0,
+              "fontFamily": "inter",
+              "imageFit": "contain"
+            }
+          },
+          {
+            "id": "9f04e401-34db-4add-a9f2-f12360408d6b",
+            "name": "hook 복사본",
+            "role": "hook",
+            "kind": "text",
+            "frame": {
+              "x": 0.0906,
+              "y": 0.2371,
+              "width": 0.8424203549283729,
+              "height": 0.14541878100233765
+            },
+            "style": {
+              "color": "#e32400",
+              "backgroundColor": "transparent",
+              "fontSize": 130,
+              "lineHeight": 1.04,
+              "fontWeight": 400,
+              "textAlign": "center",
+              "borderRadius": 0,
+              "fontFamily": "oswald",
+              "imageFit": "contain"
+            }
+          }
+        ],
+        "slides": [
+          {
+            "id": "slide-1",
+            "role": "hook",
+            "backgroundColor": "#FFFFFF",
+            "placements": [
+              {
+                "id": "hook",
+                "elementId": "hook",
+                "value": "UPPER BACK EXERCISES\nRANKED",
+                "frameOverride": {
+                  "x": 0.03,
+                  "y": 0.13,
+                  "width": 0.94,
+                  "height": 0.22
+                },
+                "styleOverride": {
+                  "lineHeight": 1.04,
+                  "fontSize": 104
+                },
+                "textColors": [
+                  {
+                    "start": 21,
+                    "end": 27,
+                    "color": "#e32400"
+                  }
+                ]
+              },
+              {
+                "id": "art",
+                "elementId": "art",
+                "value": "99c01c8b-60ec-438a-afd2-31df69e18f12",
+                "frameOverride": {
+                  "x": 0.05,
+                  "y": 0.43,
+                  "width": 0.9,
+                  "height": 0.68
+                },
+                "styleOverride": null
+              },
+              {
+                "id": "brand-badge",
+                "elementId": "brand-badge",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "brand",
+                "elementId": "brand",
+                "value": "LIFTCODE",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "__background-placement__",
+                "elementId": "__background__",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": {
+                  "backgroundColor": "#FFFFFF"
+                }
+              },
+              {
+                "id": "cover-subtitle",
+                "elementId": "cover-subtitle",
+                "value": "11 exercises. Which one takes the top spot?",
+                "frameOverride": {
+                  "x": 0.07,
+                  "y": 0.35,
+                  "width": 0.86,
+                  "height": 0.06
+                },
+                "styleOverride": {
+                  "fontSize": 33
+                },
+                "textColors": []
+              }
+            ],
+            "name": "11 Upper-Back Exercises, Ranked"
+          },
+          {
+            "id": "slide-7",
+            "role": "body",
+            "backgroundColor": "#FFFFFF",
+            "placements": [
+              {
+                "id": "rank",
+                "elementId": "rank",
+                "value": "#11",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "title",
+                "elementId": "title",
+                "value": "Face Pulls",
+                "frameOverride": null,
+                "styleOverride": {
+                  "fontSize": 64,
+                  "lineHeight": 1.02
+                },
+                "textColors": []
+              },
+              {
+                "id": "body",
+                "elementId": "body",
+                "value": "Useful as an accessory, but not our first pick\nfor heavy upper-back work. Loading can get awkward.",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "art",
+                "elementId": "art",
+                "value": "ff6bdc0f-ffad-4bc4-9558-7a95283d3aa9",
+                "frameOverride": {
+                  "x": 0.19,
+                  "y": 0.42,
+                  "width": 0.72,
+                  "height": 0.49
+                },
+                "styleOverride": {
+                  "imageFit": "contain"
+                }
+              },
+              {
+                "id": "brand-badge",
+                "elementId": "brand-badge",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "brand",
+                "elementId": "brand",
+                "value": "LIFTCODE",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "__background-placement__",
+                "elementId": "__background__",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": {
+                  "backgroundColor": "#FFFFFF"
+                }
+              }
+            ],
+            "name": "#11 Face Pulls"
+          },
+          {
+            "id": "slide-8",
+            "role": "body",
+            "backgroundColor": "#FFFFFF",
+            "placements": [
+              {
+                "id": "rank",
+                "elementId": "rank",
+                "value": "#10",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "title",
+                "elementId": "title",
+                "value": "Suspension Row",
+                "frameOverride": null,
+                "styleOverride": {
+                  "fontSize": 64,
+                  "lineHeight": 1.02
+                },
+                "textColors": []
+              },
+              {
+                "id": "body",
+                "elementId": "body",
+                "value": "A simple place to start with bodyweight rows.\nProgression takes more setup as you get stronger.",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "art",
+                "elementId": "art",
+                "value": "19386fcc-c3c7-4bf2-8a31-ed814e2c280b",
+                "frameOverride": {
+                  "x": 0.06,
+                  "y": 0.43,
+                  "width": 0.88,
+                  "height": 0.47
+                },
+                "styleOverride": {
+                  "imageFit": "contain"
+                }
+              },
+              {
+                "id": "brand-badge",
+                "elementId": "brand-badge",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "brand",
+                "elementId": "brand",
+                "value": "LIFTCODE",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "__background-placement__",
+                "elementId": "__background__",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": {
+                  "backgroundColor": "#FFFFFF"
+                }
+              }
+            ],
+            "name": "#10 Suspension Row"
+          },
+          {
+            "id": "slide-10",
+            "role": "body",
+            "backgroundColor": "#FFFFFF",
+            "placements": [
+              {
+                "id": "rank",
+                "elementId": "rank",
+                "value": "#9",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "title",
+                "elementId": "title",
+                "value": "DB Bent-Over Row",
+                "frameOverride": null,
+                "styleOverride": {
+                  "fontSize": 64,
+                  "lineHeight": 1.02
+                },
+                "textColors": []
+              },
+              {
+                "id": "body",
+                "elementId": "body",
+                "value": "Two free weights, no chest support.\nIt's easy to let body movement take over the rep.",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "art",
+                "elementId": "art",
+                "value": "1c0cdaa2-943a-4914-8458-50d0b0332c19",
+                "frameOverride": {
+                  "x": 0.12,
+                  "y": 0.42,
+                  "width": 0.76,
+                  "height": 0.48
+                },
+                "styleOverride": {
+                  "imageFit": "contain"
+                }
+              },
+              {
+                "id": "brand-badge",
+                "elementId": "brand-badge",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "brand",
+                "elementId": "brand",
+                "value": "LIFTCODE",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "__background-placement__",
+                "elementId": "__background__",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": {
+                  "backgroundColor": "#FFFFFF"
+                }
+              }
+            ],
+            "name": "#9 DB Bent-Over Row"
+          },
+          {
+            "id": "slide-11",
+            "role": "body",
+            "backgroundColor": "#FFFFFF",
+            "placements": [
+              {
+                "id": "rank",
+                "elementId": "rank",
+                "value": "#8",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "title",
+                "elementId": "title",
+                "value": "Seal Row",
+                "frameOverride": null,
+                "styleOverride": {
+                  "fontSize": 64,
+                  "lineHeight": 1.02
+                },
+                "textColors": []
+              },
+              {
+                "id": "body",
+                "elementId": "body",
+                "value": "Chest support is a plus. The trade-off?\nBench height and clearance can make setup awkward.",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "art",
+                "elementId": "art",
+                "value": "cdbdb122-d027-49ab-bfda-c06bb995b6fd",
+                "frameOverride": {
+                  "x": 0.045,
+                  "y": 0.45,
+                  "width": 0.91,
+                  "height": 0.43
+                },
+                "styleOverride": {
+                  "imageFit": "contain"
+                }
+              },
+              {
+                "id": "brand-badge",
+                "elementId": "brand-badge",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "brand",
+                "elementId": "brand",
+                "value": "LIFTCODE",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "__background-placement__",
+                "elementId": "__background__",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": {
+                  "backgroundColor": "#FFFFFF"
+                }
+              }
+            ],
+            "name": "#8 Seal Row"
+          },
+          {
+            "id": "slide-12",
+            "role": "body",
+            "backgroundColor": "#FFFFFF",
+            "placements": [
+              {
+                "id": "rank",
+                "elementId": "rank",
+                "value": "#7",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "title",
+                "elementId": "title",
+                "value": "Barbell Bent-Over Row",
+                "frameOverride": null,
+                "styleOverride": {
+                  "fontSize": 64,
+                  "lineHeight": 1.02
+                },
+                "textColors": []
+              },
+              {
+                "id": "body",
+                "elementId": "body",
+                "value": "A classic row with more demand on your torso.\nAs the weight climbs, keep momentum in check.",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "art",
+                "elementId": "art",
+                "value": "c978985e-413f-4134-aa27-7642ac78c2a3",
+                "frameOverride": {
+                  "x": 0.09,
+                  "y": 0.42,
+                  "width": 0.82,
+                  "height": 0.49
+                },
+                "styleOverride": {
+                  "imageFit": "contain"
+                }
+              },
+              {
+                "id": "brand-badge",
+                "elementId": "brand-badge",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "brand",
+                "elementId": "brand",
+                "value": "LIFTCODE",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "__background-placement__",
+                "elementId": "__background__",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": {
+                  "backgroundColor": "#FFFFFF"
+                }
+              }
+            ],
+            "name": "#7 Barbell Bent-Over Row"
+          },
+          {
+            "id": "slide-13",
+            "role": "body",
+            "backgroundColor": "#FFFFFF",
+            "placements": [
+              {
+                "id": "rank",
+                "elementId": "rank",
+                "value": "#6",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "title",
+                "elementId": "title",
+                "value": "Wide-Grip Cable Row",
+                "frameOverride": null,
+                "styleOverride": {
+                  "fontSize": 64,
+                  "lineHeight": 1.02
+                },
+                "textColors": []
+              },
+              {
+                "id": "body",
+                "elementId": "body",
+                "value": "A solid option, but your torso still needs to brace.\nHeavier reps can turn into rocking without control.",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "art",
+                "elementId": "art",
+                "value": "950ea549-49f1-4ade-b775-4d293a0b3ddd",
+                "frameOverride": {
+                  "x": 0.06,
+                  "y": 0.43,
+                  "width": 0.88,
+                  "height": 0.49
+                },
+                "styleOverride": {
+                  "imageFit": "contain"
+                }
+              },
+              {
+                "id": "brand-badge",
+                "elementId": "brand-badge",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "brand",
+                "elementId": "brand",
+                "value": "LIFTCODE",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "__background-placement__",
+                "elementId": "__background__",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": {
+                  "backgroundColor": "#FFFFFF"
+                }
+              }
+            ],
+            "name": "#6 Wide-Grip Cable Row"
+          },
+          {
+            "id": "slide-15",
+            "role": "body",
+            "backgroundColor": "#FFFFFF",
+            "placements": [
+              {
+                "id": "rank",
+                "elementId": "rank",
+                "value": "#5",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "title",
+                "elementId": "title",
+                "value": "Dumbbell Upper Row",
+                "frameOverride": null,
+                "styleOverride": {
+                  "fontSize": 64,
+                  "lineHeight": 1.02
+                },
+                "textColors": []
+              },
+              {
+                "id": "body",
+                "elementId": "body",
+                "value": "Chest support helps keep the reps steady.\nSetup can be fiddly, but a bench and dumbbells work.",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "art",
+                "elementId": "art",
+                "value": "8cba2002-a0ba-4195-aca4-2f27dee7ff00",
+                "frameOverride": {
+                  "x": 0.07,
+                  "y": 0.44,
+                  "width": 0.86,
+                  "height": 0.46
+                },
+                "styleOverride": {
+                  "imageFit": "contain"
+                }
+              },
+              {
+                "id": "brand-badge",
+                "elementId": "brand-badge",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "brand",
+                "elementId": "brand",
+                "value": "LIFTCODE",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "__background-placement__",
+                "elementId": "__background__",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": {
+                  "backgroundColor": "#FFFFFF"
+                }
+              }
+            ],
+            "name": "#5 Dumbbell Upper Row"
+          },
+          {
+            "id": "slide-16",
+            "role": "body",
+            "backgroundColor": "#FFFFFF",
+            "placements": [
+              {
+                "id": "rank",
+                "elementId": "rank",
+                "value": "#4",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "title",
+                "elementId": "title",
+                "value": "Smith Machine Rows",
+                "frameOverride": null,
+                "styleOverride": {
+                  "fontSize": 64,
+                  "lineHeight": 1.02
+                },
+                "textColors": []
+              },
+              {
+                "id": "body",
+                "elementId": "body",
+                "value": "The guided bar takes balance out of the equation.\nYou still need to hold your torso in position.",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "art",
+                "elementId": "art",
+                "value": "edc1d068-1d20-459f-8f80-9fa26dc07f79",
+                "frameOverride": {
+                  "x": 0.16,
+                  "y": 0.435,
+                  "width": 0.68,
+                  "height": 0.475
+                },
+                "styleOverride": {
+                  "imageFit": "contain"
+                }
+              },
+              {
+                "id": "brand-badge",
+                "elementId": "brand-badge",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "brand",
+                "elementId": "brand",
+                "value": "LIFTCODE",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "__background-placement__",
+                "elementId": "__background__",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": {
+                  "backgroundColor": "#FFFFFF"
+                }
+              }
+            ],
+            "name": "#4 Smith Machine Rows"
+          },
+          {
+            "id": "slide-17",
+            "role": "body",
+            "backgroundColor": "#FFFFFF",
+            "placements": [
+              {
+                "id": "rank",
+                "elementId": "rank",
+                "value": "#3",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "title",
+                "elementId": "title",
+                "value": "Chest-Supported\nMachine Row",
+                "frameOverride": {
+                  "x": 0.055,
+                  "y": 0.192,
+                  "width": 0.89,
+                  "height": 0.118
+                },
+                "styleOverride": {
+                  "fontSize": 56,
+                  "lineHeight": 1.02
+                },
+                "textColors": []
+              },
+              {
+                "id": "body",
+                "elementId": "body",
+                "value": "Chest support and a guided path keep things simple.\nEasy weight changes help you track your progress.",
+                "frameOverride": {
+                  "x": 0.05,
+                  "y": 0.32,
+                  "width": 0.9,
+                  "height": 0.092
+                },
+                "styleOverride": {
+                  "fontSize": 32,
+                  "lineHeight": 1.25
+                },
+                "textColors": []
+              },
+              {
+                "id": "art",
+                "elementId": "art",
+                "value": "6e123f72-23e8-418c-a16f-df95089fda03",
+                "frameOverride": {
+                  "x": 0.1,
+                  "y": 0.45,
+                  "width": 0.8,
+                  "height": 0.46
+                },
+                "styleOverride": {
+                  "imageFit": "contain"
+                }
+              },
+              {
+                "id": "brand-badge",
+                "elementId": "brand-badge",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "brand",
+                "elementId": "brand",
+                "value": "LIFTCODE",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "__background-placement__",
+                "elementId": "__background__",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": {
+                  "backgroundColor": "#FFFFFF"
+                }
+              }
+            ],
+            "name": "#3 Chest-Supported Machine Row"
+          },
+          {
+            "id": "slide-19",
+            "role": "body",
+            "backgroundColor": "#FFFFFF",
+            "placements": [
+              {
+                "id": "rank",
+                "elementId": "rank",
+                "value": "#2",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "title",
+                "elementId": "title",
+                "value": "Chest-Supported\nT-Bar Row",
+                "frameOverride": {
+                  "x": 0.055,
+                  "y": 0.192,
+                  "width": 0.89,
+                  "height": 0.118
+                },
+                "styleOverride": {
+                  "fontSize": 56,
+                  "lineHeight": 1.02
+                },
+                "textColors": []
+              },
+              {
+                "id": "body",
+                "elementId": "body",
+                "value": "A strong pick for a stable, heavy row.\nKeep your chest on the pad and build the load steadily.",
+                "frameOverride": {
+                  "x": 0.05,
+                  "y": 0.32,
+                  "width": 0.9,
+                  "height": 0.092
+                },
+                "styleOverride": {
+                  "fontSize": 32,
+                  "lineHeight": 1.25
+                },
+                "textColors": []
+              },
+              {
+                "id": "art",
+                "elementId": "art",
+                "value": "b7c8e9ee-1f72-4907-9be2-f1b17f2fe69a",
+                "frameOverride": {
+                  "x": 0.11,
+                  "y": 0.45,
+                  "width": 0.78,
+                  "height": 0.46
+                },
+                "styleOverride": {
+                  "imageFit": "contain"
+                }
+              },
+              {
+                "id": "brand-badge",
+                "elementId": "brand-badge",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "brand",
+                "elementId": "brand",
+                "value": "LIFTCODE",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "__background-placement__",
+                "elementId": "__background__",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": {
+                  "backgroundColor": "#FFFFFF"
+                }
+              }
+            ],
+            "name": "#2 Chest-Supported T-Bar Row"
+          },
+          {
+            "id": "slide-20",
+            "role": "cta",
+            "backgroundColor": "#FFFFFF",
+            "placements": [
+              {
+                "id": "rank",
+                "elementId": "rank",
+                "value": "#1",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "title",
+                "elementId": "title",
+                "value": "Kelso Shrugs",
+                "frameOverride": null,
+                "styleOverride": {
+                  "fontSize": 64,
+                  "lineHeight": 1.02
+                },
+                "textColors": []
+              },
+              {
+                "id": "body",
+                "elementId": "body",
+                "value": "Our top pick for focused shoulder-blade movement.\nKeep your arms straight and squeeze your blades together.",
+                "frameOverride": null,
+                "styleOverride": null,
+                "textColors": []
+              },
+              {
+                "id": "art",
+                "elementId": "art",
+                "value": "10a9ed94-c592-4afa-b04e-fb375ed089b8",
+                "frameOverride": {
+                  "x": 0.045,
+                  "y": 0.44,
+                  "width": 0.91,
+                  "height": 0.46
+                },
+                "styleOverride": {
+                  "imageFit": "contain"
+                }
+              },
+              {
+                "id": "brand-badge",
+                "elementId": "brand-badge",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "brand",
+                "elementId": "brand",
+                "value": "LIFTCODE",
+                "frameOverride": null,
+                "styleOverride": null
+              },
+              {
+                "id": "__background-placement__",
+                "elementId": "__background__",
+                "value": "",
+                "frameOverride": null,
+                "styleOverride": {
+                  "backgroundColor": "#FFFFFF"
+                }
+              }
+            ],
+            "name": "#1 Kelso Shrugs"
+          }
+        ]
+      }
+    },
+    "assets": [
+      {
+        "id": "1ccd8e66-e09e-447e-95cd-3155f7f57373",
+        "name": "Dumbbell Preacher Curl.png",
+        "type": "image/png",
+        "size": 1080514
+      },
+      {
+        "id": "1e1bc1fc-f52f-4fdf-9517-229d06baca1b",
+        "name": "Spider Curl.png",
+        "type": "image/png",
+        "size": 834257
+      },
+      {
+        "id": "25a2f698-1e6f-498c-9578-c9d912d0cf7d",
+        "name": "pose-01.png",
+        "type": "image/png",
+        "size": 1422595
+      },
+      {
+        "id": "5c408476-a905-49a5-ad4d-1625a906fc28",
+        "name": "Seated Dumbbell Curl.png",
+        "type": "image/png",
+        "size": 904077
+      },
+      {
+        "id": "5eb9da6d-aeeb-48d0-ad55-202918445f96",
+        "name": "incline-dumbbell-curl.png",
+        "type": "image/png",
+        "size": 876727
+      },
+      {
+        "id": "60da5a74-0751-4bd6-9635-65faf798a9bd",
+        "name": "preacher-curl.png",
+        "type": "image/png",
+        "size": 1034953
+      },
+      {
+        "id": "71976e28-3c8c-4b10-b368-b74d21675cb0",
+        "name": "Waiter Curl.png",
+        "type": "image/png",
+        "size": 1308969
+      },
+      {
+        "id": "7b1157e8-d5e2-4c86-a1bf-0d87a1429187",
+        "name": "EZ Bar Preacher Curl.png",
+        "type": "image/png",
+        "size": 1041046
+      },
+      {
+        "id": "7d29c6a4-a3fd-403c-9049-7ec2331a8baa",
+        "name": "Reverse Curl.png",
+        "type": "image/png",
+        "size": 1378016
+      },
+      {
+        "id": "b0297742-15ba-4667-b1b4-baab9b841f73",
+        "name": "Bayesian Curl.png",
+        "type": "image/png",
+        "size": 866904
+      },
+      {
+        "id": "d1474752-882d-4d4f-a67f-e67ae6532cea",
+        "name": "Chin Up.png",
+        "type": "image/png",
+        "size": 1401569
+      },
+      {
+        "id": "e54a5116-b8b1-4c04-b267-1aec111b3e60",
+        "name": "cable-curl.png",
+        "type": "image/png",
+        "size": 1557090
+      },
+      {
+        "id": "e729cab7-2354-4204-8a3b-8557e4c91512",
+        "name": "Standing EZ Bar Curl.png",
+        "type": "image/png",
+        "size": 1394545
+      },
+      {
+        "id": "ed0a20ec-d8f1-4032-95aa-47c9e2759a0e",
+        "name": "hammer-curl.png",
+        "type": "image/png",
+        "size": 1367416
+      },
+      {
+        "id": "99c01c8b-60ec-438a-afd2-31df69e18f12",
+        "name": "cover.webp",
+        "type": "image/webp",
+        "size": 808406
+      },
+      {
+        "id": "ff6bdc0f-ffad-4bc4-9558-7a95283d3aa9",
+        "name": "face-pull.png",
+        "type": "image/png",
+        "size": 570769
+      },
+      {
+        "id": "19386fcc-c3c7-4bf2-8a31-ed814e2c280b",
+        "name": "suspension-row.png",
+        "type": "image/png",
+        "size": 769039
+      },
+      {
+        "id": "1c0cdaa2-943a-4914-8458-50d0b0332c19",
+        "name": "dumbbell-bent-over-row.png",
+        "type": "image/png",
+        "size": 778508
+      },
+      {
+        "id": "cdbdb122-d027-49ab-bfda-c06bb995b6fd",
+        "name": "seal-row.png",
+        "type": "image/png",
+        "size": 1539505
+      },
+      {
+        "id": "c978985e-413f-4134-aa27-7642ac78c2a3",
+        "name": "barbell-bent-over-row.png",
+        "type": "image/png",
+        "size": 1054603
+      },
+      {
+        "id": "950ea549-49f1-4ade-b775-4d293a0b3ddd",
+        "name": "wide-cable-row.webp",
+        "type": "image/webp",
+        "size": 648856
+      },
+      {
+        "id": "8cba2002-a0ba-4195-aca4-2f27dee7ff00",
+        "name": "chest-supported-dumbbell-row.png",
+        "type": "image/png",
+        "size": 1033165
+      },
+      {
+        "id": "edc1d068-1d20-459f-8f80-9fa26dc07f79",
+        "name": "smith-machine-row.png",
+        "type": "image/png",
+        "size": 1239420
+      },
+      {
+        "id": "6e123f72-23e8-418c-a16f-df95089fda03",
+        "name": "chest-supported-machine-row.png",
+        "type": "image/png",
+        "size": 1364868
+      },
+      {
+        "id": "b7c8e9ee-1f72-4907-9be2-f1b17f2fe69a",
+        "name": "chest-supported-t-bar-row.webp",
+        "type": "image/webp",
+        "size": 549866
+      },
+      {
+        "id": "10a9ed94-c592-4afa-b04e-fb375ed089b8",
+        "name": "kelso-shrug.webp",
+        "type": "image/webp",
+        "size": 861896
+      }
+    ],
+    "createdAt": "2026-10-13T04:13:50.744Z",
+    "updatedAt": "2026-10-13T04:19:53.641Z",
+    "url": "http://127.0.0.1:3000/?job=bda1be0f-3788-445a-b283-70b0cce9f4c5"
+  }
+}

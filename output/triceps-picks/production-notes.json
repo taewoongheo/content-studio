@@ -1,0 +1,60 @@
+{
+  "projectId": "0b2c55d5-fe27-47e5-950b-b5045a0b1a4e",
+  "templateProjectId": "0af357f2-be38-43bb-a1a6-f621aafa4ce6",
+  "reference": "User supplied 12 Blue Bro screenshots, ranks 12 through 1; same exercise order.",
+  "ranking": "Reference editorial order preserved; not a scientifically established hypertrophy ranking.",
+  "sources": [
+    {
+      "url": "https://contentcdn.eacefitness.com/certifiednews/images/article/pdfs/ACETricepsStudy.pdf",
+      "use": "Confirms diamond pushups, kickbacks and dips recruit triceps; EMG does not establish long-term hypertrophy ranking. Removed claims of terrible triceps tension."
+    },
+    {
+      "url": "https://doi.org/10.1080/17461391.2022.2100279",
+      "use": "Overhead elbow-extension hypertrophy evidence; no inference that single-arm extensions are universally best."
+    }
+  ],
+  "publishing": {
+    "title": "12 Triceps Exercises, Ranked",
+    "caption": "From dumbbell kickbacks to single-arm cable extensions: 12 triceps exercises, ranked. Think an exercise deserves a higher spot? Drop your top pick below.",
+    "hashtags": [
+      "#Triceps",
+      "#ArmWorkout",
+      "#BiggerArms",
+      "#MuscleBuilding",
+      "#GymTok"
+    ]
+  },
+  "imageGeneration": {
+    "tool": "Built-in image_gen",
+    "basePrompt": "Use case: scientific-educational. Create one transparent cutout exercise illustration for a fitness carousel. Input 1 is official character body/style reference, input 2 is absolute face/sunglasses reference; input 3 is exercise pose and equipment composition reference only. Replace blue character with the official exaggerated muscular bald mouthless character, black sunglasses, black shorts and black shoes. Match exact reference pose, joint angles, equipment geometry and camera. Base skin #DDD6D2 with very shallow soft shading, no white highlights or deep muscle creases. Triceps active area on posterior upper arms colored #E5725C, precise anatomical boundary. Same thin outlines and smooth stylized shading as official body. No mouth or detailed nose/ears. Equipment charcoal black, small metal connectors silver. Entire equipment and body visible with margin, no crop. Only one pose. No text, numbers, logo, ground or background. ",
+    "assets": [
+      "db-kickback",
+      "bench-dip",
+      "db-overhead-extension",
+      "jm-press",
+      "weighted-dip",
+      "single-arm-extension",
+      "cable-overhead-extension"
+    ],
+    "backgroundExtraction": "Remove all background glow, preserve exact character and equipment, transparent alpha cutout."
+  },
+  "qa": {
+    "savedRevision": 7,
+    "all13PreviewsReviewed": true,
+    "referenceOrderPreserved": true,
+    "whiteBackgrounds": true,
+    "priorBicepsCopyRemoved": true,
+    "allImageSlotsFilled": true,
+    "languageReview": "Reviewed all 13 slides plus publishing title, caption and hashtags; rewrote awkward phrasing and reduced repeated easy/setup wording."
+  },
+  "revisions": {
+    "machineDip": "Removed lower pectoral highlight; preserved triceps highlight.",
+    "copy": "Restored elbow-comfort tradeoffs to Skull Crushers and JM Press. All body copy rephrased from supplied reference."
+  },
+  "hookReview": {
+    "decision": "Retain TOP TRICEPS PICKS / FOR BIGGER ARMS with 12 exercises, ranked.",
+    "reason": "Clear subject and benefit, with ranking format stated below. Rear three-quarter pose highlights triceps directly.",
+    "reference": "User supplied Screenshot 2026-10-10 at 00.28.59.png; pose only, official character identity retained.",
+    "asset": "cover-rear-triceps.png"
+  }
+}

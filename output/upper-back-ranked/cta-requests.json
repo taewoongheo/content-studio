@@ -1,0 +1,5 @@
+[
+{"name":"search_social_candidates","args":{"platform":"tiktok","query":"workout app exercises ranked","type":"posts","limit":10,"criteria":{"format":"slideshow","minViews":100000}}},
+{"name":"list_account_posts","args":{"accountUrl":"https://www.instagram.com/hevyapp/","limit":10,"criteria":{"format":"slideshow","minViews":100000}}},
+{"name":"list_account_posts","args":{"accountUrl":"https://www.instagram.com/boostcampapp/","limit":10,"criteria":{"format":"slideshow","minViews":100000}}}
+]
