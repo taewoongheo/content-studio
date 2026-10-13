@@ -10,6 +10,23 @@ function session() {
   return { registry, service: new EditorService(registry) };
 }
 
+test("회전은 개별 덮어쓰기와 공통 변경, 되돌리기에서 유지된다", () => {
+  const { service } = session();
+  const definition = makeElementDefinition({ id: "arrow", kind: "triangle" });
+  definition.style.rotation = 90;
+  service.applyCommands("job", [{ type: "add_element", element: definition },
+    { type: "place_element", slideId: "slide-1", elementId: "arrow", placementId: "a" },
+    { type: "place_element", slideId: "slide-2", elementId: "arrow", placementId: "b" }], 0);
+  service.applyCommands("job", [{ type: "update_visual", scope: "local", slideId: "slide-1", placementId: "a",
+    style: { rotation: -45 } }], 1);
+  const common = service.applyCommands("job", [{ type: "update_visual", scope: "common", elementId: "arrow", style: { rotation: 180 } }], 2);
+  assert.equal(common.editor.document.elements.find(e => e.id === "arrow")?.style.rotation, 180);
+  assert.equal(common.editor.document.slides[0].placements.find(p => p.id === "a")?.styleOverride, null);
+  const restored = service.undo("job", 3);
+  assert.equal(restored.editor.document.elements.find(e => e.id === "arrow")?.style.rotation, 90);
+  assert.equal(restored.editor.document.slides[0].placements.find(p => p.id === "a")?.styleOverride?.rotation, -45);
+});
+
 test("긴 편집 세션은 최근 100회만 되돌리고 오래된 문서를 해제한다", () => {
   const { registry, service } = session();
   let revision = 0;

@@ -1,6 +1,6 @@
 import type { EditorCommand, ElementDefinition, ElementFrame, ElementStyle, PlacedElement, TextColorRange } from "@/lib/content-jobs/editor/types";
 import { validTextColors } from "@/lib/content-jobs/editor/typography/text-colors";
-import { validBorder, withBorderDefaults } from "@/lib/content-jobs/editor/elements/style";
+import { validBorder, validRotation, withStyleDefaults } from "@/lib/content-jobs/editor/elements/style";
 
 export type VisualTarget = { slideId: string; placement: PlacedElement };
 export type ElementDraft = {
@@ -44,7 +44,7 @@ export function makeElementDraft(element: ElementDefinition, placement: PlacedEl
     value: placement.value,
     textColors: structuredClone(placement.textColors ?? []),
     frame: visualPlacement.frameOverride ?? element.frame,
-    style: withBorderDefaults({ ...element.style, ...visualPlacement.styleOverride }),
+    style: withStyleDefaults({ ...element.style, ...visualPlacement.styleOverride }),
   };
 }
 
@@ -56,7 +56,7 @@ export function validElementDraft(draft: ElementDraft) {
     draft.style.lineHeight >= 0.8 && draft.style.lineHeight <= 3 &&
     ["normal", "italic"].includes(draft.style.fontStyle ?? "normal") &&
     Number.isInteger(draft.style.fontWeight) && draft.style.fontWeight >= 100 && draft.style.fontWeight <= 900 &&
-    draft.style.borderRadius >= 0 && draft.style.borderRadius <= 100 && validBorder(draft.style);
+    draft.style.borderRadius >= 0 && draft.style.borderRadius <= 100 && validBorder(draft.style) && validRotation(draft.style);
 }
 
 export function commandsFromDraft(
@@ -81,7 +81,7 @@ export function commandsFromDraft(
   }
 
   const baseFrame = visualPlacement.frameOverride ?? element.frame;
-  const baseStyle = withBorderDefaults({ ...element.style, ...visualPlacement.styleOverride });
+  const baseStyle = withStyleDefaults({ ...element.style, ...visualPlacement.styleOverride });
   const changedFrameKeys = (Object.keys(baseFrame) as Array<keyof ElementFrame>)
     .filter((key) => draft.frame[key] !== baseFrame[key]);
   const changedStyle = Object.fromEntries((Object.keys(baseStyle) as Array<keyof ElementStyle>)

@@ -1,7 +1,7 @@
 import type { SlideshowStructure } from "../domain/types";
 import { EDITOR_FONT_FAMILIES } from "./typography/fonts";
 import { remapTextColors, validTextColors } from "./typography/text-colors";
-import { validBorder } from "./elements/style";
+import { validBorder, validRotation } from "./elements/style";
 import { MAX_FRAME_COORDINATE, MAX_FRAME_DIMENSION } from "./types";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_FRAME, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, syncBackgroundColors } from "./background";
 import type {
@@ -23,7 +23,7 @@ function validFrame(frame: ElementFrame) {
 }
 
 function validStyle(style: ElementStyle) {
-  return validBorder(style) && colorPattern.test(style.color) &&
+  return validBorder(style) && validRotation(style) && colorPattern.test(style.color) &&
     (colorPattern.test(style.backgroundColor) || style.backgroundColor === "transparent") &&
     Number.isFinite(style.fontSize) && style.fontSize >= 8 && style.fontSize <= 200 &&
     Number.isFinite(style.lineHeight) && style.lineHeight >= 0.8 && style.lineHeight <= 3 &&

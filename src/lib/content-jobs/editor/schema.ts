@@ -16,6 +16,7 @@ const frame = object({
   height: { type: "number", exclusiveMinimum: 0, maximum: MAX_FRAME_DIMENSION },
 });
 const style = object({
+  rotation: { type: "number", minimum: -360, maximum: 360 },
   color,
   backgroundColor: { type: "string", pattern: "^(#[0-9a-fA-F]{6}|transparent)$" },
   fontSize: { type: "number", minimum: 8, maximum: 200 },

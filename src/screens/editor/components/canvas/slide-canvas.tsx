@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type DragEvent, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent, type PointerEvent } from "react";
 import type {
   EditorDocument,
   EditorSlide,
@@ -12,9 +12,9 @@ import {
 } from "@/lib/content-jobs/editor/document";
 import {
   CANVAS_SAFE_AREA,
-  moveOrResizeFrame,
   type DragMode,
 } from "./frame/geometry";
+import { moveOrResizeRotatedFrame } from "./frame/rotation";
 import { SlideArtwork } from "./slide-artwork";
 
 type Gesture = {
@@ -27,6 +27,7 @@ type Gesture = {
   canvasHeight: number;
   frame: ElementFrame;
   lockAspectRatio: boolean;
+  rotation: number;
 };
 const handles = ["nw", "ne", "sw", "se"] as const;
 const handlePositions = {
@@ -89,6 +90,16 @@ export function SlideCanvas({
     placementId: string;
     frame: ElementFrame;
   } | null>(null);
+  const previewRequest = useRef<number | null>(null);
+  const pendingPreview = useRef<typeof preview>(null);
+  useEffect(() => () => {
+    if (previewRequest.current !== null) cancelAnimationFrame(previewRequest.current);
+  }, []);
+  function clearPreviewRequest() {
+    if (previewRequest.current !== null) cancelAnimationFrame(previewRequest.current);
+    previewRequest.current = null;
+    pendingPreview.current = null;
+  }
   const [imageDragActive, setImageDragActive] = useState(false);
   const elements = new Map(
     document.elements.map((element) => [element.id, element]),
@@ -116,7 +127,10 @@ export function SlideCanvas({
     if (!bounds) return;
     const renderedBounds =
       event.currentTarget.parentElement?.getBoundingClientRect();
-    const renderedFrame = renderedBounds
+    const placement = slide.placements.find((item) => item.id === placementId);
+    const element = placement && elements.get(placement.elementId);
+    const rotation = placement?.styleOverride?.rotation ?? element?.style.rotation ?? 0;
+    const renderedFrame = renderedBounds && !rotation
       ? {
           x: (renderedBounds.left - bounds.left) / bounds.width,
           y: (renderedBounds.top - bounds.top) / bounds.height,
@@ -136,17 +150,21 @@ export function SlideCanvas({
       canvasHeight: bounds.height,
       frame: renderedFrame,
       lockAspectRatio,
+      rotation,
     };
   }
 
   function frameAtPointer(event: PointerEvent<HTMLButtonElement>) {
     const active = gesture.current;
     if (!active || active.pointerId !== event.pointerId) return null;
-    const frame = moveOrResizeFrame(
+    const frame = moveOrResizeRotatedFrame(
       active.frame,
       active.mode,
-      (event.clientX - active.startX) / active.canvasWidth,
-      (event.clientY - active.startY) / active.canvasHeight,
+      event.clientX - active.startX,
+      event.clientY - active.startY,
+      active.canvasWidth,
+      active.canvasHeight,
+      active.rotation,
       showGuides,
       active.lockAspectRatio,
     );
@@ -155,13 +173,20 @@ export function SlideCanvas({
 
   function moveGesture(event: PointerEvent<HTMLButtonElement>) {
     const next = frameAtPointer(event);
-    if (next) setPreview(next);
+    if (!next) return;
+    pendingPreview.current = next;
+    if (previewRequest.current !== null) return;
+    previewRequest.current = requestAnimationFrame(() => {
+      previewRequest.current = null;
+      setPreview(pendingPreview.current);
+    });
   }
 
   async function finishGesture(event: PointerEvent<HTMLButtonElement>) {
     const active = gesture.current;
     const next = frameAtPointer(event);
     if (!active || !next) return;
+    clearPreviewRequest();
     gesture.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId))
       event.currentTarget.releasePointerCapture(event.pointerId);
@@ -185,6 +210,7 @@ export function SlideCanvas({
 
   function cancelGesture(event: PointerEvent<HTMLButtonElement>) {
     if (gesture.current?.pointerId !== event.pointerId) return;
+    clearPreviewRequest();
     gesture.current = null;
     setPreview(null);
   }
@@ -266,6 +292,8 @@ export function SlideCanvas({
               width: `${frame.width * 100}%`,
               height: `${frame.height * 100}%`,
               zIndex: index + 30,
+              transform: `rotate(${placement.styleOverride?.rotation ?? element.style.rotation ?? 0}deg)`,
+              transformOrigin: "center",
             }}
           >
             <button

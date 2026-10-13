@@ -14,6 +14,8 @@ export type ElementFrame = {
   height: number;
 };
 export type ElementStyle = {
+  /** Clockwise degrees around the element's center; omitted values are zero. */
+  rotation?: number;
   color: string;
   backgroundColor: string;
   fontSize: number;

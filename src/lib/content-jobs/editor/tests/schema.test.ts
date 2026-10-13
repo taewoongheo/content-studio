@@ -3,6 +3,7 @@ import test from "node:test";
 import { validateEditorCommands } from "../schema";
 import { createBlankDocument, validateEditorDocument } from "../document";
 import { makeElementDefinition } from "../elements/factory";
+import { editSchema } from "@/lib/mcp/tools/schema";
 
 const element = {
   id: "heading",
@@ -22,6 +23,24 @@ const element = {
     imageFit: "cover",
   },
   };
+
+test("MCP와 저장 문서는 생략된 회전과 양음 각도를 받고 잘못된 각도를 거부한다", () => {
+  for (const rotation of [undefined, -360, -45, 0, 90, 360, 361, -361, NaN, Infinity]) {
+    const definition = makeElementDefinition({ id: "rotated", kind: "triangle" });
+    definition.style.rotation = rotation;
+    const valid = rotation === undefined || (Number.isFinite(rotation) && Math.abs(rotation) <= 360);
+    for (const commands of [
+      [{ type: "add_element", element: definition }],
+      [{ type: "update_visual", scope: "common", elementId: "rotated", style: { rotation: rotation ?? 0 } }],
+      [{ type: "update_visual", scope: "local", slideId: "slide-1", placementId: "rotated", style: { rotation: rotation ?? 0 } }],
+    ]) {
+      assert.equal(editSchema.safeParse({ projectId: "p", expectedTabId: "t", expectedRevision: 0, commands }).success, valid);
+    }
+    const document = createBlankDocument({ structure: "sequential", aspectRatio: "4:5", slideCount: 2 });
+    document.elements.push(definition);
+    assert.equal(validateEditorDocument(document).length === 0, valid);
+  }
+});
 
 test("편집 명령은 허용된 종류와 필드만 받는다", () => {
   assert.equal(validateEditorCommands({commands:[{type:"add_element",element}]}).ok, true);

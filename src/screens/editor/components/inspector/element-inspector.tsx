@@ -118,6 +118,8 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
             value={draft.frame.width * 100} onChange={(value) => updateFrame("width", value)} />
           <NumberField label={element.kind === "text" ? "영역 높이 (%)" : "높이 (%)"}
             value={draft.frame.height * 100} onChange={(value) => updateFrame("height", value)} />
+          <NumberField label="회전 (°)" value={draft.style.rotation ?? 0} min={-360} max={360} step={1}
+            onChange={(value) => updateStyle("rotation", value)} />
           {element.kind === "image" && <label className="col-span-2 flex items-center gap-2 text-xs font-medium">
             <input type="checkbox" checked={imageAspectRatioLocked}
               onChange={(event) => onImageAspectRatioLockedChange(event.target.checked)} />

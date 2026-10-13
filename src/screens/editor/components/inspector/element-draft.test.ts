@@ -13,6 +13,18 @@ const placement: PlacedElement = { id: "placed-title", elementId: "title", value
   frameOverride: null, styleOverride: null };
 const targets = [{ slideId: "slide-1", placement }];
 
+test("회전 초안은 기존 문서에서 0도로 시작하고 선택한 장만 수정한다", () => {
+  const draft = makeElementDraft(element, placement);
+  assert.equal(draft.style.rotation, 0);
+  const changed = { ...draft, style: { ...draft.style, rotation: -45 } };
+  assert.equal(validElementDraft(changed), true);
+  assert.deepEqual(commandsFromDraft(changed, element, placement, "slide-1", [
+    ...targets, { slideId: "slide-2", placement: { ...placement, id: "other" } },
+  ], ["slide-1"]), [{ type: "update_visual", scope: "local", slideId: "slide-1",
+    placementId: placement.id, style: { rotation: -45 } }]);
+  assert.equal(validElementDraft({ ...changed, style: { ...changed.style, rotation: 361 } }), false);
+});
+
 test("입력 초안은 바뀐 필드만 개별 수정 명령으로 만든다", () => {
   const draft = makeElementDraft(element, placement);
   assert.deepEqual(commandsFromDraft(draft, element, placement, "slide-1", targets, ["slide-1"]), []);
