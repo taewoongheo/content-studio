@@ -1,0 +1,14 @@
+import { defaultProjectStores } from "@/lib/content-jobs/projects/service";
+import { isLocalRequest } from "@/lib/http/local-request";
+import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
+
+export const runtime = "nodejs";
+export async function GET(request: Request, context: { params: Promise<{ projectId: string }> }) {
+  if (!isLocalRequest(request)) return new Response(null, { status: 403 });
+  try {
+    const { projectId } = await context.params;
+    const project = defaultProjectStores().projects.getContent(projectId);
+    if (!project) return Response.json({ error: "프로젝트를 찾을 수 없습니다." }, { status: 404 });
+    return Response.json(project.document, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) { return contentJobErrorResponse(error); }
+}

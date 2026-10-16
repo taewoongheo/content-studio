@@ -1,5 +1,5 @@
 import * as z from "zod/v4";
-import { compositionSchema, requiredCompositionSchema } from "@/lib/content-jobs/projects/composition";
+import { compositionSchema, requiredCompositionSchema, contentMetadataSchema, templateTopicSchema, templateMessageSchema } from "@/lib/content-jobs/projects/composition";
 import { editorCommandsSchema } from "@/lib/content-jobs/editor/schema";
 
 const localImageSchema = {
@@ -22,6 +22,15 @@ export const previewSchema = projectSchema.extend({ slideId: z.string().min(1) }
 export const cloneSchema = z.strictObject({
   name: z.string().trim().min(1).max(120).optional(),
   templateProjectId: z.string().min(1),
-});
+  topic: contentMetadataSchema.shape.topic.optional(),
+  message: contentMetadataSchema.shape.message.optional(),
+}).refine(input => (input.topic === undefined) === (input.message === undefined), { message: "주제와 메시지를 함께 입력해 주세요." });
 export const setCompositionSchema = projectSchema.extend({ composition: compositionSchema });
-export const registerTemplateSchema = projectSchema.extend({ composition: requiredCompositionSchema.optional() });
+export const registerTemplateSchema = projectSchema.extend({
+  composition: requiredCompositionSchema.optional(),
+  templateName: z.string().trim().min(1).max(120).optional(),
+  templateTopic: templateTopicSchema.optional(),
+  templateMessage: templateMessageSchema.optional(),
+  templateOrder: z.number().int().positive().optional(),
+});
+export const setContentMetadataSchema = projectSchema.extend(contentMetadataSchema.shape);

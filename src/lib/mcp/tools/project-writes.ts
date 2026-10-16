@@ -12,15 +12,19 @@ export class McpProjectWrites {
   constructor(private readonly registry: ContentJobRegistry, private readonly database: Database.Database) {
     this.stores = { projects: new ContentProjectStore(database) };
   }
-  clone(input: { templateProjectId: string; name?: string }) {
-    let composition = "";
+  clone(input: { templateProjectId: string; name?: string; topic?: string; message?: string }) {
+    if ((input.topic === undefined) !== (input.message === undefined))
+      throw new Error("주제와 메시지를 함께 입력해 주세요.");
     return this.commit(() => {
       const template = this.stores.projects.getSummary(input.templateProjectId);
-      if (!template?.isTemplate || !template.composition.trim())
+      if (!template?.isTemplate || template.templateOrder === null || !template.composition.trim())
         throw new Error("구성이 작성된 등록된 템플릿 프로젝트를 선택해 주세요.");
-      composition = template.composition;
       return createContentProject(this.registry, { sourceProjectId: template.id, name: input.name }, this.stores);
-    }, changed => this.stores.projects.updateReuse(changed.id, { composition }));
+    }, changed => {
+      this.stores.projects.setCloneSource(changed.id, input.templateProjectId);
+      if (input.topic !== undefined && input.message !== undefined)
+        this.stores.projects.updateMetadata(changed.id, { topic: input.topic, message: input.message });
+    });
   }
   edit(projectId: string, commands: Array<EditorCommand | LocalImageCommand>, expectedRevision: number, expectedTabId?: string) {
     if (expectedTabId) this.registry.requireTab(projectId, expectedTabId);

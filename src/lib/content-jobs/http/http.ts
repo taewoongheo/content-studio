@@ -1,5 +1,8 @@
+import { ProjectReuseError } from "../projects/composition";
 import { ContentJobError } from "../workflow/registry";
 export function contentJobErrorResponse(error: unknown) {
+  if (error instanceof ProjectReuseError)
+    return Response.json({ error: error.message }, { status: error.code === "PROJECT_NOT_FOUND" ? 404 : 422 });
   if (error instanceof ContentJobError || (error instanceof Error && error.name === "ContentJobError")) {
     const failure = error as ContentJobError;
     const status = { JOB_NOT_FOUND: 404, INVALID_OUTPUT: 422, INVALID_STAGE: 409 }[failure.code];

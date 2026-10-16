@@ -55,12 +55,13 @@ test("MCP는 가이드 목록만 제공하고 빈 생성·미등록 복제를 �
     assert.deepEqual(projects.get(source.id)?.assets, original.assets);
     assert.equal((await unregister(source.id)).isError, undefined);
     assert.equal((await unregister(source.id)).isError, undefined);
-    assert.deepEqual(projects.getSummary(source.id)?.composition, guide());
+    assert.equal(projects.getSummary(source.id)?.composition, "");
     assert.deepEqual((await client.callTool({ name: "list_template_guides", arguments: {} })).structuredContent, { templates: [] });
-    assert.equal((await register(source.id)).isError, undefined);
+    assert.equal((await register(source.id)).isError, true);
+    assert.equal((await register(source.id, guide())).isError, undefined);
     assert.equal(projects.listTemplates()[0].id, source.id);
     assert.equal((await unregister(source.id)).isError, undefined);
-    assert.equal((await client.callTool({ name: "set_reuse_guide", arguments: { projectId: source.id, composition: "" } })).isError, undefined);
+    assert.equal((await client.callTool({ name: "set_reuse_guide", arguments: { projectId: source.id, composition: "" } })).isError, true);
     assert.equal((await client.callTool({ name: "clone_project", arguments: { templateProjectId: source.id } })).isError, true);
     const context = { params: Promise.resolve({ projectId: source.id }) };
     const patch = (body: unknown, requestOrigin = origin) => PATCH(new Request(`${origin}/api/content-projects/${source.id}/reuse`, {
@@ -70,11 +71,11 @@ test("MCP는 가이드 목록만 제공하고 빈 생성·미등록 복제를 �
       method: "PATCH", headers: { host: "localhost:3000", origin, "content-type": "application/json" },
       body: JSON.stringify({ composition: guide() }),
     }), { params: Promise.resolve({ projectId: "missing" }) })).status, 404);
-    assert.equal((await patch({ isTemplate: true })).status, 422);
+    assert.equal((await patch({ isTemplate: true, composition: guide() })).status, 200);
     assert.equal((await patch({ composition: null })).status, 400);
     assert.equal((await patch({ composition: { contentRole: "Routine" } })).status, 400);
     assert.equal((await patch({ composition: " ", isTemplate: true })).status, 422);
-    assert.equal(projects.getSummary(source.id)?.isTemplate, false);
+    assert.equal(projects.getSummary(source.id)?.isTemplate, true);
     assert.equal((await patch({ composition: guide("Exercise cards"), isTemplate: true }, "https://example.com")).status, 403);
     assert.equal((await patch({ composition: guide("Exercise cards"), isTemplate: true })).status, 200);
     assert.equal((await patch({ composition: " " })).status, 422);
@@ -94,11 +95,13 @@ test("MCP는 가이드 목록만 제공하고 빈 생성·미등록 복제를 �
     assert.equal(projects.listTemplates().length, 1);
     const clonedProject = projects.get((cloned.structuredContent as { id: string }).id);
     assert.equal((await unregister(source.id)).isError, undefined);
-    assert.deepEqual(projects.get(clonedProject!.id), clonedProject);
+    assert.deepEqual(projects.get(clonedProject!.id)?.document, clonedProject?.document);
+    assert.deepEqual(projects.get(clonedProject!.id)?.assets, clonedProject?.assets);
+    assert.equal(projects.get(clonedProject!.id)?.sourceTemplateProjectId, null);
     assert.deepEqual(projects.get(source.id)?.document, original.document);
-    assert.deepEqual(projects.getSummary(source.id)?.composition, guide("Updated routine guide"));
+    assert.equal(projects.getSummary(source.id)?.composition, "");
     assert.equal((await client.callTool({ name: "clone_project", arguments: { templateProjectId: source.id } })).isError, true);
-    assert.equal((await register(source.id)).isError, undefined);
+    assert.equal((await register(source.id, guide())).isError, undefined);
     assert.equal((await patch({ isTemplate: false })).status, 200);
     assert.equal((await client.callTool({ name: "clone_project", arguments: { templateProjectId: source.id } })).isError, true);
     assert.ok(projects.get(source.id));

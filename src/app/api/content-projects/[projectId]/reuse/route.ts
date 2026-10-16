@@ -2,6 +2,9 @@ import { COMPOSITION_LIMIT, ProjectReuseError, projectReuseUpdateSchema } from "
 import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
 import { updateContentProjectReuse } from "@/lib/content-jobs/projects/service";
 import { isLocalRequest } from "@/lib/http/local-request";
+import { ContentTemplateStore } from "@/lib/local-db/templates/store";
+import { getLocalDatabase } from "@/lib/local-db/database";
+import { notifyProjectsChanged } from "@/lib/content-jobs/projects/events";
 
 export const runtime = "nodejs";
 
@@ -19,4 +22,14 @@ export async function PATCH(request: Request, context: { params: Promise<{ proje
       return Response.json({ error: error.message }, { status: error.code === "PROJECT_NOT_FOUND" ? 404 : 422 });
     return contentJobErrorResponse(error);
   }
+}
+
+export async function DELETE(request: Request, context: { params: Promise<{ projectId: string }> }) {
+  if (!isLocalRequest(request, true)) return new Response(null, { status: 403 });
+  try {
+    const { projectId } = await context.params;
+    new ContentTemplateStore(getLocalDatabase()).delete(projectId);
+    notifyProjectsChanged();
+    return new Response(null, { status: 204 });
+  } catch (error) { return contentJobErrorResponse(error); }
 }

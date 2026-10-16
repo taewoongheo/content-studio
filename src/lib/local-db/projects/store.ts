@@ -1,5 +1,7 @@
 import type Database from "better-sqlite3";
-import { ProjectReuseError, projectReuseUpdateSchema, type ProjectReuseUpdate } from "@/lib/content-jobs/projects/composition";
+import { ProjectReuseError, type ProjectReuseUpdate, contentMetadataSchema, type ContentMetadata } from "@/lib/content-jobs/projects/composition";
+import { ContentTemplateStore } from "../templates/store";
+import { ensureProjectSchema } from "./schema";
 import type { EditorAsset } from "../../content-jobs/domain/types";
 
 export type SavedProjectSummary = {
@@ -9,7 +11,16 @@ export type SavedProjectSummary = {
   slideCount: number;
   outputLanguage: string;
   composition: string;
+  /** Derived from templateOrder; no separate persisted flag. */
   isTemplate: boolean;
+  registeredTemplateName: string | null;
+  sourceTemplateExcluded: boolean;
+  templateOrder: number | null;
+  sourceTemplateProjectId: string | null;
+  sourceTemplateName: string | null;
+  topic: string;
+  message: string;
+  publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -33,7 +44,14 @@ type ProjectRow = {
   slide_count: number;
   output_language: string;
   composition: string;
-  is_template: number;
+  template_order: number | null;
+  registered_template_name: string | null;
+  source_template_order: number | null;
+  source_template_project_id: string | null;
+  source_template_name: string | null;
+  topic: string;
+  message: string;
+  published_at: string | null;
   document_json: string;
   created_at: string;
   updated_at: string;
@@ -46,7 +64,13 @@ type AssetRow = {
   data: Buffer;
 };
 
-const SUMMARY_COLUMNS = `id, name, aspect_ratio, slide_count, output_language, composition, is_template, created_at, updated_at`;
+const SUMMARY_COLUMNS = `id, name, aspect_ratio, slide_count, output_language, topic, message, published_at, created_at, updated_at,
+  template_id AS source_template_project_id,
+  (SELECT name FROM content_templates WHERE id = content_projects.id) AS registered_template_name,
+  COALESCE((SELECT composition FROM content_templates WHERE id = content_projects.id), '') AS composition,
+  (SELECT loop_order FROM content_templates WHERE id = content_projects.id) AS template_order,
+  (SELECT name FROM content_templates WHERE id = content_projects.template_id) AS source_template_name,
+  (SELECT loop_order FROM content_templates WHERE id = content_projects.template_id) AS source_template_order`;
 const PROJECT_COLUMNS = `${SUMMARY_COLUMNS}, document_json`;
 
 function summary(row: ProjectRow): SavedProjectSummary {
@@ -57,7 +81,15 @@ function summary(row: ProjectRow): SavedProjectSummary {
     slideCount: row.slide_count,
     outputLanguage: row.output_language,
     composition: row.composition,
-    isTemplate: row.is_template === 1,
+    isTemplate: row.registered_template_name !== null,
+    registeredTemplateName: row.registered_template_name,
+    sourceTemplateExcluded: row.source_template_name !== null && row.source_template_order === null,
+    templateOrder: row.template_order,
+    sourceTemplateProjectId: row.source_template_project_id,
+    sourceTemplateName: row.source_template_name,
+    topic: row.topic,
+    message: row.message,
+    publishedAt: row.published_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -68,54 +100,72 @@ export class ContentProjectStore {
     this.ensureSchema();
   }
 
-  private ensureSchema() {
-    this.database.transaction(() => {
-      this.database.exec(`
-        CREATE TABLE IF NOT EXISTS content_projects (
-          id TEXT PRIMARY KEY,
-          name TEXT NOT NULL,
-          aspect_ratio TEXT NOT NULL,
-          slide_count INTEGER NOT NULL CHECK (slide_count > 0),
-          output_language TEXT NOT NULL,
-          document_json TEXT NOT NULL,
-          composition TEXT NOT NULL DEFAULT '',
-          is_template INTEGER NOT NULL DEFAULT 0 CHECK (is_template IN (0, 1)),
-          created_at TEXT NOT NULL,
-          updated_at TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS content_projects_updated_at_idx
-          ON content_projects(updated_at DESC);
-        CREATE TABLE IF NOT EXISTS content_project_assets (
-          project_id TEXT NOT NULL REFERENCES content_projects(id) ON DELETE CASCADE,
-          asset_id TEXT NOT NULL,
-          name TEXT NOT NULL,
-          mime_type TEXT NOT NULL CHECK (mime_type IN ('image/png', 'image/jpeg', 'image/webp')),
-          byte_size INTEGER NOT NULL CHECK (byte_size > 0),
-          data BLOB NOT NULL,
-          PRIMARY KEY (project_id, asset_id)
-        );
-      `);
-    })();
-  }
+  private ensureSchema() { ensureProjectSchema(this.database); }
 
   updateReuse(id: string, input: ProjectReuseUpdate) {
-    const validated = projectReuseUpdateSchema.parse(input);
+    return new ContentTemplateStore(this.database).update(id, input) ?? this.getSummary(id)!;
+  }
+
+  listTemplates(includeExcluded = false) { return new ContentTemplateStore(this.database).list(includeExcluded); }
+
+  updateMetadata(id: string, input: ContentMetadata) {
+    const metadata = contentMetadataSchema.parse(input);
     return this.database.transaction(() => {
       const project = this.getSummary(id);
       if (!project) throw new ProjectReuseError("PROJECT_NOT_FOUND");
-      const composition = validated.composition === undefined ? project.composition : validated.composition;
-      const isTemplate = validated.isTemplate ?? project.isTemplate;
-      if (isTemplate && !composition.trim())
-        throw new ProjectReuseError("COMPOSITION_REQUIRED");
-      this.database.prepare("UPDATE content_projects SET composition = ?, is_template = ?, updated_at = ? WHERE id = ?")
-        .run(composition, isTemplate ? 1 : 0, new Date().toISOString(), id);
+      if (metadata.templateId !== undefined) {
+        if (metadata.templateId !== null && project.isTemplate)
+          throw new ProjectReuseError("INVALID_METADATA", "템플릿으로 등록된 콘텐츠는 부모를 지정할 수 없습니다.");
+        if (metadata.templateId !== null && !new ContentTemplateStore(this.database).get(metadata.templateId))
+          throw new ProjectReuseError("INVALID_METADATA", "존재하는 부모 템플릿을 선택해 주세요.");
+        this.database.prepare("UPDATE content_projects SET template_id = ? WHERE id = ?").run(metadata.templateId, id);
+      }
+      this.database.prepare("UPDATE content_projects SET topic = ?, message = ?, updated_at = ? WHERE id = ?")
+        .run(metadata.topic, metadata.message, new Date().toISOString(), id);
       return this.getSummary(id)!;
     })();
   }
 
-  listTemplates(): SavedProjectSummary[] {
+  setCloneSource(id: string, sourceId: string) {
+    const template = new ContentTemplateStore(this.database).get(sourceId);
+    if (id === sourceId || !template || template.templateOrder === null || this.getSummary(id)?.isTemplate)
+      throw new ProjectReuseError("INVALID_METADATA", "루프에 등록된 원본 템플릿을 선택해 주세요.");
+    this.database.prepare("UPDATE content_projects SET template_id = ? WHERE id = ?").run(sourceId, id);
+  }
+
+  publish(id: string) {
+    const project = this.getSummary(id);
+    if (!project) throw new ProjectReuseError("PROJECT_NOT_FOUND");
+    if (project.publishedAt) return project;
+    if (!project.topic.trim() || !project.message.trim())
+      throw new ProjectReuseError("INVALID_METADATA", "게시 전에 주제와 메시지를 입력해 주세요.");
+    this.database.prepare("UPDATE content_projects SET published_at = ? WHERE id = ? AND published_at IS NULL")
+      .run(new Date().toISOString(), id);
+    return this.getSummary(id)!;
+  }
+
+  unpublish(id: string) {
+    if (!this.getSummary(id)) throw new ProjectReuseError("PROJECT_NOT_FOUND");
+    this.database.prepare("UPDATE content_projects SET published_at = NULL WHERE id = ?").run(id);
+  }
+
+  listPublished() {
     return (this.database.prepare(`SELECT ${SUMMARY_COLUMNS} FROM content_projects
-      WHERE is_template = 1 ORDER BY updated_at DESC, id DESC`).all() as ProjectRow[]).map(summary);
+      WHERE published_at IS NOT NULL ORDER BY published_at DESC, id DESC`).all() as ProjectRow[]).map(summary);
+  }
+
+  contentPlan() {
+    const templates = this.listTemplates();
+    const published = this.listPublished();
+    const latest = published.find(project => templates.some(template =>
+      template.id === (project.sourceTemplateProjectId ?? project.id)));
+    const lastIndex = latest ? templates.findIndex(template => template.id === (latest.sourceTemplateProjectId ?? latest.id)) : -1;
+    return {
+      nextTemplateId: templates.length ? templates[(lastIndex + 1) % templates.length].id : null,
+      templates,
+      published,
+      unpublished: this.list().filter(project => !project.isTemplate && !project.publishedAt),
+    };
   }
 
   save(input: {
@@ -172,6 +222,12 @@ export class ContentProjectStore {
     return this.getSummary(input.id)!;
   }
 
+  getAsset(projectId: string, assetId: string) {
+    const asset = this.database.prepare("SELECT mime_type, data FROM content_project_assets WHERE project_id = ? AND asset_id = ?")
+      .get(projectId, assetId) as { mime_type: string; data: Buffer } | undefined;
+    return asset ? { type: asset.mime_type, bytes: asset.data } : null;
+  }
+
   getContent(id: string) {
     const row = this.database.prepare("SELECT name, document_json, output_language FROM content_projects WHERE id = ?")
       .get(id) as Pick<ProjectRow, "name" | "document_json" | "output_language"> | undefined;
@@ -186,6 +242,8 @@ export class ContentProjectStore {
   }
 
   delete(id: string) {
+    if (new ContentTemplateStore(this.database).get(id))
+      throw new ProjectReuseError("SOURCE_IN_USE", "템플릿 설정을 먼저 삭제해 주세요. 원본 콘텐츠를 삭제하면 템플릿을 사용할 수 없습니다.");
     this.database.prepare("DELETE FROM content_projects WHERE id = ?").run(id);
   }
 

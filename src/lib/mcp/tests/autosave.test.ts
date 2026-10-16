@@ -26,7 +26,7 @@ function fixture() {
   return { database, registry, writes, stores, seed };
 }
 
-test("부분 색상을 저장·복구하고 잘못된 구간은 저장본을 바꾸지 않는다", async () => {
+test("부분 색상과 굵기를 저장·복구하고 잘못된 구간은 저장본을 바꾸지 않는다", async () => {
   const f = fixture();
   try {
     const job = f.seed("Colors");
@@ -34,12 +34,15 @@ test("부분 색상을 저장·복구하고 잘못된 구간은 저장본을 바
       { type: "add_element", element: makeElementDefinition({ id: "title", kind: "text" }) },
       { type: "place_element", slideId: "slide-1", elementId: "title", placementId: "title-1" },
       { type: "set_slot_value", slideId: "slide-1", placementId: "title-1", value: "BUILD CHEST",
-        textColors: [{ start: 6, end: 11, color: "#FF0000" }] },
+        textColors: [{ start: 6, end: 11, color: "#FF0000" }],
+        textWeights: [{ start: 6, end: 11, fontWeight: 700 }] },
     ], 0);
     const restored = loadContentProject(new ContentJobRegistry(), job.id, f.stores);
     assert.deepEqual(restored.editor.document, edited.editor.document);
     await assert.rejects(f.writes.edit(job.id, [{ type: "set_text_colors", slideId: "slide-1", placementId: "title-1",
       textColors: [{ start: 6, end: 12, color: "#FF0000" }] }], 1), /부분 색상/);
+    await assert.rejects(f.writes.edit(job.id, [{ type: "set_text_weights", slideId: "slide-1", placementId: "title-1",
+      textWeights: [{ start: 6, end: 12, fontWeight: 700 }] }], 1), /부분 굵기/);
     assert.deepEqual(f.stores.projects.get(job.id)?.document, edited.editor.document);
     const undone = f.writes.undo(job.id, 1);
     assert.deepEqual(f.stores.projects.get(job.id)?.document, undone.editor.document);
