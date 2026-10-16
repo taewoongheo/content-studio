@@ -3,6 +3,7 @@ import { ProjectReuseError, type ProjectReuseUpdate, contentMetadataSchema, type
 import { ContentTemplateStore } from "../templates/store";
 import { ensureProjectSchema } from "./schema";
 import type { EditorAsset } from "../../content-jobs/domain/types";
+import { nextTemplateInLoop } from "../../content-jobs/projects/planning/next-template";
 
 export type SavedProjectSummary = {
   id: string;
@@ -157,11 +158,8 @@ export class ContentProjectStore {
   contentPlan() {
     const templates = this.listTemplates();
     const published = this.listPublished();
-    const latest = published.find(project => templates.some(template =>
-      template.id === (project.sourceTemplateProjectId ?? project.id)));
-    const lastIndex = latest ? templates.findIndex(template => template.id === (latest.sourceTemplateProjectId ?? latest.id)) : -1;
     return {
-      nextTemplateId: templates.length ? templates[(lastIndex + 1) % templates.length].id : null,
+      nextTemplateId: nextTemplateInLoop(templates, published)?.id ?? null,
       templates,
       published,
       unpublished: this.list().filter(project => !project.isTemplate && !project.publishedAt),

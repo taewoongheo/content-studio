@@ -6,7 +6,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { StudioSidebar } from "./components/studio-sidebar";
 import { PublishedContentPage } from "./components/published/published-content-page";
-import { TemplateProjectsPage } from "./components/projects/template-projects-page";
+import { TemplateProjectsPage } from "./components/projects/templates/template-projects-page";
 
 export function DashboardContent({ onOpen, onNew }: {
   onOpen: (projectId: string) => Promise<void>; onNew: () => void;
