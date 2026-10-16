@@ -120,6 +120,26 @@ try {
   await page.getByRole("button", { name: "다시 실행", exact: true }).click();
   await page.getByRole("button", { name: /^저장(됨| 중)?$/ }).click();
   assert.equal((await read()).document.layers.at(-1)?.rotation, 15);
+  // Shortcut listeners must use the current selection after edits and history updates.
+  await page.getByRole("button", { name: "저장됨", exact: true }).focus();
+  await page.keyboard.press("ControlOrMeta+c");
+  await page.keyboard.press("ControlOrMeta+v");
+  await page.keyboard.press("ControlOrMeta+s");
+  await page.getByRole("button", { name: "저장됨", exact: true }).waitFor();
+  const pasted = (await read()).document.layers.at(-1)!;
+  assert.equal((await read()).document.layers.length, 10);
+  assert.notEqual(pasted.id, saved.document.layers.at(-1)?.id);
+  assert.equal(pasted.rotation, 15);
+  await page.keyboard.press("Delete");
+  await page.keyboard.press("ControlOrMeta+s");
+  await page.getByRole("button", { name: "저장됨", exact: true }).waitFor();
+  assert.equal((await read()).document.layers.length, 9);
+  await page.keyboard.press("ControlOrMeta+z");
+  await page.waitForFunction(() => document.body.innerText.includes("레이어 · 10") && !document.body.innerText.includes("처리 중…"));
+  assert.equal((await read()).document.layers.length, 10);
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  await page.waitForFunction(() => document.body.innerText.includes("레이어 · 9") && !document.body.innerText.includes("처리 중…"));
+  assert.equal((await read()).document.layers.length, 9);
   if (process.argv.includes("--profile")) {
     const cdp = await page.context().newCDPSession(page); await cdp.send("Profiler.enable"); await cdp.send("Profiler.startPreciseCoverage", { callCount: true, detailed: true });
     await page.getByRole("button", { name: "재생", exact: true }).click();

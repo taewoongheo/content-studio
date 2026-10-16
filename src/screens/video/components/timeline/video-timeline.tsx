@@ -1,5 +1,6 @@
 import type { PlayerRef } from "@remotion/player";
 import { VideoPlayhead } from "./video-playhead";
+import { adjustLayerTiming, type TimelineEdit } from "@/lib/video/domain/editing";
 import { useRef, type RefObject, type PointerEvent } from "react";
 import {
   videoDuration,
@@ -32,7 +33,7 @@ export function VideoTimeline({
   function drag(
     e: PointerEvent<HTMLDivElement>,
     l: VideoLayer,
-    mode: "move" | "start" | "end",
+    mode: TimelineEdit,
   ) {
     e.preventDefault();
     e.stopPropagation();
@@ -42,39 +43,7 @@ export function VideoTimeline({
     target.setPointerCapture(e.pointerId);
     const move = (event: globalThis.PointerEvent) => {
       const delta = Math.round((event.clientX - startX) / pixelsPerFrame);
-      if (mode === "move")
-        onChange({
-          ...l,
-          from: Math.max(0, Math.min(108000 - l.duration, l.from + delta)),
-        });
-      else if (mode === "end") {
-        const media = (l.kind === "video" || l.kind === "audio") && !l.loop;
-        const max = media
-          ? Math.min(l.sourceFrames - l.trimStart, 108000 - l.from)
-          : 108000 - l.from;
-        const duration = Math.max(1, Math.min(max, l.duration + delta));
-        onChange({
-          ...l,
-          duration,
-          ...(media ? { trimEnd: l.trimStart + duration } : {}),
-        });
-      } else {
-        const minDelta =
-          (l.kind === "video" || l.kind === "audio") && !l.loop
-            ? -(l.kind === "video" && l.sequence
-                ? l.trimStart
-                : Math.min(l.from, l.trimStart))
-            : -l.from;
-        const amount = Math.max(minDelta, Math.min(l.duration - 1, delta));
-        onChange({
-          ...l,
-          from: l.from + amount,
-          duration: l.duration - amount,
-          ...((l.kind === "video" || l.kind === "audio") && !l.loop
-            ? { trimStart: l.trimStart + amount }
-            : {}),
-        } as VideoLayer);
-      }
+      onChange(adjustLayerTiming(l, delta, mode));
     };
     const up = () => {
       target.removeEventListener("pointermove", move);

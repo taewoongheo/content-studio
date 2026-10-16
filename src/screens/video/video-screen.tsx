@@ -3,11 +3,13 @@ import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref
 import type { PlayerRef } from "@remotion/player";
 import { Copy, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { appendFrame, createLayer, reorderVideoLayers, splitVideoLayer, videoDuration, type VideoLayer, type VideoSnapshot } from "@/lib/video/domain/model";
+import { createLayer, reorderVideoLayers, splitVideoLayer, videoDuration, type VideoLayer, type VideoSnapshot } from "@/lib/video/domain/model";
 import { useVideoView } from "./hooks/use-video-view";
 import { useVideoProject } from "./hooks/use-video-project";
-import { downloadBlob, videoEndpoint, videoRequest } from "./api";
-import { mediaLayer } from "./media";
+import { videoEndpoint, videoRequest } from "./api";
+import { updateVideoLayer } from "@/lib/video/domain/editing";
+import { useVideoMedia } from "./hooks/use-video-media";
+import { useVideoShortcuts } from "./hooks/use-video-shortcuts";
 import { VideoPreview } from "./components/canvas/video-preview";
 import { VideoTimeline } from "./components/timeline/video-timeline";
 import { VideoHeader } from "./components/projects/video-header";
@@ -20,36 +22,23 @@ export function VideoScreen({ initial, ref, onNewJob }: { initial: VideoSnapshot
   const player = useRef<PlayerRef>(null);
   const { initialFrame, frameRef, selected, setSelected, guides, setGuides, unlockedRatios, setUnlockedRatios } = useVideoView(initial.tabId, videoDuration(initial.document), player);
   const [working, setWorking] = useState(false);
-  const [rendering, setRendering] = useState(false);
-  const files = useRef<HTMLInputElement>(null);
-  const assetMode = useRef<"sequence" | "overlay" | "image" | "audio">("sequence");
   const docRef = useRef(doc);
   const pendingSeek = useRef<number | null>(null);
   useEffect(() => {
     docRef.current = doc;
     if (pendingSeek.current !== null) { const frame = Math.min(videoDuration(doc) - 1, pendingSeek.current); pendingSeek.current = null; player.current?.seekTo(frame); frameRef.current = frame; }
   }, [doc, frameRef]);
-  const clipboard = useRef<VideoLayer | null>(null);
   const currentWork = useRef<Promise<void> | null>(null);
-  const currentExport = useRef<Promise<void> | null>(null);
   const selectedLayer = doc.layers.find(l => l.id === selected);
+  const currentFrame = useCallback(() => player.current?.getCurrentFrame() ?? frameRef.current, [frameRef]);
+  const { files, addFiles, pick, exportMp4, rendering, waitForExport } = useVideoMedia({ project, document: docRef, pendingSeek, currentFrame, onSelect: setSelected, run });
   useImperativeHandle(ref, () => ({ flushPending: async () => {
-    try { await currentWork.current; await currentExport.current; } catch { return false; }
+    try { await currentWork.current; await waitForExport(); } catch { return false; }
     return project.flush();
   } }));
-  const currentFrame = useCallback(() => player.current?.getCurrentFrame() ?? frameRef.current, [frameRef]);
   function seek(n: number) { player.current?.seekTo(n); frameRef.current = n; }
   function updateLayer(layer: VideoLayer) {
-    const latest = docRef.current, before = latest.layers.find(l => l.id === layer.id);
-    let layers = latest.layers.map(l => l.id === layer.id ? layer : l);
-    if (layer.kind === "video" && layer.sequence && before && layer.from !== before.from && layer.duration === before.duration) {
-      const sequence = latest.layers.filter(l => l.kind === "video" && l.sequence && l.id !== layer.id).sort((a,b) => a.from - b.from);
-      const at = sequence.findIndex(l => layer.from < l.from + l.duration / 2);
-      sequence.splice(at < 0 ? sequence.length : at, 0, layer);
-      const order = new Map(sequence.map((l, index) => [l.id, index]));
-      layers = layers.map(l => order.has(l.id) ? { ...l, sequenceIndex: order.get(l.id)! } : l);
-    }
-    change({ ...latest, layers });
+    change(updateVideoLayer(docRef.current, layer));
   }
   function selectLayer(id: string | null) {
     setSelected(id);
@@ -70,59 +59,27 @@ export function VideoScreen({ initial, ref, onNewJob }: { initial: VideoSnapshot
     try { await promise; } catch (e) { project.setError(e instanceof Error ? e.message : "작업에 실패했습니다."); }
     finally { currentWork.current = null; setWorking(false); }
   }
-  async function addFiles(list: File[], mode = assetMode.current) {
-    await run(async () => {
-      for (const file of list) {
-        const latest = docRef.current;
-        const from = mode === "sequence" ? appendFrame(latest) : currentFrame();
-        const l = await mediaLayer(file, latest, project.current.current.snapshot, from, mode === "overlay" || mode === "image");
-        const next = { ...docRef.current, duration: docRef.current.layers.length === 0 && mode === "sequence" ? 1 : docRef.current.duration, layers: [...docRef.current.layers, l] }; docRef.current = next; pendingSeek.current = l.from; change(next); setSelected(l.id);
-      }
-      if (!await project.flush()) throw new Error("미디어를 추가했지만 프로젝트를 저장하지 못했습니다. 저장을 다시 시도해 주세요.");
-    });
-  }
-  function pick(mode: typeof assetMode.current) { assetMode.current = mode; if (files.current) { files.current.accept = mode === "audio" ? "audio/*" : mode === "image" ? "image/png,image/jpeg,image/webp" : "video/*"; files.current.click(); } }
-  async function exportMp4() {
-    if (!await project.flush()) return;
-    setRendering(true); project.setError("");
-    const work = (async () => {
-      const s = project.current.current.snapshot;
-      const response = await fetch(`${videoEndpoint(s.id)}/render`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ expectedTabId: s.tabId, expectedRevision: s.revision }) });
-      if (!response.ok) { const body = await response.json(); throw new Error(body.error ?? "내보내기에 실패했습니다."); }
-      downloadBlob(await response.blob(), `${s.name}.mp4`);
-    })();
-    currentExport.current = work;
-    try { await work; } catch (e) { project.setError(e instanceof Error ? e.message : "내보내기에 실패했습니다."); }
-    finally { currentExport.current = null; setRendering(false); }
-  }
-  const actions = useRef({ remove, duplicate, project, run, selectedLayer, working: working || project.historyBusy });
-  useEffect(() => { actions.current = { remove, duplicate, project, run, selectedLayer, working: working || project.historyBusy }; });
-  useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      if (e.defaultPrevented) return;
-      const a = actions.current;
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") { e.preventDefault(); if (!a.working) void a.project.flush(); return; }
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement || (e.target instanceof HTMLElement && e.target.isContentEditable)) return;
-      if (a.working || window.document.querySelector("[role=dialog]")) return;
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") { e.preventDefault(); void a.run(() => a.project.history(e.shiftKey)); }
-      else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d") { e.preventDefault(); a.duplicate(); }
-      else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "c" && a.selectedLayer) { e.preventDefault(); clipboard.current = structuredClone(a.selectedLayer); }
-      else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "v" && clipboard.current) {
-        e.preventDefault(); const layer = { ...structuredClone(clipboard.current), id: crypto.randomUUID() };
-        a.project.change({ ...a.project.current.current.document, layers: [...a.project.current.current.document.layers, layer] }); setSelected(layer.id);
-      }
-      else if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); a.remove(); }
-      else if (e.code === "Space") { e.preventDefault(); player.current?.toggle(); }
-    };
-    window.addEventListener("keydown", key); return () => window.removeEventListener("keydown", key);
-  }, [setSelected]);
   const disabled = working || project.historyBusy;
+  useVideoShortcuts({
+    disabled,
+    selectedLayer,
+    onSave: () => { void project.flush(); },
+    onHistory: redo => { void run(() => project.history(redo)); },
+    onDuplicate: duplicate,
+    onRemove: remove,
+    onPaste: layer => {
+      const latest = project.current.current.document;
+      change({ ...latest, layers: [...latest.layers, layer] });
+      setSelected(layer.id);
+    },
+    onTogglePlayback: () => player.current?.toggle(),
+  });
   return <div aria-busy={working} data-tab-id={initial.tabId} className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground max-lg:h-auto max-lg:min-h-svh max-lg:overflow-visible" onDragOver={e => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }} onDrop={e => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }}>
     <input ref={files} type="file" multiple hidden onChange={e => { const list = Array.from(e.target.files ?? []); e.target.value = ""; void addFiles(list); }} />
     <VideoHeader id={initial.id} name={project.snapshot.name} document={doc} disabled={disabled} dirty={project.dirty} saving={project.saving} working={working} rendering={rendering}
       canUndo={project.snapshot.canUndo || project.dirty} canRedo={project.snapshot.canRedo} onBack={onNewJob} onChange={change} onSave={() => void project.flush()}
       onUndo={() => void run(() => project.history())} onRedo={() => void run(() => project.history(true))}
-      onImport={() => { assetMode.current = "sequence"; if (files.current) { files.current.accept = "video/mp4,.mp4"; files.current.click(); } }} onMp4={() => void exportMp4()} onDelete={async () => { await videoRequest(videoEndpoint(initial.id), "DELETE"); }} />
+      onImport={() => pick("sequence", "video/mp4,.mp4")} onMp4={() => void exportMp4()} onDelete={async () => { await videoRequest(videoEndpoint(initial.id), "DELETE"); }} />
     {project.error && <div role="alert" className="mx-5 mt-4 flex shrink-0 flex-wrap items-start gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"><p className="min-w-0 flex-1 break-words">{project.error}</p><Button variant="outline" size="sm" onClick={() => void project.flush()}>저장 재시도</Button><Button variant="outline" size="sm" onClick={() => { if (window.confirm("현재 편집 내용을 버리고 서버의 최신 내용을 불러올까요?")) void run(() => project.reload()); }}>최신 내용 불러오기</Button></div>}
     <main inert={disabled} className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden bg-background lg:grid-cols-[minmax(220px,260px)_minmax(0,1fr)_minmax(220px,260px)] 2xl:grid-cols-[minmax(260px,300px)_minmax(0,1fr)_minmax(260px,300px)] max-lg:overflow-visible">
       <aside aria-label="선택 항목 편집" className="flex min-h-0 min-w-0 flex-col overflow-hidden border-r px-4 py-4 max-lg:order-2 max-lg:min-h-[360px] max-lg:border-r-0 max-lg:border-t">
