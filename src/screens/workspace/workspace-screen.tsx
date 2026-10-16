@@ -60,6 +60,7 @@ export function WorkspaceScreen() {
     if (!shortcut || event.defaultPrevented) return;
     const activeTab = tabs?.find(tab => tab.tabId === job?.tabId);
     if (!activeTab) return;
+    // Reserve workspace shortcuts even while blocked, so a dialog or pending save cannot close the browser or navigate its history.
     event.preventDefault();
     if (event.repeat || busy || chooser || lifecycle.closing || lifecycle.renaming ||
       document.querySelector("[role='dialog'], [role='alertdialog']")) return;

@@ -5,11 +5,15 @@ import { ensureProjectSchema, PROJECT_SCHEMA } from "./schema";
 export function migrateTemplateLoop(database: Database.Database) {
   const version = database.pragma("user_version", { simple: true }) as number;
   if (version > 10) throw new Error("지원하지 않는 DB 버전입니다.");
+  const legacyPosts = database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'published_posts'").get();
+  if (legacyPosts && (database.prepare("SELECT count(*) AS count FROM published_posts").get() as { count: number }).count > 0)
+    throw new Error("기존 게시 기록이 있습니다. 프로젝트 연결을 확인한 뒤 전환해야 합니다. 변경하지 않았습니다.");
   const columns = database.prepare("PRAGMA table_info(content_projects)").all() as Array<{ name: string }>;
   if (columns.some(column => column.name === "template_id")) {
     database.transaction(() => {
       const templateColumns = database.prepare("PRAGMA table_info(content_templates)").all() as Array<{ name: string }>;
       if (templateColumns.some(column => column.name === "color")) database.exec("ALTER TABLE content_templates DROP COLUMN color;");
+      database.exec("DROP TABLE IF EXISTS published_posts;");
       database.pragma("user_version = 10");
     })();
     return;
@@ -18,9 +22,6 @@ export function migrateTemplateLoop(database: Database.Database) {
   if (!required.every(name => columns.some(column => column.name === name)) ||
       !columns.some(column => column.name === "is_template" || column.name === "template_order"))
     throw new Error("지원하지 않는 프로젝트 DB 스키마입니다.");
-  const legacyPosts = database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'published_posts'").get();
-  if (legacyPosts && (database.prepare("SELECT count(*) AS count FROM published_posts").get() as { count: number }).count > 0)
-    throw new Error("기존 게시 기록이 있습니다. 프로젝트 연결을 확인한 뒤 전환해야 합니다. 변경하지 않았습니다.");
   type Legacy = { id: string; name: string; aspect_ratio: string; slide_count: number; output_language: string;
     document_json: string; composition: string; template_order?: number | null; is_template?: number;
     template_color?: string; source_template_project_id?: string | null; topic?: string; message?: string;

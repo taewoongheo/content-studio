@@ -66,6 +66,25 @@ test("드래그 순서는 원자적으로 저장하고 오래된 목록과 누�
   } finally { db.close(); }
 });
 
+test("최초 등록에서 요청한 순서를 보존하고 범위 밖 순서는 원자적으로 거부한다", () => {
+  const db = openLocalDatabase(":memory:");
+  try {
+    const projects = new ContentProjectStore(db), templates = new ContentTemplateStore(db);
+    for (const id of ["a", "b", "c", "invalid"]) {
+      projects.save({ id, name: id, aspectRatio: "4:5", slideCount: 1, outputLanguage: "English", document: {}, assets: [] });
+    }
+    templates.update("a", { isTemplate: true, composition: "비교 카드" });
+    templates.update("b", { isTemplate: true, composition: "비교 카드", templateOrder: 1 });
+    assert.deepEqual(templates.list().map(item => item.id), ["b", "a"]);
+    templates.update("c", { isTemplate: true, composition: "비교 카드", templateOrder: 2 });
+    assert.deepEqual(templates.list().map(item => [item.id, item.templateOrder]), [["b", 1], ["c", 2], ["a", 3]]);
+    const before = templates.list();
+    assert.throws(() => templates.update("invalid", { isTemplate: true, composition: "비교 카드", templateOrder: 5 }), /범위/);
+    assert.deepEqual(templates.list(), before);
+    assert.equal(templates.get("invalid"), null);
+  } finally { db.close(); }
+});
+
 test("v8 전환은 제외된 부모도 보존하고 등록된 콘텐츠의 부모만 해제한다", () => {
   const db = new Database(":memory:");
   try {
@@ -102,7 +121,7 @@ test("v9 색상 제거는 템플릿 설정·부모 연결·게시 시각·문서
     templates.update("source", { isTemplate: true, composition: "대안을 비교한다." });
     projects.updateMetadata("child", { topic: "child", message: "child message", templateId: "source" });
     projects.publish("child");
-    db.exec("ALTER TABLE content_templates ADD COLUMN color TEXT NOT NULL DEFAULT '#123456'; PRAGMA user_version=9;");
+    db.exec("ALTER TABLE content_templates ADD COLUMN color TEXT NOT NULL DEFAULT '#123456'; CREATE TABLE published_posts (id TEXT PRIMARY KEY); PRAGMA user_version=9;");
     const beforeProjects = db.prepare("SELECT * FROM content_projects ORDER BY id").all();
     const beforeTemplates = templates.list(true);
     migrateTemplateLoop(db);
@@ -110,7 +129,22 @@ test("v9 색상 제거는 템플릿 설정·부모 연결·게시 시각·문서
     assert.deepEqual(templates.list(true), beforeTemplates);
     assert.ok(!(db.prepare("PRAGMA table_info(content_templates)").all() as Array<{ name: string }>).some(column => column.name === "color"));
     assert.equal(db.pragma("user_version", { simple: true }), 10);
+    assert.equal(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'published_posts'").get(), undefined);
     assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
+  } finally { db.close(); }
+});
+
+test("v9 게시 기록이 있으면 색상·게시 테이블·버전을 바꾸기 전에 중단한다", () => {
+  const db = openLocalDatabase(":memory:");
+  try {
+    db.exec(`ALTER TABLE content_templates ADD COLUMN color TEXT NOT NULL DEFAULT '#123456';
+      CREATE TABLE published_posts (id TEXT PRIMARY KEY);
+      INSERT INTO published_posts VALUES ('existing'); PRAGMA user_version=9;`);
+    const before = db.prepare("SELECT name, sql FROM sqlite_master ORDER BY name").all();
+    assert.throws(() => migrateTemplateLoop(db), /기존 게시 기록/);
+    assert.deepEqual(db.prepare("SELECT name, sql FROM sqlite_master ORDER BY name").all(), before);
+    assert.deepEqual(db.prepare("SELECT * FROM published_posts").all(), [{ id: "existing" }]);
+    assert.equal(db.pragma("user_version", { simple: true }), 9);
   } finally { db.close(); }
 });
 

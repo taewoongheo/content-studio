@@ -361,6 +361,21 @@ try {
     await scopeToggle.click();
     await page.getByRole("button", { name: "전체 적용", exact: true, pressed: false }).waitFor();
     console.log("PASS all-slide toggle, Cmd+D from text input and canceled key repeat");
+    await page.getByRole("button", { name: "새 탭", exact: true }).click();
+    await page.getByRole("dialog").waitFor();
+    const dialogShortcuts = await page.evaluate(() => ["s", "d", "w", "[", "]"].flatMap(key => [true, false].map(metaKey => {
+      const event = new KeyboardEvent("keydown", { key, code: key === "[" ? "BracketLeft" : key === "]" ? "BracketRight" : `Key${key.toUpperCase()}`,
+        metaKey, ctrlKey: !metaKey, bubbles: true, cancelable: true });
+      window.dispatchEvent(event);
+      return { key, metaKey, prevented: event.defaultPrevented };
+    })));
+    for (const event of dialogShortcuts)
+      assert.equal(event.prevented, event.metaKey || event.key === "s" || event.key === "d", JSON.stringify(event));
+    await page.getByRole("dialog").press("Escape");
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+    assert.equal(await scopeToggle.getAttribute("aria-pressed"), "false");
+    assert.equal(new URL(page.url()).searchParams.get("job"), colorProject.id);
+    console.log("PASS dialogs suppress editor/workspace actions and browser save, bookmark, close and history defaults");
     await content.evaluate((input, start) => {
       const textarea = input as HTMLTextAreaElement;
       textarea.focus(); textarea.setSelectionRange(start, start);

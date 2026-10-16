@@ -11,11 +11,14 @@ function isTextInput(target: EventTarget | null) {
 
 export function useEditorShortcuts(onShortcut: (action: EditorShortcut) => boolean) {
   const handleKey = useEffectEvent((event: KeyboardEvent) => {
-    if (document.querySelector("[role='dialog'], [role='alertdialog']")) return;
     const editingText = isTextInput(event.target) || isTextInput(document.activeElement);
     const hasSelectedText = Boolean(window.getSelection()?.toString());
     const action = editorShortcut(event, editingText, hasSelectedText);
     if (!action || event.defaultPrevented) return;
+    if (document.querySelector("[role='dialog'], [role='alertdialog']")) {
+      if (action === "save" || action === "toggle-scope") event.preventDefault();
+      return;
+    }
     if (action === "toggle-scope" && event.repeat) {
       event.preventDefault();
       return;

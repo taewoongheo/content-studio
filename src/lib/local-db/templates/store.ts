@@ -36,7 +36,7 @@ export class ContentTemplateStore {
       if (!composition.trim()) throw new ProjectReuseError("COMPOSITION_REQUIRED");
       const active = this.list();
       let order = settings.templateOrder === undefined ? existing?.templateOrder ?? null : settings.templateOrder;
-      if (!existing || settings.isTemplate === true && order === null) order = active.length + 1;
+      if (order === null && (!existing || settings.isTemplate === true)) order = active.length + 1;
 
       const ids = active.filter(template => template.id !== id).map(template => template.id);
       if (order !== null) {
