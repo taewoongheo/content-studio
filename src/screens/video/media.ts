@@ -1,5 +1,6 @@
 import { type VideoAsset, type VideoDocument, type VideoLayer, type VideoSnapshot } from "@/lib/video/domain/model";
 import { videoEndpoint } from "./api";
+import { createMediaLayer } from "@/lib/video/domain/media/layer";
 export async function uploadMedia(snapshot: VideoSnapshot, file: File): Promise<VideoAsset> {
   const form = new FormData(); form.set("file", file); form.set("tabId", snapshot.tabId);
   const response = await fetch(`${videoEndpoint(snapshot.id)}/assets`, { method: "POST", body: form });
@@ -13,12 +14,7 @@ export async function mediaLayer(file: File, doc: VideoDocument, project: VideoS
   if (sourceFrames > 1080000) throw new Error("원본 영상이 너무 깁니다.");
   if (kind !== "image" && from + sourceFrames > 108000) throw new Error("미디어 전체를 추가하면 최대 영상 길이를 초과합니다.");
   const asset = await uploadMedia(project, file);
-  const overlayWidth = Math.max(1, Math.min(doc.width * 0.4, doc.height * 0.5 * info.width / info.height));
-  const base = { id: crypto.randomUUID(), name: file.name.slice(0, 120), from, duration: kind === "image" ? doc.duration : sourceFrames, x: overlay ? Math.round(doc.width * 0.1) : 0, y: overlay ? Math.round(doc.height * 0.25) : 0, width: overlay ? Math.round(overlayWidth) : doc.width, height: overlay ? Math.max(1, Math.round(overlayWidth / (info.width / info.height))) : doc.height, rotation: 0, opacity: 1, assetId: asset.id };
-  if (kind === "image") return { ...base, kind, fit: "contain" };
-  const media = { ...base, sourceFrames, trimStart: 0, trimEnd: sourceFrames, volume: 1, loop: false };
-  if (kind === "audio") return { ...media, kind };
-  return { ...media, kind, sequence: !overlay, ...(!overlay ? { sequenceIndex: doc.layers.filter(l => l.kind === "video" && l.sequence).length, sequenceStart: from > doc.layers.filter(l => l.kind === "video" && l.sequence).reduce((end, l) => Math.max(end, l.from + l.duration), 0) ? from : 0 } : {}), fit: overlay ? "contain" : "cover", cropX: 50, cropY: 50 };
+  return createMediaLayer({ kind, name: file.name, assetId: asset.id, info, document: doc, from, overlay });
 }
 async function inspect(file: File, kind: "video" | "audio" | "image"): Promise<{ duration: number; width: number; height: number }> {
   const url = URL.createObjectURL(file);

@@ -37,13 +37,29 @@ function requireSession(id: string, tabId: unknown, revision?: unknown) {
   if (revision !== undefined && s.revision !== revision) throw new Error("다른 창에서 영상이 변경되었습니다. 다시 열어 최신 내용을 확인해 주세요.");
   return s;
 }
-export function writeVideo(id: string, tabId: unknown, revision: unknown, value: unknown) {
+export function readVideo(id: string) {
+  const session = sessions.get(id);
+  if (!session) throw new Error("열린 영상 탭을 찾을 수 없습니다. open_video_project로 먼저 열어 주세요.");
+  return snapshot(session);
+}
+export function checkVideoRevision(id: string, tabId: string, revision: number) {
+  requireSession(id, tabId, revision);
+}
+/** Commit bytes and document together before changing session revision or history. */
+export function commitVideoEdit(id: string, tabId: unknown, revision: unknown, edit: (doc: VideoDocument, store: VideoStore) => VideoDocument) {
   const s = requireSession(id, tabId, revision);
-  const document = videoDocumentSchema.parse(value);
-  videoStore().save(id, s.name, document, s.revision + 1);
+  const store = videoStore();
+  const document = getLocalDatabase().transaction(() => {
+    const next = videoDocumentSchema.parse(edit(structuredClone(s.document), store));
+    store.save(id, s.name, next, s.revision + 1);
+    return next;
+  })();
   s.undo.push(s.document); if (s.undo.length > 100) s.undo.shift();
   s.redo = []; s.document = document; s.revision++;
   notify(); notifyProjectsChanged(); return snapshot(s);
+}
+export function writeVideo(id: string, tabId: unknown, revision: unknown, value: unknown) {
+  return commitVideoEdit(id, tabId, revision, () => videoDocumentSchema.parse(value));
 }
 export function historyVideo(id: string, tabId: unknown, revision: unknown, redo = false) {
   const s = requireSession(id, tabId, revision);

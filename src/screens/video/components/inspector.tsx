@@ -1,3 +1,4 @@
+import { changeVideoFps } from "@/lib/video/domain/settings";
 import { AlignCenter, AlignLeft, AlignRight } from "lucide-react";
 import type { RefObject } from "react";
 import type { PlayerRef } from "@remotion/player";
@@ -23,8 +24,7 @@ export function VideoInspector({ document: doc, layer: l, onDocument, onLayer, p
       <Field label="배경색"><div className="flex items-center gap-3 rounded-lg border bg-background p-3"><input aria-label="영상 배경색" type="color" className="size-10 shrink-0 cursor-pointer rounded-md border bg-background p-1" value={doc.backgroundColor} onChange={e => onDocument({ ...doc, backgroundColor: e.target.value })} /><span className="font-mono text-xs text-muted-foreground">{doc.backgroundColor.toUpperCase()}</span></div></Field>
       <section className="grid gap-3 border-t pt-5"><h2 className="text-sm font-semibold">영상 설정</h2>
         <Field label="FPS"><select className={inputClass} value={doc.fps} onChange={e => {
-          const fps = Number(e.target.value) as VideoDocument["fps"], ratio = fps / doc.fps;
-          onDocument({ ...doc, fps, duration: Math.max(1, Math.round(doc.duration * ratio)), layers: doc.layers.map(layer => ({ ...layer, from: Math.round(layer.from * ratio), duration: Math.max(1, Math.round(layer.duration * ratio)), ...("sourceFrames" in layer ? { sourceFrames: Math.max(1, Math.round(layer.sourceFrames * ratio)), trimStart: Math.round(layer.trimStart * ratio), trimEnd: Math.max(1, Math.round(layer.trimEnd * ratio)) } : {}), ...(layer.kind === "text" ? { fadeIn: Math.round(layer.fadeIn * ratio) } : {}) })) });
+          onDocument(changeVideoFps(doc, Number(e.target.value) as VideoDocument["fps"]));
         }}>{[24,25,30,60].map(fps => <option key={fps}>{fps}</option>)}</select></Field>
         <NumberField label="최소 영상 길이 (초)" value={doc.duration / doc.fps} min={1 / doc.fps} max={108000 / doc.fps} step={0.1} onChange={n => onDocument({ ...doc, duration: Math.max(1, Math.round(n * doc.fps)) })} />
       </section>
