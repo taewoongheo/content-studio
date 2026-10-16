@@ -1,4 +1,5 @@
 "use client";
+import { VideoProjectCard } from "@/screens/video/components/project-card";
 import { useId, useState } from "react";
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -10,7 +11,7 @@ import { nextTemplateInLoop } from "@/lib/content-jobs/projects/planning/next-te
 import { SavedProjectCard, TemplateCard } from "./project-cards";
 
 export function TemplateProjectsPage({ onOpen }: { onOpen: (projectId: string) => Promise<void> }) {
-  const { projects, templates: allTemplates, loading, error, setError } = useSavedProjects();
+  const { projects, videos, templates: allTemplates, loading, error, setError } = useSavedProjects();
   const [busy, setBusy] = useState(false);
   const [pendingIds, setPendingIds] = useState<string[] | null>(null);
   const dragId = useId();
@@ -55,11 +56,11 @@ export function TemplateProjectsPage({ onOpen }: { onOpen: (projectId: string) =
         </SortableContext></DndContext>
         {!templates.length && <p className="py-8 text-sm text-muted-foreground">루프에 포함된 템플릿이 없습니다. 저장된 프로젝트에서 루프에 추가하세요.</p>}
       </section>
-      <section aria-labelledby="saved-projects-heading" className="min-w-0"><h2 id="saved-projects-heading" className="border-b pb-4 font-semibold">저장된 프로젝트 <span aria-hidden="true" className="text-muted-foreground">{projects.length}</span></h2>
+      <section aria-labelledby="saved-projects-heading" className="min-w-0"><h2 id="saved-projects-heading" className="border-b pb-4 font-semibold">저장된 프로젝트 <span aria-hidden="true" className="text-muted-foreground">{projects.length + videos.length}</span></h2>
         <p className="mt-3 text-xs text-muted-foreground">원본의 내용 정보와 템플릿 설정은 독립적으로 저장됩니다.</p>
-        <div role="list" className="divide-y">{projects.map(project => <SavedProjectCard key={project.id} project={project} busy={busy} templates={allTemplates}
+        <div role="list" className="divide-y">{videos.map(project => <VideoProjectCard key={project.id} project={project} busy={busy} run={run} onOpen={id => void run(() => onOpen(id))} />)}{projects.map(project => <SavedProjectCard key={project.id} project={project} busy={busy} templates={allTemplates}
           onOpen={id => void run(() => onOpen(id))} onPublish={id => void run(() => publishProject(id))} />)}</div>
-        {!projects.length && <p className="py-8 text-sm text-muted-foreground">아직 저장된 프로젝트가 없습니다.</p>}
+        {!projects.length && !videos.length && <p className="py-8 text-sm text-muted-foreground">아직 저장된 프로젝트가 없습니다.</p>}
       </section>
     </div>}
   </div>;

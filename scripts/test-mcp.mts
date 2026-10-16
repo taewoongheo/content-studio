@@ -533,7 +533,7 @@ try {
       commands: [{ type: "rename_slide", slideId: "slide-1", name: "Old tab" }] } });
     assert.equal(staleTabEdit.isError, true);
     await page.getByRole("button", { name: "새 탭", exact: true }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "새 편집기 시작", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "새 슬라이드쇼 시작", exact: true }).click();
     await page.getByRole("dialog").waitFor({ state: "hidden" });
     await page.getByRole("button", { name: "ZIP 내보내기" }).waitFor();
     const blankId = new URL(page.url()).searchParams.get("job");
@@ -563,7 +563,7 @@ try {
 
     async function newBlank() {
       await tabBar.getByRole("button", { name: "새 탭", exact: true }).click();
-      await page.getByRole("dialog").getByRole("button", { name: "새 편집기 시작", exact: true }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "새 슬라이드쇼 시작", exact: true }).click();
       await page.getByRole("dialog").waitFor({ state: "hidden" });
       await page.getByRole("button", { name: "ZIP 내보내기" }).waitFor();
       const projectId = new URL(page.url()).searchParams.get("job")!;

@@ -1,3 +1,4 @@
+import { videoTabs } from "@/lib/video/server/service";
 import { projectTabEvents } from "@/lib/content-jobs/http/tab-events";
 import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
 import { contentJobRegistry } from "@/lib/content-jobs/workflow/service";
@@ -16,5 +17,5 @@ export async function POST(request: Request) {
 export function GET(request: Request) {
   if (!isLocalRequest(request)) return new Response(null, { status: 403 });
   if (request.headers.get("accept")?.includes("text/event-stream")) return projectTabEvents(contentJobRegistry, request.signal);
-  return Response.json(contentJobRegistry.tabs(), { headers: { "Cache-Control": "no-store" } });
+  return Response.json([...contentJobRegistry.tabs(), ...videoTabs()], { headers: { "Cache-Control": "no-store" } });
 }
