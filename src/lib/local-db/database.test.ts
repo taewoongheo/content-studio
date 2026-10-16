@@ -24,7 +24,7 @@ test("DB 경로는 실행 폴더가 바뀌어도 고정되며 상대 경로 설�
   }
 });
 
-test("DB를 다시 열어도 프로젝트의 게시 시각이 유지되고 테이블은 세 개다", () => {
+test("DB를 다시 열어도 프로젝트의 게시 시각이 유지되고 영상 테이블과 함께 유지된다", () => {
   const directory = mkdtempSync(join(tmpdir(), "content-studio-db-test-"));
   const path = join(directory, "studio.sqlite");
   try {
@@ -37,7 +37,7 @@ test("DB를 다시 열어도 프로젝트의 게시 시각이 유지되고 테�
     database.close();
     const reopened = openLocalDatabase(path);
     assert.equal(new ContentProjectStore(reopened).listPublished()[0].publishedAt, publishedAt);
-    assert.deepEqual(reopened.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all(), [{ name: "content_project_assets" }, { name: "content_projects" }, { name: "content_templates" }]);
+    assert.deepEqual(reopened.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all(), [{ name: "content_project_assets" }, { name: "content_projects" }, { name: "content_templates" }, { name: "video_project_assets" }, { name: "video_projects" }]);
     reopened.close();
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });

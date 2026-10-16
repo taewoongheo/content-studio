@@ -1,9 +1,10 @@
+import { VIDEO_SCHEMA } from "../video/server/store";
 import Database from "better-sqlite3";
 import { mkdirSync } from "node:fs";
 import { dirname, isAbsolute } from "node:path";
 import { ensureProjectSchema } from "./projects/schema";
 
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
 
 export function defaultDatabasePath() {
   const override = process.env.CONTENT_STUDIO_DB_PATH;
@@ -30,6 +31,7 @@ export function openLocalDatabase(path = defaultDatabasePath()) {
     database.pragma("journal_mode = WAL");
     database.transaction(() => {
       ensureProjectSchema(database);
+      database.exec(VIDEO_SCHEMA);
       database.pragma(`user_version = ${SCHEMA_VERSION}`);
     })();
     return database;

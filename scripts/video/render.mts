@@ -1,0 +1,10 @@
+import { bundle } from "@remotion/bundler";
+import { renderMedia, selectComposition } from "@remotion/renderer";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+const [propsPath, publicDir, output] = process.argv.slice(2);
+if (!propsPath || !publicDir || !output) throw new Error("렌더링 인수가 필요합니다.");
+const props = JSON.parse(await readFile(propsPath, "utf8"));
+const serveUrl = await bundle({ entryPoint: path.resolve("src/lib/video/remotion/entry.tsx"), publicDir });
+const composition = await selectComposition({ serveUrl, id: "ContentStudioVideo", inputProps: props });
+await renderMedia({ serveUrl, composition, inputProps: props, codec: "h264", pixelFormat: "yuv420p", outputLocation: output, concurrency: 2, overwrite: true });

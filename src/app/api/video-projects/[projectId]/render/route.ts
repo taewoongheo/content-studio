@@ -1,0 +1,13 @@
+import { isLocalRequest } from "@/lib/http/local-request";
+import { openVideo } from "@/lib/video/server/service";
+import { renderVideo } from "@/lib/video/server/render";
+import { videoError } from "@/lib/video/server/http";
+export const runtime = "nodejs";
+export async function POST(req: Request, ctx: { params: Promise<{ projectId: string }> }) {
+  if (!isLocalRequest(req, true)) return new Response(null, { status: 403 });
+  try {
+    const snapshot = openVideo((await ctx.params).projectId), b = await req.json();
+    if (snapshot.tabId !== b.expectedTabId || snapshot.revision !== b.expectedRevision) throw new Error("최신 내용을 저장한 뒤 다시 내보내 주세요.");
+    return new Response(new Uint8Array(await renderVideo(snapshot)), { headers: { "Content-Type": "video/mp4", "Content-Disposition": "attachment; filename=content-studio.mp4", "Cache-Control": "no-store" } });
+  } catch (e) { return videoError(e); }
+}
