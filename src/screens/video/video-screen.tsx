@@ -16,7 +16,7 @@ import { VideoHeader } from "./components/projects/video-header";
 import { VideoLayers } from "./components/layers/video-layers";
 import { VideoControls } from "./components/playback/video-controls";
 import { VideoInspector } from "./components/inspector";
-export type VideoWorkspaceHandle = { flushPending: () => Promise<boolean> };
+export type VideoWorkspaceHandle = { flushPending: () => Promise<boolean>; sync: (revision: number, name: string) => Promise<void> };
 export function VideoScreen({ initial, ref, onNewJob }: { initial: VideoSnapshot; ref?: Ref<VideoWorkspaceHandle>; onNewJob: () => void }) {
   const project = useVideoProject(initial), { document: doc, change } = project;
   const player = useRef<PlayerRef>(null);
@@ -32,7 +32,7 @@ export function VideoScreen({ initial, ref, onNewJob }: { initial: VideoSnapshot
   const selectedLayer = doc.layers.find(l => l.id === selected);
   const currentFrame = useCallback(() => player.current?.getCurrentFrame() ?? frameRef.current, [frameRef]);
   const { files, addFiles, pick, exportMp4, rendering, waitForExport } = useVideoMedia({ project, document: docRef, pendingSeek, currentFrame, onSelect: setSelected, run });
-  useImperativeHandle(ref, () => ({ flushPending: async () => {
+  useImperativeHandle(ref, () => ({ sync: project.sync, flushPending: async () => {
     try { await currentWork.current; await waitForExport(); } catch { return false; }
     return project.flush();
   } }));

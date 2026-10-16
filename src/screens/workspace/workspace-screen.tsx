@@ -46,6 +46,8 @@ export function WorkspaceScreen() {
     const openIds = new Set(next.map(tab => tab.tabId));
     for (const id of views.current.keys()) if (!openIds.has(id)) views.current.delete(id);
     const v = currentVideo.current;
+    const remoteVideo = v && next.find(tab => tab.tabId === v.tabId);
+    if (remoteVideo) void videoEditor.current?.sync(remoteVideo.revision, remoteVideo.name);
     if (v && !openIds.has(v.tabId)) { currentVideo.current = null; setVideo(null); updateUrl(null, true); }
     const active = current.current;
     if (active && !openIds.has(active.tabId)) {

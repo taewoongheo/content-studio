@@ -68,6 +68,21 @@ export function useVideoProject(initial: VideoSnapshot) {
       setSnapshot(saved); setDocument(reflowSequence(saved.document)); setDirty(false); setError("");
     } catch (e) { setError(e instanceof Error ? e.message : "불러오지 못했습니다."); }
   }
-  return { snapshot, document, change, flush, history, error, setError, saving, dirty, current, historyBusy, reload };
+  async function sync(revision: number, name: string) {
+    if (revision < current.current.snapshot.revision) return;
+    if (name !== current.current.snapshot.name) {
+      current.current.snapshot = { ...current.current.snapshot, name };
+      setSnapshot(current.current.snapshot);
+    }
+    if (revision === current.current.snapshot.revision || current.current.dirty || running.current || historyRunning.current) return;
+    try {
+      const remote = await openVideoProject(current.current.snapshot.id);
+      if (disposed.current || current.current.dirty || running.current || historyRunning.current || remote.tabId !== current.current.snapshot.tabId || remote.revision <= current.current.snapshot.revision) return;
+      const next = reflowSequence(remote.document);
+      current.current = { snapshot: remote, document: next, dirty: false };
+      setSnapshot(remote); setDocument(next); setDirty(false); setError("");
+    } catch (cause) { if (!disposed.current) setError(cause instanceof Error ? cause.message : "영상 변경을 불러오지 못했습니다."); }
+  }
+  return { snapshot, document, change, flush, history, error, setError, saving, dirty, current, historyBusy, reload, sync };
 }
 function documentVisibilityHidden() { return window.document.visibilityState === "hidden"; }
