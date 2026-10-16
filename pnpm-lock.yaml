@@ -182,16 +182,16 @@ importers:
         specifier: ^1.31.0
         version: 1.31.0(supports-color@7.2.0)(zod@4.6.5)
       '@remotion/bundler':
-        specifier: ^4.0.535
+        specifier: 4.0.535
         version: 4.0.535(@swc/helpers@0.5.23)(lightningcss@1.32.0)(postcss@8.5.28)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@remotion/google-fonts':
         specifier: 4.0.535
         version: 4.0.535(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@remotion/player':
-        specifier: ^4.0.535
+        specifier: 4.0.535
         version: 4.0.535(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@remotion/renderer':
-        specifier: ^4.0.535
+        specifier: 4.0.535
         version: 4.0.535(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       ajv:
         specifier: 8.20.0
@@ -227,7 +227,7 @@ importers:
         specifier: 19.2.8
         version: 19.2.8(react@19.2.8)
       remotion:
-        specifier: ^4.0.535
+        specifier: 4.0.535
         version: 4.0.535(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       shadcn:
         specifier: ^4.21.0

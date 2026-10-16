@@ -1,5 +1,5 @@
 import { isLocalRequest } from "@/lib/http/local-request";
-import { openVideo, writeVideo, historyVideo, renameVideo, closeVideo, deleteVideo, cloneVideo } from "@/lib/video/server/service";
+import { openVideo, writeVideo, historyVideo, renameVideo, closeVideo, deleteVideoGuarded, cloneVideo } from "@/lib/video/server/service";
 import { videoError } from "@/lib/video/server/http";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,5 +33,5 @@ export async function PATCH(req: Request, ctx: Context) {
 }
 export async function DELETE(req: Request, ctx: Context) {
   if (!isLocalRequest(req, true)) return new Response(null, { status: 403 });
-  try { deleteVideo((await ctx.params).projectId); return new Response(null, { status: 204 }); } catch (e) { return videoError(e); }
+  try { const body = await req.json(); deleteVideoGuarded((await ctx.params).projectId, body.expectedTabId, body.expectedRevision); return new Response(null, { status: 204 }); } catch (e) { return videoError(e); }
 }

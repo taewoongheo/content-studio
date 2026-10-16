@@ -12,6 +12,7 @@ export const openVideoProject = (id: string) => videoRequest<VideoSnapshot>(vide
 export const createVideoProject = () => videoRequest<VideoSnapshot>("/api/video-projects", "POST");
 export const saveVideoProject = (s: VideoSnapshot, document: VideoDocument) => videoRequest<VideoSnapshot>(videoEndpoint(s.id), "PUT", { document, expectedTabId: s.tabId, expectedRevision: s.revision });
 export const videoAction = (s: VideoSnapshot, action: "undo" | "redo" | "clone") => videoRequest<VideoSnapshot>(videoEndpoint(s.id), "POST", { action, expectedTabId: s.tabId, expectedRevision: s.revision });
+export const deleteVideoProject = (project: { id: string; revision: number; tabId?: string | null }) => videoRequest<void>(videoEndpoint(project.id), "DELETE", { expectedTabId: project.tabId, expectedRevision: project.revision });
 export async function renderVideoProject(snapshot: VideoSnapshot): Promise<Blob> {
   const response = await fetch(`${videoEndpoint(snapshot.id)}/render`, {
     method: "POST",

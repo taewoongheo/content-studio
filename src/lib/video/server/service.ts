@@ -83,6 +83,17 @@ export function renameVideo(id: string, name: string, tabId?: unknown) {
 export function closeVideo(id: string, tabId: unknown, revision: unknown) {
   requireSession(id, tabId, revision); sessions.delete(id); notify();
 }
+/** Open tabs require their exact identity; closed cards use their listed saved revision. */
+export function deleteVideoGuarded(id: string, tabId: unknown, revision: unknown) {
+  if (!Number.isInteger(revision) || (revision as number) < 0) throw new Error("현재 revision이 필요합니다.");
+  if (sessions.has(id)) requireSession(id, tabId, revision);
+  else {
+    if (tabId !== undefined && tabId !== null) throw new Error("이 탭은 종료되었습니다. 프로젝트 목록을 새로 확인해 주세요.");
+    const saved = videoStore().get(id);
+    if (!saved || saved.revision !== revision) throw new Error("프로젝트가 변경되었습니다. 목록을 새로 확인해 주세요.");
+  }
+  deleteVideo(id);
+}
 export function deleteVideo(id: string) {
   videoStore().delete(id); sessions.delete(id); notify(); notifyProjectsChanged();
 }

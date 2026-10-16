@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { createLayer, reorderVideoLayers, splitVideoLayer, videoDuration, type VideoLayer, type VideoSnapshot } from "@/lib/video/domain/model";
 import { useVideoView } from "./hooks/use-video-view";
 import { useVideoProject } from "./hooks/use-video-project";
-import { videoEndpoint, videoRequest } from "./api";
+import { deleteVideoProject } from "./api";
 import { updateVideoLayer } from "@/lib/video/domain/editing";
 import { useVideoMedia } from "./hooks/use-video-media";
 import { useVideoShortcuts } from "./hooks/use-video-shortcuts";
@@ -79,7 +79,7 @@ export function VideoScreen({ initial, ref, onNewJob }: { initial: VideoSnapshot
     <VideoHeader id={initial.id} name={project.snapshot.name} document={doc} disabled={disabled} dirty={project.dirty} saving={project.saving} working={working} rendering={rendering}
       canUndo={project.snapshot.canUndo || project.dirty} canRedo={project.snapshot.canRedo} onBack={onNewJob} onChange={change} onSave={() => void project.flush()}
       onUndo={() => void run(() => project.history())} onRedo={() => void run(() => project.history(true))}
-      onImport={() => pick("sequence", "video/mp4,.mp4")} onMp4={() => void exportMp4()} onDelete={async () => { await videoRequest(videoEndpoint(initial.id), "DELETE"); }} />
+      onImport={() => pick("sequence", "video/mp4,.mp4")} onMp4={() => void exportMp4()} onDelete={async () => { await deleteVideoProject(project.current.current.snapshot); }} />
     {project.error && <div role="alert" className="mx-5 mt-4 flex shrink-0 flex-wrap items-start gap-3 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"><p className="min-w-0 flex-1 break-words">{project.error}</p><Button variant="outline" size="sm" onClick={() => void project.flush()}>저장 재시도</Button><Button variant="outline" size="sm" onClick={() => { if (window.confirm("현재 편집 내용을 버리고 서버의 최신 내용을 불러올까요?")) void run(() => project.reload()); }}>최신 내용 불러오기</Button></div>}
     <main inert={disabled} className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden bg-background lg:grid-cols-[minmax(220px,260px)_minmax(0,1fr)_minmax(220px,260px)] 2xl:grid-cols-[minmax(260px,300px)_minmax(0,1fr)_minmax(260px,300px)] max-lg:overflow-visible">
       <aside aria-label="선택 항목 편집" className="flex min-h-0 min-w-0 flex-col overflow-hidden border-r px-4 py-4 max-lg:order-2 max-lg:min-h-[360px] max-lg:border-r-0 max-lg:border-t">

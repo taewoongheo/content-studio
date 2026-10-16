@@ -42,7 +42,7 @@ export type VideoLayer = z.infer<typeof layerSchema>;
 export type VideoDocument = z.infer<typeof videoDocumentSchema>;
 export type VideoAsset = { id: string; name: string; type: string; size: number };
 export type VideoSnapshot = { id: string; tabId: string; name: string; revision: number; document: VideoDocument; assets: VideoAsset[]; canUndo: boolean; canRedo: boolean };
-export type VideoSummary = { id: string; name: string; projectType: "video"; width: number; height: number; fps: number; duration: number; updatedAt: string };
+export type VideoSummary = { id: string; name: string; projectType: "video"; revision: number; tabId?: string | null; width: number; height: number; fps: number; duration: number; updatedAt: string };
 export const newVideoDocument = (): VideoDocument => ({ type: "content-studio-video", version: 1, width: 1080, height: 1920, fps: 30, backgroundColor: "#FFFFFF", duration: 150, layers: [] });
 export const videoDuration = (doc: VideoDocument) => Math.max(doc.duration, ...doc.layers.map(l => l.from + l.duration));
 export const mediaUrl = (projectId: string, assetId: string) => `/api/video-projects/${encodeURIComponent(projectId)}/assets/${encodeURIComponent(assetId)}`;

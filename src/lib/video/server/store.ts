@@ -18,7 +18,7 @@ export class VideoStore {
   list(): VideoSummary[] {
     return (this.db.prepare("SELECT * FROM video_projects ORDER BY updated_at DESC, id").all() as Row[]).map(row => {
       const doc = videoDocumentSchema.parse(JSON.parse(row.document_json));
-      return { id: row.id, name: row.name, projectType: "video", width: doc.width, height: doc.height, fps: doc.fps, duration: videoDuration(doc), updatedAt: row.updated_at };
+      return { id: row.id, name: row.name, projectType: "video", revision: row.revision, width: doc.width, height: doc.height, fps: doc.fps, duration: videoDuration(doc), updatedAt: row.updated_at };
     });
   }
   get(id: string) {
