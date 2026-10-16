@@ -22,10 +22,18 @@ if (!address || typeof address === "string") throw new Error("No test port");
 const port = address.port;
 await new Promise<void>((resolve, reject) => portServer.close((error) => error ? reject(error) : resolve()));
 const origin = `http://127.0.0.1:${port}`;
+const production = process.argv.includes("--production");
+const isolatedDistDir = !production && !process.env.CONTENT_STUDIO_DIST_DIR
+  ? `.next-mcp-smoke-${process.pid}` : null;
+const distDir = process.env.CONTENT_STUDIO_DIST_DIR ?? isolatedDistDir ?? ".next";
+const isolatedTsconfig = !production ? `.next-mcp-smoke-${process.pid}.tsconfig.json` : null;
+if (isolatedTsconfig) await writeFile(isolatedTsconfig, await readFile("tsconfig.json"));
 let serverLog = "";
 function startApp() {
-  const child = spawn("pnpm", [process.argv.includes("--production") ? "start" : "dev", "--port", String(port)], {
-    env: { ...process.env, CONTENT_STUDIO_DB_PATH: join(directory, "test.sqlite"), CONTENT_STUDIO_RESEARCH_RUNTIME_DIR: join(directory, "research") },
+  const child = spawn("pnpm", [production ? "start" : "dev", "--port", String(port)], {
+    env: { ...process.env, CONTENT_STUDIO_DIST_DIR: distDir,
+      ...(isolatedTsconfig ? { CONTENT_STUDIO_TSCONFIG_PATH: isolatedTsconfig } : {}),
+      CONTENT_STUDIO_DB_PATH: join(directory, "test.sqlite"), CONTENT_STUDIO_RESEARCH_RUNTIME_DIR: join(directory, "research") },
     stdio: ["ignore", "pipe", "pipe"], detached: true,
   });
   child.stdout.on("data", (chunk) => { serverLog += chunk; });
@@ -405,6 +413,55 @@ try {
     }
     console.log("PASS selected text color UI, exact glyph-layout preservation, clone, undo and invalid ranges");
 
+    // Restore a visible block: the preceding oversized-word test intentionally puts its first line outside the slide.
+    await call("edit_project", { projectId: colorProject.id, expectedRevision: colorRevision, commands: [
+      { type: "update_visual", scope: "local", slideId: "slide-1", placementId: "color-title-1",
+        frame: { x: 0.1, y: 0.15, width: 0.8, height: 0.5 }, style: { fontSize: 90, fontWeight: 400, textAlign: "center" } },
+      { type: "set_slot_value", slideId: "slide-1", placementId: "color-title-1", value: colorText,
+        textColors: [{ start: colorStart, end: colorStart + 5, color: "#DC0000" }], textWeights: [] },
+    ] });
+    await page.goto(`${origin}/?job=${colorProject.id}`);
+    await page.getByRole("button", { name: "Color title Element 선택 및 레이어 순서 이동", exact: true }).click();
+    const beforeWeightPixels = await pixels(await call("preview_slide", { projectId: colorProject.id, slideId: "slide-1" }));
+    await content.evaluate(input => {
+      const textarea = input as HTMLTextAreaElement;
+      textarea.focus(); textarea.setSelectionRange(0, 0);
+    });
+    for (let i = 0; i < 6; i++) await content.press("Shift+ArrowRight");
+    await page.getByLabel("선택 텍스트 굵기", { exact: true }).selectOption("900");
+    const weightApplied = page.waitForResponse(response => response.url().endsWith(`/api/content-jobs/${colorProject.id}`)
+      && response.request().method() === "POST");
+    await page.getByRole("button", { name: "선택 굵기 적용", exact: true }).click();
+    assert.equal((await weightApplied).status(), 200);
+    const weighted = (await call("read_project", { projectId: colorProject.id })).structuredContent as Project;
+    const weightedPlacement = weighted.editor.document.slides[0].placements.find(p => p.id === "color-title-1")!;
+    assert.deepEqual(weightedPlacement.textWeights, [{ start: 0, end: 6, fontWeight: 900 }]);
+    assert.ok(weightedPlacement.textColors?.length, "applying a weight must retain color ranges");
+    const afterWeightPixels = await pixels(await call("preview_slide", { projectId: colorProject.id, slideId: "slide-1" }));
+    assert.notDeepEqual(ink(afterWeightPixels), ink(beforeWeightPixels), "partial weight changes must affect actual glyph rendering");
+    await page.getByRole("checkbox", { name: "투명 배경", exact: true }).uncheck();
+    await page.getByLabel("배경색", { exact: true }).fill("#000000");
+    const radius = page.getByLabel("배경 모서리 반경 (px)", { exact: true });
+    const cornersSaved = page.waitForResponse(response => response.url().endsWith(`/api/content-jobs/${colorProject.id}`)
+      && response.request().method() === "POST" && !!response.request().postData()?.includes('"borderRadius":30'));
+    await radius.fill("30");
+    await content.press("Meta+s");
+    assert.equal((await cornersSaved).status(), 200);
+    const rounded = (await call("read_project", { projectId: colorProject.id })).structuredContent as Project;
+    const roundedPlacement = rounded.editor.document.slides[0].placements.find(p => p.id === "color-title-1")!;
+    const roundedElement = rounded.editor.document.elements.find(element => element.id === roundedPlacement.elementId)!;
+    assert.equal(({ ...roundedElement.style, ...roundedPlacement.styleOverride }).borderRadius, 30);
+    assert.deepEqual(roundedPlacement.textWeights, weightedPlacement.textWeights);
+    const roundedPixels = await pixels(await call("preview_slide", { projectId: colorProject.id, slideId: "slide-1" }));
+    const rgbAt = (x: number, y: number) => [...roundedPixels.subarray((y * 1080 + x) * 3, (y * 1080 + x) * 3 + 3)];
+    assert.deepEqual(rgbAt(110, 205), [255, 255, 255], "rounded corner must reveal the slide background");
+    assert.deepEqual(rgbAt(150, 215), [0, 0, 0], "text background must be painted inside the rounded frame");
+    const weightedClone = await cloneTemplate(colorProject.id, "Weighted clone");
+    assert.deepEqual(weightedClone.editor.document, rounded.editor.document);
+    await page.getByRole("button", { name: "Weighted clone 탭 닫기", exact: true }).click();
+    await page.getByRole("button", { name: "Weighted clone 탭 닫기", exact: true }).waitFor({ state: "detached" });
+    console.log("PASS partial weight UI, colored glyph rendering, background corner control and clone preservation");
+
     const tabBar = page.getByRole("navigation", { name: "프로젝트 탭", exact: true });
     await tabBar.getByRole("button", { name: "Colored clone", exact: true }).click();
     await page.waitForURL(url => url.searchParams.get("job") === colorClone.id);
@@ -420,7 +477,7 @@ try {
     const switchedClone = (await call("read_project", { projectId: colorClone.id })).structuredContent as Project;
     assert.equal(switchedClone.editor.document.slides[0].placements.find(p => p.id === "color-title-1")?.value, "FAST SWITCH");
     assert.equal(editRequests, 1, "flush and debounce must share one edit request");
-    await page.getByRole("button", { name: "슬라이드 배경 선택", exact: true }).click();
+    await page.getByRole("button", { name: "슬라이드 배경 선택", exact: true }).click({ position: { x: 5, y: 5 } });
     await page.getByLabel("슬라이드 배경색", { exact: true }).fill("#123456");
     await page.getByLabel("슬라이드 배경색", { exact: true }).press("Meta+]");
     await page.waitForURL(url => url.searchParams.get("job") === colorClone.id);
@@ -698,4 +755,6 @@ try {
   if (app.exitCode === null && app.signalCode === null) await new Promise((resolve) => app.once("exit", resolve));
   process.removeListener("SIGINT", stop);
   await rm(directory, { recursive: true, force: true });
+  if (isolatedDistDir) await rm(isolatedDistDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+  if (isolatedTsconfig) await rm(isolatedTsconfig, { force: true });
 }

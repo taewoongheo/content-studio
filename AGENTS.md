@@ -58,6 +58,7 @@ pnpm dev
 - DB·편집 상태·리서치 작업은 로컬 단일 서버 프로세스를 기준으로 한다. 여러 서버 프로세스나 서버리스 배포를 지원한다고 가정하지 않는다.
 - 기존 작업 트리의 브랜치·미커밋 변경을 먼저 확인하고 관련 없는 변경을 보존한다.
 - 개발은 원본 폴더 `/Users/taewoongheo/Projects/content-studio-workspace/content-studio`에서 `feat/*` 브랜치를 만들어 진행한다. 사용자가 별도로 요청하지 않으면 새 worktree나 작업 폴더를 만들지 않는다.
+- `pnpm test:mcp`는 임시 DB·리서치 런타임·Next 빌드 폴더를 분리해 실행 중인 개발 서버와 충돌하지 않는다. 별도 빌드 검증에는 `CONTENT_STUDIO_DIST_DIR=.next-validation pnpm build`처럼 프로젝트 안의 빌드 폴더를 지정한다. 같은 빌드로 실행하려면 `pnpm start`와 `test:mcp --production`에도 동일한 값을 전달한다.
 
 ## 프로젝트와 편집 상태
 
