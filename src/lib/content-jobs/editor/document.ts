@@ -1,7 +1,8 @@
 import type { SlideshowStructure } from "../domain/types";
 import { EDITOR_FONT_FAMILIES } from "./typography/fonts";
-import { remapTextColors, validTextColors } from "./typography/text-colors";
-import { validBorder } from "./elements/style";
+import { remapTextColors, validTextColors } from "./typography/ranges/text-colors";
+import { remapTextWeights, validTextWeights } from "./typography/ranges/text-weights";
+import { validBorder, validRotation } from "./elements/style";
 import { MAX_FRAME_COORDINATE, MAX_FRAME_DIMENSION } from "./types";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_FRAME, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, syncBackgroundColors } from "./background";
 import type {
@@ -23,7 +24,7 @@ function validFrame(frame: ElementFrame) {
 }
 
 function validStyle(style: ElementStyle) {
-  return validBorder(style) && colorPattern.test(style.color) &&
+  return validBorder(style) && validRotation(style) && colorPattern.test(style.color) &&
     (colorPattern.test(style.backgroundColor) || style.backgroundColor === "transparent") &&
     Number.isFinite(style.fontSize) && style.fontSize >= 8 && style.fontSize <= 200 &&
     Number.isFinite(style.lineHeight) && style.lineHeight >= 0.8 && style.lineHeight <= 3 &&
@@ -83,6 +84,10 @@ export function validateEditorDocument(document: EditorDocument): string[] {
         (document.elements.find((element) => element.id === placement.elementId)?.kind !== "text" ||
           !validTextColors(placement.value, placement.textColors)))
         errors.push(`${slide.id}의 부분 텍스트 색상이 올바르지 않습니다.`);
+      if (placement.textWeights !== undefined &&
+        (document.elements.find((element) => element.id === placement.elementId)?.kind !== "text" ||
+          !validTextWeights(placement.value, placement.textWeights)))
+        errors.push(`${slide.id}의 부분 텍스트 굵기가 올바르지 않습니다.`);
       if (!knownElements.has(placement.elementId) ||
         (placement.frameOverride !== null && !validFrame(placement.frameOverride)))
         errors.push(`${slide.id}에 유효하지 않은 Element 배치가 있습니다.`);
@@ -188,6 +193,10 @@ export function applyEditorCommand(document: EditorDocument, command: EditorComm
         placement.textColors = command.textColors !== undefined ? structuredClone(command.textColors)
           : remapTextColors(placement.value, command.value, placement.textColors ?? []);
       }
+      if (command.textWeights !== undefined || placement.textWeights !== undefined) {
+        placement.textWeights = command.textWeights !== undefined ? structuredClone(command.textWeights)
+          : remapTextWeights(placement.value, command.value, placement.textWeights ?? []);
+      }
       placement.value = command.value;
       break;
     }
@@ -197,6 +206,14 @@ export function applyEditorCommand(document: EditorDocument, command: EditorComm
         throw new Error("부분 색상은 텍스트 배치에만 적용할 수 있습니다.");
       if (!validTextColors(placement.value, command.textColors)) throw new Error("부분 색상 구간은 겹치지 않는 글자 범위와 HEX 색상이어야 합니다.");
       placement.textColors = structuredClone(command.textColors);
+      break;
+    }
+    case "set_text_weights": {
+      const placement = requirePlacement(requireSlide(next, command.slideId), command.placementId);
+      if (next.elements.find((element) => element.id === placement.elementId)?.kind !== "text")
+        throw new Error("부분 굵기는 텍스트 배치에만 적용할 수 있습니다.");
+      if (!validTextWeights(placement.value, command.textWeights)) throw new Error("부분 굵기 구간은 겹치지 않는 글자 범위와 100–900 굵기여야 합니다.");
+      placement.textWeights = structuredClone(command.textWeights);
       break;
     }
     case "update_visual":
@@ -278,6 +295,7 @@ export function applyEditorCommand(document: EditorDocument, command: EditorComm
         id: placement.elementId === BACKGROUND_ELEMENT_ID ? BACKGROUND_PLACEMENT_ID
           : `${command.newSlideId}-${placement.id}`,
         value: command.copyContent ? placement.value : "",
+        ...(placement.textWeights !== undefined ? { textWeights: command.copyContent ? placement.textWeights : [] } : {}),
         ...(placement.textColors !== undefined ? { textColors: command.copyContent ? placement.textColors : [] } : {}),
       }));
       next.slides.splice(afterIndex + 1, 0, slide);

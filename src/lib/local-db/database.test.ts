@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { defaultDatabasePath, openLocalDatabase } from "./database";
-import { PublishedPostStore } from "./published-posts";
+import { ContentProjectStore } from "./projects/store";
 
 test("DB 경로는 실행 폴더가 바뀌어도 고정되며 상대 경로 설정은 거부한다", () => {
   const originalDirectory = process.cwd(), originalPath = process.env.CONTENT_STUDIO_DB_PATH;
@@ -24,33 +24,23 @@ test("DB 경로는 실행 폴더가 바뀌어도 고정되며 상대 경로 설�
   }
 });
 
-test("DB를 다시 열어도 게시 기록이 유지되고 공용 라이브러리 테이블을 만들지 않는다", () => {
+test("DB를 다시 열어도 프로젝트의 게시 시각이 유지되고 테이블은 세 개다", () => {
   const directory = mkdtempSync(join(tmpdir(), "content-studio-db-test-"));
   const path = join(directory, "studio.sqlite");
   try {
     const database = openLocalDatabase(path);
-    const post = new PublishedPostStore(database).create({ title: "게시물", platform: "TikTok", publishedOn: "2026-10-04", url: "", notes: "" });
+    const store = new ContentProjectStore(database);
+    store.save({ id: "post", name: "게시물", aspectRatio: "4:5", slideCount: 1, outputLanguage: "English", document: {}, assets: [] });
+    store.updateMetadata("post", { topic: "등 운동", message: "허리 부담을 줄이는 운동 선택 기준" });
+    const publishedAt = store.publish("post").publishedAt;
+    assert.equal(store.publish("post").publishedAt, publishedAt, "재클릭은 게시 시각을 바꾸지 않는다");
     database.close();
     const reopened = openLocalDatabase(path);
-    assert.equal(new PublishedPostStore(reopened).list()[0].id, post.id);
-    assert.deepEqual(reopened.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all(), [{ name: "published_posts" }]);
+    assert.equal(new ContentProjectStore(reopened).listPublished()[0].publishedAt, publishedAt);
+    assert.deepEqual(reopened.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all(), [{ name: "content_project_assets" }, { name: "content_projects" }, { name: "content_templates" }]);
     reopened.close();
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
-
-test("게시 날짜와 외부 링크를 검증한다", () => {
-  const database = openLocalDatabase(":memory:");
-  try {
-    const posts = new PublishedPostStore(database);
-    const valid = { title: "게시물", platform: "TikTok", publishedOn: "2026-02-28", url: "", notes: "" };
-    assert.throws(() => posts.create({ ...valid, publishedOn: "2026-02-30" }), /날짜/);
-    assert.throws(() => posts.create({ ...valid, url: "javascript:alert(1)" }), /링크/);
-    assert.deepEqual(posts.list(), []);
-  } finally {
-    database.close();
-  }
-});
-
 
 test("지원하지 않는 프로젝트 스키마는 데이터와 버전을 변경하지 않고 거부한다", () => {
   const directory = mkdtempSync(join(tmpdir(), "studio-unsupported-db-"));

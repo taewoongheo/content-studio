@@ -27,37 +27,45 @@ export function ElementScopePicker({ currentSlideId, slides, selectedSlideIds, i
   }
 
   return (
-    <Popover.Root>
-      <Popover.Trigger render={<Button variant={allSelected ? "secondary" : "outline"} size="sm" disabled={disabled || busy} />}>
-        <Layers3 aria-hidden="true" /> {visualScopeLabel(selectedSlideIds.length, slides.length)}
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Positioner side="top" align="start" sideOffset={8} collisionPadding={12} className="z-50">
-          <Popover.Popup className="w-[min(18rem,calc(100vw-1.5rem))] rounded-xl border bg-popover p-3 text-popover-foreground shadow-lg outline-none">
-            <Popover.Title className="text-sm font-semibold">적용 대상 슬라이드</Popover.Title>
-            <Popover.Description className="mt-1 text-xs leading-5 text-muted-foreground">{isBackground
-              ? "선택한 장의 배경색이 바뀝니다."
-              : "변경·삭제는 Element가 있는 장에만 적용됩니다. 복제는 없는 장에도 추가합니다. 내용은 현재 장에서만 바뀝니다."}</Popover.Description>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <Button variant={selectedSlideIds.length === 1 ? "secondary" : "outline"} size="sm" disabled={disabled || busy} onClick={() => void choose("current")}>현재 장</Button>
-              <Button variant={allSelected ? "secondary" : "outline"} size="sm" disabled={disabled || busy} onClick={() => void choose("all")}>전체 장</Button>
-            </div>
-            {slides.length > 1 && <div className="mt-3 space-y-0.5 border-t pt-2">
-              {slides.map((slide) => {
-                const isCurrent = slide.slideId === currentSlideId;
-                return <label key={slide.slideId} className="flex min-h-8 items-center gap-2 rounded-md px-2 text-sm hover:bg-muted">
-                  <input type="checkbox" checked={selectedSlideIds.includes(slide.slideId)} disabled={disabled || busy || isCurrent}
-                    onChange={(event) => void choose({ slideId: slide.slideId, checked: event.target.checked })} />
-                  <span className="flex-1">{slide.label}</span>
-                  {isCurrent && <span className="text-xs text-muted-foreground">현재</span>}
-                  {!slide.hasElement && <span className="text-xs text-muted-foreground">Element 없음 · 복제 가능</span>}
-                </label>;
-              })}
-            </div>}
-            {allSelected && slides.length > 1 && !isBackground && <p className="mt-3 border-t pt-2 text-xs leading-5 text-muted-foreground">전체에 적용하면 위치가 통일되고, 바꾼 스타일은 개별값을 덮습니다.</p>}
-          </Popover.Popup>
-        </Popover.Positioner>
-      </Popover.Portal>
-    </Popover.Root>
+    <div className="flex items-center gap-1.5">
+      <Button variant={allSelected ? "secondary" : "outline"} size="sm" disabled={disabled || busy || slides.length <= 1}
+        aria-pressed={allSelected} aria-keyshortcuts="Meta+D Control+D"
+        title="전체 적용 켜기/끄기 (⌘D / Ctrl+D)"
+        onClick={() => void choose(allSelected ? "current" : "all")}>
+        <Layers3 aria-hidden="true" /> 전체 적용
+      </Button>
+      <Popover.Root>
+        <Popover.Trigger render={<Button variant={allSelected ? "secondary" : "outline"} size="sm" disabled={disabled || busy} />}>
+          <Layers3 aria-hidden="true" /> {visualScopeLabel(selectedSlideIds.length, slides.length)}
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Positioner side="top" align="start" sideOffset={8} collisionPadding={12} className="z-50">
+            <Popover.Popup className="w-[min(18rem,calc(100vw-1.5rem))] rounded-xl border bg-popover p-3 text-popover-foreground shadow-lg outline-none">
+              <Popover.Title className="text-sm font-semibold">적용 대상 슬라이드</Popover.Title>
+              <Popover.Description className="mt-1 text-xs leading-5 text-muted-foreground">{isBackground
+                ? "선택한 장의 배경색이 바뀝니다."
+                : "변경·삭제는 Element가 있는 장에만 적용됩니다. 복제는 없는 장에도 추가합니다. 내용은 현재 장에서만 바뀝니다."}</Popover.Description>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Button variant={selectedSlideIds.length === 1 ? "secondary" : "outline"} size="sm" disabled={disabled || busy} onClick={() => void choose("current")}>현재 장</Button>
+                <Button variant={allSelected ? "secondary" : "outline"} size="sm" disabled={disabled || busy} onClick={() => void choose("all")}>전체 장</Button>
+              </div>
+              {slides.length > 1 && <div className="mt-3 space-y-0.5 border-t pt-2">
+                {slides.map((slide) => {
+                  const isCurrent = slide.slideId === currentSlideId;
+                  return <label key={slide.slideId} className="flex min-h-8 items-center gap-2 rounded-md px-2 text-sm hover:bg-muted">
+                    <input type="checkbox" checked={selectedSlideIds.includes(slide.slideId)} disabled={disabled || busy || isCurrent}
+                      onChange={(event) => void choose({ slideId: slide.slideId, checked: event.target.checked })} />
+                    <span className="flex-1">{slide.label}</span>
+                    {isCurrent && <span className="text-xs text-muted-foreground">현재</span>}
+                    {!slide.hasElement && <span className="text-xs text-muted-foreground">Element 없음 · 복제 가능</span>}
+                  </label>;
+                })}
+              </div>}
+              {allSelected && slides.length > 1 && !isBackground && <p className="mt-3 border-t pt-2 text-xs leading-5 text-muted-foreground">전체에 적용하면 위치가 통일되고, 바꾼 스타일은 개별값을 덮습니다.</p>}
+            </Popover.Popup>
+          </Popover.Positioner>
+        </Popover.Portal>
+      </Popover.Root>
+    </div>
   );
 }

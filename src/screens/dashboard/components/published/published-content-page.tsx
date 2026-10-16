@@ -1,37 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { PublishedPost } from "@/lib/local-db/published-posts";
-import { deletePublishedPost, listPublishedPosts } from "../../api";
+import { useSavedProjects } from "@/screens/projects/use-saved-projects";
+import { toPublishedPost } from "@/lib/local-db/published-posts";
+import { ProjectMetadataButton } from "../projects/project-metadata-button";
+import { deletePublishedPost } from "../../api";
 import { PublishedCalendar } from "./published-calendar";
 
 export function PublishedContentPage() {
-  const [posts, setPosts] = useState<PublishedPost[]>([]);
+  const { projects, templates, loading, error, setError } = useSavedProjects();
+  const posts = projects.filter(project => project.publishedAt).sort((a, b) => b.publishedAt!.localeCompare(a.publishedAt!)).map(toPublishedPost);
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const refresh = useCallback(async () => {
-    const items = await listPublishedPosts();
-    setPosts(items);
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    void listPublishedPosts().then((items) => { if (active) setPosts(items); })
-      .catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : "게시 기록을 불러오지 못했습니다."); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, []);
-
   async function removePost(post: PublishedPost) {
-    if (!window.confirm(`“${post.title}” 기록을 로컬 DB에서 삭제할까요? 실제 게시물은 삭제되지 않습니다.`)) return;
+    if (!window.confirm(`“${post.title}” 기록을 로컬 DB에서 삭제할까요? 프로젝트는 유지되며 미게시 상태로 돌아갑니다. 실제 게시물은 삭제되지 않습니다.`)) return;
     setBusy(true); setError("");
-    try { await deletePublishedPost(post.id); await refresh(); }
+    try { await deletePublishedPost(post.id); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "삭제하지 못했습니다."); }
     finally { setBusy(false); }
   }
@@ -58,9 +46,11 @@ export function PublishedContentPage() {
           </div>
           {visiblePosts.length === 0 ? <p className="rounded-xl border border-dashed px-5 py-8 text-sm text-muted-foreground">{selectedDate ? "이 날짜에 등록된 게시물이 없습니다." : "아직 등록된 게시물이 없습니다."}</p> :
             <div role="region" aria-label="게시 기록 목록" tabIndex={0} className="max-h-[34rem] divide-y overflow-y-auto rounded-lg border">{visiblePosts.map((post) => <article key={post.id} className="flex items-start justify-between gap-4 p-4">
-              <div className="min-w-0"><div className="flex flex-wrap items-baseline gap-x-3 gap-y-1"><span className="font-medium">{post.title}</span><span className="text-xs text-muted-foreground">{post.publishedOn} · {post.platform}</span></div>
-                {post.notes && <p className="mt-1 text-sm text-muted-foreground">{post.notes}</p>}
-                {post.url && <a href={post.url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block text-sm underline underline-offset-2">게시물 열기</a>}
+              <div className="min-w-0"><div className="flex flex-wrap items-baseline gap-x-3 gap-y-1"><span className="font-medium">{post.title}</span><span className="text-xs text-muted-foreground">{post.publishedOn}</span></div>
+                {post.message && <p className="mt-1 text-sm text-muted-foreground">{post.message}</p>}
+                <p className="mt-1 text-xs text-muted-foreground">{post.topic}</p>
+                {post.sourceTemplateName && <p className="mt-1 text-xs text-muted-foreground">부모 템플릿: {post.sourceTemplateName}</p>}
+                <div className="mt-2"><ProjectMetadataButton project={post} templates={templates} disabled={busy} /></div>
               </div>
               <Button type="button" size="icon" variant="ghost" className="shrink-0 text-destructive hover:text-destructive" aria-label={`${post.title} 로컬 기록 삭제`} disabled={busy} onClick={() => void removePost(post)}><Trash2 aria-hidden="true" /></Button>
             </article>)}</div>}

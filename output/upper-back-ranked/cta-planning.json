@@ -1,0 +1,96 @@
+{
+  "purpose": "Plan LiftCode app promotion placement within existing upper-back exercise ranking; no project edits authorized or performed.",
+  "collectionRequests": 4,
+  "instagramLimit": "Hevy feed rate_limited; Boostcamp feed concurrent operation blocked; not used as evidence.",
+  "references": [
+    {
+      "url": "https://www.tiktok.com/@gymbrosecrets/photo/7676796530690493726",
+      "author": "gymbrosecrets",
+      "metrics": {
+        "likeCount": 30800,
+        "viewCount": 543300,
+        "saveCount": 10700,
+        "commentCount": 186,
+        "shareCount": 490
+      },
+      "collectedAt": "2026-10-13T04:37:07.047Z",
+      "slideCount": 8,
+      "appSlide": 5,
+      "observedPattern": "After two exercise rankings, a progress-tracking tip over an app Insights screen; rankings resume.",
+      "allSlidesInspected": true,
+      "criteriaEvaluation": {
+        "status": "passed",
+        "reasons": []
+      }
+    },
+    {
+      "url": "https://www.tiktok.com/@gymbrosecrets/photo/7677976063720410399",
+      "author": "gymbrosecrets",
+      "metrics": {
+        "likeCount": 7434,
+        "viewCount": 172000,
+        "saveCount": 792,
+        "commentCount": 72,
+        "shareCount": 105
+      },
+      "collectedAt": "2026-10-13T04:39:25.080Z",
+      "slideCount": 6,
+      "appSlide": 4,
+      "observedPattern": "After two split assessments, a progress-tracking tip over the same app Insights screen; rankings resume.",
+      "allSlidesInspected": true,
+      "criteriaEvaluation": {
+        "status": "passed",
+        "reasons": []
+      }
+    },
+    {
+      "url": "https://www.tiktok.com/@gymvsn1/photo/7672031577609620744",
+      "author": "gymvsn1",
+      "metrics": {
+        "likeCount": 8792,
+        "viewCount": 254200,
+        "saveCount": 3959,
+        "commentCount": 21,
+        "shareCount": 255
+      },
+      "collectedAt": "2026-10-13T04:39:25.080Z",
+      "slideCount": 6,
+      "appSlide": 5,
+      "observedPattern": "After three exercise tips, a phone-in-hand app screenshot, tracking tip, and explicit I use Liftly statement; final exercise follows.",
+      "allSlidesInspected": true,
+      "criteriaEvaluation": {
+        "status": "passed",
+        "reasons": []
+      }
+    },
+    {
+      "url": "https://www.tiktok.com/@sellou.sb/photo/7670767303520193822",
+      "author": "sellou.sb",
+      "metrics": {
+        "likeCount": 46900,
+        "viewCount": 609100,
+        "saveCount": 29500,
+        "commentCount": 149,
+        "shareCount": 3436
+      },
+      "collectedAt": "2026-10-13T04:37:07.047Z",
+      "slideCount": 8,
+      "appSlide": null,
+      "observedPattern": "FITRYX logo repeats on content slides; app mentioned in caption, no standalone app screenshot or install CTA in inspected eight slides.",
+      "allSlidesInspected": true,
+      "criteriaEvaluation": {
+        "status": "passed",
+        "reasons": []
+      }
+    }
+  ],
+  "recommendation": {
+    "placement": "Slide 5, after #11, #10 and #9",
+    "format": "One content-related tracking tip with one real workout screen, then continue #8 through #1",
+    "headline": "PICK YOUR ROW.\nTRACK YOUR PROGRESS.",
+    "body": "Log your sets in LIFTCODE.\nSee what to aim for next time.",
+    "lastSlideCTA": "Track your next pull day with LIFTCODE. Link in bio.",
+    "totalSlides": 13
+  },
+  "limits": "Views do not establish promotion effectiveness. No swipe retention, CTA taps, installs, sponsorship status, or causal comparison are known."
+}

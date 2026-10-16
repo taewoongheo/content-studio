@@ -49,7 +49,7 @@ export function PublishedCalendar({ posts, month, selectedDate, onMonthChange, o
               className={`min-h-20 min-w-0 bg-card p-2 text-left align-top transition-colors hover:bg-accent focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-ring max-sm:min-h-14 max-sm:p-1.5 ${selectedDate === date ? "bg-accent" : ""}`}>
               <span className={`inline-flex size-6 items-center justify-center rounded-full text-xs ${date === today ? "bg-foreground text-background" : ""}`}>{Number(date.slice(-2))}</span>
               {dayPosts.length > 0 && <span className="mt-1 block rounded bg-foreground px-1.5 py-1 text-[11px] leading-tight text-background max-sm:hidden">
-                <span className="block truncate">{dayPosts[0].title}</span>
+                <span className="flex items-center gap-2"><span className="min-w-0 flex-1 truncate">{dayPosts[0].title}</span></span>
               </span>}
               {dayPosts.length > 1 && <span className="mt-0.5 block text-[11px] text-muted-foreground max-sm:hidden">+{dayPosts.length - 1}개</span>}
               {dayPosts.length > 0 && <span className="mt-1 block size-1.5 rounded-full bg-foreground sm:hidden" aria-hidden="true" />}

@@ -15,6 +15,14 @@ export function useEditorShortcuts(onShortcut: (action: EditorShortcut) => boole
     const hasSelectedText = Boolean(window.getSelection()?.toString());
     const action = editorShortcut(event, editingText, hasSelectedText);
     if (!action || event.defaultPrevented) return;
+    if (document.querySelector("[role='dialog'], [role='alertdialog']")) {
+      if (action === "save" || action === "toggle-scope") event.preventDefault();
+      return;
+    }
+    if (action === "toggle-scope" && event.repeat) {
+      event.preventDefault();
+      return;
+    }
     if (onShortcut(action)) event.preventDefault();
   });
   useEffect(() => {

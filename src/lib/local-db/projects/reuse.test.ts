@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openLocalDatabase } from "../database";
+import { ContentTemplateStore } from "../templates/store";
 import { ContentProjectStore } from "./store";
 import { ContentJobRegistry } from "@/lib/content-jobs/workflow/registry";
 import { createContentProject, saveContentProject } from "@/lib/content-jobs/projects/service";
@@ -31,7 +32,7 @@ test("구성과 템플릿 등록은 재시작·본문 저장에도 유지된다"
     const reopened = openLocalDatabase(path);
     try {
       const persisted = new ContentProjectStore(reopened);
-      assert.equal(persisted.listTemplates()[0].name, "Renamed");
+      assert.equal(persisted.listTemplates()[0].name, "Old");
       assert.deepEqual(persisted.listTemplates()[0].composition, guide);
       assert.equal("document" in persisted.listTemplates()[0], false);
       assert.equal("assets" in persisted.listTemplates()[0], false);
@@ -39,7 +40,8 @@ test("구성과 템플릿 등록은 재시작·본문 저장에도 유지된다"
       persisted.updateReuse("old", { isTemplate: false });
       assert.equal(persisted.listTemplates().length, 0);
       assert.ok(persisted.get("old"), "등록 해제는 원본을 보존한다");
-      persisted.updateReuse("old", { isTemplate: true });
+      persisted.updateReuse("old", { isTemplate: true, composition: guide });
+      new ContentTemplateStore(reopened).delete("old");
       persisted.delete("old");
       assert.deepEqual(persisted.listTemplates(), []);
     } finally { reopened.close(); }
@@ -61,7 +63,8 @@ test("복제는 등록된 원본의 최신 구조를 사용하며 가이드는 �
     await writes.edit(source.id, [{ type: "rename_slide", slideId: "slide-1", name: "Latest hook" }], 0);
     const clone = writes.clone({ templateProjectId: source.id, name: "Chest" });
     assert.equal(clone.editor.document.slides[0].name, "Latest hook");
-    assert.deepEqual(store.getSummary(clone.id)?.composition, store.getSummary(source.id)?.composition);
+    assert.equal(store.getSummary(clone.id)?.sourceTemplateProjectId, source.id);
+    assert.equal(store.getSummary(clone.id)?.composition, "", "구성은 템플릿 설정에서 관리한다");
     assert.equal(store.getSummary(clone.id)?.isTemplate, false);
     await writes.edit(clone.id, [{ type: "rename_slide", slideId: "slide-1", name: "Chest hook" }], 0);
     assert.equal(registry.get(source.id).editor.document.slides[0].name, "Latest hook");

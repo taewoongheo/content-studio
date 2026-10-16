@@ -1,0 +1,17 @@
+{
+  "mode": "built-in image_gen",
+  "source": "User-provided comparison screenshots and anatomy visual brief",
+  "prompt": "Use case: scientific-educational. Create a clean fitness anatomy illustration asset, wide landscape with TWO equally sized posterior thoracic skeletons side by side. Left: scapular protraction, shoulder blades spread laterally away from spine. Right: scapular retraction, shoulder blades moved medially toward spine. Clearly anatomically recognizable scapula bones with scapular spines, acromions, medial borders and inferior angles. Pale light gray vertebrae and rib cage, scapulae highlighted warm coral red #EE7464 with darker outlines and mild dimensional shading. Crisp medical comic illustration on pure white background. Entire upper ribcage and neck visible, no head, no pelvis, no skin, no arms. Identical scale and baseline, centered in each half with generous white space separator. NO arrows, NO text, NO labels, NO circles, NO border; arrows and circles will be added as editable shapes separately. This will be cropped into two square inset images; keep each subject wholly within its half and all bones comfortably inset from the edges.",
+  "variants": [
+    "Extract the left diagram to a square asset preserving protraction.",
+    "Extract the right diagram to a square asset preserving retraction."
+  ],
+  "cleanup": "Remove mint dashed guide lines and red chest arrow only, preserve figure, pose, pad height and full head on white.",
+  "assets": [
+    "scapula-spread-v4.png",
+    "scapula-squeeze-v4.png",
+    "pad-pressed-clean-v4.png",
+    "pad-clear-clean-v4.png"
+  ],
+  "review": "All 7 slides visually reviewed; local image frames corrected; comparison cards and native arrows adjusted; saved through MCP."
+}

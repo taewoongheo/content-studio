@@ -50,3 +50,27 @@ export async function updateProjectReuse(id: string, input: ProjectReuseUpdate) 
   });
   return readJson<SavedProjectSummary>(response);
 }
+
+export async function updateProjectMetadata(id: string, input: { topic: string; message: string; templateId?: string | null }) {
+  const response = await fetch(`/api/content-projects/${encodeURIComponent(id)}/metadata`, {
+    method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
+  });
+  return readJson<SavedProjectSummary>(response);
+}
+
+export async function publishProject(id: string) {
+  return readJson<SavedProjectSummary>(await fetch(`/api/content-projects/${encodeURIComponent(id)}/publication`, { method: "POST" }));
+}
+
+export function listContentTemplates() {
+  return fetch("/api/content-templates", { cache: "no-store" }).then(response => readJson<SavedProjectSummary[]>(response));
+}
+export async function reorderTemplates(ids: string[], expectedIds: string[]) {
+  return readJson<SavedProjectSummary[]>(await fetch("/api/content-templates/order", {
+    method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids, expectedIds }),
+  }));
+}
+export async function deleteTemplate(id: string) {
+  const response = await fetch(`/api/content-projects/${encodeURIComponent(id)}/reuse`, { method: "DELETE" });
+  if (!response.ok) await readJson(response);
+}

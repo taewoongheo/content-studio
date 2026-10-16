@@ -14,6 +14,8 @@ export type ElementFrame = {
   height: number;
 };
 export type ElementStyle = {
+  /** Clockwise degrees around the element's center; omitted values are zero. */
+  rotation?: number;
   color: string;
   backgroundColor: string;
   fontSize: number;
@@ -41,10 +43,12 @@ export type PlacedElement = {
   elementId: string;
   value: string;
   textColors?: TextColorRange[];
+  textWeights?: TextWeightRange[];
   frameOverride: ElementFrame | null;
   styleOverride: Partial<ElementStyle> | null;
 };
 export type TextColorRange = { start: number; end: number; color: string };
+export type TextWeightRange = { start: number; end: number; fontWeight: number };
 export type EditorSlide = {
   id: string;
   name?: string;
@@ -65,8 +69,9 @@ export type EditorCommand =
   | { type: "rename_slide"; slideId: string; name: string }
   | { type: "reorder_layers"; slideId: string; placementIds: string[] }
   | { type: "set_slide_background"; slideId: string; color: string }
-  | { type: "set_slot_value"; slideId: string; placementId: string; value: string; textColors?: TextColorRange[] }
+  | { type: "set_slot_value"; slideId: string; placementId: string; value: string; textColors?: TextColorRange[]; textWeights?: TextWeightRange[] }
   | { type: "set_text_colors"; slideId: string; placementId: string; textColors: TextColorRange[] }
+  | { type: "set_text_weights"; slideId: string; placementId: string; textWeights: TextWeightRange[] }
   | { type: "update_visual"; scope: "common"; elementId: string; frame?: ElementFrame; style?: Partial<ElementStyle> }
   | { type: "update_visual"; scope: "local"; slideId: string; placementId: string; frame?: ElementFrame; style?: Partial<ElementStyle> }
   | { type: "update_element"; elementId: string; name?: string; role?: string }

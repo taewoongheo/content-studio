@@ -1,8 +1,9 @@
 import Database from "better-sqlite3";
 import { mkdirSync } from "node:fs";
 import { dirname, isAbsolute } from "node:path";
+import { ensureProjectSchema } from "./projects/schema";
 
-const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 10;
 
 export function defaultDatabasePath() {
   const override = process.env.CONTENT_STUDIO_DB_PATH;
@@ -22,23 +23,13 @@ export function openLocalDatabase(path = defaultDatabasePath()) {
     if (version > SCHEMA_VERSION)
       throw new Error(`지원하지 않는 Content Studio DB 버전입니다: ${version}`);
     const projectColumns = database.prepare("PRAGMA table_info(content_projects)").all() as Array<{ name: string }>;
-    const missingColumns = ["composition", "is_template"].filter(name => !projectColumns.some(column => column.name === name));
-    if (projectColumns.length && missingColumns.length)
-      throw new Error(`지원하지 않는 프로젝트 DB 스키마입니다 (${missingColumns.join(", ")} 누락). 자동 마이그레이션은 제공하지 않습니다. 기존 DB를 백업한 후 현재 스키마로 준비해 주세요.`);
+    const missingColumns = ["template_id", "topic", "message", "published_at"].filter(name => !projectColumns.some(column => column.name === name));
+    const hasTemplateColor = (database.prepare("PRAGMA table_info(content_templates)").all() as Array<{ name: string }>).some(column => column.name === "color");
+    if (projectColumns.length && (missingColumns.length || hasTemplateColor))
+      throw new Error(`지원하지 않는 프로젝트 DB 스키마입니다 (${missingColumns.join(", ")} 누락). 자동 마이그레이션은 제공하지 않습니다. 서버를 종료하고 pnpm migrate:template-loop로 명시적으로 전환해 주세요.`);
     database.pragma("journal_mode = WAL");
     database.transaction(() => {
-      database.exec(`
-      CREATE TABLE IF NOT EXISTS published_posts (
-        id TEXT PRIMARY KEY,
-        title TEXT NOT NULL,
-        platform TEXT NOT NULL,
-        published_on TEXT NOT NULL,
-        url TEXT NOT NULL DEFAULT '',
-        notes TEXT NOT NULL DEFAULT '',
-        created_at TEXT NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS published_posts_date_idx ON published_posts(published_on DESC);
-      `);
+      ensureProjectSchema(database);
       database.pragma(`user_version = ${SCHEMA_VERSION}`);
     })();
     return database;

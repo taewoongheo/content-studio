@@ -4,6 +4,16 @@ import { editorShortcut } from "./editor-shortcut";
 
 const event = { key: "z", code: "KeyZ", metaKey: true, ctrlKey: false, altKey: false, shiftKey: false, repeat: false };
 
+test("전체 적용 토글은 입력칸과 한글 키보드에서도 Cmd/Ctrl+D로 처리한다", () => {
+  const toggle = { ...event, code: "KeyD", key: "ㅇ" };
+  assert.equal(editorShortcut(toggle, true, true), "toggle-scope");
+  assert.equal(editorShortcut({ ...toggle, metaKey: false, ctrlKey: true }, false), "toggle-scope");
+  assert.equal(editorShortcut({ ...toggle, code: undefined, key: "D" }, false), "toggle-scope");
+  assert.equal(editorShortcut({ ...toggle, shiftKey: true }, false), null);
+  assert.equal(editorShortcut({ ...toggle, altKey: true }, false), null);
+  assert.equal(editorShortcut({ ...toggle, metaKey: false }, false), null);
+});
+
 test("Cmd+Z는 한글 입력 상태에서도 되돌리기로 해석한다", () => {
   assert.equal(editorShortcut(event, false), "undo");
   assert.equal(editorShortcut({ ...event, key: "ㅋ" }, false), "undo");

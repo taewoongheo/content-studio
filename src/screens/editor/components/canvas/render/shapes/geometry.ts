@@ -1,8 +1,8 @@
 import type { ElementStyle } from "@/lib/content-jobs/editor/types";
-import { withBorderDefaults } from "@/lib/content-jobs/editor/elements/style";
+import { withStyleDefaults } from "@/lib/content-jobs/editor/elements/style";
 
 export function shapeGeometry(width: number, height: number, input: ElementStyle) {
-  const style = withBorderDefaults(input);
+  const style = withStyleDefaults(input);
   const strokeWidth = style.borderEnabled ? Math.min(style.borderWidth, width, height) : 0;
   const inset = strokeWidth / 2;
   return {
