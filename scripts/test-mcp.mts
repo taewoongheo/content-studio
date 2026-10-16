@@ -89,9 +89,10 @@ try {
   assert.deepEqual([...tools].sort(), [
     "list_projects", "get_content_plan", "set_content_metadata", "list_template_guides", "set_reuse_guide", "register_template", "unregister_template", "open_project", "clone_project", "read_project",
     "edit_project", "undo_project", "preview_slide",
+    "list_video_projects", "create_video_project", "open_video_project", "read_video_project", "edit_video_project", "undo_video_project", "redo_video_project", "rename_video_project", "clone_video_project", "preview_video", "export_video", "close_video_project", "delete_video_project",
     "search_social_candidates", "get_research_accounts", "list_account_posts", "read_social_post", "read_post_images", "get_collection_job",
     "solve_collection_captcha", "open_collection_browser", "resume_collection", "close_collection_session",
-  ].sort(), "MCP must expose only the supported tools, without project deletion or tab close");
+  ].sort(), "MCP exposes supported slideshow/research/video tools; slideshow deletion and close remain UI-only");
   assert.equal(tools.includes("add_image"), false);
   console.log("connected", tools);
 

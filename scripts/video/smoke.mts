@@ -1,3 +1,4 @@
+import { verifyVideoMcp } from "./mcp-smoke.mjs";
 import assert from "node:assert/strict";
 import { spawn, execFileSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -199,6 +200,7 @@ try {
   const before = await read();
   const bad = await fetch(`${origin}/api/video-projects/${id}`, { method: "PUT", headers: { origin, "Content-Type": "application/json" }, body: JSON.stringify({ document: before.document, expectedTabId: before.tabId, expectedRevision: before.revision - 1 }) }); assert.equal(bad.status, 400);
   const range = await fetch(`${origin}/api/video-projects/${id}/assets/${before.assets[0].id}`, { headers: { Range: "bytes=0-9" } }); assert.equal(range.status, 206); assert.equal((await range.arrayBuffer()).byteLength, 10);
+  await verifyVideoMcp({ origin, directory, videoPath, audioPath, imagePath, page, render: process.argv.includes("--render") });
   await page.close();
   const exited = new Promise<void>(resolve => app.once("exit", () => resolve())); stop(); await exited; app = start(); await ready();
   const after = await read(); assert.notEqual(after.tabId, before.tabId); assert.deepEqual(after.document, before.document); assert.equal(after.assets.length, 8);
