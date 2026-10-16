@@ -1,11 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { isAbsolute, dirname } from "node:path";
-import { access, open } from "node:fs/promises";
 import { newVideoDocument, videoDocumentSchema, videoDuration, type VideoSnapshot } from "@/lib/video/domain/model";
-import { createVideo, openVideo, readVideo, videoTabs, videoStore, writeVideo, historyVideo, renameVideo, cloneVideo, closeVideo, deleteVideo, checkVideoRevision } from "@/lib/video/server/service";
+import { createVideo, openVideo, readVideo, videoTabs, videoStore, writeVideo, historyVideo, renameVideo, cloneVideo, closeVideo, deleteVideoGuarded, checkVideoRevision } from "@/lib/video/server/service";
 import { changeVideoFps } from "@/lib/video/domain/settings";
 import { renderVideo, renderVideoFrames } from "@/lib/video/server/render";
+import { writeVideoExport } from "@/lib/video/server/export-file";
 import { guarded, json, annotations } from "../protocol/result";
 import { serializePreview } from "../preview/queue";
 import { editVideoProject } from "./writes";
@@ -79,21 +78,12 @@ export function registerVideoTools(server: McpServer, origin: string) {
     inputSchema: videoRevisionSchema.extend({ outputPath: z.string().min(1), overwrite: z.boolean().default(false) }), annotations: annotations(false),
   }, ({ projectId, expectedTabId, expectedRevision, outputPath, overwrite }) => guarded(async () => {
     checkVideoRevision(projectId, expectedTabId, expectedRevision);
-    if (!isAbsolute(outputPath) || !outputPath.toLowerCase().endsWith(".mp4")) throw new Error("기존 폴더 안의 절대 MP4 경로를 지정해 주세요.");
-    await access(dirname(outputPath));
-    if (!overwrite) {
-      const exists = await access(outputPath).then(() => true, cause => {
-        if ((cause as NodeJS.ErrnoException).code === "ENOENT") return false;
-        throw cause;
-      });
-      if (exists) throw new Error("출력 파일이 이미 있습니다. 다른 경로를 지정하거나 overwrite=true로 요청해 주세요.");
-    }
-    checkVideoRevision(projectId, expectedTabId, expectedRevision);
     const snapshot = readVideo(projectId);
-    const bytes = await renderVideo(snapshot);
-    const file = await open(outputPath, overwrite ? "w" : "wx");
-    try { await file.writeFile(bytes); return json({ projectId, revision: snapshot.revision, outputPath, bytes: bytes.length }); }
-    finally { await file.close(); }
+    const bytes = await writeVideoExport(outputPath, overwrite, () => {
+      checkVideoRevision(projectId, expectedTabId, expectedRevision);
+      return renderVideo(snapshot);
+    });
+    return json({ projectId, revision: snapshot.revision, outputPath, bytes });
   }));
   server.registerTool("close_video_project", {
     description: "Close the current saved video tab (or discard an empty draft) when explicitly requested. The saved project and assets remain available to reopen. Subsequent calls using the old tabId are rejected.",
@@ -102,5 +92,5 @@ export function registerVideoTools(server: McpServer, origin: string) {
   server.registerTool("delete_video_project", {
     description: "Permanently delete a video project, its media and open tab ONLY when the user explicitly asks to delete it. Require current tabId/revision and confirm=true. This cannot be undone.",
     inputSchema: videoRevisionSchema.extend({ confirm: z.literal(true) }), annotations: { ...annotations(false), destructiveHint: true },
-  }, ({ projectId, expectedTabId, expectedRevision }) => guarded(() => { checkVideoRevision(projectId, expectedTabId, expectedRevision); deleteVideo(projectId); return json({ projectId, deleted: true }); }));
+  }, ({ projectId, expectedTabId, expectedRevision }) => guarded(() => { deleteVideoGuarded(projectId, expectedTabId, expectedRevision); return json({ projectId, deleted: true }); }));
 }
