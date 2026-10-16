@@ -50,7 +50,7 @@ export function useVideoShortcuts(actions: ShortcutActions) {
       } else if (event.key === "Delete" || event.key === "Backspace") {
         event.preventDefault();
         action.onRemove();
-      } else if (event.code === "Space") {
+      } else if (event.code === "Space" && !(event.target instanceof Element && event.target.closest("button, a[href], summary, [role=button], [role=slider], [role=checkbox], [role=radio], [role=switch], [role=tab], [role=menuitem]"))) {
         event.preventDefault();
         action.onTogglePlayback();
       }

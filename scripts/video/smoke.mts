@@ -69,6 +69,12 @@ try {
     await page.waitForFunction(() => !document.body.innerText.includes("처리 중…"));
     await page.getByRole("button", { name: "영상 추가", exact: true }).waitFor({ state: "visible" });
   }
+  const uploadTarget = await read();
+  const invalidUpload = new FormData(); invalidUpload.set("tabId", uploadTarget.tabId);
+  invalidUpload.set("file", new File([await readFile(imagePath)], "wrong.jpg", { type: "image/jpeg" }));
+  const invalidUploadResponse = await fetch(`${origin}/api/video-projects/${id}/assets`, { method: "POST", headers: { origin }, body: invalidUpload });
+  assert.equal(invalidUploadResponse.status, 400);
+  assert.equal((await read()).assets.length, 0, "mismatched MIME must not register assets");
   await addFile("영상 이어붙이기", [videoPath, videoPath]);
   let saved = await read();
   assert.deepEqual(saved.document.layers.map(l => l.from), [0, 30]);
@@ -84,7 +90,9 @@ try {
   for (const layer of saved.document.layers) assert.equal(reordered.document.layers.find(l => l.id === layer.id)?.from, layer.from, "레이어 이동은 재생 순서를 변경하지 않는다");
   // Select the second clip by stable ID after changing its stack position.
   await page.locator(`[data-video-layer="${saved.document.layers[1].id}"]`).click();
-  await page.getByLabel("원본 끝 (초)", { exact: true }).fill("0.5");
+  const trimEndInput = page.getByLabel("원본 끝 (초)", { exact: true });
+  await trimEndInput.fill(""); await trimEndInput.pressSequentially("0.5");
+  assert.equal(await trimEndInput.inputValue(), "0.5");
   await page.getByRole("button", { name: /^저장(됨| 중)?$/ }).click();
   await page.waitForFunction(() => document.body.innerText.includes("저장됨"));
   const trimmed = await read(); assert.equal(trimmed.document.layers.find(l => l.id === saved.document.layers[1].id)?.duration, 15);
@@ -108,6 +116,15 @@ try {
   await addFile("오디오 추가", audioPath); await addFile("이미지 추가", imagePath);
   await page.getByRole("button", { name: "텍스트 추가", exact: true }).click();
   await page.getByLabel("텍스트", { exact: true }).fill("THREE EXERCISES");
+  const fontSizeInput = page.getByLabel("글자 크기", { exact: true });
+  await fontSizeInput.fill(""); await fontSizeInput.pressSequentially("16");
+  assert.equal(await fontSizeInput.inputValue(), "16");
+  await fontSizeInput.fill(""); await fontSizeInput.pressSequentially("1");
+  await page.keyboard.press("ControlOrMeta+s");
+  await page.getByRole("button", { name: "저장됨", exact: true }).waitFor();
+  assert.equal(await fontSizeInput.inputValue(), "8", "save clamps the active draft before persistence");
+  assert.equal((await read()).document.layers.at(-1)?.kind === "text" && ((await read()).document.layers.at(-1) as { fontSize: number }).fontSize, 8);
+  await fontSizeInput.fill("64");
   await page.getByLabel("글자색", { exact: true }).fill("#ff3366");
   await page.getByLabel("도형 추가", { exact: true }).selectOption("rectangle");
   await page.getByLabel("채우기 색", { exact: true }).fill("#123456");
@@ -140,6 +157,13 @@ try {
   assert.equal((await read()).document.layers.length, 10);
   await page.keyboard.press("ControlOrMeta+Shift+z");
   await page.waitForFunction(() => document.body.innerText.includes("레이어 · 9") && !document.body.innerText.includes("처리 중…"));
+  assert.equal((await read()).document.layers.length, 9);
+  await page.getByRole("button", { name: "텍스트 추가", exact: true }).focus();
+  await page.keyboard.press("Space");
+  await page.waitForFunction(() => document.body.innerText.includes("레이어 · 10"));
+  assert.equal(await page.getByRole("button", { name: "재생", exact: true }).count(), 1, "Space activates the focused button without starting playback");
+  await page.keyboard.press("Delete"); await page.keyboard.press("ControlOrMeta+s");
+  await page.getByRole("button", { name: "저장됨", exact: true }).waitFor();
   assert.equal((await read()).document.layers.length, 9);
   if (process.argv.includes("--profile")) {
     const cdp = await page.context().newCDPSession(page); await cdp.send("Profiler.enable"); await cdp.send("Profiler.startPreciseCoverage", { callCount: true, detailed: true });
@@ -186,7 +210,19 @@ try {
   assert.equal((await request(`/api/video-projects/${importedId}`)).assets.length, 1);
   const copied = await request(`/api/video-projects/${importedId}`, "POST", { action: "clone" });
   assert.equal(copied.assets.length, 1);
-  await request(`/api/video-projects/${copied.id}`, "DELETE");
+  const guardBody = (project: VideoSnapshot) => ({ expectedTabId: project.tabId, expectedRevision: project.revision });
+  const newerCopy = await request(`/api/video-projects/${copied.id}`, "PUT", { ...guardBody(copied), document: { ...copied.document, backgroundColor: "#112233" } });
+  for (const body of [undefined, guardBody(copied), { ...guardBody(newerCopy), expectedTabId: crypto.randomUUID() }]) {
+    const rejected = await fetch(`${origin}/api/video-projects/${copied.id}`, { method: "DELETE", headers: { origin, "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+    assert.equal(rejected.status, 400);
+    assert.equal((await request(`/api/video-projects/${copied.id}`)).assets.length, 1);
+  }
+  await request(`/api/video-projects/${copied.id}`, "POST", { ...guardBody(newerCopy), action: "close" });
+  const tabsBeforeFailedExport = await request("/api/content-jobs");
+  const rejectedExport = await fetch(`${origin}/api/video-projects/${copied.id}/render`, { method: "POST", headers: { origin, "Content-Type": "application/json" }, body: JSON.stringify(guardBody(newerCopy)) });
+  assert.equal(rejectedExport.status, 400);
+  assert.deepEqual(await request("/api/content-jobs"), tabsBeforeFailedExport, "failed export of a closed tab must not reopen it");
+  await request(`/api/video-projects/${copied.id}`, "DELETE", { expectedRevision: newerCopy.revision });
   assert.equal((await read()).assets.length, 8, "복사본 삭제는 원본 자산을 지우지 않는다");
   if (process.argv.includes("--render")) {
     await page.getByRole("navigation", { name: "프로젝트 탭", exact: true }).getByRole("button", { name: longName, exact: true }).click();
