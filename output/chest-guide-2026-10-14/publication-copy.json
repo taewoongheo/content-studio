@@ -1,0 +1,154 @@
+{
+  "projectId": "7c83d0e0-871c-4b00-a6e9-105a1388769f",
+  "url": "http://127.0.0.1:3000/?job=7c83d0e0-871c-4b00-a6e9-105a1388769f",
+  "savedRevision": 119,
+  "templateProjectId": "b6b26b90-2c3d-48dc-ab9a-973fa5fe2146",
+  "loopOrder": 1,
+  "language": "English",
+  "topic": "가슴 운동의 그룹별 선택 가이드",
+  "message": "가슴 프레스·상부 가슴·하부 가슴·플라이의 네 그룹에서 각각 운동 대안 두 개를 소개해 선택하도록 돕는다.",
+  "publicationCopy": {
+    "title": "Build Your Perfect Chest Workout",
+    "caption": "Flat presses, incline presses, decline presses, and flyes. Compare two options in each group and choose what fits your gym and your training.\n\nSave this for your next chest day.",
+    "hashtags": [
+      "#ChestWorkout",
+      "#ChestDay",
+      "#ChestExercises",
+      "#GymTips",
+      "#LiftCode"
+    ]
+  },
+  "research": {
+    "viewThresholdWaivedByUser": true,
+    "reference": [
+      {
+        "url": "https://www.instagram.com/p/Dc3tsisNCNB/",
+        "author": "robinbaumann",
+        "collectedAt": "2026-10-14T04:27:06.291076Z",
+        "likeCount": 73744,
+        "commentCount": 214,
+        "viewCount": null,
+        "used": "Exercise names paired with short setup cues, rather than a bare list.",
+        "rejected": "Inner-chest isolation, guaranteed best hypertrophy, and dumbbell low-to-high fly claims."
+      },
+      {
+        "url": "https://www.instagram.com/p/DK-53_8CexE/",
+        "author": "demicstory",
+        "collectedAt": "2026-10-14T04:23:16.550560Z",
+        "likeCount": 779009,
+        "commentCount": 927,
+        "viewCount": null,
+        "used": "Compact chest-only exercise selection premise.",
+        "rejected": "Every-area targeting as a literal anatomical guarantee."
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://pubmed.ncbi.nlm.nih.gov/25799093/",
+        "use": "Flat, incline and decline are exercise-selection categories; regional emphasis is not isolation. Acute EMG does not prove a hypertrophy ranking."
+      },
+      {
+        "url": "https://pubmed.ncbi.nlm.nih.gov/36026487/",
+        "use": "Barbell and dumbbell press variants at flat, incline and decline angles were directly compared. No exclusive regional growth or optimal ranking claims are made."
+      },
+      {
+        "url": "https://www.acefitness.org/certifiednewsarticle/2884/ace-sponsored-research-top-3-most-effective-chest-exercises/",
+        "use": "Pec deck and cable fly exercise selection; no acute activation ranking is adopted."
+      }
+    ]
+  },
+  "qa": {
+    "allFiveSlidesPreviewed": true,
+    "savedDocumentMatchesActiveDocument": true,
+    "whiteBackground": true,
+    "unrelatedShoulderAndTricepsContentRemoved": true,
+    "setupAndSessionSlidesRemoved": true,
+    "allGroupsHaveTwoExerciseChoices": true,
+    "missingAssets": [],
+    "publishedAt": null,
+    "tipFontSize": 28,
+    "additionalCardShiftPixels": 13.5,
+    "borderYPercent": 30.6,
+    "allFourBodySlidesPreviewedAfterPositionChange": true,
+    "languageReviewComplete": true
+  },
+  "slides": [
+    {
+      "id": "slide-1",
+      "name": "Choose Your Chest Exercises",
+      "text": [
+        "BUILD YOUR PERFECT\nCHEST WORKOUT",
+        "Pick the moves that work for you"
+      ]
+    },
+    {
+      "id": "slide-6",
+      "name": "Chest Presses",
+      "text": [
+        "#1. Chest Presses",
+        "3 sets x 12 reps",
+        "Pick one exercise",
+        "Flat Dumbbell Press",
+        "Barbell Bench Press",
+        "Keep your shoulder blades\nback against the bench.",
+        "Keep your wrists stacked\nabove your elbows."
+      ]
+    },
+    {
+      "id": "slide-5",
+      "name": "Upper Chest",
+      "text": [
+        "#2. Upper Chest",
+        "3 sets x 12 reps",
+        "Pick one exercise",
+        "Low-Incline Smith Press",
+        "Incline Dumbbell Press",
+        "Start with a low incline\nthat feels comfortable.",
+        "Set the bench so the bar\nlowers to your upper chest."
+      ]
+    },
+    {
+      "id": "slide-2",
+      "name": "Lower Chest",
+      "text": [
+        "#3. Lower Chest",
+        "2 sets x 12 reps",
+        "Pick one exercise",
+        "Decline Dumbbell Press",
+        "Decline Barbell Press",
+        "Hook your feet under the pads.\nDon't bounce the bar.",
+        "Don't bang the dumbbells\ntogether at the top."
+      ]
+    },
+    {
+      "id": "slide-7",
+      "name": "Chest Flyes",
+      "text": [
+        "#4. Chest Flyes",
+        "2 sets x 15 reps",
+        "Pick one exercise",
+        "Low-to-High Cable Fly",
+        "Pec Deck",
+        "Keep your back on the pad\nthroughout each rep.",
+        "Bend your elbows slightly.\nKeep your torso still."
+      ]
+    }
+  ],
+  "imageGeneration": {
+    "mode": "built-in imagegen",
+    "directory": "output/chest-guide-2026-10-14/revised",
+    "assets": [
+      "decline-barbell-press.png",
+      "decline-dumbbell-press.png"
+    ],
+    "prompts": "generation-prompts.json"
+  },
+  "executionTipSources": [
+    "https://www.strongerbyscience.com/how-to-bench/",
+    "https://t-nation.com/t/6-chest-workout-tips-for-faster-gains/278005",
+    "https://www.muscleandstrength.com/exercises/incline-smith-machine-bench-press.html",
+    "https://www.muscleandstrength.com/exercises/decline-bench-press.html",
+    "https://www.muscleandstrength.com/exercises/decline-dumbbell-bench-press.html",
+    "https://www.acefitness.org/certifiednewsarticle/2884/ace-sponsored-research-top-3-most-effective-chest-exercises/"
+  ]
+}

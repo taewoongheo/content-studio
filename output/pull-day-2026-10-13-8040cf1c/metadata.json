@@ -1,0 +1,39 @@
+{
+  "projectId": "8040cf1c-bd13-4766-a26f-f4f54edf4ac5",
+  "projectUrl": "http://127.0.0.1:3000/?job=8040cf1c-bd13-4766-a26f-f4f54edf4ac5",
+  "title": "A Pull Day You Can Follow",
+  "caption": "Save this for your next pull day: five exercises with sets, reps, and a cue for each. This is a sample session, so adjust the volume to your weekly plan and recovery. Warm up, keep your reps controlled, and log your weights so you know what to build on next time.",
+  "hashtags": [
+    "#PullDay",
+    "#BackWorkout",
+    "#GymRoutine",
+    "#StrengthTraining",
+    "#LiftCode"
+  ],
+  "reference": {
+    "url": "https://www.tiktok.com/@bluebro.fit/photo/7510355587343912199",
+    "collectedAt": "2026-10-13T08:52:29.891Z",
+    "views": 10900000,
+    "likes": 684100,
+    "criteriaStatus": "passed",
+    "reused": "Pull-day topic, a practical workout hook, and one exercise per slide. Original illustration and wording were not reused."
+  },
+  "evidence": [
+    {
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12965823/",
+      "supports": "Training effort with 2–3 repetitions in reserve and gradual progression; individualized programs. Specific five-exercise selection, 2 working sets, rep ranges, and 2–3 minute rests are practical sample programming, not a tested optimal routine."
+    }
+  ],
+  "qa": {
+    "allSlidesReviewed": true,
+    "englishTitleCaptionHashtagsReviewed": true,
+    "imagesMatchExercises": true,
+    "allBackgroundsWhite": true,
+    "savedRevision": 2,
+    "slideCount": 7,
+    "dimensions": [
+      1080,
+      1350
+    ]
+  }
+}
