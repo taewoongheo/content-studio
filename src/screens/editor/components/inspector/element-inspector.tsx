@@ -11,7 +11,8 @@ import type { EditorCommand, ElementDefinition, ElementFrame, ElementStyle, Plac
 import { commandsFromDraft, draftWithFontSize, frameWithLockedDimension, makeElementDraft, validElementDraft, type VisualTarget } from "./element-draft";
 import { useAutosave } from "./use-autosave";
 import { EDITOR_FONTS, editorFont, supportedFontWeight } from "@/lib/content-jobs/editor/typography/fonts";
-import { remapTextColors } from "@/lib/content-jobs/editor/typography/text-colors";
+import { remapTextWeights } from "@/lib/content-jobs/editor/typography/ranges/text-weights";
+import { remapTextColors } from "@/lib/content-jobs/editor/typography/ranges/text-colors";
 import { TextContentControl } from "./text/text-content-control";
 
 type Props = {
@@ -83,9 +84,11 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
         <label className="grid gap-1.5 text-sm"><span className="font-medium">이름</span><Input value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} /></label>
         <label className="grid gap-1.5 text-sm"><span className="font-medium">역할·의미</span><Textarea value={draft.role} onChange={(event) => setDraft((current) => ({ ...current, role: event.target.value }))} /></label>
         {element.kind === "text" ? (
-          <TextContentControl value={draft.value} textColors={draft.textColors} baseColor={draft.style.color} disabled={disabled}
+          <TextContentControl value={draft.value} textColors={draft.textColors} textWeights={draft.textWeights} baseColor={draft.style.color} baseWeight={draft.style.fontWeight} fontFamily={draft.style.fontFamily} disabled={disabled}
             onChange={(value) => setDraft((current) => ({ ...current, value,
-              textColors: remapTextColors(current.value, value, current.textColors) }))}
+              textColors: remapTextColors(current.value, value, current.textColors),
+              textWeights: remapTextWeights(current.value, value, current.textWeights) }))}
+            onWeightsChange={(textWeights) => setDraft((current) => ({ ...current, textWeights }))}
             onColorsChange={(textColors) => setDraft((current) => ({ ...current, textColors }))} />
         ) : element.kind === "image" ? (
           <div className="grid gap-3">
@@ -133,6 +136,9 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
           <label className="grid gap-1.5 text-xs font-medium">{isShape ? "채우기 색" : "배경색"}
             <Input type="color" className="h-10 p-1" value={draft.style.backgroundColor === "transparent" ? "#FFFFFF" : draft.style.backgroundColor} onChange={(event) => updateStyle("backgroundColor", event.target.value)} disabled={draft.style.backgroundColor === "transparent"} />
           </label>
+          {element.kind === "text" &&
+            <NumberField label="배경 모서리 반경 (px)" value={draft.style.borderRadius} min={0} max={100}
+              onChange={(value) => updateStyle("borderRadius", value)} />}
           <label className="col-span-2 flex items-center gap-2 text-xs font-medium"><input type="checkbox" checked={draft.style.backgroundColor === "transparent"}
             onChange={(event) => {
               const transparent = event.target.checked;
@@ -201,7 +207,7 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
               <option value="cover">영역 채우기</option><option value="contain">전체 보이기</option>
             </select>
           </label>}
-          {(element.kind === "text" || element.kind === "image" || element.kind === "rectangle" || element.kind === "triangle") &&
+          {(element.kind === "image" || element.kind === "rectangle" || element.kind === "triangle") &&
             <NumberField label="모서리 반경 (px)" value={draft.style.borderRadius} min={0} max={100} onChange={(value) => updateStyle("borderRadius", value)} />}
         </fieldset>
       </div>

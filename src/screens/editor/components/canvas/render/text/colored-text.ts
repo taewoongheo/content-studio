@@ -1,6 +1,6 @@
 import Konva from "konva";
 import type { TextColorRange } from "@/lib/content-jobs/editor/types";
-import { lineColorStops, sourceLineOffsets } from "./color-layout";
+import { lineColorStops, sourceLineOffsets } from "./layout/color-layout";
 
 /** Reuse Konva's wrapping; each complete line stays one shaped text run, with color-only paint changes. */
 export function addColoredText(group: Konva.Group, text: Konva.Text, ranges: TextColorRange[]) {

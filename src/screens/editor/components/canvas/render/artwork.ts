@@ -6,6 +6,7 @@ import { loadArtworkImages, type ArtworkImageLoader } from "./assets";
 import { roundedTrianglePath, shapeGeometry } from "./shapes/geometry";
 import { canvasFont } from "./fonts";
 import { addColoredText } from "./text/colored-text";
+import { addWeightedText } from "./text/weighted-text";
 
 type Options = {
   document: EditorDocument;
@@ -29,8 +30,10 @@ export async function createArtworkScene(options: Options) {
     const element = elements.get(placement.elementId);
     if (element?.kind !== "text") return [];
     const style = { ...element.style, ...placement.styleOverride };
-    const font = canvasFont(style.fontFamily, style.fontWeight, style.fontStyle);
-    return [window.document.fonts.load(`${font.style} ${style.fontSize}px ${font.family}`, placement.value || element.name)];
+    return [...new Set([style.fontWeight, ...(placement.textWeights ?? []).map(range => range.fontWeight)])].map(weight => {
+      const font = canvasFont(style.fontFamily, weight, style.fontStyle);
+      return window.document.fonts.load(`${font.style} ${style.fontSize}px ${font.family}`, placement.value || element.name);
+    });
   }));
   const images = await loadArtworkImages(slide.placements.flatMap((placement) => {
     const element = elements.get(placement.elementId);
@@ -103,7 +106,13 @@ export async function createArtworkScene(options: Options) {
               lineHeight: style.lineHeight, align: style.textAlign, verticalAlign: "top", padding: 0,
               fill: placement.value ? style.color : "#999", wrap: "word" });
             text.y((frame.height - text.height()) / 2);
-            addColoredText(group, text, placement.textColors ?? []);
+            if (placement.textWeights?.length) {
+              const fonts = new Map([font.weight, ...placement.textWeights.map(range => range.fontWeight)]
+                .map(weight => [weight, canvasFont(style.fontFamily, weight, style.fontStyle)]));
+              const weights = placement.textWeights.map(range => ({ ...range, fontWeight: fonts.get(range.fontWeight)!.weight }));
+              addWeightedText(group, text, placement.textColors ?? [], weights, frame.height, font.weight,
+                weight => `${style.fontStyle ?? "normal"} ${weight}`);
+            } else { addColoredText(group, text, placement.textColors ?? []); }
           }
         }
       };

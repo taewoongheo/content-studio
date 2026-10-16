@@ -1,5 +1,6 @@
-import type { EditorCommand, ElementDefinition, ElementFrame, ElementStyle, PlacedElement, TextColorRange } from "@/lib/content-jobs/editor/types";
-import { validTextColors } from "@/lib/content-jobs/editor/typography/text-colors";
+import type { EditorCommand, ElementDefinition, ElementFrame, ElementStyle, PlacedElement, TextColorRange, TextWeightRange } from "@/lib/content-jobs/editor/types";
+import { validTextColors } from "@/lib/content-jobs/editor/typography/ranges/text-colors";
+import { validTextWeights } from "@/lib/content-jobs/editor/typography/ranges/text-weights";
 import { validBorder, validRotation, withStyleDefaults } from "@/lib/content-jobs/editor/elements/style";
 
 export type VisualTarget = { slideId: string; placement: PlacedElement };
@@ -8,6 +9,7 @@ export type ElementDraft = {
   role: string;
   value: string;
   textColors: TextColorRange[];
+  textWeights: TextWeightRange[];
   frame: ElementFrame;
   style: ElementStyle;
 };
@@ -42,6 +44,7 @@ export function makeElementDraft(element: ElementDefinition, placement: PlacedEl
     name: element.name,
     role: element.role,
     value: placement.value,
+    textWeights: structuredClone(placement.textWeights ?? []),
     textColors: structuredClone(placement.textColors ?? []),
     frame: visualPlacement.frameOverride ?? element.frame,
     style: withStyleDefaults({ ...element.style, ...visualPlacement.styleOverride }),
@@ -50,7 +53,7 @@ export function makeElementDraft(element: ElementDefinition, placement: PlacedEl
 
 export function validElementDraft(draft: ElementDraft) {
   const { x, y, width, height } = draft.frame;
-  return Boolean(draft.name.trim() && draft.role.trim()) && validTextColors(draft.value, draft.textColors) &&
+  return Boolean(draft.name.trim() && draft.role.trim()) && validTextColors(draft.value, draft.textColors) && validTextWeights(draft.value, draft.textWeights) &&
     [x, y, width, height].every(Number.isFinite) && width > 0 && height > 0 &&
     draft.style.fontSize >= 8 && draft.style.fontSize <= 200 &&
     draft.style.lineHeight >= 0.8 && draft.style.lineHeight <= 3 &&
@@ -73,11 +76,15 @@ export function commandsFromDraft(
     commands.push({ type: "update_element", elementId: element.id, name: draft.name, role: draft.role });
   if (element.kind === "text") {
     const colorsChanged = JSON.stringify(draft.textColors) !== JSON.stringify(placement.textColors ?? []);
-    if (draft.value !== placement.value)
+    const weightsChanged = JSON.stringify(draft.textWeights) !== JSON.stringify(placement.textWeights ?? []);
+    if (draft.value !== placement.value) {
       commands.push({ type: "set_slot_value", slideId, placementId: placement.id, value: draft.value,
-        ...(draft.textColors.length || placement.textColors !== undefined ? { textColors: draft.textColors } : {}) });
-    else if (colorsChanged)
-      commands.push({ type: "set_text_colors", slideId, placementId: placement.id, textColors: draft.textColors });
+        ...(draft.textColors.length || placement.textColors !== undefined ? { textColors: draft.textColors } : {}),
+        ...(draft.textWeights.length || placement.textWeights !== undefined ? { textWeights: draft.textWeights } : {}) });
+    } else {
+      if (colorsChanged) commands.push({ type: "set_text_colors", slideId, placementId: placement.id, textColors: draft.textColors });
+      if (weightsChanged) commands.push({ type: "set_text_weights", slideId, placementId: placement.id, textWeights: draft.textWeights });
+    }
   }
 
   const baseFrame = visualPlacement.frameOverride ?? element.frame;

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { remapTextColors, setTextColor, validTextColors } from "./text-colors";
-import { applyEditorCommands, createBlankDocument } from "../document";
-import { makeElementDefinition } from "../elements/factory";
+import { applyEditorCommands, createBlankDocument } from "../../document";
+import { makeElementDefinition } from "../../elements/factory";
 import { copyElement, pasteElement } from "@/screens/editor/components/clipboard/element-clipboard";
 
 test("부분 색상을 덮어쓰고 선택 영역만 해제하며 인접한 같은 색상을 합친다", () => {

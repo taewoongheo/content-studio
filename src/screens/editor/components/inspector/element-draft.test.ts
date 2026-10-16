@@ -127,3 +127,18 @@ test("이미지 크기의 한 축을 바꾸면 잠긴 비율대로 다른 축도
   assert.deepEqual(frameWithLockedDimension(frame, "width", 2),
     { x: 0.1, y: 0.2, width: 2, height: 1 });
 });
+
+
+test("부분 굵기 초안은 색상과 독립적으로 저장하며 내용 변경과 함께 원자적으로 교체한다", () => {
+  const draft = makeElementDraft(element, placement);
+  const textWeights = [{ start: 0, end: 2, fontWeight: 700 }];
+  const changed = { ...draft, textWeights };
+  assert.equal(validElementDraft(changed), true);
+  assert.deepEqual(commandsFromDraft(changed, element, placement, "slide-1", targets, ["slide-1"]), [
+    { type: "set_text_weights", slideId: "slide-1", placementId: placement.id, textWeights },
+  ]);
+  assert.deepEqual(commandsFromDraft({ ...changed, value: "새 제목" }, element, placement, "slide-1", targets, ["slide-1"]), [
+    { type: "set_slot_value", slideId: "slide-1", placementId: placement.id, value: "새 제목", textWeights },
+  ]);
+  assert.equal(validElementDraft({ ...changed, textWeights: [{ start: 0, end: 999, fontWeight: 700 }] }), false);
+});
