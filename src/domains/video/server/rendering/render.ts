@@ -1,5 +1,4 @@
-import { mkdtemp, writeFile, readFile, rm, mkdir } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { writeFile, readFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { videoStore } from "@/domains/video/server/service";
 import { videoDuration, type VideoSnapshot } from "@/domains/video/domain/model";
@@ -7,6 +6,7 @@ import { serializePreview } from "@/lib/media/preview-queue";
 import { PreviewCache } from "@/lib/media/preview/cache";
 import { serveRenderMedia } from "@/lib/media/rendering/http";
 import { runRenderProcess, type RenderOptions } from "@/lib/media/rendering/process";
+import { renderTemporaryDirectory, removeRenderDirectory } from "@/lib/media/rendering/temp/directories";
 import { renderSourceKey } from "@/lib/media/rendering/source";
 
 type Assets = Map<string, { bytes: Buffer; type: string }>;
@@ -34,8 +34,8 @@ async function runRenderer(snapshot: VideoSnapshot, frames: number[] | undefined
     clearTimeout(idle); options.signal?.throwIfAborted();
     const key = await renderSourceKey(["src/domains/video/remotion", "src/domains/video/domain", "scripts/video/render.mts"]);
     if (bundle?.key !== key) {
-      if (bundle) await rm(bundle.directory, { recursive: true, force: true });
-      bundle = { key, directory: await mkdtemp(path.join(tmpdir(), "content-studio-video-bundle-")) };
+      if (bundle) await removeRenderDirectory(bundle.directory);
+      bundle = { key, directory: await renderTemporaryDirectory("content-studio-video-bundle-") };
     }
     const cacheKey = (frame: number) => JSON.stringify([key, snapshot.id, snapshot.tabId, snapshot.revision, frame, scale]);
     let directory: string | undefined;
@@ -45,7 +45,7 @@ async function runRenderer(snapshot: VideoSnapshot, frames: number[] | undefined
       const results = new Map(unique?.flatMap(frame => { const bytes = previews.get(cacheKey(frame)); return bytes ? [[frame, bytes] as const] : []; }));
       const missing = unique?.filter(frame => !results.has(frame));
       if (!frames || missing?.length) {
-        directory = await mkdtemp(path.join(tmpdir(), "content-studio-render-"));
+        directory = await renderTemporaryDirectory("content-studio-render-");
         media = await serveRenderMedia(assets ?? captureVideoAssets(snapshot));
         const propsFile = path.join(directory, "props.json"), output = path.join(directory, "video.mp4");
         if (frames) await mkdir(output);
@@ -61,9 +61,9 @@ async function runRenderer(snapshot: VideoSnapshot, frames: number[] | undefined
       return frames!.map(frame => results.get(frame)!);
     } finally {
       await media?.close();
-      if (directory) await rm(directory, { recursive: true, force: true });
+      if (directory) await removeRenderDirectory(directory);
       const current = bundle;
-      idle = setTimeout(() => { if (bundle === current) bundle = undefined; void rm(current!.directory, { recursive: true, force: true }); }, 30_000); idle.unref();
+      idle = setTimeout(() => { if (bundle === current) bundle = undefined; void removeRenderDirectory(current!.directory); }, 30_000); idle.unref();
     }
   }, options.signal);
 }
