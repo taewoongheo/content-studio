@@ -43,3 +43,19 @@ test("대기 작업 취소는 즉시 반환하고 다음 작업이 실행 중인
   controller.abort(new Error("cancel queued")); await assert.rejects(cancelled, /cancel queued/);
   assert.equal(nextStarted, false); release(); await Promise.all([first, next]); assert.equal(rendered, false);
 });
+
+test("이미 취소된 대기 요청은 실행하지 않고 활성 요청의 실패 뒤에도 다음 작업을 실행한다", async () => {
+  const controller = new AbortController(); controller.abort(new Error("already cancelled"));
+  let ran = false;
+  await assert.rejects(serializePreview(async () => { ran = true; }, controller.signal), /already cancelled/);
+  assert.equal(ran, false);
+  const active = new AbortController(); let started!: () => void;
+  const ready = new Promise<void>(resolve => { started = resolve; });
+  const work = serializePreview(() => new Promise<void>((_, reject) => {
+    active.signal.addEventListener("abort", () => reject(active.signal.reason), { once: true }); started();
+  }), active.signal);
+  await ready;
+  const next = serializePreview(async () => "next");
+  active.abort(new Error("cancel active")); await assert.rejects(work, /cancel active/);
+  assert.equal(await next, "next");
+});
