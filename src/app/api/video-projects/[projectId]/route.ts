@@ -1,6 +1,6 @@
 import { isLocalRequest } from "@/lib/http/local-request";
-import { openVideo, writeVideo, historyVideo, renameVideo, closeVideo, deleteVideoGuarded, cloneVideo } from "@/lib/video/server/service";
-import { videoError } from "@/lib/video/server/http";
+import { openVideo, writeVideo, historyVideo, renameVideo, closeVideo, deleteVideoGuarded, cloneVideo } from "@/domains/video/server/service";
+import { videoError } from "@/domains/video/server/http";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 type Context = { params: Promise<{ projectId: string }> };

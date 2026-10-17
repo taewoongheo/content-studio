@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AccountAction, AccountPlatform, AccountStatus } from "@/lib/research/accounts/types";
+import type { AccountAction, AccountPlatform, AccountStatus } from "@/domains/research/accounts/types";
 import { requestResearchAccounts } from "./account-api";
 const POLL_INTERVAL_MS = 15_000;
 export function useResearchAccounts() {

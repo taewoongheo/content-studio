@@ -1,7 +1,7 @@
-import { renameProject, deleteProject } from "@/lib/content-jobs/projects/lifecycle/management";
-import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
-import { loadContentProject } from "@/lib/content-jobs/projects/service";
-import { contentJobRegistry } from "@/lib/content-jobs/workflow/service";
+import { renameProject, deleteProject } from "@/domains/slideshow/projects/lifecycle/management";
+import { contentJobErrorResponse } from "@/domains/slideshow/http/http";
+import { loadContentProject } from "@/domains/slideshow/projects/service";
+import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import { isLocalRequest } from "@/lib/http/local-request";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

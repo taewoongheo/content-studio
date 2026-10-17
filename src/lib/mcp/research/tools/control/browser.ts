@@ -1,9 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { CollectionRegistry } from "@/lib/research/collection/registry";
+import type { CollectionRegistry } from "@/domains/research/collection/registry";
 import * as z from "zod/v4";
 import { json, guarded } from "../../../protocol/result";
 import { researchAnnotations as annotations, jobSchema } from "../../shared";
-import { solveCaptcha } from "@/lib/research/browser/captcha/captcha";
+import { solveCaptcha } from "@/domains/research/browser/captcha/captcha";
 
 export function registerBrowserTools(server: McpServer, registry: CollectionRegistry) {
   server.registerTool("open_collection_browser", {

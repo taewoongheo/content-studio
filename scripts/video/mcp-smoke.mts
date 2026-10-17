@@ -8,7 +8,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { Page } from "playwright";
 import sharp from "sharp";
-import type { VideoSnapshot } from "../../src/lib/video/domain/model";
+import type { VideoSnapshot } from "@/domains/video/domain/model";
 
 export async function verifyVideoMcp({ origin, directory, videoPath, audioPath, imagePath, page, render }: {
   origin: string; directory: string; videoPath: string; audioPath: string; imagePath: string; page: Page; render: boolean;

@@ -3,9 +3,9 @@ import { useState } from "react";
 import { Film, GalleryVerticalEnd } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import type { OpenProjectTab } from "@/lib/content-jobs/domain/types";
-import { useSavedProjects } from "@/screens/projects/use-saved-projects";
-import { ProjectTypeTag } from "@/screens/projects/components/project-type-tag";
+import type { OpenProjectTab } from "@/domains/workspace/model";
+import { useSavedProjects } from "@/domains/workspace/client/use-saved-projects";
+import { ProjectTypeTag } from "@/components/projects/project-type-tag";
 type ProjectType = "slideshow" | "video";
 export function NewTabDialog({ tabs, open, busy, onOpenChange, onNew, onExisting }: {
   tabs: OpenProjectTab[]; open: boolean; busy: boolean; onOpenChange: (open: boolean) => void;

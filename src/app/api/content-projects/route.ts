@@ -1,18 +1,18 @@
-import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
-import { hasUnsavedChanges } from "@/lib/content-jobs/projects/lifecycle/management";
-import { saveContentProject } from "@/lib/content-jobs/projects/service";
-import { contentJobRegistry } from "@/lib/content-jobs/workflow/service";
+import { contentJobErrorResponse } from "@/domains/slideshow/http/http";
+import { hasUnsavedChanges } from "@/domains/slideshow/projects/lifecycle/management";
+import { saveContentProject } from "@/domains/slideshow/projects/service";
+import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import { isLocalRequest } from "@/lib/http/local-request";
 import { getLocalDatabase } from "@/lib/local-db/database";
-import { ContentProjectStore } from "@/lib/local-db/projects/store";
-import { contentProjectEvents } from "@/lib/content-jobs/projects/events";
+import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
+import { projectListEvents } from "@/domains/workspace/server/project-events";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export function GET(request: Request) {
   if (!isLocalRequest(request)) return new Response(null, { status: 403 });
-  if (request.headers.get("accept")?.includes("text/event-stream")) return contentProjectEvents(request.signal);
+  if (request.headers.get("accept")?.includes("text/event-stream")) return projectListEvents(request.signal);
   return Response.json(new ContentProjectStore(getLocalDatabase()).list(), {
     headers: { "Cache-Control": "no-store" },
   });

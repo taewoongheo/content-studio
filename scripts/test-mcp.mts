@@ -9,7 +9,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import { chromium } from "playwright";
 import sharp from "sharp";
-import type { ContentJobSnapshot } from "../src/lib/content-jobs/domain/types";
+import type { ContentJobSnapshot } from "@/domains/slideshow/domain/types";
 
 const routineGuide = "도입 후 그룹별로 여러 선택지를 함께 보여주고 하나를 선택하도록 안내한다.";
 

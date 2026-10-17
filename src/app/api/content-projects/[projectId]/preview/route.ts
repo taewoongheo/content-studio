@@ -1,6 +1,6 @@
-import { defaultProjectStores } from "@/lib/content-jobs/projects/service";
+import { defaultProjectStores } from "@/domains/slideshow/projects/service";
 import { isLocalRequest } from "@/lib/http/local-request";
-import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
+import { contentJobErrorResponse } from "@/domains/slideshow/http/http";
 
 export const runtime = "nodejs";
 export async function GET(request: Request, context: { params: Promise<{ projectId: string }> }) {

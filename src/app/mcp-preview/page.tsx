@@ -1,8 +1,8 @@
 "use client";
 import { useEffect } from "react";
-import type { ContentJobSnapshot } from "@/lib/content-jobs/domain/types";
-import { renderArtwork } from "@/screens/editor/components/canvas/render/artwork";
-import { createArtworkImageLoader } from "@/screens/editor/components/canvas/render/assets";
+import type { ContentJobSnapshot } from "@/domains/slideshow/domain/types";
+import { renderArtwork } from "@/domains/slideshow/rendering/artwork";
+import { createArtworkImageLoader } from "@/domains/slideshow/rendering/assets";
 
 declare global {
   interface Window {

@@ -1,5 +1,5 @@
 import { isLocalRequest } from "@/lib/http/local-request";
-import { videoStore } from "@/lib/video/server/service";
+import { videoStore } from "@/domains/video/server/service";
 export const runtime = "nodejs";
 export async function GET(req: Request, ctx: { params: Promise<{ projectId: string; assetId: string }> }) {
   if (!isLocalRequest(req)) return new Response(null, { status: 403 });

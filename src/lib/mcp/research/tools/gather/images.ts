@@ -1,9 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { CollectionRegistry } from "@/lib/research/collection/registry";
+import type { CollectionRegistry } from "@/domains/research/collection/registry";
 import * as z from "zod/v4";
 import { guarded } from "../../../protocol/result";
 import { researchAnnotations as annotations } from "../../shared";
-import { readSourceImage } from "@/lib/research/media/images";
+import { readSourceImage } from "@/domains/research/media/images";
 
 export function registerImagesTools(server: McpServer, registry: CollectionRegistry) {
   server.registerTool("read_post_images", {

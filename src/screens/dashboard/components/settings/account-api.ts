@@ -1,4 +1,4 @@
-import type { AccountAction, AccountPlatform, AccountStatus } from "@/lib/research/accounts/types";
+import type { AccountAction, AccountPlatform, AccountStatus } from "@/domains/research/accounts/types";
 
 export async function requestResearchAccounts(signal: AbortSignal, mutation?: { platform: AccountPlatform; action: AccountAction }) {
   const response = await fetch("/api/research/accounts", mutation ? {

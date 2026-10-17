@@ -1,9 +1,9 @@
-import { readEditorAsset } from "@/lib/content-jobs/editor/assets";
-import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
-import { contentJobRegistry } from "@/lib/content-jobs/workflow/service";
+import { readEditorAsset } from "@/domains/slideshow/editor/assets";
+import { contentJobErrorResponse } from "@/domains/slideshow/http/http";
+import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import { isLocalRequest } from "@/lib/http/local-request";
-import { imageRenderSize } from "@/lib/content-jobs/editor/image-processing/options";
-import { cachedRenderImage } from "@/lib/content-jobs/editor/image-processing/cache";
+import { imageRenderSize } from "@/domains/slideshow/editor/image-processing/options";
+import { cachedRenderImage } from "@/domains/slideshow/editor/image-processing/cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

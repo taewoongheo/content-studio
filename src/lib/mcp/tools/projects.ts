@@ -1,15 +1,15 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod/v4";
-import type { EditorCommand } from "@/lib/content-jobs/editor/types";
-import { contentJobRegistry } from "@/lib/content-jobs/workflow/service";
-import { defaultProjectStores, loadContentProject, updateContentProjectReuse } from "@/lib/content-jobs/projects/service";
+import type { EditorCommand } from "@/domains/slideshow/editor/types";
+import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
+import { defaultProjectStores, loadContentProject, updateContentProjectReuse } from "@/domains/slideshow/projects/service";
 import { getLocalDatabase } from "@/lib/local-db/database";
 import { cloneSchema, setCompositionSchema, registerTemplateSchema, editSchema, previewSchema, projectSchema, undoSchema, setContentMetadataSchema } from "./schema";
-import type { LocalImageCommand } from "./images";
-import { McpProjectWrites } from "./project-writes";
-import { previewSlide } from "../preview/render";
+import type { LocalImageCommand } from "@/domains/slideshow/server/local-images";
+import { SlideshowProjectWrites } from "@/domains/slideshow/server/project-writes";
+import { previewSlide } from "@/domains/slideshow/server/preview";
 
-import { notifyProjectsChanged } from "@/lib/content-jobs/projects/events";
+import { notifyProjectsChanged } from "@/domains/workspace/server/project-events";
 import { json, guarded, annotations } from "../protocol/result";
 
 export function registerProjectTools(server: McpServer, origin: string) {
@@ -83,7 +83,7 @@ export function registerProjectTools(server: McpServer, origin: string) {
     description: "Create and save a new project by cloning a template in the single loop. Record its source template automatically. Choose template and topic with get_content_plan before research; pass topic and message together for this specific content. templateProjectId is required and must come from list_template_guides. Preserves the source. No blank creation or cloning unregistered projects. New projects are not registered as templates.",
     inputSchema: cloneSchema, annotations: annotations(false),
   }, (input) => guarded(() => {
-    const job = new McpProjectWrites(contentJobRegistry, getLocalDatabase()).clone(input);
+    const job = new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase()).clone(input);
     return json(describe(job.id));
   }));
   server.registerTool("read_project", {
@@ -95,13 +95,13 @@ export function registerProjectTools(server: McpServer, origin: string) {
     inputSchema: editSchema, annotations: annotations(false),
   }, (raw) => guarded(async () => {
     const { projectId, commands, expectedRevision, expectedTabId } = raw as { projectId: string; commands: Array<EditorCommand | LocalImageCommand>; expectedRevision: number; expectedTabId: string };
-    const job = await new McpProjectWrites(contentJobRegistry, getLocalDatabase()).edit(projectId, commands, expectedRevision, expectedTabId);
+    const job = await new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase()).edit(projectId, commands, expectedRevision, expectedTabId);
     return json({ ...job, url: `${origin}/?job=${encodeURIComponent(job.id)}` });
   }));
   server.registerTool("undo_project", {
     description: "Undo the last edit batch, including text, styles and image placement. Imported assets remain available. Saves the restored document before returning success with the new document and revision. Include expectedTabId from the latest read.",
     inputSchema: undoSchema, annotations: annotations(false),
-  }, ({ projectId, expectedRevision, expectedTabId }) => guarded(() => json({ ...new McpProjectWrites(contentJobRegistry, getLocalDatabase()).undo(projectId, expectedRevision, expectedTabId) })));
+  }, ({ projectId, expectedRevision, expectedTabId }) => guarded(() => json({ ...new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase()).undo(projectId, expectedRevision, expectedTabId) })));
   server.registerTool("preview_slide", {
     description: "See one slide as a PNG rendered by the same renderer as the editor/export. Uses a snapshot and returns its revision. Does not save the project.",
     inputSchema: previewSchema, annotations: annotations(true),

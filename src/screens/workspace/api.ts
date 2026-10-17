@@ -1,5 +1,5 @@
-import { videoRequest, videoEndpoint } from "@/screens/video/api";
-import type { OpenProjectTab } from "@/lib/content-jobs/domain/types";
+import { videoRequest, videoEndpoint } from "@/domains/video/client/api";
+import type { OpenProjectTab } from "@/domains/workspace/model";
 export type CloseDecision = "save" | "discard";
 
 export async function closeTab(tab: OpenProjectTab, decision: "check" | CloseDecision = "check"): Promise<{ requiresConfirmation: boolean }> {

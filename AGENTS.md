@@ -10,8 +10,18 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Project structure
 
+- 편집 화면은 `src/screens/slideshow-editor`와 `src/screens/video-editor`로 구분하며 진입 컴포넌트도 `SlideshowEditorScreen`·`VideoEditorScreen`으로 명명한다.
+
 - When a non-vendored folder grows beyond five files, review it for cohesive feature subgroups and introduce a subfolder when the ownership boundary is clear.
 - Keep generated or shared primitive collections such as `src/components/ui` flat when grouping would make discovery harder.
+
+## 코드 소유권과 의존 방향
+
+- `src/domains/slideshow`, `video`, `research`는 각 기능의 문서·명령·저장·렌더링을 소유한다. `screens`는 화면 구성과 화면에서만 쓰는 상호작용을 소유한다. 여러 화면이 사용하는 API 클라이언트와 모델은 해당 도메인에 둔다.
+- `src/domains/workspace`는 공통 탭 계약·프로젝트 변경 알림과 두 편집기의 목록 조합을 담당한다. 슬라이드쇼와 영상은 서로 직접 참조하지 않는다.
+- `src/lib/mcp`는 도구 등록·프로토콜 입력과 결과 변환을 담당한다. 편집·파일 가져오기·원자적 저장은 도메인 서비스를 호출하며 도메인에서 MCP나 화면을 가져오지 않는다.
+- `src/lib/local-db`는 SQLite 연결과 시작 시 스키마 적용만 담당한다. 테이블·저장소·마이그레이션은 각 도메인이 소유하며 연결 초기화에서 도메인의 스키마를 참조하는 것은 허용한다.
+- 공용 미디어 검증·미리보기 실행 큐는 `src/lib/media`, 공용 프로젝트 UI는 `src/components/projects`에 둔다. `pnpm test`의 `src/architecture/boundaries.test.ts`가 의존 방향과 클라이언트의 서버 코드 유입을 검사한다.
 
 ## 슬라이드 생성과 수정
 
@@ -195,7 +205,7 @@ url = "http://127.0.0.1:3000/mcp"
 - 새 텍스트는 Inter로 시작한다. 지원하지 않는 글리프는 시스템 sans-serif로 대체된다.
 - `update_visual`의 `fontStyle`은 `normal` 또는 `italic`이다. Inter·Geist는 실제 이탤릭, Oswald·Space Grotesk는 합성 기울임을 사용한다. 편집기·미리보기·내보내기는 같은 렌더링을 사용한다.
 - 이전 문서의 Anton·Bebas Neue·Barlow Condensed는 Oswald, Source Sans 3는 Inter, 명조·고정폭은 Geist로 정규화한다. `anton`을 새 편집 명령의 지원 글꼴로 안내하지 않는다.
-- 지원 목록의 원문은 `src/lib/content-jobs/editor/typography/fonts.ts`, 실제 로딩은 `src/app/layout.tsx`에서 확인한다.
+- 지원 목록의 원문은 `src/domains/slideshow/editor/typography/fonts.ts`, 실제 로딩은 `src/app/layout.tsx`에서 확인한다.
 
 ## 저장 데이터와 구현 경계
 
@@ -215,7 +225,7 @@ url = "http://127.0.0.1:3000/mcp"
 
 - 편집기 열기에서 `slideshow` / `video`를 선택하고 유형별 저장 프로젝트와 열린 탭을 표시한다. 영상은 독립된 Remotion 편집기이며 슬라이드 문서·placement 모델에 맞추지 않는다.
 - 영상 편집기의 상단 프로젝트 액션·저장 상태·내보내기 문구, 왼쪽 선택 항목 편집, 오른쪽 Element 추가·복제·제거·드래그 레이어 배치는 슬라이드쇼와 맞춘다. 공통 위치·크기는 UI에서 %로 표시하되 영상 문서에는 px로 저장한다. 연결 영상의 `sequenceIndex`는 재생 순서이며 문서 배열의 레이어 순서와 독립적이다. 레이어 이동은 재생 시점·순서를 바꾸지 않고, 타임라인의 클립 이동은 재생 순서만 바꾼다. 이어붙이기는 오디오·텍스트까지 포함한 전체 끝에 추가하며, 다른 요소 뒤에 시작하는 연결 클립은 `sequenceStart`에 시작 기준을 보존한다. 빈 프로젝트의 첫 MP4는 0초에서 시작한다.
-- 영상 문서 검증과 프레임 계산은 `src/lib/video/domain/model.ts`, 타임라인 편집은 `domain/editing.ts`, FPS 변환은 `domain/settings.ts`, 저장·열린 탭·revision 가드는 `src/lib/video/server`, 미리보기와 MP4의 공통 구성은 `src/lib/video/remotion`에서 관리한다. 영상 UI는 `src/screens/video`다.
+- 영상 문서 검증과 프레임 계산은 `src/domains/video/domain/model.ts`, 타임라인 편집은 `domain/editing.ts`, FPS 변환은 `domain/settings.ts`, 저장·열린 탭·revision 가드는 `src/domains/video/server`, 미리보기와 MP4의 공통 구성은 `src/domains/video/remotion`에서 관리한다. 영상 UI는 `src/screens/video-editor`다.
 - 새 영상의 기본 배경은 흰색이다. 캔버스에 영상·이미지 파일을 여러 개 드롭하면 독립 요소로 추가한다. 미디어의 모서리 핸들은 기본적으로 비율을 유지하며 Shift로 비율을 해제한다. 안전 영역과 정렬 가이드는 편집 오버레이로만 표시하고 내보내기에 포함하지 않는다.
 - 영상 이어붙이기는 `sequence` 클립의 순서·자르기 후 시작 시점을 다시 계산한다. 영상 요소는 독립된 시작 시점과 프레임을 사용하며 여러 개를 동시에 재생할 수 있다. 모든 요소는 시작 시점·표시 시간을 갖고, 화면 요소는 뒤에서 앞으로 레이어 순서대로 그린다.
 - 영상 API는 `/api/video-projects` 아래에서 생성·열기·revision 검사 저장·이름 변경·복제·삭제·자산·내보내기를 제공한다. 기존 MCP 슬라이드 도구와 템플릿 루프는 슬라이드쇼 전용이며, 영상은 아래 별도 MCP 도구를 사용한다. UI/API/MCP는 영상 세션·revision·저장 로직을 공유한다. 에이전트는 DB를 직접 편집하지 않는다.

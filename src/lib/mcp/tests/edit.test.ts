@@ -5,12 +5,12 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import sharp from "sharp";
 import { openLocalDatabase } from "@/lib/local-db/database";
-import { ContentProjectStore } from "@/lib/local-db/projects/store";
-import { ContentJobRegistry } from "@/lib/content-jobs/workflow/registry";
-import { EditorService } from "@/lib/content-jobs/editor/service";
-import { makeElementDefinition } from "@/lib/content-jobs/editor/elements/factory";
-import { createContentProject, saveContentProject } from "@/lib/content-jobs/projects/service";
-import { editWithLocalImages } from "../tools/images";
+import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
+import { ContentJobRegistry } from "@/domains/slideshow/workflow/registry";
+import { EditorService } from "@/domains/slideshow/editor/service";
+import { makeElementDefinition } from "@/domains/slideshow/editor/elements/factory";
+import { createContentProject, saveContentProject } from "@/domains/slideshow/projects/service";
+import { editWithLocalImages } from "@/domains/slideshow/server/local-images";
 import { editSchema } from "../tools/schema";
 
 function fixture() {

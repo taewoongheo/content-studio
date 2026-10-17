@@ -1,19 +1,12 @@
 import * as z from "zod/v4";
-import { compositionSchema, requiredCompositionSchema, contentMetadataSchema, templateTopicSchema, templateMessageSchema } from "@/lib/content-jobs/projects/composition";
-import { editorCommandsSchema } from "@/lib/content-jobs/editor/schema";
+import { compositionSchema, requiredCompositionSchema, contentMetadataSchema, templateTopicSchema, templateMessageSchema } from "@/domains/slideshow/projects/composition";
+import { localEditorCommandsSchema } from "@/domains/slideshow/editor/local-schema";
 
-const localImageSchema = {
-  type: "object", additionalProperties: false,
-  properties: { type: { const: "set_local_image" }, slideId: { type: "string", minLength: 1 },
-    placementId: { type: "string", minLength: 1 }, localPath: { type: "string", minLength: 1 } },
-  required: ["type", "slideId", "placementId", "localPath"],
-};
-const commandSchema = editorCommandsSchema.properties.commands;
 export const editSchema = z.fromJSONSchema({
   type: "object", additionalProperties: false,
   properties: {
     expectedTabId: { type: "string", minLength: 1 }, projectId: { type: "string", minLength: 1 }, expectedRevision: { type: "integer", minimum: 0 },
-    commands: { ...commandSchema, minItems: 1, items: { oneOf: [...commandSchema.items.oneOf, localImageSchema] } },
+    commands: localEditorCommandsSchema,
   }, required: ["projectId", "expectedTabId", "expectedRevision", "commands"],
 } as Parameters<typeof z.fromJSONSchema>[0]);
 export const projectSchema = z.strictObject({ projectId: z.string().min(1) });

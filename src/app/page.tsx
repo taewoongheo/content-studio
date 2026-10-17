@@ -1,5 +1,5 @@
-import { DashboardScreen } from "@/screens/dashboard/dashboard-screen";
+import { WorkspaceScreen } from "@/screens/workspace/workspace-screen";
 
 export default function Home() {
-  return <DashboardScreen />;
+  return <WorkspaceScreen />;
 }

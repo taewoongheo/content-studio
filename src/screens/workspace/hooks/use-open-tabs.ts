@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import type { OpenProjectTab } from "@/lib/content-jobs/domain/types";
+import type { OpenProjectTab } from "@/domains/workspace/model";
 
 export function useOpenTabs(onChange: (tabs: OpenProjectTab[]) => void) {
   const change = useRef(onChange);

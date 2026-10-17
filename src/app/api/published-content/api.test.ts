@@ -5,10 +5,10 @@ import { join } from "node:path";
 import test from "node:test";
 import { GET as listPosts } from "./route";
 import { DELETE as removePost } from "./[postId]/route";
-import type { PublishedPost } from "@/lib/local-db/published-posts";
+import type { PublishedPost } from "@/domains/slideshow/projects/published-posts";
 import { POST as publish } from "../content-projects/[projectId]/publication/route";
 import { PATCH as metadata } from "../content-projects/[projectId]/metadata/route";
-import { ContentProjectStore } from "@/lib/local-db/projects/store";
+import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 import { getLocalDatabase } from "@/lib/local-db/database";
 
 const origin = "http://localhost:3000";

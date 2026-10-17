@@ -1,8 +1,8 @@
 "use client";
-import { ProjectTypeTag } from "@/screens/projects/components/project-type-tag";
+import { ProjectTypeTag } from "@/components/projects/project-type-tag";
 import { Plus, LayoutDashboard, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { OpenProjectTab } from "@/lib/content-jobs/domain/types";
+import type { OpenProjectTab } from "@/domains/workspace/model";
 
 export function ProjectTabs({ tabs, activeTabId, busy, onSelect, onClose, onRename, onNew, onDashboard }: {
   tabs: OpenProjectTab[]; activeTabId?: string; busy: boolean;

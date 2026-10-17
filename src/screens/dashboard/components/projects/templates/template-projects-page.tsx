@@ -1,13 +1,13 @@
 "use client";
-import { VideoProjectCard } from "@/screens/video/components/project-card";
+import { VideoProjectCard } from "@/screens/dashboard/components/projects/video-project-card";
 import { useId, useState } from "react";
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import type { SavedProjectSummary } from "@/lib/local-db/projects/store";
-import { useSavedProjects } from "@/screens/projects/use-saved-projects";
-import { publishProject, reorderTemplates, deleteTemplate } from "@/screens/projects/api";
+import type { SavedProjectSummary } from "@/domains/slideshow/domain/projects";
+import { useSavedProjects } from "@/domains/workspace/client/use-saved-projects";
+import { publishProject, reorderTemplates, deleteTemplate } from "@/domains/slideshow/client/projects-api";
 import { SortableTemplate } from "./sortable-template";
-import { nextTemplateInLoop } from "@/lib/content-jobs/projects/planning/next-template";
+import { nextTemplateInLoop } from "@/domains/slideshow/projects/planning/next-template";
 import { SavedProjectCard, TemplateCard } from "./project-cards";
 
 export function TemplateProjectsPage({ onOpen }: { onOpen: (projectId: string) => Promise<void> }) {

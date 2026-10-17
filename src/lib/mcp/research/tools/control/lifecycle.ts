@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { CollectionRegistry } from "@/lib/research/collection/registry";
+import type { CollectionRegistry } from "@/domains/research/collection/registry";
 import * as z from "zod/v4";
 import { json, guarded } from "../../../protocol/result";
 import { researchAnnotations as annotations, jobSchema } from "../../shared";

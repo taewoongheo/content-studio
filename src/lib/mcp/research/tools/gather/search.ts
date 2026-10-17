@@ -1,9 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod/v4";
-import type { CollectionRegistry } from "@/lib/research/collection/registry";
-import type { AccountManager } from "@/lib/research/accounts/manager";
-import { searchInputSchema, searchUrl } from "@/lib/research/search/types";
-import { criteriaSchema } from "@/lib/research/domain/schema";
+import type { CollectionRegistry } from "@/domains/research/collection/registry";
+import type { AccountManager } from "@/domains/research/accounts/manager";
+import { searchInputSchema, searchUrl } from "@/domains/research/search/types";
+import { criteriaSchema } from "@/domains/research/domain/schema";
 import { json, guarded } from "../../../protocol/result";
 import { researchAnnotations } from "../../shared";
 export function registerSearchTools(server: McpServer, registry: CollectionRegistry, accounts: AccountManager) {

@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { PublishedPost } from "@/lib/local-db/published-posts";
+import type { PublishedPost } from "@/domains/slideshow/projects/published-posts";
 import { localDateKey, monthCells } from "./calendar-model";
 
 const weekdays = ["월", "화", "수", "목", "금", "토", "일"];

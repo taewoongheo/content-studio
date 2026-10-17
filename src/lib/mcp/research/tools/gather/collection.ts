@@ -1,10 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { CollectionRegistry } from "@/lib/research/collection/registry";
+import type { CollectionRegistry } from "@/domains/research/collection/registry";
 import * as z from "zod/v4";
 import { json, guarded } from "../../../protocol/result";
 import { researchAnnotations as annotations } from "../../shared";
-import { criteriaSchema } from "@/lib/research/domain/schema";
-import { socialSource } from "@/lib/research/domain/source";
+import { criteriaSchema } from "@/domains/research/domain/schema";
+import { socialSource } from "@/domains/research/domain/source";
 
 export function registerCollectionTools(server: McpServer, registry: CollectionRegistry) {
   server.registerTool("list_account_posts", {

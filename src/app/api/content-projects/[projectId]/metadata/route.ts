@@ -1,7 +1,7 @@
-import { contentMetadataSchema } from "@/lib/content-jobs/projects/composition";
-import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
-import { notifyProjectsChanged } from "@/lib/content-jobs/projects/events";
-import { defaultProjectStores } from "@/lib/content-jobs/projects/service";
+import { contentMetadataSchema } from "@/domains/slideshow/projects/composition";
+import { contentJobErrorResponse } from "@/domains/slideshow/http/http";
+import { notifyProjectsChanged } from "@/domains/workspace/server/project-events";
+import { defaultProjectStores } from "@/domains/slideshow/projects/service";
 import { isLocalRequest } from "@/lib/http/local-request";
 
 export const runtime = "nodejs";

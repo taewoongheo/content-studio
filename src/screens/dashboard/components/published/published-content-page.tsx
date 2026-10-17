@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { PublishedPost } from "@/lib/local-db/published-posts";
-import { useSavedProjects } from "@/screens/projects/use-saved-projects";
-import { toPublishedPost } from "@/lib/local-db/published-posts";
+import type { PublishedPost } from "@/domains/slideshow/projects/published-posts";
+import { useSavedProjects } from "@/domains/workspace/client/use-saved-projects";
+import { toPublishedPost } from "@/domains/slideshow/projects/published-posts";
 import { ProjectMetadataButton } from "../projects/project-metadata-button";
 import { deletePublishedPost } from "../../api";
 import { PublishedCalendar } from "./published-calendar";

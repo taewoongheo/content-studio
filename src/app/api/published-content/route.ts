@@ -1,6 +1,6 @@
 import { isLocalRequest } from "@/lib/http/local-request";
-import { defaultProjectStores } from "@/lib/content-jobs/projects/service";
-import { toPublishedPost } from "@/lib/local-db/published-posts";
+import { defaultProjectStores } from "@/domains/slideshow/projects/service";
+import { toPublishedPost } from "@/domains/slideshow/projects/published-posts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

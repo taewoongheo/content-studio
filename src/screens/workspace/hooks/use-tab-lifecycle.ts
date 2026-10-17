@@ -1,10 +1,10 @@
 "use client";
-import { openVideoProject, videoEndpoint, videoRequest } from "@/screens/video/api";
+import { openVideoProject, videoEndpoint, videoRequest } from "@/domains/video/client/api";
 
 import { useState } from "react";
-import type { OpenProjectTab } from "@/lib/content-jobs/domain/types";
-import { getContentJob } from "@/screens/content-job/api";
-import { renameProject } from "@/screens/projects/api";
+import type { OpenProjectTab } from "@/domains/workspace/model";
+import { getContentJob } from "@/domains/slideshow/client/api";
+import { renameProject } from "@/domains/slideshow/client/projects-api";
 import { closeTab, type CloseDecision } from "../api";
 import type { WorkspaceOperation } from "./use-workspace-operation";
 

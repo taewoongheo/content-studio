@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { defaultDatabasePath, openLocalDatabase } from "./database";
-import { ContentProjectStore } from "./projects/store";
+import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 
 test("DB 경로는 실행 폴더가 바뀌어도 고정되며 상대 경로 설정은 거부한다", () => {
   const originalDirectory = process.cwd(), originalPath = process.env.CONTENT_STUDIO_DB_PATH;

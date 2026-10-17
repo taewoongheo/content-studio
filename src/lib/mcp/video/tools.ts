@@ -1,14 +1,15 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { newVideoDocument, videoDocumentSchema, videoDuration, type VideoSnapshot } from "@/lib/video/domain/model";
-import { createVideo, openVideo, readVideo, videoTabs, videoStore, writeVideo, historyVideo, renameVideo, cloneVideo, closeVideo, deleteVideoGuarded, checkVideoRevision } from "@/lib/video/server/service";
-import { changeVideoFps } from "@/lib/video/domain/settings";
-import { renderVideo, renderVideoFrames } from "@/lib/video/server/render";
-import { writeVideoExport } from "@/lib/video/server/export-file";
+import { newVideoDocument, videoDocumentSchema, videoDuration, type VideoSnapshot } from "@/domains/video/domain/model";
+import { createVideo, openVideo, readVideo, videoTabs, videoStore, writeVideo, historyVideo, renameVideo, cloneVideo, closeVideo, deleteVideoGuarded, checkVideoRevision } from "@/domains/video/server/service";
+import { changeVideoFps } from "@/domains/video/domain/settings";
+import { renderVideo, renderVideoFrames } from "@/domains/video/server/rendering/render";
+import { writeVideoExport } from "@/domains/video/server/rendering/export-file";
 import { guarded, json, annotations } from "../protocol/result";
-import { serializePreview } from "../preview/queue";
-import { editVideoProject } from "./writes";
-import { settingsSchema, videoEditSchema, videoPreviewSchema, videoProjectSchema, videoRevisionSchema } from "./schema";
+import { serializePreview } from "@/lib/media/preview-queue";
+import { editVideoProject } from "@/domains/video/server/writes";
+import { settingsSchema } from "@/domains/video/editing/schema";
+import { videoEditSchema, videoPreviewSchema, videoProjectSchema, videoRevisionSchema } from "./schema";
 
 export function registerVideoTools(server: McpServer, origin: string) {
   const describe = (snapshot: VideoSnapshot) => ({ ...snapshot, url: `${origin}/?job=${encodeURIComponent(snapshot.id)}` });

@@ -1,7 +1,7 @@
 import { isLocalRequest } from "@/lib/http/local-request";
-import { defaultProjectStores } from "@/lib/content-jobs/projects/service";
-import { notifyProjectsChanged } from "@/lib/content-jobs/projects/events";
-import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
+import { defaultProjectStores } from "@/domains/slideshow/projects/service";
+import { notifyProjectsChanged } from "@/domains/workspace/server/project-events";
+import { contentJobErrorResponse } from "@/domains/slideshow/http/http";
 export const runtime = "nodejs";
 export async function DELETE(request: Request, context: { params: Promise<{ postId: string }> }) {
   if (!isLocalRequest(request, true)) return new Response(null, { status: 403 });
