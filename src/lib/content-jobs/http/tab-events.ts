@@ -1,3 +1,4 @@
+import { subscribeVideoTabs, videoTabs } from "../../video/server/service";
 import type { ContentJobRegistry } from "../workflow/registry";
 
 export function projectTabEvents(registry: ContentJobRegistry, signal: AbortSignal) {
@@ -8,16 +9,17 @@ export function projectTabEvents(registry: ContentJobRegistry, signal: AbortSign
       let closed = false;
       const send = () => {
         if (closed) return;
-        try { controller.enqueue(encoder.encode(`data: ${JSON.stringify(registry.tabs())}\n\n`)); }
+        try { controller.enqueue(encoder.encode(`data: ${JSON.stringify([...registry.tabs(), ...videoTabs()])}\n\n`)); }
         catch { cleanup(); }
       };
       const unsubscribe = registry.subscribeTabs(send);
+      const unsubscribeVideo = subscribeVideoTabs(send);
       const abort = () => {
         if (closed) return;
         cleanup();
         try { controller.close(); } catch { /* Already cancelled. */ }
       };
-      cleanup = () => { closed = true; unsubscribe(); signal.removeEventListener("abort", abort); };
+      cleanup = () => { closed = true; unsubscribe(); unsubscribeVideo(); signal.removeEventListener("abort", abort); };
       signal.addEventListener("abort", abort, { once: true });
       if (signal.aborted) abort(); else send();
     },

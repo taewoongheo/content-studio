@@ -1,4 +1,5 @@
 "use client";
+import { openVideoProject, videoEndpoint, videoRequest } from "@/screens/video/api";
 
 import { useState } from "react";
 import type { OpenProjectTab } from "@/lib/content-jobs/domain/types";
@@ -8,6 +9,11 @@ import { closeTab, type CloseDecision } from "../api";
 import type { WorkspaceOperation } from "./use-workspace-operation";
 
 async function latestTab(tab: OpenProjectTab) {
+  if (tab.projectType === "video") {
+    const job = await openVideoProject(tab.projectId);
+    if (job.tabId !== tab.tabId) throw new Error("이 탭은 이미 종료되었습니다.");
+    return { ...tab, revision: job.revision, name: job.name };
+  }
   const job = await getContentJob(tab.projectId);
   if (job.tabId !== tab.tabId) throw new Error("이 탭은 이미 종료되었습니다.");
   return { ...tab, revision: job.editor.revision, name: job.name ?? tab.name };
@@ -61,7 +67,8 @@ export function useTabLifecycle({ activeTabId, flushPending, onClosed, run }: {
     const target = renaming;
     void run(async () => {
       if (activeTabId === target.tabId) await flushPending();
-      await renameProject(target.projectId, name, target.tabId);
+      if (target.projectType === "video") await videoRequest(videoEndpoint(target.projectId), "PATCH", { name, expectedTabId: target.tabId });
+      else await renameProject(target.projectId, name, target.tabId);
       setRenaming(null);
     });
   }

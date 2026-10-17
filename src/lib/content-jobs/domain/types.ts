@@ -23,4 +23,4 @@ export type ContentJobRecord = ContentJobInput & {
 };
 export type ContentJobSnapshot = Omit<ContentJobRecord, "editorHistory" | "initialState" | "imageData">;
 
-export type OpenProjectTab = { tabId: string; projectId: string; name: string; revision: number; savedRevision?: number };
+export type OpenProjectTab = { projectType?: "slideshow" | "video"; tabId: string; projectId: string; name: string; revision: number; savedRevision?: number };

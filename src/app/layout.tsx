@@ -13,8 +13,8 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"], style: ["nor
 const spaceGrotesk = Space_Grotesk({ variable: "--font-space-grotesk", subsets: ["latin"], preload: false });
 
 export const metadata: Metadata = {
-  title: "Content Studio | 슬라이드 편집기",
-  description: "로컬 슬라이드 편집 및 관리",
+  title: "Content Studio | 슬라이드쇼·영상 편집기",
+  description: "로컬 슬라이드쇼·영상 편집 및 관리",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

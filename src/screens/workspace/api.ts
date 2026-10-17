@@ -1,7 +1,9 @@
+import { videoRequest, videoEndpoint } from "@/screens/video/api";
 import type { OpenProjectTab } from "@/lib/content-jobs/domain/types";
 export type CloseDecision = "save" | "discard";
 
 export async function closeTab(tab: OpenProjectTab, decision: "check" | CloseDecision = "check"): Promise<{ requiresConfirmation: boolean }> {
+  if (tab.projectType === "video") { await videoRequest(videoEndpoint(tab.projectId), "POST", { action: "close", expectedTabId: tab.tabId, expectedRevision: tab.revision }); return { requiresConfirmation: false }; }
   const response = await fetch(`/api/content-jobs/${encodeURIComponent(tab.projectId)}`, {
     method: "DELETE", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ expectedTabId: tab.tabId, expectedRevision: tab.revision, decision }),

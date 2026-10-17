@@ -1,3 +1,4 @@
+import { ProjectTypeTag } from "@/screens/projects/components/project-type-tag";
 import { ChevronRight, FolderOpen, LayoutTemplate } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SavedProjectSummary } from "@/lib/local-db/projects/store";
@@ -13,7 +14,7 @@ type CardProps = { project: SavedProjectSummary; busy: boolean; onOpen: (id: str
 
 function ProjectDetails({ project, title }: { project: SavedProjectSummary; title: string }) {
   return <>
-    <h3 className="min-w-0 break-words font-medium leading-snug">{title}</h3>
+    <div className="flex min-w-0 items-start gap-2"><h3 className="min-w-0 break-words font-medium leading-snug">{title}</h3><ProjectTypeTag /></div>
     <p className="mt-1.5 text-xs text-muted-foreground">
       {project.aspectRatio} · {project.slideCount}장 · {dateFormatter.format(new Date(project.updatedAt))}
     </p>
