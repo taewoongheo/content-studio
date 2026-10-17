@@ -9,6 +9,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { CallToolResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import { chromium } from "playwright";
 import sharp from "sharp";
+import JSZip from "jszip";
 import type { ContentJobSnapshot } from "@/domains/slideshow/domain/types";
 
 const routineGuide = "도입 후 그룹별로 여러 선택지를 함께 보여주고 하나를 선택하도록 안내한다.";
@@ -88,7 +89,7 @@ try {
   const tools = (await client.listTools()).tools.map((tool) => tool.name);
   assert.deepEqual([...tools].sort(), [
     "list_projects", "get_content_plan", "set_content_metadata", "list_template_guides", "set_reuse_guide", "register_template", "unregister_template", "open_project", "clone_project", "read_project",
-    "edit_project", "undo_project", "preview_slide",
+    "edit_project", "undo_project", "preview_slide", "preview_slides", "export_slideshow", "rename_project", "get_render_job", "cancel_render_job",
     "list_video_projects", "create_video_project", "open_video_project", "read_video_project", "edit_video_project", "undo_video_project", "redo_video_project", "rename_video_project", "clone_video_project", "preview_video", "export_video", "close_video_project", "delete_video_project",
     "search_social_candidates", "get_research_accounts", "list_account_posts", "read_social_post", "read_post_images", "get_collection_job",
     "solve_collection_captcha", "open_collection_browser", "resume_collection", "close_collection_session",
@@ -303,6 +304,26 @@ try {
     const pixel = await sharp(bytes).extract({ left: 540, top: 800, width: 1, height: 1 }).removeAlpha().raw().toBuffer();
     assert.deepEqual([...pixel], [0, 255, 0], "preview must contain the imported image");
     console.log("preview", meta.width, meta.height, bytes.length);
+    const batchPreview = await call("preview_slides", { projectId: id, slideIds: ["slide-1", "slide-2"], width: 540 });
+    const thumbnails = batchPreview.content.filter(block => block.type === "image");
+    assert.equal(thumbnails.length, 2);
+    for (const thumbnail of thumbnails) if (thumbnail.type === "image") assert.equal((await sharp(Buffer.from(thumbnail.data, "base64")).metadata()).width, 540);
+    const cachedPreview = await call("preview_slides", { projectId: id, slideIds: ["slide-1", "slide-2"], width: 540 });
+    assert.deepEqual(cachedPreview.content, batchPreview.content, "same revision produces identical cached previews");
+    const zipOutput = join(directory, "slides.zip");
+    const exportJob = (await call("export_slideshow", { projectId: id, expectedTabId: updated.tabId, expectedRevision: updated.editor.revision, outputPath: zipOutput })).structuredContent as { jobId: string };
+    let exported: { status?: string; result?: { bytes: number }; error?: string } = {};
+    const exportDeadline = Date.now() + 60_000;
+    while (Date.now() < exportDeadline) {
+      exported = (await call("get_render_job", { jobId: exportJob.jobId })).structuredContent as typeof exported;
+      if (["completed", "cancelled", "failed"].includes(exported.status ?? "")) break;
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    assert.equal(exported.status, "completed", exported.error);
+    const archive = await JSZip.loadAsync(await readFile(zipOutput));
+    assert.equal(Object.keys(archive.files).length, updated.editor.document.slides.length);
+    assert.deepEqual(await archive.file("slide-01.png")!.async("nodebuffer"), bytes, "ZIP uses the same full-resolution preview renderer");
+    console.log("PASS slideshow batch/cache preview and asynchronous full-resolution PNG ZIP export");
 
     const cloned = await cloneTemplate(id, "Clone");
     await savedColumn.getByRole("heading", { name: "Clone", exact: true }).waitFor();

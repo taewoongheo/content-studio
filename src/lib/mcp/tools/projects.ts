@@ -7,7 +7,12 @@ import { getLocalDatabase } from "@/lib/local-db/database";
 import { cloneSchema, setCompositionSchema, registerTemplateSchema, editSchema, previewSchema, projectSchema, undoSchema, setContentMetadataSchema } from "./schema";
 import type { LocalImageCommand } from "@/domains/slideshow/server/local-images";
 import { SlideshowProjectWrites } from "@/domains/slideshow/server/project-writes";
-import { previewSlide } from "@/domains/slideshow/server/preview";
+import { previewSlides } from "@/domains/slideshow/server/preview";
+import { captureSlideshowRender } from "@/domains/slideshow/server/rendering/input";
+import { exportSlideshow } from "@/domains/slideshow/server/rendering/export";
+import { validateExportPath } from "@/lib/media/export/file";
+import { renderJobs } from "@/domains/workspace/server/jobs/manager";
+import { renameProject } from "@/domains/slideshow/projects/lifecycle/management";
 
 import { notifyProjectsChanged } from "@/domains/workspace/server/project-events";
 import { json, guarded, annotations } from "../protocol/result";
@@ -106,9 +111,39 @@ export function registerProjectTools(server: McpServer, origin: string) {
     description: "See one slide as a PNG rendered by the same renderer as the editor/export. Uses a snapshot and returns its revision. Does not save the project.",
     inputSchema: previewSchema, annotations: annotations(true),
   }, ({ projectId, slideId }) => guarded(async () => {
-    const job = contentJobRegistry.get(projectId);
-    const data = await previewSlide(origin, job, slideId);
+    const input = captureSlideshowRender(contentJobRegistry, projectId);
+    const data = (await previewSlides(origin, input.job, [slideId], { images: input.images }))[0].bytes.toString("base64");
     return { content: [{ type: "image", mimeType: "image/png", data },
-      { type: "text", text: JSON.stringify({ projectId, slideId, revision: job.editor.revision }) }] };
+      { type: "text", text: JSON.stringify({ projectId, slideId, revision: input.job.editor.revision }) }] };
+  }));
+  server.registerTool("preview_slides", {
+    description: "Review several slides in ONE call with a reused renderer and revision cache. Omit slideIds to review all slides; IDs preserve requested order. Width defaults to 540px (64-1920, capped at original width). Returns PNG images with slide IDs and captured revision. Does not edit, save or navigate the UI.",
+    inputSchema: projectSchema.extend({ slideIds: z.array(z.string().min(1)).min(1).max(20).optional(), width: z.number().int().min(64).max(1920).default(540) }), annotations: annotations(true),
+  }, ({ projectId, slideIds, width }) => guarded(async () => {
+    const input = captureSlideshowRender(contentJobRegistry, projectId);
+    const results = await previewSlides(origin, input.job, slideIds ?? input.job.editor.document.slides.map(slide => slide.id), { width, images: input.images });
+    return { content: [{ type: "text", text: JSON.stringify({ projectId, tabId: input.job.tabId, revision: input.job.editor.revision, slideIds: results.map(result => result.slideId) }) },
+      ...results.flatMap(result => [{ type: "text" as const, text: result.slideId }, { type: "image" as const, mimeType: "image/png", data: result.bytes.toString("base64") }])] };
+  }));
+  server.registerTool("rename_project", {
+    description: "Rename a slideshow project without editing or saving its document. Require latest open tab identity and revision; returns current revision and name. Video names use rename_video_project.",
+    inputSchema: undoSchema.extend({ name: z.string().trim().min(1).max(120) }), annotations: annotations(false),
+  }, ({ projectId, expectedTabId, expectedRevision, name }) => guarded(() => {
+    const current = contentJobRegistry.requireTab(projectId, expectedTabId);
+    if (current.editor.revision !== expectedRevision) throw new Error("문서가 변경되었습니다. 최신 revision을 읽어 주세요.");
+    renameProject(contentJobRegistry, projectId, name, expectedTabId);
+    const job = contentJobRegistry.get(projectId);
+    return json({ projectId, tabId: job.tabId, revision: job.editor.revision, name: job.name });
+  }));
+  server.registerTool("export_slideshow", {
+    description: "Export all slideshow slides as numbered full-resolution PNGs in one ZIP to an absolute outputPath. Requires latest tabId/revision. Returns a render job immediately: poll get_render_job for final outputPath/bytes or cancel_render_job. Captures document and image bytes at the requested revision; later edits do not change this export. Existing files require overwrite=true; failures/cancellation preserve existing output.",
+    inputSchema: undoSchema.extend({ outputPath: z.string().min(1), overwrite: z.boolean().default(false) }), annotations: annotations(false),
+  }, ({ projectId, expectedTabId, expectedRevision, outputPath, overwrite }) => guarded(() => {
+    const job = contentJobRegistry.requireTab(projectId, expectedTabId);
+    if (job.editor.revision !== expectedRevision) throw new Error("문서가 변경되었습니다. 최신 revision을 읽어 주세요.");
+    validateExportPath(outputPath, "zip");
+    const input = captureSlideshowRender(contentJobRegistry, projectId);
+    return json(renderJobs.start({ projectId, projectType: "slideshow", revision: expectedRevision }, async context =>
+      ({ outputPath, bytes: await exportSlideshow(origin, input, outputPath, overwrite, context) })));
   }));
 }
