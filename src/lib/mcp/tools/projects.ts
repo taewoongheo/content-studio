@@ -1,13 +1,14 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod/v4";
+import { inspectSlideshow, summarizeSlideshow } from "@/domains/slideshow/projects/inspection/read";
 import type { EditorCommand } from "@/domains/slideshow/editor/types";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import { defaultProjectStores, loadContentProject, updateContentProjectReuse } from "@/domains/slideshow/projects/service";
 import { getLocalDatabase } from "@/lib/local-db/database";
-import { cloneSchema, setCompositionSchema, registerTemplateSchema, editSchema, previewSchema, projectSchema, undoSchema, setContentMetadataSchema } from "./schema";
+import { cloneSchema, setCompositionSchema, registerTemplateSchema, editSchema, previewSchema, projectSchema, readProjectSchema, undoSchema, setContentMetadataSchema } from "./schema";
 import type { LocalImageCommand } from "@/domains/slideshow/server/local-images";
 import { SlideshowProjectWrites } from "@/domains/slideshow/server/project-writes";
-import { previewSlides } from "@/domains/slideshow/server/preview";
+import { previewSlides } from "@/domains/slideshow/server/rendering/preview";
 import { captureSlideshowRender } from "@/domains/slideshow/server/rendering/input";
 import { exportSlideshow } from "@/domains/slideshow/server/rendering/export";
 import { validateExportPath } from "@/lib/media/export/file";
@@ -92,16 +93,17 @@ export function registerProjectTools(server: McpServer, origin: string) {
     return json(describe(job.id));
   }));
   server.registerTool("read_project", {
-    description: "Read the complete active document JSON, revision and attached images. Open saved projects first. Frame coordinates are normalized to slide size; fontSize is pixels. Element definitions are shared, placements contain per-slide values and overrides.",
-    inputSchema: projectSchema, annotations: annotations(true),
-  }, ({ projectId }) => guarded(() => json(describe(projectId))));
+    description: "Read active slideshow state. Default returns the complete document. Use outline=true for content/IDs without styles, slideIds/elementIds for focused reads, includeAssets=false to omit image metadata. Filtered document responses have partial=true and retain the current tabId/revision. Unknown IDs are errors. Open saved projects first. Frame coordinates are normalized to slide size; fontSize is pixels. Element definitions are shared, placements contain per-slide values and overrides.",
+    inputSchema: readProjectSchema, annotations: annotations(true),
+  }, ({ projectId, ...options }) => guarded(() => json({ ...inspectSlideshow(contentJobRegistry.get(projectId), options),
+    project: defaultProjectStores().projects.getSummary(projectId), url: `${origin}/?job=${encodeURIComponent(projectId)}` })));
   server.registerTool("edit_project", {
-    description: "Apply an ordered command batch atomically as one undo step and save it to the database before returning success. Use expectedTabId and expectedRevision from read/edit/undo; on conflict re-read. update_visual common changes the shared definition AND clears matching local overrides on all placements; local changes only the specified slide placement. style.rotation is clockwise degrees (-360 to 360) around the element center; omission means 0. Set it in add_element or update_visual (common/local); read, undo, save, preview and export preserve it. Rectangle/circle/triangle/text/image are elements: add_element then place_element. set_local_image loads a PNG/JPG/WebP absolute localPath (max 10MB) into an existing image placement, including one created earlier in this batch. set_text_colors replaces a text placement’s color ranges (start/end are UTF-16 offsets, end exclusive, grapheme boundaries, sorted and non-overlapping; [] clears colors). set_text_weights replaces textWeights ranges (start/end UTF-16 offsets with the same boundary rules; fontWeight integer 100–900, resolved to supported font weights; [] clears). Color and weight ranges are independent and may overlap each other. set_slot_value optionally accepts textColors and textWeights for an atomic text/style replacement; omitted existing ranges adjust to the text edit. Non-background placements render back-to-front; the background sentinel must be last in reorder_layers. No separate image-upload tool is needed.",
+    description: "Apply an ordered command batch atomically as one undo step and save it to the database before returning success. includeDocument defaults true for compatibility; set false for a compact revision and resulting ID summary when the edited content is already known. Use expectedTabId and expectedRevision from read/edit/undo; on conflict re-read. update_visual common changes the shared definition AND clears matching local overrides on all placements; local changes only the specified slide placement. style.rotation is clockwise degrees (-360 to 360) around the element center; omission means 0. Set it in add_element or update_visual (common/local); read, undo, save, preview and export preserve it. Rectangle/circle/triangle/text/image are elements: add_element then place_element. set_local_image loads a PNG/JPG/WebP absolute localPath (max 10MB) into an existing image placement, including one created earlier in this batch. set_text_colors replaces a text placement’s color ranges (start/end are UTF-16 offsets, end exclusive, grapheme boundaries, sorted and non-overlapping; [] clears colors). set_text_weights replaces textWeights ranges (start/end UTF-16 offsets with the same boundary rules; fontWeight integer 100–900, resolved to supported font weights; [] clears). Color and weight ranges are independent and may overlap each other. set_slot_value optionally accepts textColors and textWeights for an atomic text/style replacement; omitted existing ranges adjust to the text edit. Non-background placements render back-to-front; the background sentinel must be last in reorder_layers. No separate image-upload tool is needed.",
     inputSchema: editSchema, annotations: annotations(false),
   }, (raw) => guarded(async () => {
-    const { projectId, commands, expectedRevision, expectedTabId } = raw as { projectId: string; commands: Array<EditorCommand | LocalImageCommand>; expectedRevision: number; expectedTabId: string };
+    const { projectId, commands, expectedRevision, expectedTabId, includeDocument } = raw as { projectId: string; commands: Array<EditorCommand | LocalImageCommand>; expectedRevision: number; expectedTabId: string; includeDocument?: boolean };
     const job = await new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase()).edit(projectId, commands, expectedRevision, expectedTabId);
-    return json({ ...job, url: `${origin}/?job=${encodeURIComponent(job.id)}` });
+    return json({ ...(includeDocument === false ? summarizeSlideshow(job) : job), url: `${origin}/?job=${encodeURIComponent(job.id)}` });
   }));
   server.registerTool("undo_project", {
     description: "Undo the last edit batch, including text, styles and image placement. Imported assets remain available. Saves the restored document before returning success with the new document and revision. Include expectedTabId from the latest read.",
@@ -111,7 +113,7 @@ export function registerProjectTools(server: McpServer, origin: string) {
     description: "See one slide as a PNG rendered by the same renderer as the editor/export. Uses a snapshot and returns its revision. Does not save the project.",
     inputSchema: previewSchema, annotations: annotations(true),
   }, ({ projectId, slideId }) => guarded(async () => {
-    const input = captureSlideshowRender(contentJobRegistry, projectId);
+    const input = captureSlideshowRender(contentJobRegistry, projectId, [slideId]);
     const data = (await previewSlides(origin, input.job, [slideId], { images: input.images }))[0].bytes.toString("base64");
     return { content: [{ type: "image", mimeType: "image/png", data },
       { type: "text", text: JSON.stringify({ projectId, slideId, revision: input.job.editor.revision }) }] };
@@ -120,7 +122,7 @@ export function registerProjectTools(server: McpServer, origin: string) {
     description: "Review several slides in ONE call with a reused renderer and revision cache. Omit slideIds to review all slides; IDs preserve requested order. Width defaults to 540px (64-1920, capped at original width). Returns PNG images with slide IDs and captured revision. Does not edit, save or navigate the UI.",
     inputSchema: projectSchema.extend({ slideIds: z.array(z.string().min(1)).min(1).max(20).optional(), width: z.number().int().min(64).max(1920).default(540) }), annotations: annotations(true),
   }, ({ projectId, slideIds, width }) => guarded(async () => {
-    const input = captureSlideshowRender(contentJobRegistry, projectId);
+    const input = captureSlideshowRender(contentJobRegistry, projectId, slideIds);
     const results = await previewSlides(origin, input.job, slideIds ?? input.job.editor.document.slides.map(slide => slide.id), { width, images: input.images });
     return { content: [{ type: "text", text: JSON.stringify({ projectId, tabId: input.job.tabId, revision: input.job.editor.revision, slideIds: results.map(result => result.slideId) }) },
       ...results.flatMap(result => [{ type: "text" as const, text: result.slideId }, { type: "image" as const, mimeType: "image/png", data: result.bytes.toString("base64") }])] };

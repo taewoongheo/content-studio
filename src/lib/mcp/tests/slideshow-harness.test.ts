@@ -29,5 +29,13 @@ test("슬라이드쇼 이름 변경은 문서를 보존하고 오래된 탭·rev
     const rejected = await client.callTool({ name: "rename_project", arguments: { projectId: job.id, expectedTabId: job.tabId, expectedRevision: 0, name: "stale" } });
     assert.equal(rejected.isError, true);
     assert.equal(contentJobRegistry.get(job.id).name, "after");
+    const selection = await client.callTool({ name: "read_project", arguments: { projectId: job.id, slideIds: ["slide-1"], includeAssets: false } });
+    assert.equal((selection.structuredContent as { partial: boolean }).partial, true);
+    const compact = await client.callTool({ name: "edit_project", arguments: { projectId: job.id, expectedTabId: job.tabId, expectedRevision: 1, includeDocument: false,
+      commands: [{ type: "set_slide_background", slideId: "slide-1", color: "#123456" }] } });
+    assert.equal(compact.isError, undefined);
+    assert.equal("editor" in (compact.structuredContent as Record<string, unknown>), false);
+    assert.equal((compact.structuredContent as { revision: number }).revision, 2);
+    assert.equal(contentJobRegistry.get(job.id).savedRevision, 2);
   } finally { await client.close(); await server.close(); getLocalDatabase().close(); await rm(directory, { recursive: true, force: true }); }
 });

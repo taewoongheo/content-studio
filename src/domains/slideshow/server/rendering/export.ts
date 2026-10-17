@@ -4,7 +4,7 @@ import { writeExportFile } from "@/lib/media/export/file";
 import { previewSlides } from "./preview";
 import type { RenderContext } from "@/domains/workspace/server/jobs/manager";
 
-export function exportSlideshow(origin: string, input: { job: ContentJobSnapshot; images: Record<string, string> }, outputPath: string, overwrite: boolean, context?: RenderContext) {
+export function exportSlideshow(origin: string, input: { job: ContentJobSnapshot; images: () => Record<string, string> }, outputPath: string, overwrite: boolean, context?: RenderContext) {
   return writeExportFile(outputPath, overwrite, async () => {
     const slides = await previewSlides(origin, input.job, input.job.editor.document.slides.map(slide => slide.id), {
       images: input.images, signal: context?.signal, progress: (progress, phase) => context?.progress(progress * 0.9, phase),

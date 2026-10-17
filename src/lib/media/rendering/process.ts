@@ -13,6 +13,8 @@ export function runRenderProcess(script: string, args: string[], options: Render
       catch (error) { if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error; }
     };
     const kill = () => { terminate("SIGTERM"); force ??= setTimeout(() => terminate("SIGKILL"), 2000); force.unref(); };
+    const exit = () => terminate("SIGKILL");
+    process.once("exit", exit);
     const timer = setTimeout(() => { timedOut = true; kill(); }, timeoutMs);
     const abort = () => kill();
     options.signal?.addEventListener("abort", abort, { once: true });
@@ -24,7 +26,7 @@ export function runRenderProcess(script: string, args: string[], options: Render
       if (typeof message?.progress === "number" && Number.isFinite(message.progress) && typeof message.phase === "string")
         options.progress?.(message.progress, message.phase);
     });
-    const cleanup = () => { clearTimeout(timer); clearTimeout(force); options.signal?.removeEventListener("abort", abort); };
+    const cleanup = () => { clearTimeout(timer); clearTimeout(force); process.removeListener("exit", exit); options.signal?.removeEventListener("abort", abort); };
     child.once("error", error => { cleanup(); reject(error); });
     child.once("close", code => {
       cleanup();

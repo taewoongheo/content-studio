@@ -104,7 +104,7 @@ url = "http://127.0.0.1:3000/mcp"
 | --- | --- |
 | `list_projects` | 저장 프로젝트와 열린 미저장 작업 조회 |
 | `open_project` | 저장 프로젝트를 편집 가능한 열린 작업으로 불러오기 |
-| `read_project` | 작업 문서와 최신 revision·tabId 읽기 |
+| `read_project` | 전체/부분/개요 문서와 최신 revision·tabId 읽기 |
 | `list_template_guides` | 루프 순서의 템플릿 구성 설명과 요약 메타데이터 조회 |
 | `get_content_plan` | 다음 템플릿·전체 게시 이력·미게시 프로젝트 조회 |
 | `set_content_metadata` | 개별 콘텐츠의 주제·메시지 저장 |
@@ -113,7 +113,11 @@ url = "http://127.0.0.1:3000/mcp"
 | `clone_project` | 등록된 템플릿 프로젝트 복제 |
 | `edit_project` | 편집 명령 배열을 한 묶음으로 적용 |
 | `undo_project` | 직전 편집 묶음 되돌리기 |
-| `preview_slide` | 기존 렌더러로 슬라이드 PNG 확인 |
+| `preview_slide` | 기존 단일 슬라이드 전체 해상도 PNG 확인 |
+| `preview_slides` | 여러 장을 한 번에 축소 미리보기, 생략하면 전체 장 확인 |
+| `rename_project` | 슬라이드쇼 이름만 변경 |
+| `export_slideshow` | 전체 슬라이드를 PNG ZIP으로 내보내는 작업 시작 |
+| `get_render_job`, `cancel_render_job` | 영상/슬라이드쇼 내보내기 상태 조회·취소 |
 
 - 템플릿 비교·선택은 `list_template_guides`의 메타데이터로 한다. 비교를 위해 후보의 전체 문서나 미리보기를 읽지 않는다. 선택한 원본을 `clone_project`로 복제한 뒤 복제본을 읽고 편집한다.
 - `clone_project`는 등록된 `templateProjectId`가 필수다. 등록된 템플릿이 없으면 UI에서 원본을 지정하도록 사용자에게 안내한다. 생성 제한을 우회하려고 에이전트가 임의 등록하거나 원본을 수정하지 않는다.
@@ -125,6 +129,9 @@ url = "http://127.0.0.1:3000/mcp"
 
 - `composition`은 최대 2000자의 단일 설명이다. 등록·복제에는 비어 있지 않은 설명이 필요하다. 등록 시 설명을 함께 저장할 수 있고, 설명 변경은 등록 상태를 변경하지 않는다. 등록은 열린 미저장 본문을 자동 저장하지 않는다.
 - 구성 설명을 작성·갱신할 때는 실제 문서의 핵심 시각적 특징과 적합한 정보 형식·분량을 연결해 설명한다. 주제·메시지도 원본에 묶이지 않는 재사용 설명으로 작성하며, 상세 기준은 아래 템플릿 정보 작성 가이드를 따른다. 비교·선택 때의 메타데이터 경계와 작성 때의 문서 확인을 구분한다.
+- `read_project`는 기본적으로 기존 전체 응답을 유지한다. `slideIds`·`elementIds`는 조회 범위를 좁히고 해당 문서에 `partial: true`를 표시한다. `outline: true`는 스타일 없는 내용·ID 개요를, `includeAssets: false`는 자산 메타데이터 생략을 제공한다. 존재하지 않는 ID는 거부한다. `edit_project`의 `includeDocument: false`는 전체 문서 대신 최신 revision과 결과 ID 요약을 반환하며, 기본값은 기존 전체 응답이다.
+- `preview_slides`의 `slideIds`를 생략하면 전체 장을 확인한다. 기본 너비 540px, 64~1920px 범위이며 원본보다 확대하지 않는다. 렌더러 코드·프로젝트·탭·revision·크기에 따라 바이트 한도 내에서 결과를 재사용한다. 브라우저는 작업 간 재사용하고 유휴 시 종료한다. 기존 `preview_slide`는 전체 해상도 PNG 응답을 유지한다.
+- `export_slideshow`는 최신 `expectedTabId`·`expectedRevision`, 절대 `.zip` `outputPath`를 받는다. 요청 시점의 문서·이미지를 캡처하고 작업 ID를 즉시 반환한다. `get_render_job`을 1~2초 간격으로 조회하고 `completed`의 `result.outputPath`·`bytes`를 확인한다. `failed`에는 오류가 있고, `cancel_render_job` 후 최종 상태를 다시 확인한다. 완료 메타데이터는 최대 40개·15분 보관하며 서버 재시작에는 초기화된다. 출력 폴더는 이미 있어야 하고 덮어쓰기는 `overwrite: true`가 필요하다. 취소·실패는 기존 파일을 보존한다.
 - `edit_project`와 `undo_project`에는 최신 읽기·쓰기 응답의 `expectedRevision`과 `expectedTabId`를 사용한다. 닫힌 작업이나 이전 탭 ID는 거부된다. 다시 연 작업은 다시 읽고 최신 값을 사용한다.
 - 편집 명령 배열은 한 단계로 되돌린다. 실패한 묶음은 문서·revision·되돌리기 이력과 신규 이미지 등록을 복구한다. `clone_project`, `edit_project`, `undo_project`는 DB 저장 성공 후 성공을 반환한다.
 - 읽기·열기·미리보기는 자동 저장하지 않는다. MCP 생성·복제·명시적 열기는 탭을 추가하며 브라우저 화면을 강제로 전환하지 않는다. 프로젝트 삭제·탭 닫기는 MCP로 제공하지 않는다.
@@ -248,7 +255,8 @@ url = "http://127.0.0.1:3000/mcp"
 | `undo_video_project`, `redo_video_project` | 편집 묶음 단위 되돌리기·다시 실행 및 저장 |
 | `rename_video_project`, `clone_video_project` | 이름만 변경 / 저장 문서·자산 복제 |
 | `preview_video` | 같은 Remotion 구성으로 지정 프레임 1~8개 PNG 확인 |
-| `export_video` | 지정한 절대 경로에 H.264/AAC MP4 생성 |
+| `start_video_export` | 에이전트 권장: MP4 작업 시작 후 공통 작업 도구로 조회·취소 |
+| `export_video` | 기존 호환용 동기식 H.264/AAC MP4 생성 |
 | `close_video_project`, `delete_video_project` | 사용자 요청에 따른 탭 닫기 / 프로젝트·자산 삭제 |
 
 - 편집·되돌리기·이름 변경·복제·내보내기·닫기·삭제에는 최신 응답의 `expectedTabId`·`expectedRevision`이 필요하다. 닫았다 다시 열면 기존 탭 ID를 재사용하지 않는다. 영상 탭 생성·열기·복제는 브라우저를 강제 전환하지 않는다. 읽기·미리보기는 저장하지 않는다.
@@ -256,6 +264,9 @@ url = "http://127.0.0.1:3000/mcp"
 - `add_layer`는 텍스트·도형의 기본값을 지원한다. `update_layer`는 해당 종류의 모든 문서 속성을 수정하며 다른 종류의 속성·알 수 없는 속성은 거부한다. `remove_layer`, `duplicate_layer`, `split_layer`, `move_layer`, `trim_layer`, `reorder_layers`, `reorder_sequence`로 삭제·복제·분할·이동·자르기·쌓임 순서·연결 순서를 편집한다. `reorder_layers`는 전체 요소 ID를 뒤→앞 순서로, `reorder_sequence`는 연결 영상 ID 전체를 재생 순서로 받는다. 문서 전체를 교체할 필요가 없다.
 - `import_media`는 절대 `localPath`의 영상·오디오·이미지를 읽고 실제 메타데이터로 요소를 만든다. 기본 연결 영상은 전체 끝에 추가하고 `mode: "overlay"` 영상·이미지·오디오는 기본 0프레임에 추가한다. `from`으로 독립 요소의 시점을 지정할 수 있다. `layerId`를 지정하면 같은 묶음 뒤 명령에서 참조할 수 있다. `replace_media`는 같은 종류의 파일로 원본을 교체하고 배치·스타일을 유지한다. 미디어는 UI와 동일한 브라우저 코덱 지원 범위에서 검사하며 시스템 ffprobe에 의존하지 않는다.
 - 한 묶음은 한 undo 단계이며 DB 저장이 성공해야 성공을 반환한다. 비동기 파일 읽기 후 revision을 재검사하며 실패하면 새 프로젝트 행·자산·문서 변경이 롤백되고 메모리의 revision·이력도 유지된다. 성공 후 undo는 기존 자산을 유지한다. 기본 결과는 revision·요소 요약·자산 메타데이터이고 전체 문서는 `includeDocument: true` 또는 `read_video_project`로 확인한다.
+- `read_video_project`는 기본 전체 응답을 유지한다. `layerIds`로 부분 문서(`partial: true`), `outline: true`로 내용·타이밍·ID 개요를 조회하고 `includeAssets: false`로 자산 메타데이터를 생략한다. 모든 조회는 최신 tabId·revision을 유지한다.
+- `start_video_export`는 동기식 `export_video`와 같은 경로·revision 계약으로 문서·미디어를 캡처하며 작업 ID를 즉시 반환한다. 에이전트는 공통 `get_render_job`·`cancel_render_job`으로 진행률과 완료·실패·취소를 확인한다. 기존 `export_video`와 UI MP4 다운로드도 유지한다. 취소는 렌더 하위 프로세스 종료와 임시 파일 정리를 기다리고, 이미 완료된 파일은 삭제하지 않는다.
+- 영상 렌더러는 소스가 동일한 동안 번들을 재사용하고 프레임은 탭·revision·소스·크기별 캐시에 보관한다. 미디어는 렌더링 범위의 임시 loopback 서버에서 제공하며 파일로 재복사하지 않는다. 요청 종료 후 서버·작업 파일을, 유휴 시 번들을 정리한다. 여러 영상·오디오 가져오기는 최대 두 파일을 동시에 검사하며 한 브라우저를 공유한다.
 - 미리보기는 `frames`(0부터, 실제 길이 내), 선택 `width`(기본 540)를 받고 PNG 이미지와 해당 revision을 반환한다. 가이드·선택은 포함하지 않으며 오디오는 정지 이미지에서 들리지 않는다. 여러 시점을 확인한 뒤 MP4로 내보낸다. `export_video`의 출력 폴더는 이미 있어야 하며 기존 파일은 기본 거부하고 `overwrite: true`일 때만 덮어쓴다. 출력 경로는 렌더링 전에 예약하며 임시 파일을 완성한 뒤 교체하고 실패 시 예약·임시 파일을 정리한다. 덮어쓰기 렌더링이 실패하면 기존 파일을 보존한다.
 - MCP 변경은 열린 영상 UI에 반영한다. 미저장 입력은 덮어쓰지 않으며 revision 충돌로 저장을 막고 최신 내용 다시 읽기를 제공한다. 선택·가이드·비율 잠금은 문서가 아닌 편집 화면 상태다. 영상 삭제 도구는 명시적 사용자 요청과 `confirm: true`에만 사용한다. 영상 삭제 API도 열린 탭 ID와 revision을 검사하고, 닫힌 저장본은 목록에서 받은 저장 revision으로 검사하며 삭제 때문에 탭을 열지 않는다. 슬라이드쇼의 삭제·탭 닫기 MCP 정책은 변경하지 않는다.
 - `pnpm test:video`에는 실제 MCP 클라이언트의 모든 영상 도구·PNG 미리보기·UI 동기화·충돌 보호 검사도 포함된다. `--render`는 UI와 MCP의 실제 MP4 출력을 함께 검사한다.

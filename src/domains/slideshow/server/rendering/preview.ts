@@ -12,7 +12,7 @@ let idle: ReturnType<typeof setTimeout> | undefined;
 async function close() { const current = browser; browser = undefined; page = undefined; pageOrigin = ""; await current?.close(); }
 
 export async function previewSlides(origin: string, job: ContentJobSnapshot, slideIds: string[], options: {
-  width?: number; images?: Record<string, string>; signal?: AbortSignal; progress?: (progress: number, phase: string) => void;
+  width?: number; images?: Record<string, string> | (() => Record<string, string>); signal?: AbortSignal; progress?: (progress: number, phase: string) => void;
 } = {}) {
   const ids = [...new Set(slideIds)];
   if (!ids.length || ids.length > 20 || ids.some(id => !job.editor.document.slides.some(slide => slide.id === id)))
@@ -45,7 +45,7 @@ export async function previewSlides(origin: string, job: ContentJobSnapshot, sli
           try {
             const data = await Promise.race([
               page.evaluate(({ job, slideId, width, images }) => window.renderStudioPreview!(job, slideId, width, images),
-                { job, slideId, width: options.width, images: options.images }),
+                { job, slideId, width: options.width, images: typeof options.images === "function" ? options.images() : options.images }),
               new Promise<never>((_, reject) => { timeout = setTimeout(() => reject(new Error("미리보기 렌더링 시간이 초과되었습니다.")), 30_000); }),
             ]);
             bytes = Buffer.from(data.substring(data.indexOf(",") + 1), "base64");

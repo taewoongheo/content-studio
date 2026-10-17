@@ -8,7 +8,7 @@ import { socialSource } from "@/domains/research/domain/source";
 
 export function registerCollectionTools(server: McpServer, registry: CollectionRegistry) {
   server.registerTool("list_account_posts", {
-    description: "Start a bounded account-post collection using the connected account when available. YouTube collects community posts. Declare your research purpose and follow AGENTS.md and docs/research-guidelines.md, with explicit user instructions taking precedence. For creation without a reference, begin research before selecting a template. Returns jobId/sessionId; use get_collection_job for results. Instagram/TikTok anonymous feeds may be blocked or unavailable. No comments are fetched. Reuse sessionId for cursor pagination. Never assume missing metrics satisfy criteria.",
+    description: "Start a bounded account-post collection using the connected account when available. YouTube collects community posts. Declare your research purpose and follow AGENTS.md and docs/research-guidelines.md, with explicit user instructions taking precedence. For creation without a reference, get_content_plan and select the loop template/topic BEFORE research, following AGENTS.md. Returns jobId/sessionId; use get_collection_job for results. Instagram/TikTok anonymous feeds may be blocked or unavailable. No comments are fetched. Reuse sessionId for cursor pagination. Never assume missing metrics satisfy criteria.",
     inputSchema: z.strictObject({ accountUrl: z.url(), limit: z.number().int().min(1).max(30).default(10),
       criteria: criteriaSchema.optional(), cursor: z.string().max(200).optional(), sessionId: z.uuid().optional() }), annotations,
   }, input => guarded(() => json(registry.start({ source: socialSource(input.accountUrl, "account"),

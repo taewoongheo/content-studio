@@ -146,7 +146,9 @@ export async function verifyVideoMcp({ origin, directory, videoPath, audioPath, 
         throw new Error("render job did not finish");
       };
       const asyncPath = join(directory, "async-video.mp4");
-      const job = (await call("start_video_export", { ...guard(project), outputPath: asyncPath })).structuredContent as { jobId: string };
+      const captured = (await call("clone_video_project", { ...guard(project), name: "SNAPSHOT EXPORT" })).structuredContent as VideoSnapshot;
+      const job = (await call("start_video_export", { ...guard(captured), outputPath: asyncPath })).structuredContent as { jobId: string };
+      await call("delete_video_project", { ...guard(captured), confirm: true });
       const finished = await waitJob(job.jobId); assert.equal(finished.status, "completed", finished.error); assert.equal(finished.progress, 1);
       assert.equal((await stat(asyncPath)).size, finished.result?.bytes);
       const asyncProbe = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_name", "-of", "json", asyncPath], { encoding: "utf8" }));
