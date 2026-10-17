@@ -26,7 +26,7 @@ export async function verifyVideoMcp({ origin, directory, videoPath, audioPath, 
       assert.equal(result.isError, true, `${name} should reject`);
     };
     const names = (await client.listTools()).tools.map(tool => tool.name);
-    for (const name of ["list_video_projects", "create_video_project", "open_video_project", "read_video_project", "edit_video_project", "undo_video_project", "redo_video_project", "rename_video_project", "clone_video_project", "preview_video", "export_video", "close_video_project", "delete_video_project"])
+    for (const name of ["list_video_projects", "create_video_project", "open_video_project", "read_video_project", "edit_video_project", "undo_video_project", "redo_video_project", "rename_video_project", "clone_video_project", "preview_video", "export_video", "start_video_export", "close_video_project", "delete_video_project"])
       assert.ok(names.includes(name), name);
     const empty = (await call("create_video_project", { name: "Empty MCP video" })).structuredContent as VideoSnapshot;
     const guard = (s: VideoSnapshot) => ({ projectId: s.id, expectedTabId: s.tabId, expectedRevision: s.revision });
@@ -54,6 +54,11 @@ export async function verifyVideoMcp({ origin, directory, videoPath, audioPath, 
       { type: "add_layer", layer: { kind: "text", id: text, name: "MCP text", text: "MCP TEXT", x: 10, y: 10, width: 220, height: 80, fontSize: 30, fontWeight: 700, color: "#FFFFFF", italic: true, backgroundOpacity: 0.3, paddingX: 4, paddingY: 4, lineHeight: 1.2, fadeIn: 5 } },
       { type: "add_layer", layer: { kind: "shape", id: shape, name: "MCP shape", x: 250, y: 170, width: 60, height: 60, color: "#FF00FF", strokeWidth: 0 } },
     ], false);
+    const focused = (await call("read_video_project", { projectId: project.id, layerIds: [text], includeAssets: false })).structuredContent as VideoSnapshot & { partial: boolean };
+    assert.equal(focused.partial, true); assert.equal(focused.document.layers.length, 1); assert.equal(focused.document.layers[0].id, text);
+    assert.equal("assets" in focused, false);
+    const outline = (await call("read_video_project", { projectId: project.id, outline: true })).structuredContent as { layers: unknown[] };
+    assert.equal(outline.layers.length, 7);
     assert.equal(project.document.layers.length, 7);
     assert.equal(project.assets.length, 3, "same file is stored once per batch");
     assert.deepEqual(project.document.layers.slice(0, 2).map(layer => layer.from), [0, 30]);
@@ -87,7 +92,13 @@ export async function verifyVideoMcp({ origin, directory, videoPath, audioPath, 
     project = (await call("redo_video_project", guard(project))).structuredContent as VideoSnapshot;
     assert.deepEqual(project.document, reordered);
     await rejected("preview_video", { projectId: project.id, frames: [108000] });
+    const previewStart = performance.now();
     const previews = await call("preview_video", { projectId: project.id, frames: [0, 60], width: 320 });
+    const firstPreviewMs = performance.now() - previewStart;
+    const cachedStart = performance.now();
+    const cached = await call("preview_video", { projectId: project.id, frames: [0, 60], width: 320 });
+    assert.deepEqual(cached.content, previews.content);
+    console.log("VIDEO PREVIEW CACHE", JSON.stringify({ firstMs: firstPreviewMs, cachedMs: performance.now() - cachedStart }));
     const images = previews.content.filter(block => block.type === "image"); assert.equal(images.length, 2);
     for (const image of images) {
       if (image.type !== "image") continue;
@@ -125,6 +136,28 @@ export async function verifyVideoMcp({ origin, directory, videoPath, audioPath, 
       const size = (await stat(outputPath)).size;
       await rejected("export_video", { ...guard(project), outputPath });
       assert.equal((await readFile(outputPath)).length, size);
+      const waitJob = async (jobId: string) => {
+        const deadline = Date.now() + 60_000;
+        while (Date.now() < deadline) {
+          const job = (await call("get_render_job", { jobId })).structuredContent as { status: string; progress: number; result?: { bytes: number }; error?: string };
+          if (["completed", "failed", "cancelled"].includes(job.status)) return job;
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        throw new Error("render job did not finish");
+      };
+      const asyncPath = join(directory, "async-video.mp4");
+      const job = (await call("start_video_export", { ...guard(project), outputPath: asyncPath })).structuredContent as { jobId: string };
+      const finished = await waitJob(job.jobId); assert.equal(finished.status, "completed", finished.error); assert.equal(finished.progress, 1);
+      assert.equal((await stat(asyncPath)).size, finished.result?.bytes);
+      const asyncProbe = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_name", "-of", "json", asyncPath], { encoding: "utf8" }));
+      assert.ok(asyncProbe.streams.some((stream: { codec_name: string }) => stream.codec_name === "h264"));
+      assert.ok(asyncProbe.streams.some((stream: { codec_name: string }) => stream.codec_name === "aac"));
+      const cancelPath = join(directory, "cancel-video.mp4"); await writeFile(cancelPath, "keep original");
+      const cancelled = (await call("start_video_export", { ...guard(project), outputPath: cancelPath, overwrite: true })).structuredContent as { jobId: string };
+      await call("cancel_render_job", { jobId: cancelled.jobId });
+      assert.equal((await waitJob(cancelled.jobId)).status, "cancelled");
+      assert.equal(await readFile(cancelPath, "utf8"), "keep original");
+      console.log("ASYNC VIDEO EXPORT verified: job polling, H.264/AAC, cancellation and existing-file preservation");
     }
     await call("close_video_project", guard(project));
     await rejected("read_video_project", { projectId: project.id });

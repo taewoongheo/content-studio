@@ -2,18 +2,19 @@ import { appendFrame, reflowSequence, type VideoSnapshot } from "@/domains/video
 import { createMediaLayer } from "@/domains/video/domain/media/layer";
 import { checkVideoRevision, commitVideoEdit, readVideo } from "@/domains/video/server/service";
 import { applyVideoCommand, parseLayer, requireLayer } from "@/domains/video/editing/commands";
-import { readLocalVideoMedia, type LocalVideoMedia } from "@/domains/video/server/media/local";
+import { readLocalVideoMedia, readLocalVideoMediaBatch, type LocalVideoMedia } from "@/domains/video/server/media/local";
 import { videoCommandsSchema, type VideoCommand } from "@/domains/video/editing/schema";
 
 export async function editVideoProject(projectId: string, tabId: string, revision: number, input: VideoCommand[],
-  readMedia = readLocalVideoMedia): Promise<VideoSnapshot> {
+  readMedia?: typeof readLocalVideoMedia): Promise<VideoSnapshot> {
   const commands = videoCommandsSchema.parse(input);
   checkVideoRevision(projectId, tabId, revision);
-  const prepared = new Map<string, LocalVideoMedia>();
-  for (const command of commands) {
-    if ((command.type === "import_media" || command.type === "replace_media") && !prepared.has(command.localPath))
-      prepared.set(command.localPath, await readMedia(command.localPath));
-  }
+  const paths = [...new Set(commands.flatMap(command => command.type === "import_media" || command.type === "replace_media" ? [command.localPath] : []))];
+  let prepared: Map<string, LocalVideoMedia>;
+  if (readMedia) {
+    prepared = new Map();
+    for (const path of paths) prepared.set(path, await readMedia(path));
+  } else prepared = await readLocalVideoMediaBatch(paths);
   // Metadata reads are asynchronous: recheck inside the commit before registering any bytes.
   const original = readVideo(projectId);
   return commitVideoEdit(projectId, tabId, revision, (document, store) => {

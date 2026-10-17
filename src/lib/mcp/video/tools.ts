@@ -1,15 +1,17 @@
+import { inspectVideo } from "@/domains/video/editing/inspection";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { newVideoDocument, videoDocumentSchema, videoDuration, type VideoSnapshot } from "@/domains/video/domain/model";
 import { createVideo, openVideo, readVideo, videoTabs, videoStore, writeVideo, historyVideo, renameVideo, cloneVideo, closeVideo, deleteVideoGuarded, checkVideoRevision } from "@/domains/video/server/service";
 import { changeVideoFps } from "@/domains/video/domain/settings";
-import { renderVideo, renderVideoFrames } from "@/domains/video/server/rendering/render";
+import { renderVideo, renderVideoFrames, captureVideoAssets } from "@/domains/video/server/rendering/render";
 import { writeVideoExport } from "@/domains/video/server/rendering/export-file";
 import { guarded, json, annotations } from "../protocol/result";
-import { serializePreview } from "@/lib/media/preview-queue";
+import { renderJobs } from "@/domains/workspace/server/jobs/manager";
+import { validateExportPath } from "@/lib/media/export/file";
 import { editVideoProject } from "@/domains/video/server/writes";
 import { settingsSchema } from "@/domains/video/editing/schema";
-import { videoEditSchema, videoPreviewSchema, videoProjectSchema, videoRevisionSchema } from "./schema";
+import { videoReadSchema, videoEditSchema, videoPreviewSchema, videoProjectSchema, videoRevisionSchema } from "./schema";
 
 export function registerVideoTools(server: McpServer, origin: string) {
   const describe = (snapshot: VideoSnapshot) => ({ ...snapshot, url: `${origin}/?job=${encodeURIComponent(snapshot.id)}` });
@@ -38,9 +40,9 @@ export function registerVideoTools(server: McpServer, origin: string) {
     inputSchema: videoProjectSchema, annotations: annotations(false),
   }, ({ projectId }) => guarded(() => json(describe(openVideo(projectId)))));
   server.registerTool("read_video_project", {
-    description: "Read an already open video document, media metadata, tabId and revision without saving or opening it. All spatial coordinates and sizes are pixels; all timing values are integer frames at document fps. Array layer order is back-to-front; sequenceIndex independently determines connected-clip playback order. Asset bytes are project-local and never included in this response.",
-    inputSchema: videoProjectSchema, annotations: annotations(true),
-  }, ({ projectId }) => guarded(() => json(describe(readVideo(projectId)))));
+    description: "Read an already open video without saving/opening it. Default returns the full document; use layerIds for selected layers (partial=true), outline=true for IDs/content/timing without styles, includeAssets=false to omit media metadata. All views return tabId/revision; unknown IDs are rejected. All spatial coordinates and sizes are pixels; all timing values are integer frames at document fps. Array layer order is back-to-front; sequenceIndex independently determines connected-clip playback order. Asset bytes are project-local and never included in this response.",
+    inputSchema: videoReadSchema, annotations: annotations(true),
+  }, ({ projectId, ...options }) => guarded(() => json({ ...inspectVideo(readVideo(projectId), options), url: `${origin}/?job=${encodeURIComponent(projectId)}` })));
   server.registerTool("edit_video_project", {
     description: "Apply ordered video commands atomically, save before success, and create one undo step. Require latest expectedTabId/revision. Any failed command rolls back document, revision, history and newly imported bytes. set_document changes resolution/background/minimum duration and rescales real-time timing when fps changes. add_layer: text/shape need only kind; all properties can be supplied, IDs optional. update_layer exposes EVERY kind-specific property (text/font/weight/italic/alignment/lineHeight/padding/colors/background/radius/fade; shapes/fill/stroke; position/size/rotation/opacity; assetId/fit/crop; start/duration/source trim/volume/loop/sequence flags/order/anchor). Wrong-kind properties are rejected. To replace a source file use replace_media. import_media reads an absolute local video/audio/image path <=200MB, probes actual metadata, copies bytes; default sequence videos append after ALL layers, overlay videos/images/audio start at frame 0 unless from is supplied. Specify layerId to refer to imports later in the same batch. Use move_layer/trim_layer for UI-equivalent timeline gestures; deltaFrames is relative. split_layer splits non-looping videos. reorder_layers requires ALL layer IDs back-to-front; reorder_sequence requires ALL connected-video IDs in playback order. Selection, guides and ratio-lock are editor view state, not content. Default response is a compact resulting layer summary; includeDocument=true returns full document.",
     inputSchema: videoEditSchema, annotations: annotations(false),
@@ -70,12 +72,21 @@ export function registerVideoTools(server: McpServer, origin: string) {
     inputSchema: videoPreviewSchema, annotations: annotations(true),
   }, ({ projectId, frames, width }) => guarded(async () => {
     const snapshot = readVideo(projectId);
-    const pngs = await serializePreview(() => renderVideoFrames(snapshot, frames, width));
+    const pngs = await renderVideoFrames(snapshot, frames, width);
     return { content: [{ type: "text", text: JSON.stringify({ projectId, tabId: snapshot.tabId, revision: snapshot.revision, frames, fps: snapshot.document.fps }) },
       ...pngs.map(bytes => ({ type: "image" as const, mimeType: "image/png", data: bytes.toString("base64") }))] };
   }));
+  server.registerTool("start_video_export", {
+    description: "Preferred MP4 export for agents: capture current tabId/revision and media, start rendering, return a job immediately. Poll get_render_job for progress/result/error; cancel_render_job cancels safely. Later edits/closing/deleting the source do not change captured media. outputPath is absolute MP4 in an existing directory; overwrite defaults false. No long MCP call or media bytes in the response.",
+    inputSchema: videoRevisionSchema.extend({ outputPath: z.string().min(1), overwrite: z.boolean().default(false) }), annotations: annotations(false),
+  }, ({ projectId, expectedTabId, expectedRevision, outputPath, overwrite }) => guarded(() => {
+    checkVideoRevision(projectId, expectedTabId, expectedRevision); validateExportPath(outputPath, "mp4");
+    const snapshot = readVideo(projectId), assets = captureVideoAssets(snapshot);
+    return json(renderJobs.start({ projectId, projectType: "video", revision: snapshot.revision }, async context => ({ outputPath,
+      bytes: await writeVideoExport(outputPath, overwrite, () => renderVideo(snapshot, { ...context, assets }), context.signal) })));
+  }));
   server.registerTool("export_video", {
-    description: "Render the current saved revision to a local H.264/AAC MP4 with the shared Remotion renderer. Require current tabId/revision and an absolute outputPath in an existing directory. Returns a local file path and byte count, not media bytes. Existing files are refused unless overwrite=true. Export can take several minutes; it does not change the project. Preview frames first.",
+    description: "Synchronous compatibility export; agents should prefer start_video_export plus get_render_job for long renders. Render the current saved revision to a local H.264/AAC MP4 with the shared Remotion renderer. Require current tabId/revision and an absolute outputPath in an existing directory. Returns a local file path and byte count, not media bytes. Existing files are refused unless overwrite=true. Export can take several minutes; it does not change the project. Preview frames first.",
     inputSchema: videoRevisionSchema.extend({ outputPath: z.string().min(1), overwrite: z.boolean().default(false) }), annotations: annotations(false),
   }, ({ projectId, expectedTabId, expectedRevision, outputPath, overwrite }) => guarded(async () => {
     checkVideoRevision(projectId, expectedTabId, expectedRevision);

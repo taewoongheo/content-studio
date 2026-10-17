@@ -1,7 +1,7 @@
 import { open } from "node:fs/promises";
 import { basename, extname, isAbsolute } from "node:path";
 import { createServer } from "node:http";
-import { chromium } from "playwright";
+import { chromium, type Browser } from "playwright";
 import sharp from "sharp";
 import type { MediaInfo } from "@/domains/video/domain/media/layer";
 
@@ -12,7 +12,7 @@ const types: Record<string, string> = {
   ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp",
 };
 const maxBytes = 200 * 1024 * 1024;
-export async function readLocalVideoMedia(localPath: string): Promise<LocalVideoMedia> {
+export async function readLocalVideoMedia(localPath: string, sharedBrowser?: () => Promise<Browser>): Promise<LocalVideoMedia> {
   if (!isAbsolute(localPath)) throw new Error("localPath에는 절대 경로가 필요합니다.");
   const type = types[extname(localPath).toLowerCase()];
   if (!type) throw new Error("지원하는 영상·오디오·이미지 파일을 지정해 주세요.");
@@ -53,9 +53,9 @@ export async function readLocalVideoMedia(localPath: string): Promise<LocalVideo
   try {
     const address = server.address();
     if (!address || typeof address === "string") throw new Error("미디어 검사 서버를 시작하지 못했습니다.");
-    const browser = await chromium.launch({ headless: true });
+    const browser = await (sharedBrowser ? sharedBrowser() : chromium.launch({ headless: true }));
+    const page = await browser.newPage().catch(async error => { if (!sharedBrowser) await browser.close(); throw error; });
     try {
-      const page = await browser.newPage();
       await page.goto(`http://127.0.0.1:${address.port}`);
       const info = await page.evaluate(({ kind }) => new Promise<{ duration: number; width: number; height: number }>((resolve, reject) => {
         const element = document.createElement(kind);
@@ -72,6 +72,27 @@ export async function readLocalVideoMedia(localPath: string): Promise<LocalVideo
         element.src = "/media";
       }), { kind });
       return { bytes, name: basename(localPath), type, kind, info };
-    } finally { await browser.close(); }
+    } finally { await page.close(); if (!sharedBrowser) await browser.close(); }
   } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); }
+}
+
+/** Two probes share one browser; await all workers before closing it, even after a failure. */
+export async function readLocalVideoMediaBatch(paths: string[]) {
+  let browser: Promise<Browser> | undefined;
+  const getBrowser = () => browser ??= chromium.launch({ headless: true });
+  const results = new Map<string, LocalVideoMedia>();
+  let cursor = 0, failed = false;
+  const workers = Array.from({ length: Math.min(2, paths.length) }, async () => {
+    while (cursor < paths.length && !failed) {
+      const localPath = paths[cursor++];
+      try { results.set(localPath, await readLocalVideoMedia(localPath, getBrowser)); }
+      catch (cause) { failed = true; throw new Error(`${localPath}: ${cause instanceof Error ? cause.message : "미디어 읽기 실패"}`); }
+    }
+  });
+  try {
+    const settled = await Promise.allSettled(workers);
+    const failed = settled.find(result => result.status === "rejected");
+    if (failed?.status === "rejected") throw failed.reason;
+    return results;
+  } finally { if (browser) await (await browser).close(); }
 }
