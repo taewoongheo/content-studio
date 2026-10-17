@@ -48,3 +48,6 @@ next-env.d.ts
 # Python collector bytecode
 __pycache__/
 *.pyc
+
+# Generated production intermediates are not application source or project storage.
+/output/
