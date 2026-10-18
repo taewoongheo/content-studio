@@ -1,35 +1,49 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, useEffect } from "react";
 import { COMPOSITION_LIMIT } from "@/domains/slideshow/projects/composition";
 import { LayoutTemplate } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import type { SavedProjectSummary } from "@/domains/slideshow/domain/projects";
-import { updateProjectReuse } from "@/domains/slideshow/client/projects-api";
+import type { SavedProjectSummary, SavedTemplateSummary } from "@/domains/slideshow/domain/projects";
+import { TemplatePagePicker } from "./templates/template-page-picker";
+import type { EditorDocument } from "@/domains/slideshow/editor/types";
+import { createTemplate, readSavedDocument, updateProjectReuse } from "@/domains/slideshow/client/projects-api";
 
 export function ProjectReuseButton({ project, mode = "guide", disabled, size = "default" }: {
-  project: SavedProjectSummary; mode?: "guide" | "register"; disabled?: boolean; size?: "default" | "sm";
+  project: SavedProjectSummary | SavedTemplateSummary; mode?: "guide" | "register"; disabled?: boolean; size?: "default" | "sm";
 }) {
   const id = useId();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(project.name);
   const [topic, setTopic] = useState(project.topic || project.name);
   const [message, setMessage] = useState(project.message || `${project.name}의 내용을 전달한다.`);
-  const [composition, setComposition] = useState(project.composition);
+  const [composition, setComposition] = useState("composition" in project ? project.composition : "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const [document, setDocument] = useState<EditorDocument | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  useEffect(() => {
+    if (!open || mode !== "register") return;
+    let active = true;
+    void readSavedDocument(project.id).then(doc => { if (active) { setDocument(doc); setSelectedIds(doc.slides.map(slide => slide.id)); } })
+      .catch(cause => { if (active) setError(cause instanceof Error ? cause.message : "페이지를 불러오지 못했습니다."); });
+    return () => { active = false; };
+  }, [open, mode, project.id]);
+
   function show() {
     setName(project.name); setTopic(project.topic || project.name); setMessage(project.message || `${project.name}의 내용을 전달한다.`);
-    setComposition(project.composition); setError(""); setOpen(true);
+    setComposition("composition" in project ? project.composition : ""); setDocument(null); setSelectedIds([]); setError(""); setOpen(true);
   }
   async function save() {
     setSaving(true); setError("");
     try {
-      await updateProjectReuse(project.id, { composition, templateName: name, templateTopic: topic, templateMessage: message, ...(mode === "register" ? { isTemplate: true } : {}) });
+      const input = { composition, templateName: name, templateTopic: topic, templateMessage: message };
+      if (mode === "register") await createTemplate(project.id, { ...input, slideIds: selectedIds });
+      else await updateProjectReuse(project.id, input);
       setOpen(false);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "재사용 설정을 저장하지 못했습니다."); }
     finally { setSaving(false); }
@@ -37,15 +51,15 @@ export function ProjectReuseButton({ project, mode = "guide", disabled, size = "
 
   return <>
     <Button variant={mode === "register" ? "default" : "outline"} size={size} disabled={disabled || saving}
-      onClick={show} aria-label={`${project.name} ${mode === "register" ? "루프에 추가" : "템플릿 설정"}`}>
+      onClick={show} aria-label={`${project.name} ${mode === "register" ? "템플릿으로 만들기" : "템플릿 설정"}`}>
       {mode === "register" && <LayoutTemplate aria-hidden="true" />}
-      {mode === "register" ? "루프에 추가" : "템플릿 설정"}
+      {mode === "register" ? "템플릿으로 만들기" : "템플릿 설정"}
     </Button>
     <Dialog open={open} onOpenChange={saving ? undefined : setOpen}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{mode === "register" ? "루프에 추가" : "템플릿 설정"}</DialogTitle>
-          <DialogDescription>‘{project.name}’에서 주제가 바뀌어도 재사용할 수 있는 콘텐츠 유형·전달 목적·시각적 구조를 작성하세요.{mode === "register" && " 등록하면 기존 부모 연결이 해제됩니다. 원본의 이름과 내용 정보는 유지됩니다."}</DialogDescription>
+          <DialogTitle>{mode === "register" ? "템플릿으로 만들기" : "템플릿 설정"}</DialogTitle>
+          <DialogDescription>‘{project.name}’에서 주제가 바뀌어도 재사용할 수 있는 콘텐츠 유형·전달 목적·시각적 구조를 작성하세요.{mode === "register" && " 선택한 페이지를 별도 템플릿으로 복사합니다."}</DialogDescription>
         </DialogHeader>
         <form onSubmit={event => { event.preventDefault(); void save(); }} className="grid gap-5">
           <div className="grid gap-2"><label htmlFor={`${id}-name`}>템플릿 이름</label><Input id={`${id}-name`} value={name} onChange={event => setName(event.target.value)} required maxLength={120} disabled={saving} /></div>
@@ -54,15 +68,17 @@ export function ProjectReuseButton({ project, mode = "guide", disabled, size = "
           <div className="grid gap-2">
             <label htmlFor={`${id}-composition`} className="text-sm font-medium">구성</label>
             <Textarea id={`${id}-composition`} value={composition} onChange={event => setComposition(event.target.value)}
-              maxLength={COMPOSITION_LIMIT} rows={6} disabled={saving} required={mode === "register" || project.isTemplate}
+              maxLength={COMPOSITION_LIMIT} rows={6} disabled={saving} required
               aria-describedby={`${id}-hint`}
               placeholder="도입 후 정보를 그룹별로 나눈다. 각 그룹에서 여러 선택지를 함께 보여주고 하나를 선택하도록 안내한다. 선택지마다 이미지·이름·짧은 보조 정보를 배치한다." />
             <p id={`${id}-hint`} className="text-xs text-muted-foreground">어떤 메시지 유형(비교·선택·설명·실행 안내)에 적합한지, 이를 돕는 시각적 구조와 페이지 흐름을 적어주세요. 현재 게시글의 구체적인 내용은 제외합니다.</p>
           </div>
+          {mode === "register" && (document ? <TemplatePagePicker document={document} projectId={project.id} selectedIds={selectedIds} onChange={setSelectedIds} disabled={saving} />
+            : <p role="status" className="text-sm text-muted-foreground">페이지 불러오는 중…</p>)}
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" disabled={saving} onClick={() => setOpen(false)}>취소</Button>
-            <Button type="submit" disabled={saving}>{saving ? "저장 중…" : mode === "register" ? "저장하고 루프에 추가" : "저장"}</Button>
+            <Button type="submit" disabled={saving || (mode === "register" && (!document || !selectedIds.length))}>{saving ? "저장 중…" : mode === "register" ? "저장하고 템플릿으로 만들기" : "저장"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

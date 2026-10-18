@@ -78,13 +78,19 @@ try {
     assert.equal(saved.status, 201);
     return (await call("read_project", { projectId: job.id })).structuredContent as Project;
   }
+  const templateIds = new Map<string, string>();
   async function registerTemplate(projectId: string) {
-    const result = await call("register_template", { projectId, composition: routineGuide });
-    assert.equal((result.structuredContent as { project: { isTemplate: boolean } }).project.isTemplate, true);
+    const source = (await call("read_project", { projectId })).structuredContent as Project;
+    const result = await call("register_template", { projectId, slideIds: source.editor.document.slides.map(slide => slide.id),
+      templateName: source.name ?? "Template", templateTopic: "Exercise guide", templateMessage: "Compare exercise options", composition: routineGuide });
+    const templateId = (result.structuredContent as { template: { id: string } }).template.id;
+    assert.notEqual(templateId, projectId);
+    templateIds.set(projectId, templateId);
+    return templateId;
   }
   async function cloneTemplate(projectId: string, name: string) {
-    await registerTemplate(projectId);
-    return (await call("clone_project", { templateProjectId: projectId, name })).structuredContent as Project;
+    const templateId = await registerTemplate(projectId);
+    return (await call("clone_project", { templateId, name })).structuredContent as Project;
   }
   const tools = (await client.listTools()).tools.map((tool) => tool.name);
   assert.deepEqual([...tools].sort(), [
@@ -105,7 +111,7 @@ try {
   assert.equal(readUiJob.id, uiJob.id);
   const emptyGuides = await call("list_template_guides", {});
   assert.deepEqual(emptyGuides.structuredContent, { templates: [] });
-  const blocked = CallToolResultSchema.parse(await client.callTool({ name: "clone_project", arguments: { templateProjectId: uiJob.id } }));
+  const blocked = CallToolResultSchema.parse(await client.callTool({ name: "clone_project", arguments: { templateId: uiJob.id } }));
   assert.equal(blocked.isError, true);
   const created = await seedProject("MCP smoke");
   const id = created.id;
@@ -119,13 +125,13 @@ try {
     const savedColumn = listPage.getByRole("region", { name: "저장된 프로젝트", exact: true });
     const templateColumn = listPage.getByRole("region", { name: "템플릿 프로젝트", exact: true });
     assert.equal(await listPage.getByRole("tab", { name: "저장된 프로젝트", exact: true }).count(), 0);
-    await savedColumn.getByRole("button", { name: "MCP smoke 루프에 추가", exact: true }).click();
+    await savedColumn.getByRole("button", { name: "MCP smoke 템플릿으로 만들기", exact: true }).click();
     const reuseDialog = listPage.getByRole("dialog");
     await reuseDialog.getByLabel("구성", { exact: true }).fill(routineGuide);
-    await reuseDialog.getByRole("button", { name: "저장하고 루프에 추가", exact: true }).click();
+    await reuseDialog.getByRole("button", { name: "저장하고 템플릿으로 만들기", exact: true }).click();
     await reuseDialog.waitFor({ state: "hidden" });
     await templateColumn.getByRole("heading", { name: /^1\. MCP smoke$/ }).waitFor();
-    await savedColumn.getByRole("button", { name: "템플릿 지정됨", exact: true }).waitFor();
+    assert.equal(await savedColumn.getByRole("button", { name: "템플릿 지정됨", exact: true }).count(), 0);
     const previews = templateColumn.getByRole("region", { name: "MCP smoke 슬라이드 미리보기", exact: true });
     await previews.locator("canvas").first().waitFor();
     assert.ok(await previews.locator("figure").count() > 1);
@@ -133,7 +139,8 @@ try {
     assert.equal((await fetch(`${origin}/api/content-projects/missing/preview`)).status, 404);
 
     const registeredGuides = (await call("list_template_guides", {})).structuredContent as { templates: Array<{ id: string; composition: string }> };
-    assert.equal(registeredGuides.templates[0].id, id);
+    assert.notEqual(registeredGuides.templates[0].id, id);
+    templateIds.set(id, registeredGuides.templates[0].id);
     assert.deepEqual(registeredGuides.templates[0].composition, routineGuide);
     await listPage.setViewportSize({ width: 1440, height: 1000 });
     const leftBounds = await templateColumn.boundingBox();
@@ -163,8 +170,8 @@ try {
     const loopB = await seedProject("Loop B");
     await registerTemplate(loopB.id);
     const planBefore = (await call("get_content_plan", {})).structuredContent as { nextTemplateId: string };
-    assert.equal(planBefore.nextTemplateId, id);
-    const publicationClone = (await call("clone_project", { templateProjectId: id, name: "Loop publication" })).structuredContent as Project;
+    assert.equal(planBefore.nextTemplateId, templateIds.get(id));
+    const publicationClone = (await call("clone_project", { templateId: templateIds.get(id), name: "Loop publication" })).structuredContent as Project;
     const publicationCard = savedColumn.getByRole("listitem").filter({ has: listPage.getByRole("heading", { name: "Loop publication", exact: true }) });
     await publicationCard.getByRole("button", { name: "Loop publication 내용 정보", exact: true }).click();
     const metadataDialog = listPage.getByRole("dialog");
@@ -177,10 +184,10 @@ try {
     assert.equal(await publicationCard.getByRole("img").count(), 0);
     await publicationCard.getByRole("button", { name: "Loop publication 게시 등록", exact: true }).click();
     await publicationCard.getByText(/^게시됨 ·/).waitFor();
-    const planAfter = (await call("get_content_plan", {})).structuredContent as { nextTemplateId: string; published: Array<{ id: string; sourceTemplateProjectId: string; topic: string; message: string }> };
-    assert.equal(planAfter.nextTemplateId, loopB.id);
+    const planAfter = (await call("get_content_plan", {})).structuredContent as { nextTemplateId: string; published: Array<{ id: string; sourceTemplateId: string; topic: string; message: string }> };
+    assert.equal(planAfter.nextTemplateId, templateIds.get(loopB.id));
     assert.equal(planAfter.published[0].id, publicationClone.id);
-    assert.equal(planAfter.published[0].sourceTemplateProjectId, id);
+    assert.equal(planAfter.published[0].sourceTemplateId, templateIds.get(id));
     assert.equal(planAfter.published[0].topic, "등 운동");
     await listPage.getByText("다음 템플릿: 2. Loop B", { exact: true }).waitFor();
     const loopBHandle = templateColumn.getByRole("button", { name: "Loop B 템플릿 순서 이동", exact: true });
@@ -228,43 +235,44 @@ try {
       await dialog.getByRole("button", { name: "저장", exact: true }).click();
       await dialog.waitFor({ state: "hidden" });
     }
-    await setParent(loopB.id);
+    await setParent(templateIds.get(loopB.id)!);
     await publicationCard.getByText("부모 템플릿: Loop B", { exact: true }).waitFor();
     await setParent("");
     await publicationCard.getByText("부모 템플릿: Loop B", { exact: true }).waitFor({ state: "hidden" });
-    await setParent(id);
+    await setParent(templateIds.get(id)!);
     listPage.once("dialog", dialog => void dialog.accept());
     await templateColumn.getByRole("button", { name: "MCP smoke 루프에서 제외", exact: true }).click();
     await publicationCard.getByText("부모 템플릿: MCP smoke", { exact: true }).waitFor({ state: "hidden" });
     const removedParent = (await fetch(`${origin}/api/content-projects`).then(r => r.json())).find((item: { id: string }) => item.id === publicationClone.id);
-    assert.equal(removedParent.sourceTemplateProjectId, null);
+    assert.equal(removedParent.sourceTemplateId, null);
     await registerTemplate(id);
     await templateColumn.getByRole("button", { name: "MCP smoke 루프에서 제외", exact: true }).waitFor();
-    await setParent(id);
+    await setParent(templateIds.get(id)!);
     await publicationCard.getByText("부모 템플릿: MCP smoke", { exact: true }).waitFor();
     const originalInfo = (await fetch(`${origin}/api/content-projects`).then(r => r.json())).find((item: { id: string }) => item.id === publicationClone.id);
-    await publicationCard.getByRole("button", { name: "Loop publication 루프에 추가", exact: true }).click();
+    await publicationCard.getByRole("button", { name: "Loop publication 템플릿으로 만들기", exact: true }).click();
     const registration = listPage.getByRole("dialog");
     await registration.getByLabel("템플릿 이름", { exact: true }).fill("Independent template");
     await registration.getByLabel("템플릿 주제", { exact: true }).fill("템플릿의 별도 주제");
     await registration.getByLabel("템플릿 메시지", { exact: true }).fill("템플릿의 별도 메시지");
     await registration.getByLabel("구성", { exact: true }).fill(routineGuide);
-    await registration.getByRole("button", { name: "저장하고 루프에 추가", exact: true }).click();
+    await registration.getByRole("button", { name: "저장하고 템플릿으로 만들기", exact: true }).click();
     await registration.waitFor({ state: "hidden" });
-    await publicationCard.getByRole("button", { name: "템플릿 지정됨", exact: true }).waitFor();
+    await templateColumn.getByRole("heading", { name: /Independent template$/ }).waitFor();
+    assert.equal(await publicationCard.getByRole("button", { name: "템플릿 지정됨", exact: true }).count(), 0);
     assert.equal(await publicationCard.getByText(/템플릿으로 등록됨/).count(), 0);
     const registeredInfo = (await fetch(`${origin}/api/content-projects`).then(r => r.json())).find((item: { id: string }) => item.id === publicationClone.id);
     assert.equal(registeredInfo.name, originalInfo.name);
     assert.equal(registeredInfo.topic, originalInfo.topic);
     assert.equal(registeredInfo.message, originalInfo.message);
-    assert.equal(registeredInfo.sourceTemplateProjectId, null);
+    assert.equal(registeredInfo.sourceTemplateId, originalInfo.sourceTemplateId);
     await publicationCard.getByRole("button", { name: "열기", exact: true }).click();
     await listPage.getByRole("button", { name: "ZIP 내보내기", exact: true }).waitFor();
     assert.equal(await listPage.getByText(/템플릿으로 등록된 콘텐츠/).count(), 0);
     await listPage.screenshot({ path: "/tmp/content-studio-template-editor-banner.png", fullPage: true });
     await listPage.getByRole("button", { name: "대시보드", exact: true }).click();
     await savedColumn.getByRole("heading", { name: "Loop publication", exact: true }).waitFor();
-    console.log("PASS pointer/keyboard drag, parent change/detach, confirmed removal/re-registration, registration detaches parent, independent metadata and no redundant registration indicators");
+    console.log("PASS pointer/keyboard drag, parent change/detach, confirmed removal/re-registration, template creation preserves parent, independent metadata and no redundant registration indicators");
 
 
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });

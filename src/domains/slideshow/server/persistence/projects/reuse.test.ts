@@ -1,76 +1,49 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { openLocalDatabase } from "@/lib/local-db/database";
-import { ContentTemplateStore } from "@/domains/slideshow/server/persistence/templates/store";
-import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
-import { ContentJobRegistry } from "@/domains/slideshow/workflow/registry";
-import { createContentProject, saveContentProject } from "@/domains/slideshow/projects/service";
-import { SlideshowProjectWrites } from "@/domains/slideshow/server/project-writes";
+import { ContentProjectStore } from "./store";
+import { ContentTemplateStore } from "../templates/store";
+import { createTemplateFromProject } from "../../../templates/service";
+import { ContentJobRegistry } from "../../../workflow/registry";
+import { createContentProject, saveContentProject, loadContentProject } from "../../../projects/service";
+import { SlideshowProjectWrites } from "../../project-writes";
 
-const guide = "도입 후 그룹별로 여러 선택지를 함께 보여주고 하나를 선택하도록 안내한다.";
+export const templateSettings = { templateName: "Template", templateTopic: "Exercise guide", templateMessage: "Compare options", composition: "An image and short explanation per page" };
 
-test("구성과 템플릿 등록은 재시작·본문 저장에도 유지된다", () => {
-  const directory = mkdtempSync(join(tmpdir(), "studio-reuse-"));
-  const path = join(directory, "db.sqlite");
-  try {
-    const db = openLocalDatabase(path);
-    const store = new ContentProjectStore(db);
-    store.save({ id: "old", name: "Old", aspectRatio: "4:5", slideCount: 2,
-      outputLanguage: "English", document: { slides: [] }, assets: [] });
-    assert.equal(store.getSummary("old")?.composition, "");
-    assert.equal(store.getSummary("old")?.isTemplate, false);
-    assert.throws(() => store.updateReuse("old", { isTemplate: true }), /구성/);
-    store.updateReuse("old", { composition: ` ${guide} `, isTemplate: true });
-    assert.equal(store.listTemplates().length, 1);
-    assert.equal(store.list().length, 1, "등록은 원본 복사본을 만들지 않는다");
-    store.save({ id: "old", name: "Renamed", aspectRatio: "4:5", slideCount: 2,
-      outputLanguage: "English", document: { slides: ["latest"] }, assets: [] });
-    db.close();
-    const reopened = openLocalDatabase(path);
-    try {
-      const persisted = new ContentProjectStore(reopened);
-      assert.equal(persisted.listTemplates()[0].name, "Old");
-      assert.deepEqual(persisted.listTemplates()[0].composition, guide);
-      assert.equal("document" in persisted.listTemplates()[0], false);
-      assert.equal("assets" in persisted.listTemplates()[0], false);
-      assert.throws(() => persisted.updateReuse("old", { composition: "" }), /구성/);
-      persisted.updateReuse("old", { isTemplate: false });
-      assert.equal(persisted.listTemplates().length, 0);
-      assert.ok(persisted.get("old"), "등록 해제는 원본을 보존한다");
-      persisted.updateReuse("old", { isTemplate: true, composition: guide });
-      new ContentTemplateStore(reopened).delete("old");
-      persisted.delete("old");
-      assert.deepEqual(persisted.listTemplates(), []);
-    } finally { reopened.close(); }
-  } finally { rmSync(directory, { recursive: true, force: true }); }
-});
-
-test("복제는 등록된 원본의 최신 구조를 사용하며 가이드는 상속하고 등록 여부는 상속하지 않는다", async () => {
+test("template selection copies content independently, never records registration on the source", async () => {
   const db = openLocalDatabase(":memory:");
   try {
-    const registry = new ContentJobRegistry();
-    const store = new ContentProjectStore(db);
-    const stores = { projects: store };
-    const source = createContentProject(registry, { name: "Back" }, stores);
-    saveContentProject(registry, source.id, "Back", stores);
-    const writes = new SlideshowProjectWrites(registry, db);
-    assert.throws(() => writes.clone({ templateProjectId: source.id }), /등록된/);
-    assert.equal(store.list().length, 1);
-    store.updateReuse(source.id, { composition: guide, isTemplate: true });
-    await writes.edit(source.id, [{ type: "rename_slide", slideId: "slide-1", name: "Latest hook" }], 0);
-    const clone = writes.clone({ templateProjectId: source.id, name: "Chest" });
-    assert.equal(clone.editor.document.slides[0].name, "Latest hook");
-    assert.equal(store.getSummary(clone.id)?.sourceTemplateProjectId, source.id);
-    assert.equal(store.getSummary(clone.id)?.composition, "", "구성은 템플릿 설정에서 관리한다");
-    assert.equal(store.getSummary(clone.id)?.isTemplate, false);
-    await writes.edit(clone.id, [{ type: "rename_slide", slideId: "slide-1", name: "Chest hook" }], 0);
-    assert.equal(registry.get(source.id).editor.document.slides[0].name, "Latest hook");
-    store.updateReuse(source.id, { isTemplate: false });
-    assert.throws(() => writes.clone({ templateProjectId: source.id }), /등록된/);
-    assert.throws(() => writes.clone({ templateProjectId: "missing" }), /등록된/);
-    assert.equal(store.list().length, 2);
+    const projects = new ContentProjectStore(db), templates = new ContentTemplateStore(db), registry = new ContentJobRegistry();
+    const stores = { projects }, writes = new SlideshowProjectWrites(registry, db);
+    const source = createContentProject(registry, { name: "Original" }, stores);
+    saveContentProject(registry, source.id, "Original", stores);
+    const before = projects.get(source.id);
+    const template = createTemplateFromProject(projects, source.id, { ...templateSettings, slideIds: ["slide-2"] });
+    assert.notEqual(template.id, source.id);
+    assert.deepEqual(projects.get(source.id), before);
+    assert.equal("isTemplate" in projects.getSummary(source.id)!, false);
+    assert.equal(templates.read(template.id)?.document.slides.length, 1);
+    const opened = loadContentProject(registry, template.id, stores);
+    await writes.edit(template.id, [{ type: "rename_slide", slideId: "slide-2", name: "Template body" }], opened.editor.revision);
+    assert.deepEqual(projects.get(source.id), before);
+    const clone = writes.clone({ templateId: template.id });
+    assert.equal(clone.editor.document.slides[0].name, "Template body");
+    assert.equal(projects.getSummary(clone.id)?.sourceTemplateId, template.id);
+    projects.delete(source.id);
+    assert.ok(templates.get(template.id));
+    templates.delete(template.id);
+    assert.ok(projects.get(clone.id));
+    assert.equal(projects.getSummary(clone.id)?.sourceTemplateId, null);
+  } finally { db.close(); }
+});
+
+test("selection rejects empty, duplicate and unknown pages without partial templates", () => {
+  const db = openLocalDatabase(":memory:");
+  try {
+    const projects = new ContentProjectStore(db), registry = new ContentJobRegistry();
+    const source = createContentProject(registry, {}, { projects }); saveContentProject(registry, source.id, "Original", { projects });
+    for (const slideIds of [[], ["missing"], ["slide-1", "slide-1"]])
+      assert.throws(() => createTemplateFromProject(projects, source.id, { ...templateSettings, slideIds }));
+    assert.equal(projects.listTemplates().length, 0);
   } finally { db.close(); }
 });

@@ -1,3 +1,4 @@
+import { createTemplateFromProject } from "../templates/service";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -20,10 +21,13 @@ function fixture() {
   function seed(name: string) {
     const job = createContentProject(registry, { name }, stores);
     saveContentProject(registry, job.id, name, stores);
-    stores.projects.updateReuse(job.id, { composition: "도입 후 항목별 이미지와 짧은 설명을 반복한다.", isTemplate: true });
     return registry.get(job.id);
   }
-  return { database, registry, writes, stores, seed };
+  const template = (id: string) => createTemplateFromProject(stores.projects, id, {
+    templateName: "Template", templateTopic: "Guide", templateMessage: "Compare options", composition: "도입 후 항목별 설명을 반복한다.",
+    slideIds: registry.get(id).editor.document.slides.map(slide => slide.id),
+  }).id;
+  return { database, registry, writes, stores, seed, template };
 }
 
 test("부분 색상과 굵기를 저장·복구하고 잘못된 구간은 저장본을 바꾸지 않는다", async () => {
@@ -65,7 +69,7 @@ test("MCP 생성·복제·편집·되돌리기는 최신 문서를 저장하고 
     const edited = await f.writes.edit(source.id, [{ type: "rename_slide", slideId: "slide-1", name: "New title" }], 0);
     assert.equal(edited.savedRevision, 1);
     assert.equal(notifications, 1);
-    const clone = f.writes.clone({ templateProjectId: source.id });
+    const clone = f.writes.clone({ templateId: f.template(source.id) });
     assert.deepEqual(clone.editor.document, edited.editor.document);
     assert.equal(f.stores.projects.list().length, 2);
     const restored = loadContentProject(new ContentJobRegistry(), clone.id, f.stores);
@@ -110,7 +114,7 @@ test("실패한 생성은 메모리의 새 작업을 제거한다", () => {
   try {
     const source = f.seed("Template");
     f.database.exec(`CREATE TRIGGER fail_create BEFORE INSERT ON content_projects BEGIN SELECT RAISE(ABORT, 'save failed'); END;`);
-    assert.throws(() => f.writes.clone({ templateProjectId: source.id, name: "Failed" }), /save failed/);
+    assert.throws(() => f.writes.clone({ templateId: f.template(source.id), name: "Failed" }), /save failed/);
     assert.equal(f.registry.list().length, 1);
     assert.equal(f.stores.projects.list().length, 1);
   } finally { f.database.close(); }

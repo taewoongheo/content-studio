@@ -1,3 +1,5 @@
+import { ContentTemplateStore } from "./persistence/templates/store";
+import { inspectSharedElements } from "../editor/inspection/shared-elements";
 import type Database from "better-sqlite3";
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 import type { ContentJobSnapshot } from "@/domains/slideshow/domain/types";
@@ -12,16 +14,17 @@ export class SlideshowProjectWrites {
   constructor(private readonly registry: ContentJobRegistry, private readonly database: Database.Database) {
     this.stores = { projects: new ContentProjectStore(database) };
   }
-  clone(input: { templateProjectId: string; name?: string; topic?: string; message?: string }) {
+  clone(input: { templateId: string; name?: string; topic?: string; message?: string }) {
     if ((input.topic === undefined) !== (input.message === undefined))
       throw new Error("주제와 메시지를 함께 입력해 주세요.");
     return this.commit(() => {
-      const template = this.stores.projects.getSummary(input.templateProjectId);
-      if (!template?.isTemplate || template.templateOrder === null || !template.composition.trim())
+      const template = new ContentTemplateStore(this.database).get(input.templateId);
+      if (!template || template.templateOrder === null || !template.composition.trim())
         throw new Error("구성이 작성된 등록된 템플릿 프로젝트를 선택해 주세요.");
-      return createContentProject(this.registry, { sourceProjectId: template.id, name: input.name }, this.stores);
+      const created = createContentProject(this.registry, { sourceProjectId: template.id, name: input.name }, this.stores);
+      return this.registry.update(created.id, job => { job.warnings = inspectSharedElements(job.editor.document); });
     }, changed => {
-      this.stores.projects.setCloneSource(changed.id, input.templateProjectId);
+      this.stores.projects.setCloneSource(changed.id, input.templateId);
       if (input.topic !== undefined && input.message !== undefined)
         this.stores.projects.updateMetadata(changed.id, { topic: input.topic, message: input.message });
     });

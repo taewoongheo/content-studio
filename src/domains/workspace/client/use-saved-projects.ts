@@ -3,14 +3,14 @@
 import type { VideoSummary } from "@/domains/video/domain/model";
 import { listVideoProjects } from "@/domains/video/client/api";
 import { useEffect, useState } from "react";
-import type { SavedProjectSummary } from "@/domains/slideshow/domain/projects";
+import type { SavedProjectSummary, SavedTemplateSummary } from "@/domains/slideshow/domain/projects";
 import { listContentProjects, listContentTemplates } from "@/domains/slideshow/client/projects-api";
 
 /** Coalesce save notifications and reconnects so older requests cannot overwrite newer lists. */
 export function useSavedProjects(enabled = true) {
   const [projects, setProjects] = useState<SavedProjectSummary[]>([]);
   const [videos, setVideos] = useState<VideoSummary[]>([]);
-  const [templates, setTemplates] = useState<SavedProjectSummary[]>([]);
+  const [templates, setTemplates] = useState<SavedTemplateSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 

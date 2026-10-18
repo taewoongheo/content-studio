@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { SavedProjectSummary } from "@/domains/slideshow/domain/projects";
+import type { SlideshowSummary } from "@/domains/slideshow/domain/projects";
 import type { EditorDocument, EditorSlide } from "@/domains/slideshow/editor/types";
 import { createArtworkImageLoader, type ArtworkImageLoader } from "@/domains/slideshow/rendering/assets";
 
@@ -18,7 +18,7 @@ function useVisible() {
   return { ref, visible };
 }
 
-function Thumbnail({ document, slide, projectId, loadImage, index }: {
+export function Thumbnail({ document, slide, projectId, loadImage, index }: {
   document: EditorDocument; slide: EditorSlide; projectId: string; loadImage: ArtworkImageLoader; index: number;
 }) {
   const { ref, visible } = useVisible();
@@ -51,7 +51,7 @@ function Thumbnail({ document, slide, projectId, loadImage, index }: {
   </figure>;
 }
 
-export function TemplatePreviews({ project, contentUpdatedAt }: { project: SavedProjectSummary; contentUpdatedAt: string }) {
+export function TemplatePreviews({ project, contentUpdatedAt }: { project: SlideshowSummary; contentUpdatedAt: string }) {
   const { ref, visible } = useVisible();
   const [document, setDocument] = useState<EditorDocument | null>(null);
   const [error, setError] = useState(false);

@@ -11,22 +11,21 @@ export const templateMessageSchema = z.string().trim().min(1).max(2000).describe
   "Reusable reader purpose: what this format helps the reader compare, choose, understand or do. Do not summarize the source post's specific claims or conclusion."
 );
 export const requiredCompositionSchema = compositionSchema.min(1);
-export const projectReuseUpdateSchema = z.strictObject({
+export const templateSettingsSchema = z.strictObject({
   composition: compositionSchema.optional(),
   templateName: z.string().trim().min(1).max(120).optional(),
   templateTopic: templateTopicSchema.optional(),
   templateMessage: templateMessageSchema.optional(),
-  isTemplate: z.boolean().optional(),
   templateOrder: z.number().int().positive().nullable().optional(),
 }).refine(input => Object.values(input).some(value => value !== undefined), {
   message: "변경할 재사용 설정을 입력해 주세요.",
 });
-export type ProjectReuseUpdate = z.infer<typeof projectReuseUpdateSchema>;
+export type TemplateSettingsInput = z.infer<typeof templateSettingsSchema>;
 
-export class ProjectReuseError extends Error {
+export class TemplateError extends Error {
   constructor(public readonly code: "PROJECT_NOT_FOUND" | "COMPOSITION_REQUIRED" | "INVALID_METADATA" | "SOURCE_IN_USE", message?: string) {
     super(message ?? (code === "PROJECT_NOT_FOUND" ? "프로젝트를 찾을 수 없습니다." : "템플릿으로 등록하려면 구성을 입력해 주세요."));
-    this.name = "ProjectReuseError";
+    this.name = "TemplateError";
   }
 }
 
@@ -36,3 +35,12 @@ export const contentMetadataSchema = z.strictObject({
   templateId: z.string().min(1).nullable().optional(),
 });
 export type ContentMetadata = z.infer<typeof contentMetadataSchema>;
+
+export const templateCreateSchema = z.strictObject({
+  slideIds: z.array(z.string().min(1)).min(1).max(20),
+  templateName: z.string().trim().min(1).max(120),
+  templateTopic: templateTopicSchema,
+  templateMessage: templateMessageSchema,
+  composition: requiredCompositionSchema,
+});
+export type TemplateCreateInput = z.infer<typeof templateCreateSchema>;

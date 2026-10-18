@@ -1,6 +1,6 @@
 import type { ContentJobSnapshot } from "@/domains/slideshow/domain/types";
-import type { ProjectReuseUpdate } from "@/domains/slideshow/projects/composition";
-import type { SavedProjectSummary } from "@/domains/slideshow/domain/projects";
+import type { TemplateSettingsInput } from "@/domains/slideshow/projects/composition";
+import type { SavedProjectSummary, SavedTemplateSummary } from "@/domains/slideshow/domain/projects";
 
 async function readJson<T>(response: Response): Promise<T> {
   const body = await response.json().catch(() => null) as { error?: string } | null;
@@ -44,11 +44,11 @@ export function deleteProject(id: string, expectedTabId?: string) {
   return projectMutation(id, "DELETE", { expectedTabId });
 }
 
-export async function updateProjectReuse(id: string, input: ProjectReuseUpdate) {
-  const response = await fetch(`/api/content-projects/${encodeURIComponent(id)}/reuse`, {
+export async function updateProjectReuse(id: string, input: TemplateSettingsInput) {
+  const response = await fetch(`/api/content-templates/${encodeURIComponent(id)}`, {
     method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
   });
-  return readJson<SavedProjectSummary>(response);
+  return readJson<SavedTemplateSummary>(response);
 }
 
 export async function updateProjectMetadata(id: string, input: { topic: string; message: string; templateId?: string | null }) {
@@ -63,14 +63,23 @@ export async function publishProject(id: string) {
 }
 
 export function listContentTemplates() {
-  return fetch("/api/content-templates", { cache: "no-store" }).then(response => readJson<SavedProjectSummary[]>(response));
+  return fetch("/api/content-templates", { cache: "no-store" }).then(response => readJson<SavedTemplateSummary[]>(response));
 }
 export async function reorderTemplates(ids: string[], expectedIds: string[]) {
-  return readJson<SavedProjectSummary[]>(await fetch("/api/content-templates/order", {
+  return readJson<SavedTemplateSummary[]>(await fetch("/api/content-templates/order", {
     method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids, expectedIds }),
   }));
 }
 export async function deleteTemplate(id: string) {
-  const response = await fetch(`/api/content-projects/${encodeURIComponent(id)}/reuse`, { method: "DELETE" });
+  const response = await fetch(`/api/content-templates/${encodeURIComponent(id)}`, { method: "DELETE" });
   if (!response.ok) await readJson(response);
+}
+
+export async function createTemplate(projectId: string, input: import("../projects/composition").TemplateCreateInput) {
+  return readJson<SavedTemplateSummary>(await fetch("/api/content-templates", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId, ...input }),
+  }));
+}
+export async function readSavedDocument(projectId: string) {
+  return readJson<import("../editor/types").EditorDocument>(await fetch(`/api/content-projects/${encodeURIComponent(projectId)}/preview`, { cache: "no-store" }));
 }

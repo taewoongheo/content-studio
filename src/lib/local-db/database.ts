@@ -4,7 +4,7 @@ import { mkdirSync } from "node:fs";
 import { dirname, isAbsolute } from "node:path";
 import { ensureProjectSchema } from "@/domains/slideshow/server/persistence/projects/schema";
 
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 
 export function defaultDatabasePath() {
   const override = process.env.CONTENT_STUDIO_DB_PATH;
@@ -27,7 +27,10 @@ export function openLocalDatabase(path = defaultDatabasePath()) {
     const missingColumns = ["template_id", "topic", "message", "published_at"].filter(name => !projectColumns.some(column => column.name === name));
     const hasTemplateColor = (database.prepare("PRAGMA table_info(content_templates)").all() as Array<{ name: string }>).some(column => column.name === "color");
     if (projectColumns.length && (missingColumns.length || hasTemplateColor))
-      throw new Error(`지원하지 않는 프로젝트 DB 스키마입니다 (${missingColumns.join(", ")} 누락). 자동 마이그레이션은 제공하지 않습니다. 서버를 종료하고 pnpm migrate:template-loop로 명시적으로 전환해 주세요.`);
+      throw new Error(`지원하지 않는 프로젝트 DB 스키마입니다 (${missingColumns.join(", ")} 누락). 자동 마이그레이션은 제공하지 않습니다. 서버를 종료하고 로컬 DB를 확인해 주세요.`);
+    const templateColumns = database.prepare("PRAGMA table_info(content_templates)").all() as Array<{ name: string }>;
+    if (templateColumns.length && !templateColumns.some(column => column.name === "document_json"))
+      throw new Error("독립 템플릿 DB 전환이 필요합니다. 서버를 종료하고 로컬 DB를 변환해 주세요.");
     database.pragma("journal_mode = WAL");
     database.transaction(() => {
       ensureProjectSchema(database);

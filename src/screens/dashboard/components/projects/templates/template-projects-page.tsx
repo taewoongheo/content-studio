@@ -3,7 +3,7 @@ import { VideoProjectCard } from "@/screens/dashboard/components/projects/video-
 import { useId, useState } from "react";
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import type { SavedProjectSummary } from "@/domains/slideshow/domain/projects";
+import type { SavedTemplateSummary } from "@/domains/slideshow/domain/projects";
 import { useSavedProjects } from "@/domains/workspace/client/use-saved-projects";
 import { publishProject, reorderTemplates, deleteTemplate } from "@/domains/slideshow/client/projects-api";
 import { SortableTemplate } from "./sortable-template";
@@ -18,19 +18,19 @@ export function TemplateProjectsPage({ onOpen }: { onOpen: (projectId: string) =
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const active = allTemplates.filter(template => template.templateOrder !== null);
-  const templates = pendingIds ? pendingIds.map(id => active.find(template => template.id === id)).filter((item): item is SavedProjectSummary => !!item) : active;
+  const templates = pendingIds ? pendingIds.map(id => active.find(template => template.id === id)).filter((item): item is SavedTemplateSummary => !!item) : active;
   async function run(work: () => Promise<unknown>) {
     setBusy(true); setError("");
     try { await work(); } catch (cause) { setError(cause instanceof Error ? cause.message : "요청을 처리하지 못했습니다."); }
     finally { setBusy(false); }
   }
   const nextTemplate = nextTemplateInLoop(active, projects);
-  async function removeTemplate(template: SavedProjectSummary) {
-    if (!window.confirm(`“${template.name}” 루프에서 제외할까요? 템플릿 설정이 삭제되고 연결된 게시글의 부모가 해제됩니다. 원본 콘텐츠는 유지됩니다.`)) return;
+  async function removeTemplate(template: SavedTemplateSummary) {
+    if (!window.confirm(`“${template.name}” 루프에서 제외할까요? 템플릿과 템플릿 이미지가 삭제되고 연결된 게시글의 부모가 해제됩니다. 게시글은 유지됩니다.`)) return;
     await run(() => deleteTemplate(template.id));
   }
   return <div className="grid gap-8">
-    <header><h1 className="text-3xl font-semibold tracking-tight">템플릿 프로젝트</h1><p className="mt-2 text-sm text-muted-foreground">템플릿 설정과 원본 콘텐츠를 함께 관리하세요. 순서는 드래그로 변경합니다.</p></header>
+    <header><h1 className="text-3xl font-semibold tracking-tight">템플릿 프로젝트</h1><p className="mt-2 text-sm text-muted-foreground">독립 템플릿과 게시글을 관리하세요. 순서는 드래그로 변경합니다.</p></header>
     {nextTemplate && <p className="text-sm text-muted-foreground">다음 템플릿: {nextTemplate.templateOrder}. {nextTemplate.name}</p>}
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {loading ? <p role="status">프로젝트를 불러오는 중…</p> : <div className="grid min-w-0 gap-8 lg:grid-cols-2 lg:gap-10">
@@ -50,14 +50,14 @@ export function TemplateProjectsPage({ onOpen }: { onOpen: (projectId: string) =
           <div role="list" className="divide-y">{templates.map(template =>
             <SortableTemplate key={template.id} id={template.id} name={template.name} disabled={busy}>
               <TemplateCard project={template} busy={busy}
-                contentUpdatedAt={projects.find(project => project.id === template.id)?.updatedAt ?? template.updatedAt}
+                contentUpdatedAt={template.updatedAt}
                 onOpen={id => void run(() => onOpen(id))} onRemove={project => void removeTemplate(project)} />
             </SortableTemplate>)}</div>
         </SortableContext></DndContext>
-        {!templates.length && <p className="py-8 text-sm text-muted-foreground">루프에 포함된 템플릿이 없습니다. 저장된 프로젝트에서 루프에 추가하세요.</p>}
+        {!templates.length && <p className="py-8 text-sm text-muted-foreground">루프에 포함된 템플릿이 없습니다. 저장된 프로젝트에서 템플릿을 만드세요.</p>}
       </section>
       <section aria-labelledby="saved-projects-heading" className="min-w-0"><h2 id="saved-projects-heading" className="border-b pb-4 font-semibold">저장된 프로젝트 <span aria-hidden="true" className="text-muted-foreground">{projects.length + videos.length}</span></h2>
-        <p className="mt-3 text-xs text-muted-foreground">원본의 내용 정보와 템플릿 설정은 독립적으로 저장됩니다.</p>
+        <p className="mt-3 text-xs text-muted-foreground">게시글의 페이지를 선택해 독립 템플릿으로 만들 수 있습니다.</p>
         <div role="list" className="divide-y">{videos.map(project => <VideoProjectCard key={project.id} project={project} busy={busy} run={run} onOpen={id => void run(() => onOpen(id))} />)}{projects.map(project => <SavedProjectCard key={project.id} project={project} busy={busy} templates={allTemplates}
           onOpen={id => void run(() => onOpen(id))} onPublish={id => void run(() => publishProject(id))} />)}</div>
         {!projects.length && !videos.length && <p className="py-8 text-sm text-muted-foreground">아직 저장된 프로젝트가 없습니다.</p>}

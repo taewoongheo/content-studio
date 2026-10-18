@@ -1,7 +1,7 @@
 import { ProjectTypeTag } from "@/components/projects/project-type-tag";
-import { ChevronRight, FolderOpen, LayoutTemplate } from "lucide-react";
+import { ChevronRight, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { SavedProjectSummary } from "@/domains/slideshow/domain/projects";
+import type { SavedProjectSummary, SavedTemplateSummary, SlideshowSummary } from "@/domains/slideshow/domain/projects";
 import { ProjectDeleteButton } from "@/components/projects/project-delete-button";
 import { ProjectMetadataButton } from "../project-metadata-button";
 import { ProjectReuseButton } from "../project-reuse-button";
@@ -12,7 +12,7 @@ const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
 });
 type CardProps = { project: SavedProjectSummary; busy: boolean; onOpen: (id: string) => void };
 
-function ProjectDetails({ project, title }: { project: SavedProjectSummary; title: string }) {
+function ProjectDetails({ project, title }: { project: SlideshowSummary & { publishedAt?: string | null }; title: string }) {
   return <>
     <div className="flex min-w-0 items-start gap-2"><h3 className="min-w-0 break-words font-medium leading-snug">{title}</h3><ProjectTypeTag /></div>
     <p className="mt-1.5 text-xs text-muted-foreground">
@@ -24,8 +24,8 @@ function ProjectDetails({ project, title }: { project: SavedProjectSummary; titl
   </>;
 }
 
-export function TemplateCard({ project, busy, onOpen, contentUpdatedAt, onRemove }: CardProps & {
-  contentUpdatedAt: string; onRemove: (project: SavedProjectSummary) => void;
+export function TemplateCard({ project, busy, onOpen, contentUpdatedAt, onRemove }: Omit<CardProps, "project"> & { project: SavedTemplateSummary;
+  contentUpdatedAt: string; onRemove: (project: SavedTemplateSummary) => void;
 }) {
   return <article role="listitem" className="grid min-w-0 gap-4 py-5">
     <div className="min-w-0">
@@ -54,7 +54,7 @@ export function TemplateCard({ project, busy, onOpen, contentUpdatedAt, onRemove
 }
 
 export function SavedProjectCard({ project, busy, onOpen, templates, onPublish }: CardProps & {
-  templates: SavedProjectSummary[]; onPublish: (id: string) => void;
+  templates: SavedTemplateSummary[]; onPublish: (id: string) => void;
 }) {
   return <article role="listitem" className="grid min-w-0 gap-4 py-5">
     <div className="min-w-0">
@@ -66,11 +66,10 @@ export function SavedProjectCard({ project, busy, onOpen, templates, onPublish }
     <div className="flex min-w-0 flex-wrap items-start gap-2">
       <Button variant="outline" size="sm" disabled={busy} onClick={() => onOpen(project.id)}><FolderOpen aria-hidden="true" />열기</Button>
       <ProjectMetadataButton project={project} templates={templates} disabled={busy} />
-      {project.isTemplate ? <Button variant="secondary" size="sm" disabled><LayoutTemplate aria-hidden="true" />템플릿 지정됨</Button>
-        : <ProjectReuseButton project={project} mode="register" disabled={busy} size="sm" />}
+      <ProjectReuseButton project={project} mode="register" disabled={busy} size="sm" />
       <Button variant="outline" size="sm" disabled={busy || !!project.publishedAt} aria-label={`${project.name} 게시 등록`}
         onClick={() => onPublish(project.id)}>{project.publishedAt ? "게시됨" : "게시"}</Button>
-      {!project.isTemplate && <ProjectDeleteButton projectId={project.id} name={project.name} compact disabled={busy} />}
+      {<ProjectDeleteButton projectId={project.id} name={project.name} compact disabled={busy} />}
     </div>
   </article>;
 }

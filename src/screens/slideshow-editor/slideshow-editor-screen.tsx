@@ -470,7 +470,7 @@ export function SlideshowEditorScreen({ ref, initialViewState, initialJob, onNew
                     onClick={() => void addSlide(true)}><Copy className="size-3.5" aria-hidden="true" /> 장 복제</Button>
                   <Button type="button" variant="ghost" size="icon-sm" className="text-destructive hover:text-destructive"
                     aria-label="현재 슬라이드 제거" title="현재 슬라이드 제거"
-                    disabled={disabled || document.slides.length <= (document.structure === "repeating" ? 3 : 2) ||
+                    disabled={disabled || document.slides.length <= (document.structure === "repeating" ? 3 : 1) ||
                       (document.structure === "repeating" && slide.role !== "body")}
                     onClick={() => void removeSlide()}><Trash2 className="size-3.5" aria-hidden="true" /></Button>
                 </div>

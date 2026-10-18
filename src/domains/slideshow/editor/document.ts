@@ -52,7 +52,7 @@ export function validateEditorDocument(document: EditorDocument): string[] {
     document.elements.filter((element) => element.kind === "background").length !== 1 ||
     !Object.keys(BACKGROUND_FRAME).every((key) => background.frame[key as keyof ElementFrame] === BACKGROUND_FRAME[key as keyof ElementFrame]))
     errors.push("공통 배경 Element가 올바르지 않습니다.");
-  if (document.slides.length < 2 || document.slides.length > 20)
+  if (document.slides.length < 1 || document.slides.length > 20)
     errors.push("슬라이드 수가 올바르지 않습니다.");
   if (document.structure === "repeating" && document.slides.length < 3)
     errors.push("반복형에는 본문 슬라이드가 한 장 이상 필요합니다.");

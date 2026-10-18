@@ -3,8 +3,8 @@ import test from "node:test";
 import { nextTemplateInLoop } from "@/domains/slideshow/projects/planning/next-template";
 
 const templates = [{ id: "a", templateOrder: 1 }, { id: "b", templateOrder: 2 }];
-const post = (id: string, sourceTemplateProjectId: string | null, publishedAt: string | null) =>
-  ({ id, sourceTemplateProjectId, publishedAt });
+const post = (id: string, sourceTemplateId: string | null, publishedAt: string | null) =>
+  ({ id, sourceTemplateId, publishedAt });
 
 test("다음 템플릿은 활성 루프 순서를 따르고 게시 이력이 없으면 처음부터 시작한다", () => {
   assert.equal(nextTemplateInLoop([], []), null);
