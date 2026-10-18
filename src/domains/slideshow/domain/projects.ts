@@ -16,5 +16,4 @@ export type SavedProjectSummary = SlideshowSummary & {
 };
 export type SavedTemplateSummary = SlideshowSummary & {
   composition: string;
-  templateOrder: number | null;
 };

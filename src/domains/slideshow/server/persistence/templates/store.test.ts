@@ -9,19 +9,21 @@ function seed(templates: ContentTemplateStore, id: string) {
   return templates.create({ id, name: id, topic: "Guide", message: "Compare", composition: "Short list", outputLanguage: "English", assets: [],
     document: createBlankDocument({ structure: "sequential", slideCount: 2, aspectRatio: "4:5" }) });
 }
-test("reorders atomically, rejects stale/duplicate lists and invalid positions", () => {
+test("templates retain creation order when metadata changes or another template is deleted", () => {
   const db = openLocalDatabase(":memory:");
   try {
-    const templates = new ContentTemplateStore(db); for (const id of ["a", "b", "c"]) seed(templates, id);
-    templates.reorder(["c", "a", "b"], ["a", "b", "c"]);
-    assert.throws(() => templates.reorder(["a", "b", "c"], ["a", "b", "c"]), /변경/);
-    assert.throws(() => templates.reorder(["c", "a", "a"], ["c", "a", "b"]), /한 번/);
-    assert.throws(() => templates.update("a", { templateOrder: 4 }), /범위/);
-    assert.deepEqual(templates.list().map(t => t.id), ["c", "a", "b"]);
-    templates.delete("a"); assert.deepEqual(templates.list().map(t => t.templateOrder), [1, 2]);
+    const templates = new ContentTemplateStore(db);
+    for (const id of ["a", "b", "c"]) seed(templates, id);
+    const untouched = templates.get("b");
+    templates.update("a", { templateName: "Updated", composition: "Two columns" });
+    assert.deepEqual(templates.list().map(t => t.id), ["a", "b", "c"]);
+    assert.equal(templates.get("a")?.composition, "Two columns");
+    templates.delete("a");
+    assert.deepEqual(templates.list().map(t => t.id), ["b", "c"]);
+    assert.deepEqual(templates.get("b"), untouched);
   } finally { db.close(); }
 });
-test("template deletion failure rolls back assets, project links and order", () => {
+test("template deletion failure rolls back assets and project links", () => {
   const db = openLocalDatabase(":memory:");
   try {
     const templates = new ContentTemplateStore(db), projects = new ContentProjectStore(db);

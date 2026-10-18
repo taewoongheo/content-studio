@@ -44,6 +44,6 @@ test("selection rejects empty, duplicate and unknown pages without partial templ
     const source = createContentProject(registry, {}, { projects }); saveContentProject(registry, source.id, "Original", { projects });
     for (const slideIds of [[], ["missing"], ["slide-1", "slide-1"]])
       assert.throws(() => createTemplateFromProject(projects, source.id, { ...templateSettings, slideIds }));
-    assert.equal(projects.listTemplates().length, 0);
+    assert.equal(new ContentTemplateStore(db).list().length, 0);
   } finally { db.close(); }
 });

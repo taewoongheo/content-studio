@@ -1,3 +1,4 @@
+import { ContentTemplateStore } from "@/domains/slideshow/server/persistence/templates/store";
 import { requestIdSchema } from "../protocol/requests";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod/v4";
@@ -10,9 +11,9 @@ import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 
 export function registerTemplateTools(server: McpServer) {
   registerTool(server, "list_template_guides", {
-    description: "List independent templates in loop order, with reusable metadata only. Select using metadata; do not inspect candidate documents or previews to compare. Creation uses clone_project with templateId. Follow docs/content-guidelines.md.",
+    description: "List independent templates with reusable metadata only. Select using metadata; do not inspect candidate documents or previews to compare. Creation uses clone_project with templateId. Follow docs/content-guidelines.md.",
     inputSchema: z.strictObject({}), annotations: annotations(true),
-  }, () => guarded(() => json({ templates: defaultProjectStores().projects.listTemplates() })));
+  }, () => guarded(() => json({ templates: new ContentTemplateStore(defaultProjectStores().projects.database).list() })));
   registerTool(server, "register_template", {
     description: "Create an independent template from selected saved project slideIds, copying their content, shared Element relationships and used images. Returns a NEW template ID; stores no connection to the source project. Only when explicitly requested. Requires reusable metadata per AGENTS.md. Does not save active drafts. No fixed number of pages per role is enforced. Related settings can later be edited in the UI. Open the returned template ID with open_project to edit its document using the shared editor.",
     inputSchema: templateCreateSchema.extend({ projectId: z.string().min(1), requestId: requestIdSchema }), annotations: annotations(false), deduplicate: true,

@@ -16,7 +16,6 @@ export const templateSettingsSchema = z.strictObject({
   templateName: z.string().trim().min(1).max(120).optional(),
   templateTopic: templateTopicSchema.optional(),
   templateMessage: templateMessageSchema.optional(),
-  templateOrder: z.number().int().positive().optional(),
 }).refine(input => Object.values(input).some(value => value !== undefined), {
   message: "변경할 재사용 설정을 입력해 주세요.",
 });

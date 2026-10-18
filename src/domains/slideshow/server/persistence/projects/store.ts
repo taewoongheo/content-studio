@@ -2,9 +2,7 @@ import type Database from "better-sqlite3";
 import { SlideshowMetadataError } from "@/domains/slideshow/domain/errors";
 import { contentMetadataSchema, type ContentMetadata } from "@/domains/slideshow/projects/metadata";
 import { ContentTemplateStore } from "@/domains/slideshow/server/persistence/templates/store";
-import { ensureProjectSchema } from "@/domains/slideshow/server/persistence/projects/schema";
 import { saveAssets, readAssets, readAsset, type SavedSlideshowAsset } from "../assets";
-import { nextTemplateInLoop } from "@/domains/slideshow/projects/planning/next-template";
 
 import type { SavedProjectSummary } from "@/domains/slideshow/domain/projects";
 export type SavedProjectAsset = SavedSlideshowAsset;
@@ -53,13 +51,7 @@ function summary(row: ProjectRow): SavedProjectSummary {
 }
 
 export class ContentProjectStore {
-  constructor(readonly database: Database.Database) {
-    this.ensureSchema();
-  }
-
-  private ensureSchema() { ensureProjectSchema(this.database); }
-
-  listTemplates(includeExcluded = false) { return new ContentTemplateStore(this.database).list(includeExcluded); }
+  constructor(readonly database: Database.Database) {}
 
   updateMetadata(id: string, input: ContentMetadata) {
     const metadata = contentMetadataSchema.parse(input);
@@ -79,8 +71,8 @@ export class ContentProjectStore {
 
   setCloneSource(id: string, sourceId: string) {
     const template = new ContentTemplateStore(this.database).get(sourceId);
-    if (id === sourceId || !template || template.templateOrder === null)
-      throw new SlideshowMetadataError("INVALID_METADATA", "루프에 등록된 원본 템플릿을 선택해 주세요.");
+    if (id === sourceId || !template)
+      throw new SlideshowMetadataError("INVALID_METADATA", "존재하는 템플릿을 선택해 주세요.");
     this.database.prepare("UPDATE content_projects SET template_id = ? WHERE id = ?").run(sourceId, id);
   }
 
@@ -103,17 +95,6 @@ export class ContentProjectStore {
   listPublished() {
     return (this.database.prepare(`SELECT ${SUMMARY_COLUMNS} FROM content_projects
       WHERE published_at IS NOT NULL ORDER BY published_at DESC, id DESC`).all() as ProjectRow[]).map(summary);
-  }
-
-  contentPlan() {
-    const templates = this.listTemplates();
-    const published = this.listPublished();
-    return {
-      nextTemplateId: nextTemplateInLoop(templates, published)?.id ?? null,
-      templates,
-      published,
-      unpublished: this.list().filter(project => !project.publishedAt),
-    };
   }
 
   save(input: {

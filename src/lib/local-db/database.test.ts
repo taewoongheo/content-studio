@@ -68,3 +68,21 @@ test("지원하지 않는 프로젝트 스키마는 데이터와 버전을 변�
     }
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
+
+test("구형 템플릿 순서 스키마는 자동 변환 없이 거부한다", () => {
+  const directory = mkdtempSync(join(tmpdir(), "studio-template-order-db-"));
+  const path = join(directory, "legacy.sqlite");
+  try {
+    const legacy = openLocalDatabase(path);
+    legacy.exec("ALTER TABLE content_templates ADD COLUMN loop_order INTEGER");
+    legacy.pragma("user_version = 12");
+    const schema = legacy.prepare("SELECT name, sql FROM sqlite_master ORDER BY name").all();
+    legacy.close();
+    assert.throws(() => openLocalDatabase(path), /템플릿 순서 컬럼 제거/);
+    const unchanged = new Database(path);
+    try {
+      assert.equal(unchanged.pragma("user_version", { simple: true }), 12);
+      assert.deepEqual(unchanged.prepare("SELECT name, sql FROM sqlite_master ORDER BY name").all(), schema);
+    } finally { unchanged.close(); }
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});

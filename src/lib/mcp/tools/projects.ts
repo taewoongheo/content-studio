@@ -1,3 +1,4 @@
+import { ContentTemplateStore } from "@/domains/slideshow/server/persistence/templates/store";
 import { registerTemplateTools } from "./templates";
 import { documentStore } from "@/domains/slideshow/projects/persistence/document-store";
 import { requestIdSchema } from "../protocol/requests";
@@ -34,7 +35,7 @@ export function registerProjectTools(server: McpServer, origin: string) {
     inputSchema: z.strictObject({}), annotations: annotations(true),
   }, () => guarded(() => {
     const stores = defaultProjectStores();
-    const templateIds = new Set(stores.projects.listTemplates(true).map(template => template.id));
+    const templateIds = new Set(new ContentTemplateStore(stores.projects.database).list().map(template => template.id));
     const saved = stores.projects.list();
     const entries = new Map(saved.map((project) => [project.id, { ...project, state: "saved", url: `${origin}/?job=${encodeURIComponent(project.id)}` }]));
     for (const job of contentJobRegistry.list()) {
@@ -47,10 +48,6 @@ export function registerProjectTools(server: McpServer, origin: string) {
     }
     return json({ projects: [...entries.values()] });
   }));
-  registerTool(server, "get_content_plan", {
-    description: "Read the single template loop in templateOrder and its nextTemplateId, all published projects ordered newest first, and unpublished drafts. Before research, use this plan to choose the next template and a topic/message that avoids repetition across BOTH all published content and that template's history. When constraints conflict, prioritize avoiding repetition in the overall history. Unpublished drafts also help avoid producing duplicate work. Metadata only; no document or previews. Publication is manually recorded by the user in the UI.",
-    inputSchema: z.strictObject({}), annotations: annotations(true),
-  }, () => guarded(() => json(defaultProjectStores().projects.contentPlan())));
   registerTool(server, "set_content_metadata", {
     description: "Save this specific content's topic and concrete message (what the reader should learn or do). These describe the current post, unlike composition which describes a reusable communication purpose and visual structure. Required before publication; update when research changes the message. Optional templateId changes or clears the parent of ordinary content; Parent changes affect current history classification, not slides. Does not save active slide edits or mark the project published.",
     inputSchema: setContentMetadataSchema, annotations: annotations(false),
@@ -67,7 +64,7 @@ export function registerProjectTools(server: McpServer, origin: string) {
     return json(describe(projectId));
   }));
   registerTool(server, "clone_project", {
-    description: "Create and save a new project by cloning a template in the single loop. Record its source template automatically. Choose template and topic with get_content_plan before research; pass topic and message together for this specific content. templateId is required and must come from list_template_guides. Preserves the source. No blank creation or cloning unregistered projects. New projects are not registered as templates.",
+    description: "Create and save a new project by copying an independent template and its assets. Record its template link for history classification. Choose a template for the visual expression of an already established topic/message; pass topic and message together for this specific content. templateId is required and must come from list_template_guides. Preserves the source. No blank creation or cloning unregistered projects. New projects are not registered as templates.",
     inputSchema: cloneSchema, annotations: annotations(false), deduplicate: true,
   }, (input) => guarded(() => {
     const job = new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase()).clone(input);

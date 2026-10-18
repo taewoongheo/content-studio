@@ -8,20 +8,18 @@ import { ContentJobRegistry } from "../../../workflow/registry";
 import { createContentProject, saveContentProject } from "../../../projects/service";
 import { SlideshowProjectWrites } from "../../project-writes";
 
-test("independent templates follow reorder and publication; copying a source does not detach its parent", () => {
+test("template copying preserves the source parent; template deletion preserves published projects", () => {
   const db = openLocalDatabase(":memory:");
   try {
     const projects = new ContentProjectStore(db), templates = new ContentTemplateStore(db), registry = new ContentJobRegistry();
     const source = createContentProject(registry, {}, { projects }); saveContentProject(registry, source.id, "Source", { projects });
-    const [a, b, c] = ["A", "B", "C"].map(name => createTemplateFromProject(projects, source.id, {
+    const [, b, c] = ["A", "B", "C"].map(name => createTemplateFromProject(projects, source.id, {
       templateName: name, templateTopic: "Guide", templateMessage: "Compare", composition: "Image with explanation", slideIds: ["slide-1", "slide-2"],
     }));
-    templates.reorder([c.id, a.id, b.id], [a.id, b.id, c.id]);
-    assert.equal(projects.contentPlan().nextTemplateId, c.id);
     const clone = new SlideshowProjectWrites(registry, db).clone({ templateId: c.id, topic: "Back", message: "Choose a supported row" });
-    assert.equal(projects.contentPlan().nextTemplateId, c.id);
+    assert.equal(projects.getSummary(clone.id)?.sourceTemplateId, c.id);
     projects.publish(clone.id);
-    assert.equal(projects.contentPlan().nextTemplateId, a.id);
+    assert.equal(projects.listPublished()[0].id, clone.id);
     projects.updateMetadata(source.id, { topic: "Original", message: "Message", templateId: b.id });
     const before = projects.get(source.id);
     createTemplateFromProject(projects, source.id, { templateName: "D", templateTopic: "Guide", templateMessage: "Compare", composition: "List", slideIds: ["slide-2"] });

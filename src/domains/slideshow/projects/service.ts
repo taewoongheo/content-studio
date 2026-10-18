@@ -1,3 +1,4 @@
+import { usedImageAssetIds } from "../editor/inspection/used-assets";
 import { documentStore, savedDocument } from "./persistence/document-store";
 import { ensureSharedBackground, validateEditorDocument } from "@/domains/slideshow/editor/document";
 import type { EditorDocument } from "@/domains/slideshow/editor/types";
@@ -12,15 +13,6 @@ export function defaultProjectStores() {
   return {
     projects: new ContentProjectStore(database),
   };
-}
-
-function projectAssetIds(document: EditorDocument) {
-  const imageElementIds = new Set(document.elements
-    .filter((element) => element.kind === "image")
-    .map((element) => element.id));
-  return [...new Set(document.slides.flatMap((slide) => slide.placements
-    .filter((placement) => imageElementIds.has(placement.elementId) && placement.value)
-    .map((placement) => placement.value)))];
 }
 
 function readProjectAsset(assetId: string, job: ContentJobRecord): SavedProjectAsset {
@@ -75,7 +67,7 @@ export function saveContentProject(
     slideCount: document.slides.length,
     outputLanguage: record.outputLanguage,
     document,
-    assets: projectAssetIds(document).map((assetId) => readProjectAsset(assetId, record)),
+    assets: [...usedImageAssetIds(document)].map((assetId) => readProjectAsset(assetId, record)),
   });
   registry.update(jobId, (job) => {
     job.editor.document = document;

@@ -51,14 +51,14 @@ export function Thumbnail({ document, slide, projectId, loadImage, index }: {
   </figure>;
 }
 
-export function TemplatePreviews({ project, contentUpdatedAt }: { project: SlideshowSummary; contentUpdatedAt: string }) {
+export function TemplatePreviews({ project }: { project: SlideshowSummary }) {
   const { ref, visible } = useVisible();
   const [document, setDocument] = useState<EditorDocument | null>(null);
   const [error, setError] = useState(false);
   const loadImage = useMemo(() => {
     const loader = createArtworkImageLoader({ maxBytes: 16 * 1024 * 1024 });
-    return (url: string) => loader(`${url.replace("/api/content-jobs/", "/api/content-projects/")}&version=${encodeURIComponent(contentUpdatedAt)}`);
-  }, [contentUpdatedAt]);
+    return (url: string) => loader(`${url.replace("/api/content-jobs/", "/api/content-projects/")}&version=${encodeURIComponent(project.updatedAt)}`);
+  }, [project.updatedAt]);
   useEffect(() => {
     if (!visible) return;
     const controller = new AbortController();
@@ -67,7 +67,7 @@ export function TemplatePreviews({ project, contentUpdatedAt }: { project: Slide
       .then(value => { if (!controller.signal.aborted) { setDocument(value); setError(false); } })
       .catch(() => { if (!controller.signal.aborted) setError(true); });
     return () => controller.abort();
-  }, [visible, project.id, contentUpdatedAt]);
+  }, [visible, project.id, project.updatedAt]);
   return <div ref={ref} role="region" aria-label={`${project.name} 슬라이드 미리보기`} tabIndex={0}
     className="mt-3 max-w-full overflow-x-auto rounded-md pb-2 focus-visible:outline-2">
     <div className="flex w-max gap-2">

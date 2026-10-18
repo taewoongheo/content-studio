@@ -35,6 +35,7 @@ const graph = new Map(sources.map(file => [relative(file), imports(file)]));
 test("공통 라이브러리는 기능 구현을 소유하지 않고 DB 초기화는 스키마만 참조한다", () => {
   const allowedSchemas = new Set([
     "src/domains/slideshow/server/persistence/projects/schema.ts",
+    "src/domains/slideshow/server/persistence/templates/schema.ts",
     "src/domains/video/server/persistence/schema.ts",
   ]);
   const violations: string[] = [];

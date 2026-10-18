@@ -19,7 +19,7 @@ export class SlideshowProjectWrites {
       throw new Error("주제와 메시지를 함께 입력해 주세요.");
     return this.commit(() => {
       const template = new ContentTemplateStore(this.database).get(input.templateId);
-      if (!template || template.templateOrder === null || !template.composition.trim())
+      if (!template || !template.composition.trim())
         throw new Error("구성이 작성된 등록된 템플릿 프로젝트를 선택해 주세요.");
       const created = createContentProject(this.registry, { sourceProjectId: template.id, name: input.name }, this.stores);
       return this.registry.update(created.id, job => { job.warnings = inspectSharedElements(job.editor.document); });

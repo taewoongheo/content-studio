@@ -12,11 +12,6 @@ export async function updateTemplateSettings(id: string, input: TemplateSettings
 export function listContentTemplates() {
   return fetch("/api/content-templates", { cache: "no-store" }).then(response => readJson<SavedTemplateSummary[]>(response));
 }
-export async function reorderTemplates(ids: string[], expectedIds: string[]) {
-  return readJson<SavedTemplateSummary[]>(await fetch("/api/content-templates/order", {
-    method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids, expectedIds }),
-  }));
-}
 export async function deleteTemplate(id: string) {
   const response = await fetch(`/api/content-templates/${encodeURIComponent(id)}`, { method: "DELETE" });
   if (!response.ok) await readJson(response);

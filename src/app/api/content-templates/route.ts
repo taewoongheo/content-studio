@@ -1,3 +1,4 @@
+import { ContentTemplateStore } from "@/domains/slideshow/server/persistence/templates/store";
 import { z } from "zod/v4";
 import { templateCreateSchema } from "@/domains/slideshow/templates/metadata";
 import { createTemplateFromProject } from "@/domains/slideshow/templates/service";
@@ -8,7 +9,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export function GET(request: Request) {
   if (!isLocalRequest(request)) return new Response(null, { status: 403 });
-  return Response.json(defaultProjectStores().projects.listTemplates(true), { headers: { "Cache-Control": "no-store" } });
+  return Response.json(new ContentTemplateStore(defaultProjectStores().projects.database).list(), { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(request: Request) {

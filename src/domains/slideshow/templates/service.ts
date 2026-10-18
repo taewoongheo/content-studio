@@ -1,3 +1,4 @@
+import { usedImageAssetIds } from "../editor/inspection/used-assets";
 import { inspectSharedElements } from "../editor/inspection/shared-elements";
 import { syncOpenProjectName, deleteProject } from "../projects/lifecycle/management";
 import type { ContentJobRegistry } from "../workflow/registry";
@@ -26,8 +27,7 @@ export function createTemplateFromProject(projects: ContentProjectStore, project
     document.elements = document.elements.filter(element => used.has(element.id));
     // A selection may omit hook/CTA. Sequential documents support arbitrary representative-page selections.
     document.structure = "sequential";
-    const images = new Set(document.elements.filter(e => e.kind === "image").map(e => e.id));
-    const assetIds = new Set(document.slides.flatMap(slide => slide.placements.filter(p => images.has(p.elementId) && p.value).map(p => p.value)));
+    const assetIds = usedImageAssetIds(document);
     const template = new ContentTemplateStore(projects.database).create({ id: randomUUID(), name: input.templateName,
       topic: input.templateTopic, message: input.templateMessage, composition: input.composition,
       document, outputLanguage: source.outputLanguage, assets: source.assets.filter(asset => assetIds.has(asset.assetId)) });
@@ -40,7 +40,7 @@ export function createTemplateFromProject(projects: ContentProjectStore, project
 export function updateTemplateSettings(registry: ContentJobRegistry, projects: ContentProjectStore, templateId: string, input: TemplateSettingsInput) {
   return registry.transaction(() => projects.database.transaction(() => {
     const template = new ContentTemplateStore(projects.database).update(templateId, input);
-    if (template) syncOpenProjectName(registry, templateId, template.name, { projects });
+    syncOpenProjectName(registry, templateId, template.name, { projects });
     registry.afterCommit(notifyProjectsChanged);
     return template;
   })());

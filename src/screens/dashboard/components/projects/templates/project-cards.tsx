@@ -24,13 +24,13 @@ function ProjectDetails({ project, title }: { project: SlideshowSummary & { publ
   </>;
 }
 
-export function TemplateCard({ project, busy, onOpen, contentUpdatedAt, onRemove }: Omit<CardProps, "project"> & { project: SavedTemplateSummary;
-  contentUpdatedAt: string; onRemove: (project: SavedTemplateSummary) => void;
+export function TemplateCard({ project, busy, onOpen, onRemove }: Omit<CardProps, "project"> & { project: SavedTemplateSummary;
+  onRemove: (project: SavedTemplateSummary) => void;
 }) {
   return <article role="listitem" className="grid min-w-0 gap-4 py-5">
     <div className="min-w-0">
-      <ProjectDetails project={project} title={`${project.templateOrder}. ${project.name}`} />
-      <TemplatePreviews project={project} contentUpdatedAt={contentUpdatedAt} />
+      <ProjectDetails project={project} title={project.name} />
+      <TemplatePreviews project={project} />
       <details className="group mt-3 text-sm leading-relaxed">
         <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-sm font-medium focus-visible:outline-2 [&::-webkit-details-marker]:hidden">
           <ChevronRight className="size-4 group-open:rotate-90" aria-hidden="true" />구성
@@ -47,8 +47,8 @@ export function TemplateCard({ project, busy, onOpen, contentUpdatedAt, onRemove
     <div className="flex min-w-0 flex-wrap items-start gap-2">
       <Button variant="outline" size="sm" disabled={busy} onClick={() => onOpen(project.id)}><FolderOpen aria-hidden="true" />열기</Button>
       <TemplateDialogButton project={project} disabled={busy} size="sm" />
-      <Button variant="outline" size="sm" disabled={busy} aria-label={`${project.name} 루프에서 제외`}
-        onClick={() => onRemove(project)}>루프에서 제외</Button>
+      <Button variant="outline" size="sm" disabled={busy} aria-label={`${project.name} 템플릿 삭제`}
+        onClick={() => onRemove(project)}>템플릿 삭제</Button>
     </div>
   </article>;
 }
