@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "playwright";
 import sharp from "sharp";
-import type { VideoSnapshot } from "../../src/lib/video/domain/model";
+import type { VideoSnapshot } from "@/domains/video/domain/model";
 const directory = await mkdtemp(join(tmpdir(), "studio-video-smoke-"));
 const portServer = createServer();
 await new Promise<void>(resolve => portServer.listen(0, "127.0.0.1", resolve));
@@ -175,7 +175,7 @@ try {
     })()`) as { samples: number; stallsOver50ms: number; meanFrameMs: number; movingSamples: number };
     await page.getByRole("button", { name: "일시정지", exact: true }).click();
     const coverage = await cdp.send("Profiler.takePreciseCoverage");
-    const renders = coverage.result.flatMap(script => script.functions.filter(fn => fn.functionName === "VideoScreen").map(fn => ({ name: fn.functionName, calls: fn.ranges[0]?.count })));
+    const renders = coverage.result.flatMap(script => script.functions.filter(fn => fn.functionName === "VideoEditorScreen").map(fn => ({ name: fn.functionName, calls: fn.ranges[0]?.count })));
     console.log("PLAYBACK PROFILE", JSON.stringify({ ...samples, renders })); await cdp.detach();
   }
   await page.screenshot({ path: join(tmpdir(), "content-studio-video-ux.png") });

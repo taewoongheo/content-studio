@@ -1,6 +1,6 @@
 import { isLocalRequest } from "@/lib/http/local-request";
-import { createVideo, videoStore, videoTabs } from "@/lib/video/server/service";
-import { videoError } from "@/lib/video/server/http";
+import { createVideo, videoStore, videoTabs } from "@/domains/video/server/service";
+import { videoError } from "@/domains/video/server/http";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export function GET(request: Request) {

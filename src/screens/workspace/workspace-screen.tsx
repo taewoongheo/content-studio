@@ -1,14 +1,15 @@
 "use client";
 import dynamic from "next/dynamic";
-import { createVideoProject, openVideoProject, listVideoProjects } from "@/screens/video/api";
-import type { VideoSnapshot } from "@/lib/video/domain/model";
-import type { VideoWorkspaceHandle } from "@/screens/video/video-screen";
+import { createVideoProject, openVideoProject, listVideoProjects } from "@/domains/video/client/api";
+import type { VideoSnapshot } from "@/domains/video/domain/model";
+import type { VideoEditorWorkspaceHandle } from "@/screens/video-editor/video-editor-screen";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import type { ContentJobSnapshot, OpenProjectTab } from "@/lib/content-jobs/domain/types";
+import type { OpenProjectTab } from "@/domains/workspace/model";
+import type { ContentJobSnapshot } from "@/domains/slideshow/domain/types";
 import { DashboardContent } from "@/screens/dashboard/dashboard-content";
-import { EditorScreen, type EditorViewState, type EditorWorkspaceHandle } from "@/screens/editor/editor-screen";
-import { createContentJob } from "@/screens/content-job/api";
-import { loadContentProject } from "@/screens/projects/api";
+import { SlideshowEditorScreen, type SlideshowEditorViewState, type SlideshowEditorWorkspaceHandle } from "@/screens/slideshow-editor/slideshow-editor-screen";
+import { createContentJob } from "@/domains/slideshow/client/api";
+import { loadContentProject } from "@/domains/slideshow/client/projects-api";
 import { useOpenTabs } from "./hooks/use-open-tabs";
 import { useWorkspaceOperation } from "./hooks/use-workspace-operation";
 import { useTabLifecycle } from "./hooks/use-tab-lifecycle";
@@ -18,7 +19,7 @@ import { RenameTabDialog } from "./components/rename-tab-dialog";
 import { NewTabDialog } from "./components/new-tab-dialog";
 import { adjacentTab, workspaceShortcut } from "./shortcuts/workspace-shortcut";
 
-const VideoScreen = dynamic(() => import("@/screens/video/video-screen").then(m => m.VideoScreen), { ssr: false, loading: () => <p className="p-6 text-sm">영상 편집기 불러오는 중…</p> });
+const VideoEditorScreen = dynamic(() => import("@/screens/video-editor/video-editor-screen").then(m => m.VideoEditorScreen), { ssr: false, loading: () => <p className="p-6 text-sm">영상 편집기 불러오는 중…</p> });
 
 function updateUrl(projectId: string | null, replace = false, type?: "video") {
   const url = new URL(window.location.href);
@@ -29,14 +30,14 @@ function updateUrl(projectId: string | null, replace = false, type?: "video") {
 
 export function WorkspaceScreen() {
   const [video, setVideo] = useState<VideoSnapshot | null>(null);
-  const videoEditor = useRef<VideoWorkspaceHandle>(null);
+  const videoEditor = useRef<VideoEditorWorkspaceHandle>(null);
   const currentVideo = useRef(video);
   const [job, setJob] = useState<ContentJobSnapshot | null>(null);
-  const [initialViewState, setInitialViewState] = useState<EditorViewState>();
+  const [initialViewState, setInitialViewState] = useState<SlideshowEditorViewState>();
   const { busy, error, setError, run } = useWorkspaceOperation();
   const [chooser, setChooser] = useState(false);
-  const editor = useRef<EditorWorkspaceHandle>(null);
-  const views = useRef(new Map<string, EditorViewState>());
+  const editor = useRef<SlideshowEditorWorkspaceHandle>(null);
+  const views = useRef(new Map<string, SlideshowEditorViewState>());
   const current = useRef(job);
   useEffect(() => { current.current = job; }, [job]);
 
@@ -156,7 +157,7 @@ export function WorkspaceScreen() {
     {(error || connectionError) && <p role="alert" className="shrink-0 border-b px-4 py-2 text-sm text-destructive">{error || connectionError}</p>}
     <div className="relative min-h-0 flex-1 overflow-auto">
       {busy && <div className="absolute inset-0 z-40 cursor-wait bg-background/20" aria-label="탭 처리 중" />}
-      {video ? <VideoScreen key={video.tabId} ref={videoEditor} initial={video} onNewJob={dashboard} /> : job ? <EditorScreen key={job.tabId} ref={editor} initialJob={job}
+      {video ? <VideoEditorScreen key={video.tabId} ref={videoEditor} initial={video} onNewJob={dashboard} /> : job ? <SlideshowEditorScreen key={job.tabId} ref={editor} initialJob={job}
         initialViewState={initialViewState} onNewJob={dashboard} />
         : <DashboardContent onOpen={select} onNew={() => setChooser(true)} />}
     </div>

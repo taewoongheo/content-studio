@@ -1,7 +1,7 @@
 import { isLocalRequest } from "@/lib/http/local-request";
-import { readVideo } from "@/lib/video/server/service";
-import { renderVideo } from "@/lib/video/server/render";
-import { videoError } from "@/lib/video/server/http";
+import { readVideo } from "@/domains/video/server/service";
+import { renderVideo } from "@/domains/video/server/rendering/render";
+import { videoError } from "@/domains/video/server/http";
 export const runtime = "nodejs";
 export async function POST(req: Request, ctx: { params: Promise<{ projectId: string }> }) {
   if (!isLocalRequest(req, true)) return new Response(null, { status: 403 });

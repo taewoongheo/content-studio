@@ -6,10 +6,10 @@ import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createStudioMcpServer } from "../server";
-import { contentJobRegistry } from "@/lib/content-jobs/workflow/service";
-import { createContentProject, saveContentProject } from "@/lib/content-jobs/projects/service";
+import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
+import { createContentProject, saveContentProject } from "@/domains/slideshow/projects/service";
 import { getLocalDatabase } from "@/lib/local-db/database";
-import { ContentProjectStore } from "@/lib/local-db/projects/store";
+import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 import { PATCH } from "@/app/api/content-projects/[projectId]/reuse/route";
 
 const origin = "http://localhost:3000";

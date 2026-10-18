@@ -1,5 +1,5 @@
 "use client";
-import type { OpenProjectTab } from "@/lib/content-jobs/domain/types";
+import type { OpenProjectTab } from "@/domains/workspace/model";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 

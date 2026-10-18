@@ -1,7 +1,7 @@
 "use client";
 import { ExternalLink, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { accountPlatforms, type AccountStatus } from "@/lib/research/accounts/types";
+import { accountPlatforms, type AccountStatus } from "@/domains/research/accounts/types";
 import type { useResearchAccounts } from "./use-research-accounts";
 const names = { tiktok: "TikTok", instagram: "Instagram" };
 const labels: Record<AccountStatus["status"], string> = { disconnected: "연결 안 됨", connected: "연결됨", login_required: "재로그인 필요", logging_in: "로그인 중" };

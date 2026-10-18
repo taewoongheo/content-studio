@@ -1,8 +1,8 @@
-import { ProjectTypeTag } from "@/screens/projects/components/project-type-tag";
+import { ProjectTypeTag } from "@/components/projects/project-type-tag";
 import { ChevronRight, FolderOpen, LayoutTemplate } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { SavedProjectSummary } from "@/lib/local-db/projects/store";
-import { ProjectDeleteButton } from "@/screens/projects/components/project-delete-button";
+import type { SavedProjectSummary } from "@/domains/slideshow/domain/projects";
+import { ProjectDeleteButton } from "@/components/projects/project-delete-button";
 import { ProjectMetadataButton } from "../project-metadata-button";
 import { ProjectReuseButton } from "../project-reuse-button";
 import { TemplatePreviews } from "./template-previews";

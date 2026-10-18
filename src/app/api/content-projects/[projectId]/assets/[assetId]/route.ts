@@ -1,8 +1,8 @@
-import { defaultProjectStores } from "@/lib/content-jobs/projects/service";
+import { defaultProjectStores } from "@/domains/slideshow/projects/service";
 import { isLocalRequest } from "@/lib/http/local-request";
-import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
-import { cachedRenderImage } from "@/lib/content-jobs/editor/image-processing/cache";
-import { imageRenderSize } from "@/lib/content-jobs/editor/image-processing/options";
+import { contentJobErrorResponse } from "@/domains/slideshow/http/http";
+import { cachedRenderImage } from "@/domains/slideshow/editor/image-processing/cache";
+import { imageRenderSize } from "@/domains/slideshow/editor/image-processing/options";
 
 export const runtime = "nodejs";
 export async function GET(request: Request, context: { params: Promise<{ projectId: string; assetId: string }> }) {

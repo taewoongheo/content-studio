@@ -1,8 +1,8 @@
-import { VIDEO_SCHEMA } from "../video/server/store";
+import { VIDEO_SCHEMA } from "@/domains/video/server/persistence/schema";
 import Database from "better-sqlite3";
 import { mkdirSync } from "node:fs";
 import { dirname, isAbsolute } from "node:path";
-import { ensureProjectSchema } from "./projects/schema";
+import { ensureProjectSchema } from "@/domains/slideshow/server/persistence/projects/schema";
 
 export const SCHEMA_VERSION = 11;
 

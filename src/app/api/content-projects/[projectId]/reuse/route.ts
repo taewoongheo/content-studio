@@ -1,10 +1,10 @@
-import { COMPOSITION_LIMIT, ProjectReuseError, projectReuseUpdateSchema } from "@/lib/content-jobs/projects/composition";
-import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
-import { updateContentProjectReuse } from "@/lib/content-jobs/projects/service";
+import { COMPOSITION_LIMIT, ProjectReuseError, projectReuseUpdateSchema } from "@/domains/slideshow/projects/composition";
+import { contentJobErrorResponse } from "@/domains/slideshow/http/http";
+import { updateContentProjectReuse } from "@/domains/slideshow/projects/service";
 import { isLocalRequest } from "@/lib/http/local-request";
-import { ContentTemplateStore } from "@/lib/local-db/templates/store";
+import { ContentTemplateStore } from "@/domains/slideshow/server/persistence/templates/store";
 import { getLocalDatabase } from "@/lib/local-db/database";
-import { notifyProjectsChanged } from "@/lib/content-jobs/projects/events";
+import { notifyProjectsChanged } from "@/domains/workspace/server/project-events";
 
 export const runtime = "nodejs";
 

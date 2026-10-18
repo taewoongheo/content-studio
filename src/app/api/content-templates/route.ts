@@ -1,5 +1,5 @@
 import { isLocalRequest } from "@/lib/http/local-request";
-import { defaultProjectStores } from "@/lib/content-jobs/projects/service";
+import { defaultProjectStores } from "@/domains/slideshow/projects/service";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export function GET(request: Request) {

@@ -1,7 +1,6 @@
-import { videoTabs } from "@/lib/video/server/service";
-import { projectTabEvents } from "@/lib/content-jobs/http/tab-events";
-import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
-import { contentJobRegistry } from "@/lib/content-jobs/workflow/service";
+import { projectTabEvents, listOpenProjectTabs } from "@/domains/workspace/server/tabs";
+import { contentJobErrorResponse } from "@/domains/slideshow/http/http";
+import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import { isLocalRequest } from "@/lib/http/local-request";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +15,6 @@ export async function POST(request: Request) {
 
 export function GET(request: Request) {
   if (!isLocalRequest(request)) return new Response(null, { status: 403 });
-  if (request.headers.get("accept")?.includes("text/event-stream")) return projectTabEvents(contentJobRegistry, request.signal);
-  return Response.json([...contentJobRegistry.tabs(), ...videoTabs()], { headers: { "Cache-Control": "no-store" } });
+  if (request.headers.get("accept")?.includes("text/event-stream")) return projectTabEvents(request.signal);
+  return Response.json(listOpenProjectTabs(), { headers: { "Cache-Control": "no-store" } });
 }

@@ -1,14 +1,14 @@
 "use client";
 
 import { useId, useState } from "react";
-import { COMPOSITION_LIMIT } from "@/lib/content-jobs/projects/composition";
+import { COMPOSITION_LIMIT } from "@/domains/slideshow/projects/composition";
 import { LayoutTemplate } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import type { SavedProjectSummary } from "@/lib/local-db/projects/store";
-import { updateProjectReuse } from "@/screens/projects/api";
+import type { SavedProjectSummary } from "@/domains/slideshow/domain/projects";
+import { updateProjectReuse } from "@/domains/slideshow/client/projects-api";
 
 export function ProjectReuseButton({ project, mode = "guide", disabled, size = "default" }: {
   project: SavedProjectSummary; mode?: "guide" | "register"; disabled?: boolean; size?: "default" | "sm";

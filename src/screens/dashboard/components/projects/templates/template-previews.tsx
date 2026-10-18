@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { SavedProjectSummary } from "@/lib/local-db/projects/store";
-import type { EditorDocument, EditorSlide } from "@/lib/content-jobs/editor/types";
-import { createArtworkImageLoader, type ArtworkImageLoader } from "@/screens/editor/components/canvas/render/assets";
+import type { SavedProjectSummary } from "@/domains/slideshow/domain/projects";
+import type { EditorDocument, EditorSlide } from "@/domains/slideshow/editor/types";
+import { createArtworkImageLoader, type ArtworkImageLoader } from "@/domains/slideshow/rendering/assets";
 
 function useVisible() {
   const ref = useRef<HTMLDivElement>(null);
@@ -26,7 +26,7 @@ function Thumbnail({ document, slide, projectId, loadImage, index }: {
   useEffect(() => {
     if (!visible) return;
     const controller = new AbortController();
-    void import("@/screens/editor/components/canvas/render/artwork").then(({ renderArtwork }) =>
+    void import("@/domains/slideshow/rendering/artwork").then(({ renderArtwork }) =>
       renderArtwork({ document, slide, jobId: projectId, loadImage, signal: controller.signal })
     ).then(({ canvas }) => {
       if (controller.signal.aborted || !ref.current) return;

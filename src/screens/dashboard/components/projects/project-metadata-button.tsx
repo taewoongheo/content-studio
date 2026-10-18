@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import type { SavedProjectSummary } from "@/lib/local-db/projects/store";
-import { updateProjectMetadata } from "@/screens/projects/api";
+import type { SavedProjectSummary } from "@/domains/slideshow/domain/projects";
+import { updateProjectMetadata } from "@/domains/slideshow/client/projects-api";
 
 export function ProjectMetadataButton({ project, templates = [], disabled }: { templates?: SavedProjectSummary[]; project: SavedProjectSummary; disabled?: boolean }) {
   const id = useId();

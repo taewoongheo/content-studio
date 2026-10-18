@@ -1,6 +1,6 @@
-import { addEditorAsset } from "@/lib/content-jobs/editor/assets";
-import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
-import { contentJobRegistry } from "@/lib/content-jobs/workflow/service";
+import { addEditorAsset } from "@/domains/slideshow/editor/assets";
+import { contentJobErrorResponse } from "@/domains/slideshow/http/http";
+import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import { isLocalRequest } from "@/lib/http/local-request";
 
 export const runtime = "nodejs";

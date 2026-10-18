@@ -1,9 +1,9 @@
 import * as z from "zod/v4";
 import { isLocalRequest } from "@/lib/http/local-request";
 import { getLocalDatabase } from "@/lib/local-db/database";
-import { ContentTemplateStore } from "@/lib/local-db/templates/store";
-import { notifyProjectsChanged } from "@/lib/content-jobs/projects/events";
-import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
+import { ContentTemplateStore } from "@/domains/slideshow/server/persistence/templates/store";
+import { notifyProjectsChanged } from "@/domains/workspace/server/project-events";
+import { contentJobErrorResponse } from "@/domains/slideshow/http/http";
 export const runtime = "nodejs";
 const schema = z.strictObject({ ids: z.array(z.string().min(1)), expectedIds: z.array(z.string().min(1)) });
 export async function PUT(request: Request) {

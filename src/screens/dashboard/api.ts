@@ -1,4 +1,4 @@
-import type { PublishedPost } from "@/lib/local-db/published-posts";
+import type { PublishedPost } from "@/domains/slideshow/projects/published-posts";
 
 async function responseError(response: Response) {
   const body = await response.json().catch(() => null) as { error?: string } | null;

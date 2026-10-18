@@ -1,6 +1,6 @@
 import Database from "better-sqlite3";
 import { defaultDatabasePath, SCHEMA_VERSION } from "../src/lib/local-db/database";
-import { migrateTemplateLoop } from "../src/lib/local-db/projects/migrate-loop";
+import { migrateTemplateLoop } from "@/domains/slideshow/server/persistence/projects/migrate-loop";
 
 const path = defaultDatabasePath();
 const database = new Database(path, { fileMustExist: true });

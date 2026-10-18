@@ -3,7 +3,7 @@ import test from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { CollectionRegistry } from "@/lib/research/collection/registry";
+import { CollectionRegistry } from "@/domains/research/collection/registry";
 import { registerResearchTools } from "./tools";
 
 test("MCP rejects off-platform URLs, shares job state across protocol instances and exposes no comment tool", async () => {

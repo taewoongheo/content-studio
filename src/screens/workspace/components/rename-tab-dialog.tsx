@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import type { OpenProjectTab } from "@/lib/content-jobs/domain/types";
+import type { OpenProjectTab } from "@/domains/workspace/model";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";

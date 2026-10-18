@@ -1,7 +1,7 @@
-import { closeProjectTab } from "@/lib/content-jobs/projects/lifecycle/close";
-import { contentJobEvents } from "@/lib/content-jobs/http/events";
-import { contentJobErrorResponse } from "@/lib/content-jobs/http/http";
-import { contentJobRegistry, editorService, projectAutosave } from "@/lib/content-jobs/workflow/service";
+import { closeProjectTab } from "@/domains/slideshow/projects/lifecycle/close";
+import { contentJobEvents } from "@/domains/slideshow/http/events";
+import { contentJobErrorResponse } from "@/domains/slideshow/http/http";
+import { contentJobRegistry, editorService, projectAutosave } from "@/domains/slideshow/workflow/service";
 import { isLocalRequest } from "@/lib/http/local-request";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

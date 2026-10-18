@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { join } from "node:path";
 import { mkdir } from "node:fs/promises";
-import { researchRuntimeDirectory } from "../src/lib/research/runtime";
+import { researchRuntimeDirectory } from "@/domains/research/runtime";
 
 async function run(command: string, args: string[]) {
   const child = spawn(command, args, { stdio: "inherit", shell: false });

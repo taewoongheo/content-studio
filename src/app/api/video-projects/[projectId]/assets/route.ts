@@ -1,7 +1,7 @@
-import { validateVideoUpload, videoMediaTypes } from "@/lib/video/server/media/upload";
+import { validateVideoUpload, videoMediaTypes } from "@/domains/video/server/media/upload";
 import { isLocalRequest } from "@/lib/http/local-request";
-import { uploadVideoAsset } from "@/lib/video/server/service";
-import { videoError } from "@/lib/video/server/http";
+import { uploadVideoAsset } from "@/domains/video/server/service";
+import { videoError } from "@/domains/video/server/http";
 export const runtime = "nodejs";
 
 export async function POST(req: Request, ctx: { params: Promise<{ projectId: string }> }) {

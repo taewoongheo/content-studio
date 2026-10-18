@@ -1,25 +1,24 @@
+import { requestIdSchema } from "../protocol/requests";
 import * as z from "zod/v4";
-import { compositionSchema, requiredCompositionSchema, contentMetadataSchema, templateTopicSchema, templateMessageSchema } from "@/lib/content-jobs/projects/composition";
-import { editorCommandsSchema } from "@/lib/content-jobs/editor/schema";
+import { compositionSchema, requiredCompositionSchema, contentMetadataSchema, templateTopicSchema, templateMessageSchema } from "@/domains/slideshow/projects/composition";
+import { localEditorCommandsSchema } from "@/domains/slideshow/editor/local-schema";
 
-const localImageSchema = {
-  type: "object", additionalProperties: false,
-  properties: { type: { const: "set_local_image" }, slideId: { type: "string", minLength: 1 },
-    placementId: { type: "string", minLength: 1 }, localPath: { type: "string", minLength: 1 } },
-  required: ["type", "slideId", "placementId", "localPath"],
-};
-const commandSchema = editorCommandsSchema.properties.commands;
 export const editSchema = z.fromJSONSchema({
   type: "object", additionalProperties: false,
   properties: {
     expectedTabId: { type: "string", minLength: 1 }, projectId: { type: "string", minLength: 1 }, expectedRevision: { type: "integer", minimum: 0 },
-    commands: { ...commandSchema, minItems: 1, items: { oneOf: [...commandSchema.items.oneOf, localImageSchema] } },
+    commands: localEditorCommandsSchema, includeDocument: { type: "boolean", default: true },
   }, required: ["projectId", "expectedTabId", "expectedRevision", "commands"],
 } as Parameters<typeof z.fromJSONSchema>[0]);
 export const projectSchema = z.strictObject({ projectId: z.string().min(1) });
+export const readProjectSchema = projectSchema.extend({
+  slideIds: z.array(z.string().min(1)).min(1).max(20).optional(), elementIds: z.array(z.string().min(1)).min(1).max(200).optional(),
+  outline: z.boolean().default(false), includeAssets: z.boolean().default(true),
+});
 export const undoSchema = projectSchema.extend({ expectedTabId: z.string().min(1), expectedRevision: z.number().int().nonnegative() });
 export const previewSchema = projectSchema.extend({ slideId: z.string().min(1) });
 export const cloneSchema = z.strictObject({
+  requestId: requestIdSchema,
   name: z.string().trim().min(1).max(120).optional(),
   templateProjectId: z.string().min(1),
   topic: contentMetadataSchema.shape.topic.optional(),
