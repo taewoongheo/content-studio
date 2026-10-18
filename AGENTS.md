@@ -203,13 +203,11 @@ url = "http://127.0.0.1:3000/mcp"
 | 역할 | `fontFamily` | 지원 굵기 |
 | --- | --- | --- |
 | 훅 | `oswald` | 700 (Bold) |
-| 본문 제목 | `space-grotesk` | 300–700, 권장 700 |
 | 본문 | `inter` | 100–900, 권장 400–500 |
-| 기본 대체 | `sans-serif` (Geist) | 100–900 |
 
-- 새 텍스트는 Inter로 시작한다. 지원하지 않는 글리프는 시스템 sans-serif로 대체된다.
-- `update_visual`의 `fontStyle`은 `normal` 또는 `italic`이다. Inter·Geist는 실제 이탤릭, Oswald·Space Grotesk는 합성 기울임을 사용한다. 편집기·미리보기·내보내기는 같은 렌더링을 사용한다.
-- 이전 문서의 Anton·Bebas Neue·Barlow Condensed는 Oswald, Source Sans 3는 Inter, 명조·고정폭은 Geist로 정규화한다. `anton`을 새 편집 명령의 지원 글꼴로 안내하지 않는다.
+- 지원 글꼴은 Oswald와 Inter 두 개뿐이며 새 텍스트는 Inter로 시작한다. 별도 Fallback 글꼴은 제공하거나 로딩하지 않는다.
+- `update_visual`의 `fontStyle`은 `normal` 또는 `italic`이다. Inter는 실제 이탤릭, Oswald는 합성 기울임을 사용한다. 편집기·미리보기·내보내기는 같은 렌더링을 사용한다.
+- 이전 문서의 Anton·Bebas Neue·Barlow Condensed는 Oswald, Space Grotesk·Geist(sans-serif)·Source Sans 3·명조·고정폭은 Inter로 정규화한다. `anton`을 새 편집 명령의 지원 글꼴로 안내하지 않는다.
 - 지원 목록의 원문은 `src/domains/slideshow/editor/typography/fonts.ts`, 실제 로딩은 `src/app/layout.tsx`에서 확인한다.
 
 ## 저장 데이터와 구현 경계

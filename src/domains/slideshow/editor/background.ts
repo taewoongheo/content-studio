@@ -10,7 +10,7 @@ function makeBackgroundElement(color: string): ElementDefinition {
     id: BACKGROUND_ELEMENT_ID, name: "배경", role: "슬라이드 전체의 바탕색", kind: "background",
     frame: { ...BACKGROUND_FRAME },
     style: { color: "#111111", backgroundColor: color, fontSize: 36, lineHeight: 1.2, fontWeight: 400,
-      textAlign: "center", borderRadius: 0, fontFamily: "sans-serif", imageFit: "cover" },
+      textAlign: "center", borderRadius: 0, fontFamily: "inter", imageFit: "cover" },
   };
 }
 

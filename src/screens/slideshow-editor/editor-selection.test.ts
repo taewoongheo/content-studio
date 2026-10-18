@@ -8,7 +8,7 @@ const analysis: EditorAnalysis = {
   elements: [{
     id: "title", name: "제목", role: "본문 제목", kind: "text", frame: { x: 0.1, y: 0.1, width: 0.8, height: 0.1 },
     style: { color: "#111111", backgroundColor: "transparent", fontSize: 36, lineHeight: 1.2, fontWeight: 700,
-      textAlign: "center", borderRadius: 0, fontFamily: "sans-serif", imageFit: "cover" },
+      textAlign: "center", borderRadius: 0, fontFamily: "inter", imageFit: "cover" },
   }],
 
   slides: [

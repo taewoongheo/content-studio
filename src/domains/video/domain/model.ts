@@ -17,7 +17,7 @@ export const layerSchema = z.discriminatedUnion("kind", [
   z.object({ ...base, kind: z.literal("video"), ...media, sequence: z.boolean().optional(), sequenceIndex: z.number().min(0).max(1000).optional(), sequenceStart: frame.optional(), fit: z.enum(["cover", "contain"]), cropX: z.number().min(0).max(100), cropY: z.number().min(0).max(100) }),
   z.object({ ...base, kind: z.literal("audio"), ...media }),
   z.object({ ...base, kind: z.literal("image"), assetId: z.string().uuid(), fit: z.enum(["cover", "contain"]) }),
-  z.object({ ...base, kind: z.literal("text"), text: z.string().max(10000), fontFamily: z.enum(["Inter", "Oswald", "Space Grotesk", "sans-serif"]), fontSize: z.number().min(8).max(400), fontWeight: z.number().int().min(100).max(900), italic: z.boolean(), align: z.enum(["left", "center", "right"]), color, backgroundColor: color, backgroundOpacity: z.number().min(0).max(1), borderRadius: z.number().min(0).max(100), fadeIn: frame, lineHeight: z.number().min(0.5).max(3).optional(), paddingX: z.number().min(0).max(400).optional(), paddingY: z.number().min(0).max(400).optional() }),
+  z.object({ ...base, kind: z.literal("text"), text: z.string().max(10000), fontFamily: z.enum(["Inter", "Oswald"]), fontSize: z.number().min(8).max(400), fontWeight: z.number().int().min(100).max(900), italic: z.boolean(), align: z.enum(["left", "center", "right"]), color, backgroundColor: color, backgroundOpacity: z.number().min(0).max(1), borderRadius: z.number().min(0).max(100), fadeIn: frame, lineHeight: z.number().min(0.5).max(3).optional(), paddingX: z.number().min(0).max(400).optional(), paddingY: z.number().min(0).max(400).optional() }),
   z.object({ ...base, kind: z.literal("shape"), shape: z.enum(["rectangle", "ellipse", "triangle", "line"]), color, strokeColor: color, strokeWidth: z.number().min(0).max(100), borderRadius: z.number().min(0).max(100) }),
 ]);
 export const videoDocumentSchema = z.object({
@@ -83,3 +83,14 @@ export function reorderVideoLayers(doc: VideoDocument, activeId: string, overId:
 }
 
 export const appendFrame = (doc: VideoDocument) => doc.layers.length ? videoDuration(doc) : 0;
+
+/** Normalize retired fonts only when reading saved video documents. */
+export function parseSavedVideoDocument(value: unknown): VideoDocument {
+  const saved = structuredClone(value);
+  if (saved && typeof saved === "object" && "layers" in saved && Array.isArray(saved.layers)) {
+    for (const layer of saved.layers) {
+      if (layer?.kind === "text" && ["Space Grotesk", "sans-serif"].includes(layer.fontFamily)) layer.fontFamily = "Inter";
+    }
+  }
+  return videoDocumentSchema.parse(saved);
+}
