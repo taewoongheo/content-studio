@@ -311,7 +311,9 @@ try {
     const cachedPreview = await call("preview_slides", { projectId: id, slideIds: ["slide-1", "slide-2"], width: 540 });
     assert.deepEqual(cachedPreview.content, batchPreview.content, "same revision produces identical cached previews");
     const zipOutput = join(directory, "slides.zip");
-    const exportJob = (await call("export_slideshow", { projectId: id, expectedTabId: updated.tabId, expectedRevision: updated.editor.revision, outputPath: zipOutput })).structuredContent as { jobId: string };
+    const exportRequest = { requestId: "slideshow-export-smoke", projectId: id, expectedTabId: updated.tabId, expectedRevision: updated.editor.revision, outputPath: zipOutput };
+    const exportJob = (await call("export_slideshow", exportRequest)).structuredContent as { jobId: string };
+    assert.deepEqual((await call("export_slideshow", exportRequest)).structuredContent, exportJob);
     let exported: { status?: string; result?: { bytes: number }; error?: string } = {};
     const exportDeadline = Date.now() + 60_000;
     while (Date.now() < exportDeadline) {
@@ -320,6 +322,7 @@ try {
       await new Promise(resolve => setTimeout(resolve, 200));
     }
     assert.equal(exported.status, "completed", exported.error);
+    assert.deepEqual((await call("export_slideshow", exportRequest)).structuredContent, exportJob, "completed export retries reuse the original job");
     const archive = await JSZip.loadAsync(await readFile(zipOutput));
     assert.equal(Object.keys(archive.files).length, updated.editor.document.slides.length);
     assert.deepEqual(await archive.file("slide-01.png")!.async("nodebuffer"), bytes, "ZIP uses the same full-resolution preview renderer");

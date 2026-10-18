@@ -1,3 +1,4 @@
+import { requestIdSchema } from "../protocol/requests";
 import { registerTool } from "../protocol/tools";
 import { inspectVideo } from "@/domains/video/editing/inspection";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -26,7 +27,7 @@ export function registerVideoTools(server: McpServer, origin: string) {
   }, () => guarded(() => json({ saved: videoStore().list(), open: videoTabs().map(tab => summary(readVideo(tab.projectId))) })));
   registerTool(server, "create_video_project", {
     description: "Create an independent video editor tab without switching the browser. Default 1080x1920, 30fps, white, 5 seconds. Optional settings are document pixels and frames. Unlike slideshow template cloning, blank video creation is supported. Empty drafts are not persisted until first edit. Read the returned tabId/revision for editing.",
-    inputSchema: z.strictObject({ name: z.string().trim().min(1).max(120).optional(), settings: settingsSchema.optional() }), annotations: annotations(false),
+    inputSchema: z.strictObject({ requestId: requestIdSchema, name: z.string().trim().min(1).max(120).optional(), settings: settingsSchema.optional() }), annotations: annotations(false), deduplicate: true,
   }, ({ name, settings }) => guarded(() => {
     // Validate before creating an observable tab.
     const defaults = settings?.fps ? changeVideoFps(newVideoDocument(), settings.fps) : newVideoDocument();
@@ -63,7 +64,7 @@ export function registerVideoTools(server: McpServer, origin: string) {
   }));
   registerTool(server, "clone_video_project", {
     description: "Clone a saved video document and all its media into an independent project/tab, preserving the source. Current revision guard prevents cloning an older saved state. Empty unsaved drafts cannot be cloned.",
-    inputSchema: videoRevisionSchema.extend({ name: z.string().trim().min(1).max(120).optional() }), annotations: annotations(false),
+    inputSchema: videoRevisionSchema.extend({ requestId: requestIdSchema, name: z.string().trim().min(1).max(120).optional() }), annotations: annotations(false), deduplicate: true,
   }, ({ projectId, expectedTabId, expectedRevision, name }) => guarded(() => {
     checkVideoRevision(projectId, expectedTabId, expectedRevision);
     const copy = cloneVideo(projectId); if (name) renameVideo(copy.id, name, copy.tabId); return json(describe(readVideo(copy.id)));
@@ -79,7 +80,7 @@ export function registerVideoTools(server: McpServer, origin: string) {
   }));
   registerTool(server, "start_video_export", {
     description: "Preferred MP4 export for agents: capture current tabId/revision and media, start rendering, return a job immediately. Poll get_render_job for progress/result/error; cancel_render_job cancels safely. Later edits/closing/deleting the source do not change captured media. outputPath is absolute MP4 in an existing directory; overwrite defaults false. No long MCP call or media bytes in the response.",
-    inputSchema: videoRevisionSchema.extend({ outputPath: z.string().min(1), overwrite: z.boolean().default(false) }), annotations: annotations(false),
+    inputSchema: videoRevisionSchema.extend({ requestId: requestIdSchema, outputPath: z.string().min(1), overwrite: z.boolean().default(false) }), annotations: annotations(false), deduplicate: true,
   }, ({ projectId, expectedTabId, expectedRevision, outputPath, overwrite }) => guarded(() => {
     checkVideoRevision(projectId, expectedTabId, expectedRevision); validateExportPath(outputPath, "mp4");
     const snapshot = readVideo(projectId), assets = captureVideoAssets(snapshot);
@@ -88,7 +89,7 @@ export function registerVideoTools(server: McpServer, origin: string) {
   }));
   registerTool(server, "export_video", {
     description: "Synchronous compatibility export; agents should prefer start_video_export plus get_render_job for long renders. Render the current saved revision to a local H.264/AAC MP4 with the shared Remotion renderer. Require current tabId/revision and an absolute outputPath in an existing directory. Returns a local file path and byte count, not media bytes. Existing files are refused unless overwrite=true. Export can take several minutes; it does not change the project. Preview frames first.",
-    inputSchema: videoRevisionSchema.extend({ outputPath: z.string().min(1), overwrite: z.boolean().default(false) }), annotations: annotations(false),
+    inputSchema: videoRevisionSchema.extend({ requestId: requestIdSchema, outputPath: z.string().min(1), overwrite: z.boolean().default(false) }), annotations: annotations(false), deduplicate: true,
   }, ({ projectId, expectedTabId, expectedRevision, outputPath, overwrite }) => guarded(async () => {
     checkVideoRevision(projectId, expectedTabId, expectedRevision);
     const snapshot = readVideo(projectId);

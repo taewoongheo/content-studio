@@ -129,7 +129,9 @@ export async function verifyVideoMcp({ origin, directory, videoPath, audioPath, 
     assert.equal((await read()).assets.length, project.assets.length);
     if (render) {
       const outputPath = join(directory, "mcp-output.mp4");
-      await call("export_video", { ...guard(project), outputPath });
+      const syncRequest = { ...guard(project), outputPath, requestId: randomUUID() };
+      const syncResult = await call("export_video", syncRequest);
+      assert.deepEqual(await call("export_video", syncRequest), syncResult, "retry does not render or overwrite again");
       const probe = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_name,width,height", "-of", "json", outputPath], { encoding: "utf8" }));
       assert.ok(probe.streams.some((stream: { codec_name: string; width: number }) => stream.codec_name === "h264" && stream.width === 320));
       assert.ok(probe.streams.some((stream: { codec_name: string }) => stream.codec_name === "aac"));
@@ -147,8 +149,11 @@ export async function verifyVideoMcp({ origin, directory, videoPath, audioPath, 
       };
       const asyncPath = join(directory, "async-video.mp4");
       const captured = (await call("clone_video_project", { ...guard(project), name: "SNAPSHOT EXPORT" })).structuredContent as VideoSnapshot;
-      const job = (await call("start_video_export", { ...guard(captured), outputPath: asyncPath })).structuredContent as { jobId: string };
+      const exportRequest = { ...guard(captured), outputPath: asyncPath, requestId: randomUUID() };
+      const job = (await call("start_video_export", exportRequest)).structuredContent as { jobId: string };
+      assert.deepEqual((await call("start_video_export", exportRequest)).structuredContent, job);
       await call("delete_video_project", { ...guard(captured), confirm: true });
+      assert.deepEqual((await call("start_video_export", exportRequest)).structuredContent, job, "source deletion does not start a second export");
       const finished = await waitJob(job.jobId); assert.equal(finished.status, "completed", finished.error); assert.equal(finished.progress, 1);
       assert.equal((await stat(asyncPath)).size, finished.result?.bytes);
       const asyncProbe = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "stream=codec_name", "-of", "json", asyncPath], { encoding: "utf8" }));

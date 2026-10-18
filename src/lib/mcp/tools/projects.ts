@@ -1,3 +1,4 @@
+import { requestIdSchema } from "../protocol/requests";
 import { OperationError } from "@/lib/errors/operation";
 import { registerTool } from "../protocol/tools";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -89,7 +90,7 @@ export function registerProjectTools(server: McpServer, origin: string) {
   }));
   registerTool(server, "clone_project", {
     description: "Create and save a new project by cloning a template in the single loop. Record its source template automatically. Choose template and topic with get_content_plan before research; pass topic and message together for this specific content. templateProjectId is required and must come from list_template_guides. Preserves the source. No blank creation or cloning unregistered projects. New projects are not registered as templates.",
-    inputSchema: cloneSchema, annotations: annotations(false),
+    inputSchema: cloneSchema, annotations: annotations(false), deduplicate: true,
   }, (input) => guarded(() => {
     const job = new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase()).clone(input);
     return json(describe(job.id));
@@ -142,7 +143,7 @@ export function registerProjectTools(server: McpServer, origin: string) {
   }));
   registerTool(server, "export_slideshow", {
     description: "Export all slideshow slides as numbered full-resolution PNGs in one ZIP to an absolute outputPath. Requires latest tabId/revision. Returns a render job immediately: poll get_render_job for final outputPath/bytes or cancel_render_job. Captures document and image bytes at the requested revision; later edits do not change this export. Existing files require overwrite=true; failures/cancellation preserve existing output.",
-    inputSchema: undoSchema.extend({ outputPath: z.string().min(1), overwrite: z.boolean().default(false) }), annotations: annotations(false),
+    inputSchema: undoSchema.extend({ requestId: requestIdSchema, outputPath: z.string().min(1), overwrite: z.boolean().default(false) }), annotations: annotations(false), deduplicate: true,
   }, ({ projectId, expectedTabId, expectedRevision, outputPath, overwrite }) => guarded(() => {
     const job = contentJobRegistry.requireTab(projectId, expectedTabId);
     if (job.editor.revision !== expectedRevision) throw new OperationError("REVISION_CONFLICT", "문서가 변경되었습니다. 최신 revision을 읽어 주세요.",

@@ -1,3 +1,4 @@
+import { requestIdSchema } from "../protocol/requests";
 import * as z from "zod/v4";
 import { compositionSchema, requiredCompositionSchema, contentMetadataSchema, templateTopicSchema, templateMessageSchema } from "@/domains/slideshow/projects/composition";
 import { localEditorCommandsSchema } from "@/domains/slideshow/editor/local-schema";
@@ -17,6 +18,7 @@ export const readProjectSchema = projectSchema.extend({
 export const undoSchema = projectSchema.extend({ expectedTabId: z.string().min(1), expectedRevision: z.number().int().nonnegative() });
 export const previewSchema = projectSchema.extend({ slideId: z.string().min(1) });
 export const cloneSchema = z.strictObject({
+  requestId: requestIdSchema,
   name: z.string().trim().min(1).max(120).optional(),
   templateProjectId: z.string().min(1),
   topic: contentMetadataSchema.shape.topic.optional(),

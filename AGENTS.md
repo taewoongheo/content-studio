@@ -135,6 +135,7 @@ url = "http://127.0.0.1:3000/mcp"
 - `edit_project`와 `undo_project`에는 최신 읽기·쓰기 응답의 `expectedRevision`과 `expectedTabId`를 사용한다. 닫힌 작업이나 이전 탭 ID는 거부된다. 다시 연 작업은 다시 읽고 최신 값을 사용한다.
 - 편집 명령 배열은 한 단계로 되돌린다. 실패한 묶음은 문서·revision·되돌리기 이력과 신규 이미지 등록을 복구한다. `clone_project`, `edit_project`, `undo_project`는 DB 저장 성공 후 성공을 반환한다.
 - 읽기·열기·미리보기는 자동 저장하지 않는다. MCP 생성·복제·명시적 열기는 탭을 추가하며 브라우저 화면을 강제로 전환하지 않는다. 프로젝트 삭제·탭 닫기는 MCP로 제공하지 않는다.
+- `clone_project`·`create_video_project`·`clone_video_project`·`export_slideshow`·`start_video_export`·`export_video`는 선택적 `requestId`(1~128자)를 지원한다. 새 작업에는 고유 ID를 만들고, 응답 유실/연결 재시도에는 같은 도구·ID·인자를 그대로 사용한다. 동시 요청과 다른 MCP 연결에서도 최초 성공/실패 응답을 재사용하며 같은 ID로 인자를 바꾸면 `REQUEST_ID_REUSED`를 반환한다. 수정한 요청이나 실패한 렌더링을 새로 실행하려면 새 ID를 사용한다. 기록은 서버 메모리에 완료 후 1시간 유지하며 서버 재시작 시 사라진다. 재시작·만료 후 재요청은 중복 방지를 보장하지 않으므로 프로젝트/작업 목록을 먼저 확인한다. 기록 256개 또는 완료 응답 합계 32MiB에 도달하면 기존 기록을 밀어내지 않고 새 ID 요청을 `REQUEST_CACHE_FULL`로 거부한다. 이미 실행 중인 응답이 완료되면서 바이트 기준을 초과할 수 있다. `requestId` 생략 시 기존 동작을 유지한다. 재사용 응답은 최초 스냅샷이며 현재 상태는 다시 읽어야 한다. 내보내기 작업 메타데이터 보관 기간(15분·최대 40개)은 별도이므로 반환된 작업 ID를 즉시 조회한다.
 - MCP 도구 오류는 기존 `isError`·텍스트 문구와 함께 `structuredContent.error`의 `code`·`message`·`details`·`recovery`를 반환한다. 스키마 오류의 `details.issues`에는 필드 경로와 제한값/허용값이 있다. 실행 중 명령 오류는 `commandIndex`(0부터)·`commandType`·대상 ID를 제공한다. `REVISION_CONFLICT`·`TAB_CONFLICT`는 최신 상태를 다시 읽고, `PROJECT_NOT_OPEN`은 명시적으로 연 뒤 다시 읽는다. 오류 문자열을 파싱해 복구하지 않는다.
 - 에이전트는 앱 DB에 직접 쓰지 않는다. 저장과 편집은 앱 API/MCP를 사용한다.
 
