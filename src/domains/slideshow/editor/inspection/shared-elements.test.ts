@@ -70,3 +70,15 @@ test("grouping retains exact matches without inferring transitive similarity", (
   assert.equal(warnings[0].matches.length, 2);
   assert.equal(warnings[0].matches.some(pair => pair.first.elementId === "a" && pair.second.elementId === "c"), false);
 });
+test("page roles and unused definition cleanup preserve visuals and reject live/background deletion", () => {
+  const doc = fixture();
+  const unused = makeElementDefinition({ id: "unused", kind: "text" });
+  doc.elements.push(unused);
+  const result = applyEditorCommands(doc, [{ type: "set_slide_role", slideId: "s1", role: "cta" }, { type: "remove_element", elementId: "unused" }]);
+  assert.equal(result.slides[1].role, "cta");
+  assert.deepEqual(result.slides[1].placements, doc.slides[1].placements);
+  assert.deepEqual(result.elements, doc.elements.filter(e => e.id !== "unused"));
+  assert.throws(() => applyEditorCommands(doc, [{ type: "remove_element", elementId: "a" }]), /사용 중/);
+  assert.throws(() => applyEditorCommands(doc, [{ type: "remove_element", elementId: "__background__" }]), /일반 Element/);
+  assert.equal(doc.slides[1].role, "body");
+});

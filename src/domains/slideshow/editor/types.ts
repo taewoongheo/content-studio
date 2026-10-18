@@ -66,6 +66,8 @@ export type EditorDocument = {
 export type EditorCommand =
   | { type: "set_aspect_ratio"; aspectRatio: EditorDocument["aspectRatio"] }
   | { type: "reorder_slides"; slideIds: string[] }
+  | { type: "set_slide_role"; slideId: string; role: SlideRole }
+  | { type: "remove_element"; elementId: string }
   | { type: "rename_slide"; slideId: string; name: string }
   | { type: "reorder_layers"; slideId: string; placementIds: string[] }
   | { type: "set_slide_background"; slideId: string; color: string }

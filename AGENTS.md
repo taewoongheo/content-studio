@@ -134,6 +134,7 @@ url = "http://127.0.0.1:3000/mcp"
 - `export_slideshow`는 최신 `expectedTabId`·`expectedRevision`, 절대 `.zip` `outputPath`를 받는다. 요청 시점의 문서·이미지를 캡처하고 작업 ID를 즉시 반환한다. `get_render_job`을 1~2초 간격으로 조회하고 `completed`의 `result.outputPath`·`bytes`를 확인한다. `failed`에는 오류가 있고, `cancel_render_job` 후 최종 상태를 다시 확인한다. 완료 메타데이터는 최대 40개·15분 보관하며 서버 재시작에는 초기화된다. 출력 폴더는 이미 있어야 하고 덮어쓰기는 `overwrite: true`가 필요하다. 취소·실패는 기존 파일을 보존한다.
 - `edit_project`와 `undo_project`에는 최신 읽기·쓰기 응답의 `expectedRevision`과 `expectedTabId`를 사용한다. 닫힌 작업이나 이전 탭 ID는 거부된다. 다시 연 작업은 다시 읽고 최신 값을 사용한다.
 - Element 공유 누락 검증은 문서 쓰기 배치·되돌리기·프로젝트 복제의 최종 문서에서 한 번 실행한다. 읽기·미리보기·이름·메타데이터 변경은 검증하지 않는다. 결과의 `warnings`는 경고이며 저장을 차단하거나 자동 병합하지 않는다. 비교 조건·허용치는 `src/domains/slideshow/editor/inspection/shared-elements.ts` 한 곳에서 관리한다. `includeDocument: false`에서도 경고를 반환한다.
+- `set_slide_role`은 페이지의 `hook`·`body`·`cta` 역할을 변경하며 시각 요소는 유지한다. `remove_element`는 배치에서 사용하지 않는 일반 Element 정의만 삭제한다. 사용 중이거나 배경인 정의는 거부하며 둘 다 기존 배치 저장·되돌리기 계약을 따른다.
 - `rebind_element`는 `slideId`·`placementId`·대상 `elementId`를 받아 같은 종류의 Element로 다시 연결한다. 내용·부분 텍스트 스타일·레이어 순서·실제 외형을 보존하며 차이는 개별 덮어쓰기로 남긴다. 일반 편집과 같은 저장·되돌리기 계약을 따른다. 경고 해석과 배치 작성 기준은 [제작 가이드](docs/content-guidelines.md#3-독립-템플릿을-복제해-제작한다)를 따른다.
 - 편집 명령 배열은 한 단계로 되돌린다. 실패한 묶음은 문서·revision·되돌리기 이력과 신규 이미지 등록을 복구한다. `clone_project`, `edit_project`, `undo_project`는 DB 저장 성공 후 성공을 반환한다.
 - 읽기·열기·미리보기는 자동 저장하지 않는다. MCP 생성·복제·명시적 열기는 탭을 추가하며 브라우저 화면을 강제로 전환하지 않는다. 프로젝트 삭제·탭 닫기는 MCP로 제공하지 않는다.

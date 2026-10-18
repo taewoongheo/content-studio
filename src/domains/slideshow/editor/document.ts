@@ -271,6 +271,17 @@ export function applyEditorCommand(document: EditorDocument, command: EditorComm
       placement.elementId = target.id;
       break;
     }
+    case "set_slide_role":
+      requireSlide(next, command.slideId).role = command.role;
+      break;
+    case "remove_element": {
+      const element = next.elements.find(item => item.id === command.elementId);
+      if (!element || element.kind === "background") throw new Error("삭제할 일반 Element를 찾을 수 없습니다.");
+      if (next.slides.some(slide => slide.placements.some(placement => placement.elementId === element.id)))
+        throw new Error("배치에서 사용 중인 Element는 삭제할 수 없습니다.");
+      next.elements = next.elements.filter(item => item.id !== element.id);
+      break;
+    }
     case "add_element":
       if (command.element.kind === "background" || command.element.id === BACKGROUND_ELEMENT_ID)
         throw new Error("배경 Element는 자동으로 관리됩니다.");

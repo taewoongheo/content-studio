@@ -56,6 +56,8 @@ function object<Properties extends Record<string, unknown>>(properties: Properti
 
 const commandVariants = [
   object({ type: { const: "set_aspect_ratio" }, aspectRatio: { type: "string", enum: ["4:5", "1:1", "9:16"] } }),
+  object({ type: { const: "set_slide_role" }, slideId: text, role: { type: "string", enum: ["hook", "body", "cta"] } }),
+  object({ type: { const: "remove_element" }, elementId: text }),
   object({ type: { const: "rename_slide" }, slideId: text, name: { type: "string", minLength: 1, maxLength: 120 } }),
   object({ type: { const: "reorder_slides" }, slideIds: { type: "array", items: text } }),
   object({ type: { const: "reorder_layers" }, slideId: text, placementIds: { type: "array", items: text } }),
