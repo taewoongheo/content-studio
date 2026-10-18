@@ -66,6 +66,7 @@ const commandVariants = [
   object({ type: { const: "update_visual" }, scope: { const: "common" }, elementId: text, frame, style: stylePatch }, ["type", "scope", "elementId"]),
   object({ type: { const: "update_visual" }, scope: { const: "local" }, slideId: text, placementId: text, frame, style: stylePatch }, ["type", "scope", "slideId", "placementId"]),
   object({ type: { const: "update_element" }, elementId: text, name: text, role: text }, ["type", "elementId"]),
+  object({ type: { const: "rebind_element" }, slideId: text, placementId: text, elementId: text }),
   object({ type: { const: "add_element" }, element: editorElementSchema }),
   object({ type: { const: "place_element" }, slideId: text, elementId: text, placementId: text }),
   object({ type: { const: "add_slide" }, afterSlideId: text, sourceSlideId: text,

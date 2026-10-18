@@ -3,6 +3,7 @@ import { applyEditorCommands, validateEditorDocument } from "@/domains/slideshow
 import { validateEditorCommands } from "@/domains/slideshow/editor/schema";
 import { ContentJobError, type ContentJobRegistry } from "@/domains/slideshow/workflow/registry";
 import type { EditorImage } from "@/domains/slideshow/editor/assets";
+import { inspectSharedElements } from "./inspection/shared-elements";
 export const EDITOR_HISTORY_LIMIT = 100;
 export class EditorService {
   constructor(readonly registry: ContentJobRegistry) {}
@@ -36,6 +37,7 @@ export class EditorService {
       if (current.editorHistory.length > EDITOR_HISTORY_LIMIT)
         current.editorHistory.splice(0, current.editorHistory.length - EDITOR_HISTORY_LIMIT);
       current.editor.document = next;
+      current.warnings = inspectSharedElements(next);
       for (const { bytes, ...asset } of addedAssets) {
         if (current.assets.some((item) => item.id === asset.id)) continue;
         current.assets.push(asset);
@@ -51,6 +53,7 @@ export class EditorService {
     if (!job.editorHistory.length) throw new ContentJobError("INVALID_STAGE", "되돌릴 수정이 없습니다.");
     return this.registry.update(id, (current) => {
       current.editor.document = current.editorHistory.pop()!;
+      current.warnings = inspectSharedElements(current.editor.document);
       current.slideCount = current.editor.document.slides.length;
       current.aspectRatio = current.editor.document.aspectRatio;
       current.editor.revision += 1;

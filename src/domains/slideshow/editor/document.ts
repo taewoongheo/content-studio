@@ -255,6 +255,18 @@ export function applyEditorCommand(document: EditorDocument, command: EditorComm
       if (command.role !== undefined) element.role = command.role;
       break;
     }
+    case "rebind_element": {
+      const placement = requirePlacement(requireSlide(next, command.slideId), command.placementId);
+      const source = next.elements.find(element => element.id === placement.elementId)!;
+      const target = next.elements.find(element => element.id === command.elementId);
+      if (!target || source.kind === "background" || target.kind !== source.kind)
+        throw new Error("같은 종류의 배경이 아닌 Element로 연결해 주세요.");
+      if (source.id === target.id) break;
+      placement.frameOverride = structuredClone(placement.frameOverride ?? source.frame);
+      placement.styleOverride = { ...structuredClone(source.style), ...placement.styleOverride };
+      placement.elementId = target.id;
+      break;
+    }
     case "add_element":
       if (command.element.kind === "background" || command.element.id === BACKGROUND_ELEMENT_ID)
         throw new Error("배경 Element는 자동으로 관리됩니다.");

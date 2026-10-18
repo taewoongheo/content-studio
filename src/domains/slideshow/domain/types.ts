@@ -12,6 +12,7 @@ export type ContentJobRecord = ContentJobInput & {
   id: string;
   tabId: string;
   name?: string;
+  warnings?: import("../editor/inspection/shared-elements").SharedElementWarning[];
   savedRevision?: number;
   saveError?: string;
   editor: { revision: number; document: EditorDocument };

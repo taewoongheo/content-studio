@@ -75,6 +75,7 @@ export type EditorCommand =
   | { type: "update_visual"; scope: "common"; elementId: string; frame?: ElementFrame; style?: Partial<ElementStyle> }
   | { type: "update_visual"; scope: "local"; slideId: string; placementId: string; frame?: ElementFrame; style?: Partial<ElementStyle> }
   | { type: "update_element"; elementId: string; name?: string; role?: string }
+  | { type: "rebind_element"; slideId: string; placementId: string; elementId: string }
   | { type: "add_element"; element: ElementDefinition }
   | { type: "place_element"; slideId: string; elementId: string; placementId: string }
   | { type: "add_slide"; afterSlideId: string; sourceSlideId: string; newSlideId: string; copyContent: boolean }
