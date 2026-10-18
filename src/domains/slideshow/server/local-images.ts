@@ -1,7 +1,8 @@
+import { OperationError, commandFailure } from "@/lib/errors/operation";
 import { open } from "node:fs/promises";
 import { basename, isAbsolute } from "node:path";
 import { MAX_UPLOAD_IMAGE_BYTES, imageTypes, validSignature } from "@/lib/media/images";
-import { ContentJobError, type ContentJobRegistry } from "@/domains/slideshow/workflow/registry";
+import { type ContentJobRegistry } from "@/domains/slideshow/workflow/registry";
 import { EditorService } from "@/domains/slideshow/editor/service";
 import type { EditorCommand } from "@/domains/slideshow/editor/types";
 import { validateEditorCommands } from "@/domains/slideshow/editor/schema";
@@ -39,7 +40,8 @@ export async function editWithLocalImages(registry: ContentJobRegistry, database
   commit: (apply: () => ContentJobSnapshot) => ContentJobSnapshot = (apply) => apply()) {
   const job = registry.get(projectId);
   if (job.editor.revision !== revision)
-    throw new ContentJobError("INVALID_STAGE", "편집 문서가 변경되었습니다. 다시 읽어 주세요.");
+    throw new OperationError("REVISION_CONFLICT", "편집 문서가 변경되었습니다. 다시 읽어 주세요.",
+      { projectId, expectedRevision: revision, actualRevision: job.editor.revision, tabId: job.tabId }, "read_latest");
   if (!commands.some((command) => command.type === "set_local_image"))
     return commit(() => new EditorService(registry).applyCommands(projectId, commands, revision));
   const prepared = new Map<string, Awaited<ReturnType<typeof readLocalImage>>>();
@@ -48,7 +50,7 @@ export async function editWithLocalImages(registry: ContentJobRegistry, database
     try {
       if (!prepared.has(command.localPath)) prepared.set(command.localPath, await readLocalImage(command.localPath));
     } catch (error) {
-      throw new ContentJobError("INVALID_OUTPUT", `commands[${index}] (${command.localPath}): ${error instanceof Error ? error.message : "파일 읽기 실패"}`);
+      throw commandFailure(index, command, error);
     }
   }
   return commit(() => database.transaction(() => {
@@ -58,7 +60,7 @@ export async function editWithLocalImages(registry: ContentJobRegistry, database
       ? { type: "set_slot_value", slideId: command.slideId, placementId: command.placementId, value: imported.get(command.localPath)!.id }
       : command);
     const checked = validateEditorCommands({ commands: resolved });
-    if (!checked.ok) throw new ContentJobError("INVALID_OUTPUT", checked.errors.join(" "));
+    if (!checked.ok) throw new OperationError("INVALID_INPUT", checked.errors.join(" "), { issues: checked.issues });
     // Validate targets in command order, including newly created placements.
     const { document } = registry.get(projectId).editor;
     let probe = document;
@@ -68,10 +70,10 @@ export async function editWithLocalImages(registry: ContentJobRegistry, database
         const placement = probe.slides.find((slide) => slide.id === original.slideId)?.placements
           .find((item) => item.id === original.placementId);
         if (!placement || probe.elements.find((element) => element.id === placement.elementId)?.kind !== "image")
-          throw new ContentJobError("INVALID_OUTPUT", `commands[${index}]: 이미지 배치를 찾을 수 없습니다.`);
+          throw commandFailure(index, original, new Error("이미지 배치를 찾을 수 없습니다."));
       }
       try { probe = applyEditorCommands(probe, [command]); }
-      catch (error) { throw new ContentJobError("INVALID_OUTPUT", `commands[${index}]: ${error instanceof Error ? error.message : "편집 실패"}`); }
+      catch (error) { throw commandFailure(index, original, error); }
     }
     return new EditorService(registry).applyCommands(projectId, resolved, revision, [...imported.values()]);
   })());

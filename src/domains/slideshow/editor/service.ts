@@ -1,3 +1,4 @@
+import { OperationError } from "@/lib/errors/operation";
 import { applyEditorCommands, validateEditorDocument } from "@/domains/slideshow/editor/document";
 import { validateEditorCommands } from "@/domains/slideshow/editor/schema";
 import { ContentJobError, type ContentJobRegistry } from "@/domains/slideshow/workflow/registry";
@@ -8,13 +9,14 @@ export class EditorService {
   private requireRevision(id: string, expected: number) {
     const job = this.registry.getRecord(id);
     if (job.editor.revision !== expected)
-      throw new ContentJobError("INVALID_STAGE", "편집 문서가 변경되었습니다. 최신 결과를 확인해 주세요.");
+      throw new OperationError("REVISION_CONFLICT", "편집 문서가 변경되었습니다. 최신 결과를 확인해 주세요.",
+        { projectId: id, expectedRevision: expected, actualRevision: job.editor.revision, tabId: job.tabId }, "read_latest");
     return job;
   }
   applyCommands(id: string, commands: unknown, revision: number, addedAssets: EditorImage[] = []) {
     const job = this.requireRevision(id, revision);
     const checked = validateEditorCommands({ commands });
-    if (!checked.ok) throw new ContentJobError("INVALID_OUTPUT", checked.errors.join(" "));
+    if (!checked.ok) throw new OperationError("INVALID_INPUT", checked.errors.join(" "), { issues: checked.issues });
     let next;
     try {
       next = applyEditorCommands(job.editor.document, checked.value.commands);
@@ -26,6 +28,7 @@ export class EditorService {
         images.has(placement.elementId) && placement.value && !assets.has(placement.value))))
         throw new Error("슬라이드에서 사용하는 이미지를 찾을 수 없습니다.");
     } catch (error) {
+      if (error instanceof OperationError) throw error;
       throw new ContentJobError("INVALID_OUTPUT", error instanceof Error ? error.message : "편집 내용을 확인해 주세요.");
     }
     return this.registry.update(id, (current) => {

@@ -1,3 +1,4 @@
+import { OperationError, commandFailure } from "@/lib/errors/operation";
 import { appendFrame, reflowSequence, type VideoSnapshot } from "@/domains/video/domain/model";
 import { createMediaLayer } from "@/domains/video/domain/media/layer";
 import { checkVideoRevision, commitVideoEdit, readVideo } from "@/domains/video/server/service";
@@ -11,10 +12,20 @@ export async function editVideoProject(projectId: string, tabId: string, revisio
   checkVideoRevision(projectId, tabId, revision);
   const paths = [...new Set(commands.flatMap(command => command.type === "import_media" || command.type === "replace_media" ? [command.localPath] : []))];
   let prepared: Map<string, LocalVideoMedia>;
-  if (readMedia) {
-    prepared = new Map();
-    for (const path of paths) prepared.set(path, await readMedia(path));
-  } else prepared = await readLocalVideoMediaBatch(paths);
+  try {
+    if (readMedia) {
+      prepared = new Map();
+      for (const path of paths) {
+        try { prepared.set(path, await readMedia(path)); }
+        catch (cause) { throw new OperationError("MEDIA_READ_FAILED", cause instanceof Error ? cause.message : "미디어 읽기 실패", { localPath: path }); }
+      }
+    } else prepared = await readLocalVideoMediaBatch(paths);
+  } catch (cause) {
+    const index = cause instanceof OperationError ? commands.findIndex(command =>
+      (command.type === "import_media" || command.type === "replace_media") && command.localPath === cause.details.localPath) : -1;
+    if (index >= 0) throw commandFailure(index, commands[index], cause);
+    throw cause;
+  }
   // Metadata reads are asynchronous: recheck inside the commit before registering any bytes.
   const original = readVideo(projectId);
   return commitVideoEdit(projectId, tabId, revision, (document, store) => {
@@ -52,7 +63,7 @@ export async function editVideoProject(projectId: string, tabId: string, revisio
           document = reflowSequence({ ...document, duration: sequence && !document.layers.length ? 1 : document.duration, layers: [...document.layers, layer] });
         }
       } catch (cause) {
-        throw new Error(`commands[${index}]: ${cause instanceof Error ? cause.message : "편집 실패"}`);
+        throw commandFailure(index, command, cause);
       }
     }
     return document;

@@ -85,8 +85,8 @@ const ajv = new Ajv({ allErrors: true, strict: true });
 const validate = ajv.compile(editorCommandsSchema);
 export function validateEditorCommands(value: unknown):
   | { ok: true; value: { commands: EditorCommand[] } }
-  | { ok: false; errors: string[] } {
+  | { ok: false; errors: string[]; issues: Array<{ path: string; keyword: string; params: Record<string, unknown> }> } {
   if (validate(value)) return { ok: true, value: value as { commands: EditorCommand[] } };
-  return { ok: false, errors: (validate.errors ?? []).map((error) =>
+  return { ok: false, issues: (validate.errors ?? []).map(error => ({ path: error.instancePath, keyword: error.keyword, params: error.params })), errors: (validate.errors ?? []).map((error) =>
     `${error.instancePath || "/"}: ${error.message ?? "유효하지 않은 값입니다."}`) };
 }

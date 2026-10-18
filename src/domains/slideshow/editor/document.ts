@@ -1,3 +1,4 @@
+import { commandFailure } from "@/lib/errors/operation";
 import type { SlideshowStructure } from "@/domains/slideshow/editor/types";
 import { EDITOR_FONT_FAMILIES } from "@/domains/slideshow/editor/typography/fonts";
 import { remapTextColors, validTextColors } from "@/domains/slideshow/editor/typography/ranges/text-colors";
@@ -358,6 +359,6 @@ export function applyEditorCommand(document: EditorDocument, command: EditorComm
 export function applyEditorCommands(document: EditorDocument, commands: EditorCommand[]) {
   return commands.reduce((current, command, index) => {
     try { return applyEditorCommand(current, command); }
-    catch (error) { throw new Error(`commands[${index}] (${command.type}): ${error instanceof Error ? error.message : "편집 실패"}`); }
+    catch (error) { throw commandFailure(index, command, error); }
   }, document);
 }

@@ -1,3 +1,4 @@
+import { OperationError } from "@/lib/errors/operation";
 import { randomUUID } from "node:crypto";
 import { getLocalDatabase } from "@/lib/local-db/database";
 import type { OpenProjectTab } from "@/domains/workspace/model";
@@ -33,13 +34,16 @@ export function openVideo(id: string) {
 }
 function requireSession(id: string, tabId: unknown, revision?: unknown) {
   const s = sessions.get(id);
-  if (!s || s.tabId !== tabId) throw new Error("이 탭은 종료되었습니다. 프로젝트를 다시 열어 주세요.");
-  if (revision !== undefined && s.revision !== revision) throw new Error("다른 창에서 영상이 변경되었습니다. 다시 열어 최신 내용을 확인해 주세요.");
+  if (!s) throw new OperationError("PROJECT_NOT_OPEN", "이 탭은 종료되었습니다. 프로젝트를 다시 열어 주세요.", { projectId: id }, "open_project");
+  if (s.tabId !== tabId) throw new OperationError("TAB_CONFLICT", "이 탭은 종료되었습니다. 프로젝트를 다시 열어 주세요.",
+    { projectId: id, expectedTabId: tabId, actualTabId: s.tabId }, "read_latest");
+  if (revision !== undefined && s.revision !== revision) throw new OperationError("REVISION_CONFLICT", "다른 창에서 영상이 변경되었습니다. 다시 열어 최신 내용을 확인해 주세요.",
+      { projectId: id, expectedRevision: revision, actualRevision: s.revision, tabId: s.tabId }, "read_latest");
   return s;
 }
 export function readVideo(id: string) {
   const session = sessions.get(id);
-  if (!session) throw new Error("열린 영상 탭을 찾을 수 없습니다. open_video_project로 먼저 열어 주세요.");
+  if (!session) throw new OperationError("PROJECT_NOT_OPEN", "열린 영상 탭을 찾을 수 없습니다. open_video_project로 먼저 열어 주세요.", { projectId: id }, "open_project");
   return snapshot(session);
 }
 export function checkVideoRevision(id: string, tabId: string, revision: number) {

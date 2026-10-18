@@ -1,3 +1,4 @@
+import { OperationError } from "@/lib/errors/operation";
 import { randomUUID } from "node:crypto";
 import { createBlankDocument } from "@/domains/slideshow/editor/document";
 import type { OpenProjectTab } from "@/domains/workspace/model";
@@ -43,7 +44,7 @@ export class ContentJobRegistry {
   get(id: string) { return this.snapshot(this.getRecord(id)); }
   getRecord(id: string) {
     const job = this.jobs.get(id);
-    if (!job) throw new ContentJobError("JOB_NOT_FOUND", "작업을 찾을 수 없습니다. 저장된 프로젝트를 다시 열어 주세요.");
+    if (!job) throw new OperationError("PROJECT_NOT_OPEN", "작업을 찾을 수 없습니다. 저장된 프로젝트를 다시 열어 주세요.", { projectId: id }, "open_project");
     return job;
   }
   update(id: string, update: (job: ContentJobRecord) => void) {
@@ -103,7 +104,8 @@ export class ContentJobRegistry {
   }
   requireTab(id: string, tabId: string) {
     const job = this.getRecord(id);
-    if (job.tabId !== tabId) throw new ContentJobError("INVALID_STAGE", "이 탭은 종료되었습니다. 다시 열린 탭의 최신 상태를 읽어 주세요.");
+    if (job.tabId !== tabId) throw new OperationError("TAB_CONFLICT", "이 탭은 종료되었습니다. 다시 열린 탭의 최신 상태를 읽어 주세요.",
+      { projectId: id, expectedTabId: tabId, actualTabId: job.tabId }, "read_latest");
     return job;
   }
   tabs(): OpenProjectTab[] {

@@ -135,6 +135,7 @@ url = "http://127.0.0.1:3000/mcp"
 - `edit_project`와 `undo_project`에는 최신 읽기·쓰기 응답의 `expectedRevision`과 `expectedTabId`를 사용한다. 닫힌 작업이나 이전 탭 ID는 거부된다. 다시 연 작업은 다시 읽고 최신 값을 사용한다.
 - 편집 명령 배열은 한 단계로 되돌린다. 실패한 묶음은 문서·revision·되돌리기 이력과 신규 이미지 등록을 복구한다. `clone_project`, `edit_project`, `undo_project`는 DB 저장 성공 후 성공을 반환한다.
 - 읽기·열기·미리보기는 자동 저장하지 않는다. MCP 생성·복제·명시적 열기는 탭을 추가하며 브라우저 화면을 강제로 전환하지 않는다. 프로젝트 삭제·탭 닫기는 MCP로 제공하지 않는다.
+- MCP 도구 오류는 기존 `isError`·텍스트 문구와 함께 `structuredContent.error`의 `code`·`message`·`details`·`recovery`를 반환한다. 스키마 오류의 `details.issues`에는 필드 경로와 제한값/허용값이 있다. 실행 중 명령 오류는 `commandIndex`(0부터)·`commandType`·대상 ID를 제공한다. `REVISION_CONFLICT`·`TAB_CONFLICT`는 최신 상태를 다시 읽고, `PROJECT_NOT_OPEN`은 명시적으로 연 뒤 다시 읽는다. 오류 문자열을 파싱해 복구하지 않는다.
 - 에이전트는 앱 DB에 직접 쓰지 않는다. 저장과 편집은 앱 API/MCP를 사용한다.
 
 ### 템플릿 정보 작성 가이드

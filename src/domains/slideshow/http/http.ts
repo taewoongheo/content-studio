@@ -1,6 +1,14 @@
+import { OperationError } from "@/lib/errors/operation";
 import { ProjectReuseError } from "@/domains/slideshow/projects/composition";
 import { ContentJobError } from "@/domains/slideshow/workflow/registry";
 export function contentJobErrorResponse(error: unknown) {
+  if (error instanceof OperationError) {
+    const status = error.code === "PROJECT_NOT_OPEN" ? 404 : ["REVISION_CONFLICT", "TAB_CONFLICT"].includes(error.code) ? 409 : 422;
+    const code = error.code === "PROJECT_NOT_OPEN" ? "JOB_NOT_FOUND"
+      : ["REVISION_CONFLICT", "TAB_CONFLICT"].includes(error.code) ? "INVALID_STAGE"
+      : ["COMMAND_FAILED", "INVALID_INPUT"].includes(error.code) ? "INVALID_OUTPUT" : error.code;
+    return Response.json({ error: error.message, code, errorCode: error.code, details: error.details, recovery: error.recovery }, { status });
+  }
   if (error instanceof ProjectReuseError)
     return Response.json({ error: error.message }, { status: error.code === "PROJECT_NOT_FOUND" ? 404 : 422 });
   if (error instanceof ContentJobError || (error instanceof Error && error.name === "ContentJobError")) {

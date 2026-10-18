@@ -1,3 +1,4 @@
+import { OperationError } from "@/lib/errors/operation";
 import { open } from "node:fs/promises";
 import { basename, extname, isAbsolute } from "node:path";
 import { createServer } from "node:http";
@@ -86,7 +87,7 @@ export async function readLocalVideoMediaBatch(paths: string[]) {
     while (cursor < paths.length && !failed) {
       const localPath = paths[cursor++];
       try { results.set(localPath, await readLocalVideoMedia(localPath, getBrowser)); }
-      catch (cause) { failed = true; throw new Error(`${localPath}: ${cause instanceof Error ? cause.message : "미디어 읽기 실패"}`); }
+      catch (cause) { failed = true; throw new OperationError("MEDIA_READ_FAILED", `${localPath}: ${cause instanceof Error ? cause.message : "미디어 읽기 실패"}`, { localPath }); }
     }
   });
   try {
