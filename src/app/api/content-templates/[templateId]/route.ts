@@ -1,8 +1,7 @@
 import { contentJobErrorResponse } from "@/domains/slideshow/http/http";
 import { defaultProjectStores } from "@/domains/slideshow/projects/service";
-import { updateTemplateSettings } from "@/domains/slideshow/templates/service";
-import { templateSettingsSchema } from "@/domains/slideshow/projects/composition";
-import { deleteProject } from "@/domains/slideshow/projects/lifecycle/management";
+import { updateTemplateSettings, deleteTemplate } from "@/domains/slideshow/templates/service";
+import { templateSettingsSchema } from "@/domains/slideshow/templates/metadata";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import { isLocalRequest } from "@/lib/http/local-request";
 export const runtime = "nodejs";
@@ -18,7 +17,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ temp
   if (!isLocalRequest(request, true)) return new Response(null, { status: 403 });
   try {
     const { templateId } = await context.params;
-    deleteProject(contentJobRegistry, templateId);
+    deleteTemplate(contentJobRegistry, defaultProjectStores().projects, templateId);
     return new Response(null, { status: 204 });
   } catch (error) { return contentJobErrorResponse(error); }
 }

@@ -5,7 +5,8 @@ import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, us
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { SavedTemplateSummary } from "@/domains/slideshow/domain/projects";
 import { useSavedProjects } from "@/domains/workspace/client/use-saved-projects";
-import { publishProject, reorderTemplates, deleteTemplate } from "@/domains/slideshow/client/projects-api";
+import { publishProject } from "@/domains/slideshow/client/projects-api";
+import { reorderTemplates, deleteTemplate } from "@/domains/slideshow/client/templates-api";
 import { SortableTemplate } from "./sortable-template";
 import { nextTemplateInLoop } from "@/domains/slideshow/projects/planning/next-template";
 import { SavedProjectCard, TemplateCard } from "./project-cards";

@@ -8,8 +8,8 @@ import type { EditorCommand, ElementFrame, ElementKind } from "@/domains/slidesh
 import { makeElementDefinition } from "@/domains/slideshow/editor/elements/factory";
 import { slideActionCommand } from "@/domains/slideshow/editor/slides/commands";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, getDuplicateTargets } from "@/domains/slideshow/editor/document";
-import { getContentJob, uploadEditorImage } from "@/domains/slideshow/client/api";
-import { useContentJob } from "@/domains/slideshow/client/use-content-job";
+import { getContentJob, uploadEditorImage } from "@/domains/slideshow/client/editor/api";
+import { useContentJob } from "@/domains/slideshow/client/editor/use-content-job";
 import { ElementInspector, type ElementInspectorHandle } from "./components/inspector/element-inspector";
 import { ElementScopePicker } from "./components/element-scope-picker";
 import { removalCommandsForScope, selectVisualSlides, type ScopeChoice } from "./components/element-scope";

@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
-import { TemplateError, templateSettingsSchema, type TemplateSettingsInput } from "../../../projects/composition";
+import { SlideshowMetadataError } from "@/domains/slideshow/domain/errors";
+import { templateSettingsSchema, type TemplateSettingsInput } from "../../../templates/metadata";
 import type { SavedTemplateSummary } from "../../../domain/projects";
 import { saveAssets, readAssets, readAsset, type SavedSlideshowAsset as SavedProjectAsset } from "../assets";
 import type { EditorDocument } from "../../../editor/types";
@@ -43,12 +44,13 @@ export class ContentTemplateStore {
       this.database.prepare(`INSERT INTO content_templates (id, name, topic, message, composition, loop_order, aspect_ratio, slide_count, output_language, document_json, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(input.id, input.name, input.topic, input.message, input.composition,
         this.list().length + 1, input.document.aspectRatio, input.document.slides.length, input.outputLanguage, JSON.stringify(input.document), now, now);
-      return this.save({ ...input, aspectRatio: input.document.aspectRatio, slideCount: input.document.slides.length });
+      saveAssets(this.database, "template", input.id, input.assets);
+      return this.get(input.id)!;
     })();
   }
   save(input: { id: string; name: string; aspectRatio: string; slideCount: number; outputLanguage: string; document: unknown; assets: SavedProjectAsset[] }) {
     return this.database.transaction(() => {
-      if (!this.get(input.id)) throw new TemplateError("PROJECT_NOT_FOUND");
+      if (!this.get(input.id)) throw new SlideshowMetadataError("PROJECT_NOT_FOUND");
       this.database.prepare(`UPDATE content_templates SET name = ?, aspect_ratio = ?, slide_count = ?, output_language = ?, document_json = ?, updated_at = ? WHERE id = ?`)
         .run(input.name, input.aspectRatio, input.slideCount, input.outputLanguage, JSON.stringify(input.document), new Date().toISOString(), input.id);
       saveAssets(this.database, "template", input.id, input.assets);
@@ -59,15 +61,14 @@ export class ContentTemplateStore {
     const settings = templateSettingsSchema.parse(input);
     return this.database.transaction(() => {
       const existing = this.get(id);
-      if (!existing) throw new TemplateError("PROJECT_NOT_FOUND");
-      if (settings.templateOrder === null) { this.delete(id); return null; }
+      if (!existing) throw new SlideshowMetadataError("PROJECT_NOT_FOUND");
       const composition = settings.composition ?? existing.composition;
-      if (!composition.trim()) throw new TemplateError("COMPOSITION_REQUIRED");
+      if (!composition.trim()) throw new SlideshowMetadataError("COMPOSITION_REQUIRED");
       this.database.prepare("UPDATE content_templates SET name = ?, topic = ?, message = ?, composition = ?, updated_at = ? WHERE id = ?")
         .run(settings.templateName ?? existing.name, settings.templateTopic ?? existing.topic, settings.templateMessage ?? existing.message, composition, new Date().toISOString(), id);
       if (settings.templateOrder !== undefined) {
         const ids = this.list().filter(t => t.id !== id).map(t => t.id);
-        if (settings.templateOrder < 1 || settings.templateOrder > ids.length + 1) throw new TemplateError("INVALID_METADATA", "템플릿 순서는 루프 범위 안에서 지정해 주세요.");
+        if (settings.templateOrder < 1 || settings.templateOrder > ids.length + 1) throw new SlideshowMetadataError("INVALID_METADATA", "템플릿 순서는 루프 범위 안에서 지정해 주세요.");
         ids.splice(settings.templateOrder - 1, 0, id); this.applyOrder(ids);
       }
       return this.get(id)!;
@@ -78,9 +79,9 @@ export class ContentTemplateStore {
     return this.database.transaction(() => {
       const current = this.list().map(template => template.id);
       if (current.length !== expectedIds.length || current.some((id, index) => id !== expectedIds[index]))
-        throw new TemplateError("INVALID_METADATA", "루프가 변경됐습니다. 최신 목록에서 다시 이동해 주세요.");
+        throw new SlideshowMetadataError("INVALID_METADATA", "루프가 변경됐습니다. 최신 목록에서 다시 이동해 주세요.");
       if (ids.length !== current.length || new Set(ids).size !== ids.length || ids.some(id => !current.includes(id)))
-        throw new TemplateError("INVALID_METADATA", "현재 루프의 모든 템플릿을 한 번씩 지정해 주세요.");
+        throw new SlideshowMetadataError("INVALID_METADATA", "현재 루프의 모든 템플릿을 한 번씩 지정해 주세요.");
       this.applyOrder(ids); return this.list();
     })();
   }
@@ -92,7 +93,7 @@ export class ContentTemplateStore {
   }
   delete(id: string) {
     this.database.transaction(() => {
-      if (!this.get(id)) throw new TemplateError("PROJECT_NOT_FOUND");
+      if (!this.get(id)) throw new SlideshowMetadataError("PROJECT_NOT_FOUND");
       this.database.prepare("UPDATE content_projects SET template_id = NULL WHERE template_id = ?").run(id);
       this.database.prepare("DELETE FROM content_templates WHERE id = ?").run(id);
       this.applyOrder(this.list().map(template => template.id));

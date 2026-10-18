@@ -81,6 +81,9 @@ try {
   const templateIds = new Map<string, string>();
   async function registerTemplate(projectId: string) {
     const source = (await call("read_project", { projectId })).structuredContent as Project;
+    const saved = await fetch(`${origin}/api/content-projects`, { method: "POST", headers: { origin, "content-type": "application/json" },
+      body: JSON.stringify({ jobId: projectId, name: source.name ?? "Template", expectedTabId: source.tabId }) });
+    assert.equal(saved.status, 201);
     const result = await call("register_template", { projectId, slideIds: source.editor.document.slides.map(slide => slide.id),
       templateName: source.name ?? "Template", templateTopic: "Exercise guide", templateMessage: "Compare exercise options", composition: routineGuide });
     const templateId = (result.structuredContent as { template: { id: string } }).template.id;

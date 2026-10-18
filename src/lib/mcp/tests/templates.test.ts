@@ -25,6 +25,8 @@ test("MCP copies selected pages into an independent editable template and return
     const projects = new ContentProjectStore(getLocalDatabase()), before = projects.get(source.id);
     const input = { projectId: source.id, slideIds: ["slide-2"], templateName: "Template", templateTopic: "Guide", templateMessage: "Compare options", composition: "Image and explanation" };
     assert.equal((await call("clone_project", { templateId: source.id })).isError, true);
+    assert.equal((await call("unregister_template", { templateId: source.id })).isError, true);
+    assert.deepEqual(projects.get(source.id), before);
     assert.equal((await call("register_template", { ...input, slideIds: [] })).isError, true);
     const registered = await call("register_template", input); assert.equal(registered.isError, undefined);
     const template = (registered.structuredContent as { template: { id: string } }).template;

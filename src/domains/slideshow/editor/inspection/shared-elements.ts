@@ -7,6 +7,7 @@ type Candidate = { slideId: string; placementId: string; elementId: string; kind
 export type SharedElementWarning = {
   code: "POSSIBLE_UNSHARED_ELEMENT";
   message: string;
+  omittedMatches: number;
   matches: Array<{ first: Pick<Candidate, "slideId" | "placementId" | "elementId">; second: Pick<Candidate, "slideId" | "placementId" | "elementId"> }>;
 };
 const sameColor = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
@@ -24,6 +25,7 @@ export function inspectSharedElements(document: EditorDocument): SharedElementWa
         frame: placement.frameOverride ?? element.frame, style: withStyleDefaults({ ...element.style, ...placement.styleOverride }) }];
     }));
   const matches: SharedElementWarning["matches"] = [];
+  let omittedMatches = 0;
   const ref = ({ slideId, placementId, elementId }: Candidate) => ({ slideId, placementId, elementId });
   for (let i = 0; i < candidates.length; i++) for (let j = i + 1; j < candidates.length; j++) {
     const a = candidates[i], b = candidates[j], tolerance = SHARED_ELEMENT_TOLERANCES;
@@ -41,7 +43,8 @@ export function inspectSharedElements(document: EditorDocument): SharedElementWa
         a.style.borderEnabled !== b.style.borderEnabled ||
         (a.style.borderEnabled && !sameColor(a.style.borderColor!, b.style.borderColor!)))) continue;
     }
-    matches.push({ first: ref(a), second: ref(b) });
+    if (matches.length < 200) matches.push({ first: ref(a), second: ref(b) });
+    else omittedMatches++;
   }
   // Group connected candidates for presentation, retaining exact pairs rather than claiming transitive similarity.
   const groups: typeof matches[] = [];
@@ -52,5 +55,5 @@ export function inspectSharedElements(document: EditorDocument): SharedElementWa
     for (const old of touching) groups.splice(groups.indexOf(old), 1);
     groups.push(group);
   }
-  return groups.map(group => ({ code: "POSSIBLE_UNSHARED_ELEMENT", message: "본문의 유사한 요소가 서로 다른 Element를 사용합니다. 함께 수정할 요소인지 확인하고 필요하면 rebind_element로 연결하세요.", matches: group }));
+  return groups.map(group => ({ code: "POSSIBLE_UNSHARED_ELEMENT", message: "본문의 유사한 요소가 서로 다른 Element를 사용합니다. 함께 수정할 요소인지 확인하고 필요하면 rebind_element로 연결하세요.", matches: group, omittedMatches }));
 }

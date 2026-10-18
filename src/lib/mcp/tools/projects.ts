@@ -33,10 +33,12 @@ export function registerProjectTools(server: McpServer, origin: string) {
     description: "Find saved projects and active drafts. Match user-provided names or URL ?job IDs. Active drafts take precedence over saved versions of the same ID; do not guess between ambiguous matches.",
     inputSchema: z.strictObject({}), annotations: annotations(true),
   }, () => guarded(() => {
-    const saved = defaultProjectStores().projects.list();
+    const stores = defaultProjectStores();
+    const templateIds = new Set(stores.projects.listTemplates(true).map(template => template.id));
+    const saved = stores.projects.list();
     const entries = new Map(saved.map((project) => [project.id, { ...project, state: "saved", url: `${origin}/?job=${encodeURIComponent(project.id)}` }]));
     for (const job of contentJobRegistry.list()) {
-      if ("composition" in (documentStore(defaultProjectStores(), job.id).getSummary(job.id) ?? {})) continue;
+      if (templateIds.has(job.id)) continue;
       entries.set(job.id, { id: job.id, name: job.name ?? entries.get(job.id)?.name ?? "새 프로젝트",
         aspectRatio: job.aspectRatio, slideCount: job.slideCount, outputLanguage: job.outputLanguage,
         sourceTemplateId: entries.get(job.id)?.sourceTemplateId ?? null, sourceTemplateName: entries.get(job.id)?.sourceTemplateName ?? null,

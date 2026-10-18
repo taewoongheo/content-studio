@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { templateCreateSchema } from "@/domains/slideshow/projects/composition";
+import { templateCreateSchema } from "@/domains/slideshow/templates/metadata";
 import { createTemplateFromProject } from "@/domains/slideshow/templates/service";
 import { contentJobErrorResponse } from "@/domains/slideshow/http/http";
 import { isLocalRequest } from "@/lib/http/local-request";

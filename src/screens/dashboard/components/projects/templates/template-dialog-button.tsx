@@ -1,18 +1,19 @@
 "use client";
 
 import { useId, useState, useEffect } from "react";
-import { COMPOSITION_LIMIT } from "@/domains/slideshow/projects/composition";
+import { COMPOSITION_LIMIT } from "@/domains/slideshow/templates/metadata";
 import { LayoutTemplate } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { SavedProjectSummary, SavedTemplateSummary } from "@/domains/slideshow/domain/projects";
-import { TemplatePagePicker } from "./templates/template-page-picker";
+import { TemplatePagePicker } from "./previews/template-page-picker";
 import type { EditorDocument } from "@/domains/slideshow/editor/types";
-import { createTemplate, readSavedDocument, updateProjectReuse } from "@/domains/slideshow/client/projects-api";
+import { readSavedDocument } from "@/domains/slideshow/client/projects-api";
+import { createTemplate, updateTemplateSettings } from "@/domains/slideshow/client/templates-api";
 
-export function ProjectReuseButton({ project, mode = "guide", disabled, size = "default" }: {
+export function TemplateDialogButton({ project, mode = "guide", disabled, size = "default" }: {
   project: SavedProjectSummary | SavedTemplateSummary; mode?: "guide" | "register"; disabled?: boolean; size?: "default" | "sm";
 }) {
   const id = useId();
@@ -43,7 +44,7 @@ export function ProjectReuseButton({ project, mode = "guide", disabled, size = "
     try {
       const input = { composition, templateName: name, templateTopic: topic, templateMessage: message };
       if (mode === "register") await createTemplate(project.id, { ...input, slideIds: selectedIds });
-      else await updateProjectReuse(project.id, input);
+      else await updateTemplateSettings(project.id, input);
       setOpen(false);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "재사용 설정을 저장하지 못했습니다."); }
     finally { setSaving(false); }

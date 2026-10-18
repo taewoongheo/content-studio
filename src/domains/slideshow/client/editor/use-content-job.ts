@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { ContentJobSnapshot } from "@/domains/slideshow/domain/types";
-import { postContentJobAction } from "@/domains/slideshow/client/api";
+import { postContentJobAction } from "@/domains/slideshow/client/editor/api";
 
 export function useContentJob(initialJob: ContentJobSnapshot) {
   const [job, setJob] = useState(initialJob);

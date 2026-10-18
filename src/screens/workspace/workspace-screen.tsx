@@ -8,7 +8,7 @@ import type { OpenProjectTab } from "@/domains/workspace/model";
 import type { ContentJobSnapshot } from "@/domains/slideshow/domain/types";
 import { DashboardContent } from "@/screens/dashboard/dashboard-content";
 import { SlideshowEditorScreen, type SlideshowEditorViewState, type SlideshowEditorWorkspaceHandle } from "@/screens/slideshow-editor/slideshow-editor-screen";
-import { createContentJob } from "@/domains/slideshow/client/api";
+import { createContentJob } from "@/domains/slideshow/client/editor/api";
 import { loadContentProject } from "@/domains/slideshow/client/projects-api";
 import { useOpenTabs } from "./hooks/use-open-tabs";
 import { useWorkspaceOperation } from "./hooks/use-workspace-operation";

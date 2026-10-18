@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
-import { TemplateError, contentMetadataSchema, type ContentMetadata } from "@/domains/slideshow/projects/composition";
+import { SlideshowMetadataError } from "@/domains/slideshow/domain/errors";
+import { contentMetadataSchema, type ContentMetadata } from "@/domains/slideshow/projects/metadata";
 import { ContentTemplateStore } from "@/domains/slideshow/server/persistence/templates/store";
 import { ensureProjectSchema } from "@/domains/slideshow/server/persistence/projects/schema";
 import { saveAssets, readAssets, readAsset, type SavedSlideshowAsset } from "../assets";
@@ -64,10 +65,10 @@ export class ContentProjectStore {
     const metadata = contentMetadataSchema.parse(input);
     return this.database.transaction(() => {
       const project = this.getSummary(id);
-      if (!project) throw new TemplateError("PROJECT_NOT_FOUND");
+      if (!project) throw new SlideshowMetadataError("PROJECT_NOT_FOUND");
       if (metadata.templateId !== undefined) {
         if (metadata.templateId !== null && !new ContentTemplateStore(this.database).get(metadata.templateId))
-          throw new TemplateError("INVALID_METADATA", "존재하는 부모 템플릿을 선택해 주세요.");
+          throw new SlideshowMetadataError("INVALID_METADATA", "존재하는 부모 템플릿을 선택해 주세요.");
         this.database.prepare("UPDATE content_projects SET template_id = ? WHERE id = ?").run(metadata.templateId, id);
       }
       this.database.prepare("UPDATE content_projects SET topic = ?, message = ?, updated_at = ? WHERE id = ?")
@@ -79,23 +80,23 @@ export class ContentProjectStore {
   setCloneSource(id: string, sourceId: string) {
     const template = new ContentTemplateStore(this.database).get(sourceId);
     if (id === sourceId || !template || template.templateOrder === null)
-      throw new TemplateError("INVALID_METADATA", "루프에 등록된 원본 템플릿을 선택해 주세요.");
+      throw new SlideshowMetadataError("INVALID_METADATA", "루프에 등록된 원본 템플릿을 선택해 주세요.");
     this.database.prepare("UPDATE content_projects SET template_id = ? WHERE id = ?").run(sourceId, id);
   }
 
   publish(id: string) {
     const project = this.getSummary(id);
-    if (!project) throw new TemplateError("PROJECT_NOT_FOUND");
+    if (!project) throw new SlideshowMetadataError("PROJECT_NOT_FOUND");
     if (project.publishedAt) return project;
     if (!project.topic.trim() || !project.message.trim())
-      throw new TemplateError("INVALID_METADATA", "게시 전에 주제와 메시지를 입력해 주세요.");
+      throw new SlideshowMetadataError("INVALID_METADATA", "게시 전에 주제와 메시지를 입력해 주세요.");
     this.database.prepare("UPDATE content_projects SET published_at = ? WHERE id = ? AND published_at IS NULL")
       .run(new Date().toISOString(), id);
     return this.getSummary(id)!;
   }
 
   unpublish(id: string) {
-    if (!this.getSummary(id)) throw new TemplateError("PROJECT_NOT_FOUND");
+    if (!this.getSummary(id)) throw new SlideshowMetadataError("PROJECT_NOT_FOUND");
     this.database.prepare("UPDATE content_projects SET published_at = NULL WHERE id = ?").run(id);
   }
 

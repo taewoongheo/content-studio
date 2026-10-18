@@ -1,6 +1,6 @@
 import { requestIdSchema } from "../protocol/requests";
 import * as z from "zod/v4";
-import { contentMetadataSchema } from "@/domains/slideshow/projects/composition";
+import { contentMetadataSchema } from "@/domains/slideshow/projects/metadata";
 import { localEditorCommandsSchema } from "@/domains/slideshow/editor/local-schema";
 
 export const editSchema = z.fromJSONSchema({

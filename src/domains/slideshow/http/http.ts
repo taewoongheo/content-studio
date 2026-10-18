@@ -1,6 +1,6 @@
 import { ZodError } from "zod/v4";
 import { OperationError } from "@/lib/errors/operation";
-import { TemplateError } from "@/domains/slideshow/projects/composition";
+import { SlideshowMetadataError } from "@/domains/slideshow/domain/errors";
 import { ContentJobError } from "@/domains/slideshow/workflow/registry";
 export function contentJobErrorResponse(error: unknown) {
   if (error instanceof ZodError) return Response.json({ error: error.issues.map(issue => issue.message).join(" ") }, { status: 400 });
@@ -11,7 +11,7 @@ export function contentJobErrorResponse(error: unknown) {
       : ["COMMAND_FAILED", "INVALID_INPUT"].includes(error.code) ? "INVALID_OUTPUT" : error.code;
     return Response.json({ error: error.message, code, errorCode: error.code, details: error.details, recovery: error.recovery }, { status });
   }
-  if (error instanceof TemplateError)
+  if (error instanceof SlideshowMetadataError)
     return Response.json({ error: error.message }, { status: error.code === "PROJECT_NOT_FOUND" ? 404 : 422 });
   if (error instanceof ContentJobError || (error instanceof Error && error.name === "ContentJobError")) {
     const failure = error as ContentJobError;

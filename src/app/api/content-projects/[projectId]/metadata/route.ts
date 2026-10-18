@@ -1,4 +1,4 @@
-import { contentMetadataSchema } from "@/domains/slideshow/projects/composition";
+import { contentMetadataSchema } from "@/domains/slideshow/projects/metadata";
 import { contentJobErrorResponse } from "@/domains/slideshow/http/http";
 import { notifyProjectsChanged } from "@/domains/workspace/server/project-events";
 import { defaultProjectStores } from "@/domains/slideshow/projects/service";

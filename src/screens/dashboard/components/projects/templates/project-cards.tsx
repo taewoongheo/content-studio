@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import type { SavedProjectSummary, SavedTemplateSummary, SlideshowSummary } from "@/domains/slideshow/domain/projects";
 import { ProjectDeleteButton } from "@/components/projects/project-delete-button";
 import { ProjectMetadataButton } from "../project-metadata-button";
-import { ProjectReuseButton } from "../project-reuse-button";
-import { TemplatePreviews } from "./template-previews";
+import { TemplateDialogButton } from "./template-dialog-button";
+import { TemplatePreviews } from "./previews/template-previews";
 
 const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul", year: "numeric", month: "short", day: "numeric",
@@ -46,7 +46,7 @@ export function TemplateCard({ project, busy, onOpen, contentUpdatedAt, onRemove
     </div>
     <div className="flex min-w-0 flex-wrap items-start gap-2">
       <Button variant="outline" size="sm" disabled={busy} onClick={() => onOpen(project.id)}><FolderOpen aria-hidden="true" />열기</Button>
-      <ProjectReuseButton project={project} disabled={busy} size="sm" />
+      <TemplateDialogButton project={project} disabled={busy} size="sm" />
       <Button variant="outline" size="sm" disabled={busy} aria-label={`${project.name} 루프에서 제외`}
         onClick={() => onRemove(project)}>루프에서 제외</Button>
     </div>
@@ -66,7 +66,7 @@ export function SavedProjectCard({ project, busy, onOpen, templates, onPublish }
     <div className="flex min-w-0 flex-wrap items-start gap-2">
       <Button variant="outline" size="sm" disabled={busy} onClick={() => onOpen(project.id)}><FolderOpen aria-hidden="true" />열기</Button>
       <ProjectMetadataButton project={project} templates={templates} disabled={busy} />
-      <ProjectReuseButton project={project} mode="register" disabled={busy} size="sm" />
+      <TemplateDialogButton project={project} mode="register" disabled={busy} size="sm" />
       <Button variant="outline" size="sm" disabled={busy || !!project.publishedAt} aria-label={`${project.name} 게시 등록`}
         onClick={() => onPublish(project.id)}>{project.publishedAt ? "게시됨" : "게시"}</Button>
       {<ProjectDeleteButton projectId={project.id} name={project.name} compact disabled={busy} />}

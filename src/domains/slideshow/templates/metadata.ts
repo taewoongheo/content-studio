@@ -16,25 +16,11 @@ export const templateSettingsSchema = z.strictObject({
   templateName: z.string().trim().min(1).max(120).optional(),
   templateTopic: templateTopicSchema.optional(),
   templateMessage: templateMessageSchema.optional(),
-  templateOrder: z.number().int().positive().nullable().optional(),
+  templateOrder: z.number().int().positive().optional(),
 }).refine(input => Object.values(input).some(value => value !== undefined), {
   message: "변경할 재사용 설정을 입력해 주세요.",
 });
 export type TemplateSettingsInput = z.infer<typeof templateSettingsSchema>;
-
-export class TemplateError extends Error {
-  constructor(public readonly code: "PROJECT_NOT_FOUND" | "COMPOSITION_REQUIRED" | "INVALID_METADATA" | "SOURCE_IN_USE", message?: string) {
-    super(message ?? (code === "PROJECT_NOT_FOUND" ? "프로젝트를 찾을 수 없습니다." : "템플릿으로 등록하려면 구성을 입력해 주세요."));
-    this.name = "TemplateError";
-  }
-}
-
-export const contentMetadataSchema = z.strictObject({
-  topic: z.string().trim().min(1).max(200),
-  message: z.string().trim().min(1).max(2000),
-  templateId: z.string().min(1).nullable().optional(),
-});
-export type ContentMetadata = z.infer<typeof contentMetadataSchema>;
 
 export const templateCreateSchema = z.strictObject({
   slideIds: z.array(z.string().min(1)).min(1).max(20),

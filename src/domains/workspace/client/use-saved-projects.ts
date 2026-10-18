@@ -4,7 +4,8 @@ import type { VideoSummary } from "@/domains/video/domain/model";
 import { listVideoProjects } from "@/domains/video/client/api";
 import { useEffect, useState } from "react";
 import type { SavedProjectSummary, SavedTemplateSummary } from "@/domains/slideshow/domain/projects";
-import { listContentProjects, listContentTemplates } from "@/domains/slideshow/client/projects-api";
+import { listContentProjects } from "@/domains/slideshow/client/projects-api";
+import { listContentTemplates } from "@/domains/slideshow/client/templates-api";
 
 /** Coalesce save notifications and reconnects so older requests cannot overwrite newer lists. */
 export function useSavedProjects(enabled = true) {

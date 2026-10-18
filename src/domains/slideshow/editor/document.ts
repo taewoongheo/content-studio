@@ -3,7 +3,7 @@ import type { SlideshowStructure } from "@/domains/slideshow/editor/types";
 import { EDITOR_FONT_FAMILIES } from "@/domains/slideshow/editor/typography/fonts";
 import { remapTextColors, validTextColors } from "@/domains/slideshow/editor/typography/ranges/text-colors";
 import { remapTextWeights, validTextWeights } from "@/domains/slideshow/editor/typography/ranges/text-weights";
-import { validBorder, validRotation } from "@/domains/slideshow/editor/elements/style";
+import { validBorder, validRotation, withStyleDefaults } from "@/domains/slideshow/editor/elements/style";
 import { MAX_FRAME_COORDINATE, MAX_FRAME_DIMENSION } from "@/domains/slideshow/editor/types";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_FRAME, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, syncBackgroundColors } from "@/domains/slideshow/editor/background";
 import type {
@@ -262,8 +262,12 @@ export function applyEditorCommand(document: EditorDocument, command: EditorComm
       if (!target || source.kind === "background" || target.kind !== source.kind)
         throw new Error("같은 종류의 배경이 아닌 Element로 연결해 주세요.");
       if (source.id === target.id) break;
-      placement.frameOverride = structuredClone(placement.frameOverride ?? source.frame);
-      placement.styleOverride = { ...structuredClone(source.style), ...placement.styleOverride };
+      const frame = structuredClone(placement.frameOverride ?? source.frame);
+      placement.frameOverride = (Object.keys(frame) as Array<keyof ElementFrame>).some(key => frame[key] !== target.frame[key]) ? frame : null;
+      const style = withStyleDefaults({ ...source.style, ...placement.styleOverride });
+      const targetStyle = withStyleDefaults(target.style);
+      const overrides = Object.fromEntries(Object.entries(style).filter(([key, value]) => value !== targetStyle[key as keyof ElementStyle]));
+      placement.styleOverride = Object.keys(overrides).length ? overrides : null;
       placement.elementId = target.id;
       break;
     }
