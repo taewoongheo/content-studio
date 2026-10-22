@@ -11,6 +11,7 @@ import "@xyflow/react/dist/style.css";
 import { CenterInitialStart, HorizontalWheelPan, StartNodeControl } from "./workflow/viewport/viewport-controls";
 import { StageNode } from "./workflow/stage-node";
 import { StartNode } from "./workflow/start-node";
+import { BranchEdge, BranchTrunk } from "./workflow/edges/branch-edges";
 import { buildWorkflowGraph, type WorkflowNode } from "./workflow/graph";
 import type {
   WorkItem,
@@ -18,6 +19,7 @@ import type {
   ProductionStep,
 } from "@/domains/content-production/domain/contracts";
 const nodeTypes = { stage: StageNode, start: StartNode };
+const edgeTypes = { branch: BranchEdge, trunk: BranchTrunk };
 const initialViewport = { x: 48, y: 64, zoom: 1 };
 
 
@@ -74,6 +76,7 @@ export function WorkflowCanvas({
         nodes={renderedNodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodeClick={click}
         onNodesChange={onNodesChange}
         defaultViewport={initialViewport}

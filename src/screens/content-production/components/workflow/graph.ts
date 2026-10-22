@@ -45,9 +45,12 @@ export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, Wo
         activity: state === "running" ? activity[task.id] || "진행 중" : state === "failed" ? "오류 확인" : state === "stopped" ? "중단됨" : "",
         color, state, write: stage === "result" ? 0 : stepWrites, kind: `콘텐츠 ${String(index + 1).padStart(2, "0")}`,
       } });
-      edges.push({ id: `${previous}-${id}`, source: previous, target: id, type: previous === "sync" && index > 0 ? "smoothstep" : "straight", animated: state === "running", markerEnd: { type: MarkerType.ArrowClosed, color }, style: { stroke: color, strokeWidth: 2.5 } });
+      edges.push({ id: `${previous}-${id}`, source: previous, target: id, type: previous === "sync" ? "branch" : "straight", animated: state === "running", markerEnd: { type: MarkerType.ArrowClosed, color }, style: { stroke: color, strokeWidth: 2.5 } });
       previous = id;
     }
   });
+  const branches = edges.filter(edge => edge.type === "branch");
+  const lastBranch = branches.at(-1);
+  if (lastBranch) edges.unshift({ id: "sync-branch-trunk", source: "sync", target: lastBranch.target, type: "trunk", style: { stroke: "#94a3b8", strokeWidth: 2.5 }, selectable: false });
   return { nodes, edges };
 }

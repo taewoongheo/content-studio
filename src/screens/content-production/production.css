@@ -91,6 +91,7 @@
 .production-save-indicator { display: inline-flex; padding: 4px; flex-shrink: 0; }
 .production-save-dot { display: block; width: 7px; height: 7px; border-radius: 50%; background: var(--instance-color); }
 .production-stage .react-flow__handle {
+  top: 110px;
   background: var(--instance-color);
   border: 0;
   width: 10px;

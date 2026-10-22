@@ -77,6 +77,16 @@ try {
   assert.deepEqual(result.missing, [], "existing nodes must not disappear from the node list");
   assert.equal(result.moved, false, "progress must preserve the viewport");
   assert.equal(result.count, 14);
+  const paths = await page.locator(".react-flow__edge").evaluateAll(edges => edges.map(edge => {
+    const path = edge.querySelector<SVGPathElement>(".react-flow__edge-path")!;
+    const start = path.getPointAtLength(0), end = path.getPointAtLength(path.getTotalLength());
+    return { id: (edge as HTMLElement).dataset.id, startY: start.y, endY: end.y, path: path.getAttribute("d")! };
+  }));
+  assert.equal(paths.filter(path => path.id === "sync-branch-trunk").length, 1, "parallel branches share a single trunk");
+  for (const path of paths.filter(path => path.id !== "sync-branch-trunk")) {
+    assert.ok(Math.abs(path.startY - path.endY) < 0.01, `${path.id} must stay horizontal despite differing card heights`);
+    assert.doesNotMatch(path.path, /[VQC]/, "row arrows must not bend");
+  }
   assert.deepEqual(apiRequests, [], "preview must not call real APIs");
   console.log("PASS continuous parallel playback: node visibility, retained nodes, fixed camera and zero API calls");
 } finally {
