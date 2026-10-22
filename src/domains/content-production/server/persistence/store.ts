@@ -1,0 +1,114 @@
+import type Database from "better-sqlite3";
+import { randomUUID } from "node:crypto";
+import { analysisPatchSchema, analysisResultSchema, productionPatchSchema, directionSchema, type Direction, type ProductionStep, type Row, type WorkItem, type WorkDetail } from "../../domain/contracts";
+import { publishChange } from "../events";
+
+const directionKeys = Object.keys(directionSchema.shape) as Array<keyof Direction>;
+export function decode(row: Row): Row {
+  return Object.fromEntries(Object.entries(row).map(([key, value]) => key.endsWith("_json")
+    ? [key.slice(0, -5), value === null ? null : JSON.parse(value as string)] : [key, value]));
+}
+export class ProductionStore {
+  constructor(readonly db: Database.Database) {}
+  private now() { return new Date().toISOString(); }
+  private row(sql: string, ...args: unknown[]) { return this.db.prepare(sql).get(...args) as Row | undefined; }
+  private update(table: string, key: string, id: string, values: Row) {
+    const entries = Object.entries(values);
+    if (entries.length) this.db.prepare(`UPDATE ${table} SET ${entries.map(([k]) => `${k}=?`).join(",")} WHERE ${key}=?`).run(...entries.map(([,v]) => v), id);
+  }
+  list(): WorkItem[] {
+    return this.db.prepare(`SELECT d.*,l.project_id,l.topic,l.content_type FROM content_drafts d JOIN content_creation_logs l ON l.id=d.log_id ORDER BY d.created_at,d.id`).all() as WorkItem[];
+  }
+  get(id: string): WorkDetail {
+    const task = this.list().find(row => row.id === id);
+    if (!task) throw new Error("작업이 존재하지 않거나 취소되었습니다.");
+    const analysis = this.row("SELECT * FROM content_analysis_drafts WHERE draft_id=?", id)!;
+    const production = this.row("SELECT * FROM content_production_drafts WHERE draft_id=?", id);
+    const log = this.row("SELECT * FROM content_creation_logs WHERE id=?", task.log_id)!;
+    return { task, analysis: decode(analysis), production: production ? decode(production) : null, log: decode(log) };
+  }
+  create(count: number) {
+    const ids: string[] = [];
+    this.db.transaction(() => {
+      for (let i=0;i<count;i++) {
+        const id=randomUUID(), log=randomUUID(), now=this.now();
+        this.db.prepare("INSERT INTO content_creation_logs(id,created_at,updated_at) VALUES(?,?,?)").run(log,now,now);
+        this.db.prepare("INSERT INTO content_drafts VALUES(?,?,'analysis','pending',?,?)").run(id,log,now,now);
+        this.db.prepare("INSERT INTO content_analysis_drafts(draft_id,created_at,updated_at) VALUES(?,?,?)").run(id,now,now); ids.push(id);
+      }
+    })(); publishChange({kind:"state"}); return ids;
+  }
+  assertActive(id: string, step: ProductionStep) {
+    const detail=this.get(id);
+    if (detail.task.current_step !== step || detail.task.state !== "running") throw new Error("현재 실행 단계에서만 저장할 수 있습니다.");
+    return detail;
+  }
+  state(id: string, state: string, error?: string) {
+    const detail=this.get(id), now=this.now();
+    this.db.transaction(() => {
+      this.update("content_drafts","id",id,{state,updated_at:now});
+      this.update(`content_${detail.task.current_step}_drafts`,"draft_id",id,{state:state==="finished"?"completed":state,error_json:error?JSON.stringify({message:error}):null,updated_at:now});
+    })(); publishChange({task_id:id,step:detail.task.current_step,kind:"state"});
+  }
+  save(id: string, step: ProductionStep, raw: unknown) {
+    this.assertActive(id,step);
+    const patch=(step==="analysis"?analysisPatchSchema:productionPatchSchema).parse(raw);
+    const values: Row={updated_at:this.now()};
+    for (const [key,value] of Object.entries(patch)) values[typeof value==="object"?`${key}_json`:key]=typeof value==="object"?JSON.stringify(value):value;
+    if (step==="production" && "content" in patch && patch.content && Object.keys(patch.content).length) {
+      const previous=this.get(id).production;
+      if (!previous?.draft_saved_at) values.draft_saved_at=this.now();
+    }
+    this.db.transaction(() => { this.update(`content_${step}_drafts`,"draft_id",id,values); this.update("content_drafts","id",id,{updated_at:values.updated_at}); })();
+    publishChange({task_id:id,step,kind:"saved"}); return this.get(id);
+  }
+  completeAnalysis(id: string, raw: unknown) {
+    const detail=this.assertActive(id,"analysis"), result=analysisResultSchema.parse(raw), now=this.now();
+    this.db.transaction(() => {
+      const values: Row={analysis:result.analysis,sources_json:JSON.stringify(result.sources),updated_at:now};
+      for(const key of directionKeys) values[key]=result[key];
+      this.update("content_creation_logs","id",detail.task.log_id,values);
+      this.update("content_analysis_drafts","draft_id",id,{...values,state:"completed",completed_at:now});
+      this.db.prepare("INSERT INTO content_production_drafts(draft_id,created_at,updated_at) VALUES(?,?,?)").run(id,now,now);
+      this.update("content_drafts","id",id,{current_step:"production",state:"pending",updated_at:now});
+    })(); publishChange({task_id:id,step:"analysis",kind:"saved"}); return this.get(id);
+  }
+  completeProduction(id: string, result: {project_id:string;summary:Row;sources:unknown[]}) {
+    const detail=this.assertActive(id,"production"), now=this.now();
+    this.db.transaction(() => {
+      const sources=[...(detail.log.sources as unknown[]),...result.sources];
+      const summary={...result.summary,direction_changes:detail.production?.direction_changes??null};
+      this.update("content_creation_logs","id",detail.task.log_id,{project_id:result.project_id,content_summary_json:JSON.stringify(summary),sources_json:JSON.stringify(sources),updated_at:now});
+      this.update("content_production_drafts","draft_id",id,{state:"completed",completed_at:now,updated_at:now});
+      this.update("content_drafts","id",id,{state:"finished",updated_at:now});
+    })(); publishChange({task_id:id,step:"production",kind:"saved"});
+  }
+  changeDirection(id: string, raw: unknown, cause: "collision"|"research", reason?:string) {
+    const detail=this.assertActive(id,"production"), direction=directionSchema.parse(raw), now=this.now();
+    if(cause==="research"&&!reason?.trim()) throw new Error("추가 조사에 따른 변경 이유가 필요합니다.");
+    this.db.transaction(() => {
+      if(cause==="collision") {
+        this.update("content_analysis_drafts","draft_id",id,{...direction,updated_at:now});
+        this.update("content_creation_logs","id",detail.task.log_id,{...direction,updated_at:now});
+        this.update("content_production_drafts","draft_id",id,{content_json:null,draft_saved_at:null,direction_changes:null,updated_at:now});
+      } else {
+        const changes=[detail.production?.direction_changes,JSON.stringify({reason,direction})].filter(Boolean).join("\n");
+        this.update("content_production_drafts","draft_id",id,{direction_changes:changes,updated_at:now});
+      }
+    })(); publishChange({task_id:id,step:"production",kind:"saved"});
+  }
+  remove(id:string) { this.get(id); this.db.prepare("DELETE FROM content_drafts WHERE id=?").run(id); publishChange({task_id:id,kind:"removed"}); }
+  recover() {
+    for(const task of this.list()) if(task.state==="running"||task.state==="pending") this.state(task.id,"stopped");
+  }
+  logs(query="") { return (this.db.prepare(`SELECT l.*,p.name FROM content_creation_logs l LEFT JOIN content_projects p ON p.id=l.project_id WHERE (l.project_id IS NOT NULL OR EXISTS(SELECT 1 FROM content_drafts d WHERE d.log_id=l.id)) AND (COALESCE(l.topic,'') LIKE ? OR COALESCE(p.name,'') LIKE ?) ORDER BY l.created_at DESC`).all(`%${query}%`,`%${query}%`) as Row[]).map(decode); }
+  comparisons() {
+    const since=new Date(Date.now()-86400000).toISOString();
+    return {drafts:this.list().map(t=>this.get(t.id)),published:this.logs().filter(l=>typeof l.actual_published_at==="string"&&l.actual_published_at>=since)};
+  }
+  editLog(id:string,raw:unknown) {
+    const patch=directionSchema.partial().extend({analysis:analysisPatchSchema.shape.analysis}).strict().parse(raw);
+    if(!this.row("SELECT id FROM content_creation_logs WHERE id=?",id)) throw new Error("로그를 찾을 수 없습니다.");
+    this.update("content_creation_logs","id",id,{...patch,updated_at:this.now()}); publishChange({kind:"library"});
+  }
+}

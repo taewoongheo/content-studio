@@ -37,7 +37,7 @@ test("DB를 다시 열어도 프로젝트의 게시 시각이 유지되고 영�
     database.close();
     const reopened = openLocalDatabase(path);
     assert.equal(new ContentProjectStore(reopened).listPublished()[0].publishedAt, publishedAt);
-    assert.deepEqual(reopened.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all(), [{ name: "content_project_assets" }, { name: "content_projects" }, { name: "content_template_assets" }, { name: "content_templates" }, { name: "video_project_assets" }, { name: "video_projects" }]);
+    assert.deepEqual((reopened.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all() as Array<{name:string}>).map(row => row.name), ["content_analysis_drafts", "content_creation_logs", "content_drafts", "content_production_drafts", "content_project_assets", "content_projects", "content_references", "content_template_assets", "content_templates", "content_visual_sets", "content_visual_slides", "video_project_assets", "video_projects"]);
     reopened.close();
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });

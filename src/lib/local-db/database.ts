@@ -1,3 +1,4 @@
+import { PRODUCTION_SCHEMA } from "@/domains/content-production/server/persistence/schema";
 import { VIDEO_SCHEMA } from "@/domains/video/server/persistence/schema";
 import Database from "better-sqlite3";
 import { mkdirSync } from "node:fs";
@@ -5,7 +6,7 @@ import { dirname, isAbsolute } from "node:path";
 import { PROJECT_SCHEMA } from "@/domains/slideshow/server/persistence/projects/schema";
 import { TEMPLATE_SCHEMA } from "@/domains/slideshow/server/persistence/templates/schema";
 
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 14;
 
 export function defaultDatabasePath() {
   const override = process.env.CONTENT_STUDIO_DB_PATH;
@@ -34,11 +35,14 @@ export function openLocalDatabase(path = defaultDatabasePath()) {
       throw new Error("독립 템플릿 DB 전환이 필요합니다. 서버를 종료하고 로컬 DB를 변환해 주세요.");
     if (templateColumns.some(column => column.name === "loop_order"))
       throw new Error("템플릿 순서 컬럼 제거가 필요합니다. 서버를 종료하고 로컬 DB를 변환해 주세요.");
+    if (projectColumns.length && version < 14)
+      throw new Error("콘텐츠 생산 DB 전환이 필요합니다. 서버를 종료하고 백업 후 일회성 변환을 실행해 주세요.");
     database.pragma("journal_mode = WAL");
     database.transaction(() => {
       database.exec(TEMPLATE_SCHEMA);
       database.exec(PROJECT_SCHEMA);
       database.exec(VIDEO_SCHEMA);
+      database.exec(PRODUCTION_SCHEMA);
       database.pragma(`user_version = ${SCHEMA_VERSION}`);
     })();
     return database;
