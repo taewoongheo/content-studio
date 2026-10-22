@@ -19,6 +19,7 @@ import type {
 const nodeTypes = { stage: StageNode };
 function FitWorkflow({ layoutKey, selectedNode }: { layoutKey: string; selectedNode?: string }) {
   const fitted = useRef<string | null>(null);
+  const focused = useRef<string | undefined>(undefined);
   const { fitView } = useReactFlow();
   const ready = useNodesInitialized();
   const width = useStore((state) => state.width),
@@ -30,8 +31,12 @@ function FitWorkflow({ layoutKey, selectedNode }: { layoutKey: string; selectedN
     }
   }, [ready, width, height, layoutKey, fitView]);
   useEffect(() => {
-    if (ready && selectedNode) void fitView({ nodes: [{ id: selectedNode }], padding: 0.6, maxZoom: 1, duration: 200 });
-  }, [selectedNode, ready, fitView]);
+    if (!selectedNode) { focused.current = undefined; return; }
+    if (ready && width && height && focused.current !== selectedNode) {
+      focused.current = selectedNode;
+      void fitView({ nodes: [{ id: selectedNode }], padding: 0.6, maxZoom: 1, duration: 200 });
+    }
+  }, [selectedNode, ready, width, height, fitView]);
   return null;
 }
 

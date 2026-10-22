@@ -127,137 +127,12 @@ try {
   try {
     const listPage = await browser.newPage();
     await listPage.goto(origin);
-    await listPage.getByRole("tab", {name:"템플릿 프로젝트",exact:true}).click();
-    const savedColumn = listPage.getByRole("region", { name: "저장된 프로젝트", exact: true });
-    const templateColumn = listPage.getByRole("region", { name: "템플릿 프로젝트", exact: true });
-    assert.equal(await listPage.getByRole("tab", { name: "저장된 프로젝트", exact: true }).count(), 0);
-    await savedColumn.getByRole("button", { name: "MCP smoke 템플릿으로 만들기", exact: true }).click();
-    const reuseDialog = listPage.getByRole("dialog");
-    await reuseDialog.getByLabel("구성", { exact: true }).fill(routineGuide);
-    await reuseDialog.getByRole("button", { name: "저장하고 템플릿으로 만들기", exact: true }).click();
-    await reuseDialog.waitFor({ state: "hidden" });
-    await templateColumn.getByRole("heading", { name: "MCP smoke", exact: true }).waitFor();
-    assert.equal(await savedColumn.getByRole("button", { name: "템플릿 지정됨", exact: true }).count(), 0);
-    const previews = templateColumn.getByRole("region", { name: "MCP smoke 슬라이드 미리보기", exact: true });
-    await previews.locator("canvas").first().waitFor();
-    assert.ok(await previews.locator("figure").count() > 1);
-    assert.equal((await fetch(`${origin}/api/content-projects/${id}/preview`)).status, 200);
-    assert.equal((await fetch(`${origin}/api/content-projects/missing/preview`)).status, 404);
-
-    const registeredGuides = (await call("list_template_guides", {})).structuredContent as { templates: Array<{ id: string; composition: string }> };
-    assert.notEqual(registeredGuides.templates[0].id, id);
-    templateIds.set(id, registeredGuides.templates[0].id);
-    assert.deepEqual(registeredGuides.templates[0].composition, routineGuide);
-    await listPage.setViewportSize({ width: 1440, height: 1000 });
-    const leftBounds = await templateColumn.boundingBox();
-    const rightBounds = await savedColumn.boundingBox();
-    assert.ok(leftBounds && rightBounds && leftBounds.x < rightBounds.x && Math.abs(leftBounds.y - rightBounds.y) < 2);
-    await listPage.screenshot({ path: "/tmp/content-studio-template-columns-desktop.png", fullPage: true });
-    await listPage.setViewportSize({ width: 390, height: 844 });
-    assert.ok(await listPage.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "mobile page must not scroll horizontally");
-    assert.ok(await previews.evaluate(element => element.scrollWidth > element.clientWidth));
-    await previews.evaluate(element => { element.scrollLeft = element.scrollWidth; });
-    await previews.locator("figure").last().locator("canvas").waitFor();
-    await previews.evaluate(element => { element.scrollLeft = 0; });
-    await listPage.screenshot({ path: "/tmp/content-studio-template-columns-mobile.png", fullPage: true });
-    await listPage.setViewportSize({ width: 1440, height: 1000 });
-    listPage.once("dialog", dialog => void dialog.dismiss());
-    await templateColumn.getByRole("button", { name: "MCP smoke 템플릿 삭제", exact: true }).click();
-    await templateColumn.getByRole("heading", { name: "MCP smoke", exact: true }).waitFor();
-    listPage.once("dialog", dialog => void dialog.accept());
-    await templateColumn.getByRole("button", { name: "MCP smoke 템플릿 삭제", exact: true }).click();
-    await templateColumn.getByRole("heading", { name: "MCP smoke", exact: true }).waitFor({ state: "detached" });
-    await savedColumn.getByRole("heading", { name: "MCP smoke", exact: true }).waitFor();
-    await registerTemplate(id);
-    await templateColumn.getByRole("heading", { name: "MCP smoke", exact: true }).waitFor();
-    assert.equal(await listPage.getByRole("dialog").count(), 0);
-    console.log("PASS two-column template dashboard, atomic guide/designation, direct designation/unregister and mobile layout");
-    const templateB = await seedProject("Template B");
-    await registerTemplate(templateB.id);
-    const publicationClone = (await call("clone_project", { templateId: templateIds.get(id), name: "Template publication" })).structuredContent as Project;
-    const publicationCard = savedColumn.getByRole("listitem").filter({ has: listPage.getByRole("heading", { name: "Template publication", exact: true }) });
-    await publicationCard.getByRole("button", { name: "Template publication 내용 정보", exact: true }).click();
-    const metadataDialog = listPage.getByRole("dialog");
-    await metadataDialog.getByLabel("주제", { exact: true }).fill("등 운동");
-    await metadataDialog.getByLabel("메시지", { exact: true }).fill("허리 부담을 줄이는 운동 선택 기준을 설명한다.");
-    await metadataDialog.getByRole("button", { name: "저장", exact: true }).click();
-    await metadataDialog.waitFor({ state: "hidden" });
-    await publicationCard.getByText("허리 부담을 줄이는 운동 선택 기준을 설명한다.", { exact: true }).waitFor();
-    await publicationCard.getByText("부모 템플릿: MCP smoke", { exact: true }).waitFor();
-    assert.equal(await publicationCard.getByRole("img").count(), 0);
-    await publicationCard.getByRole("button", { name: "Template publication 게시 등록", exact: true }).click();
-    await publicationCard.getByText(/^게시됨 ·/).waitFor();
-    const published = (await call("list_projects", {})).structuredContent as { projects: Array<{ id: string; sourceTemplateId: string; topic: string; publishedAt: string | null }> };
-    const publishedPost = published.projects.find(project => project.id === publicationClone.id)!;
-    assert.ok(publishedPost.publishedAt);
-    assert.equal(publishedPost.sourceTemplateId, templateIds.get(id));
-    assert.equal(publishedPost.topic, "등 운동");
-    assert.equal(await listPage.getByText(/^다음 템플릿:/).count(), 0);
-    await templateColumn.getByRole("button", { name: "MCP smoke 템플릿 설정", exact: true }).click();
-    const settingsDialog = listPage.getByRole("dialog");
-    assert.equal(await settingsDialog.getByLabel("템플릿 색상", { exact: true }).count(), 0);
-    await settingsDialog.getByRole("button", { name: "취소", exact: true }).click();
-    await settingsDialog.waitFor({ state: "hidden" });
-    await listPage.getByRole("tab", { name: "게시 콘텐츠", exact: true }).click();
-    await listPage.getByRole("region", { name: "게시 기록 목록", exact: true }).getByText("Template publication", { exact: true }).waitFor();
-    await listPage.screenshot({ path: "/tmp/content-studio-published-desktop.png", fullPage: true });
-    await listPage.setViewportSize({ width: 390, height: 844 });
-    assert.ok(await listPage.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
-    await listPage.screenshot({ path: "/tmp/content-studio-published-mobile.png", fullPage: true });
-    await listPage.setViewportSize({ width: 1440, height: 1000 });
-    const confirmCancel = listPage.waitForEvent("dialog").then(dialog => dialog.accept());
-    await listPage.getByRole("button", { name: "Template publication 로컬 기록 삭제", exact: true }).click();
-    await confirmCancel;
-    await listPage.getByText("아직 등록된 게시물이 없습니다.", { exact: true }).waitFor();
-    await listPage.getByRole("tab", { name: "템플릿 프로젝트", exact: true }).click();
-    console.log("PASS metadata UI, manual publication, no template color, calendar and publication cancellation");
-    async function setParent(value: string) {
-      await publicationCard.getByRole("button", { name: "Template publication 내용 정보", exact: true }).click();
-      const dialog = listPage.getByRole("dialog");
-      await dialog.getByLabel("부모 템플릿", { exact: true }).selectOption(value);
-      await dialog.getByRole("button", { name: "저장", exact: true }).click();
-      await dialog.waitFor({ state: "hidden" });
-    }
-    await setParent(templateIds.get(templateB.id)!);
-    await publicationCard.getByText("부모 템플릿: Template B", { exact: true }).waitFor();
-    await setParent("");
-    await publicationCard.getByText("부모 템플릿: Template B", { exact: true }).waitFor({ state: "hidden" });
-    await setParent(templateIds.get(id)!);
-    listPage.once("dialog", dialog => void dialog.accept());
-    await templateColumn.getByRole("button", { name: "MCP smoke 템플릿 삭제", exact: true }).click();
-    await publicationCard.getByText("부모 템플릿: MCP smoke", { exact: true }).waitFor({ state: "hidden" });
-    const removedParent = (await fetch(`${origin}/api/content-projects`).then(r => r.json())).find((item: { id: string }) => item.id === publicationClone.id);
-    assert.equal(removedParent.sourceTemplateId, null);
-    await registerTemplate(id);
-    await templateColumn.getByRole("button", { name: "MCP smoke 템플릿 삭제", exact: true }).waitFor();
-    await setParent(templateIds.get(id)!);
-    await publicationCard.getByText("부모 템플릿: MCP smoke", { exact: true }).waitFor();
-    const originalInfo = (await fetch(`${origin}/api/content-projects`).then(r => r.json())).find((item: { id: string }) => item.id === publicationClone.id);
-    await publicationCard.getByRole("button", { name: "Template publication 템플릿으로 만들기", exact: true }).click();
-    const registration = listPage.getByRole("dialog");
-    await registration.getByLabel("템플릿 이름", { exact: true }).fill("Independent template");
-    await registration.getByLabel("템플릿 주제", { exact: true }).fill("템플릿의 별도 주제");
-    await registration.getByLabel("템플릿 메시지", { exact: true }).fill("템플릿의 별도 메시지");
-    await registration.getByLabel("구성", { exact: true }).fill(routineGuide);
-    await registration.getByRole("button", { name: "저장하고 템플릿으로 만들기", exact: true }).click();
-    await registration.waitFor({ state: "hidden" });
-    await templateColumn.getByRole("heading", { name: /Independent template$/ }).waitFor();
-    assert.equal(await publicationCard.getByRole("button", { name: "템플릿 지정됨", exact: true }).count(), 0);
-    assert.equal(await publicationCard.getByText(/템플릿으로 등록됨/).count(), 0);
-    const registeredInfo = (await fetch(`${origin}/api/content-projects`).then(r => r.json())).find((item: { id: string }) => item.id === publicationClone.id);
-    assert.equal(registeredInfo.name, originalInfo.name);
-    assert.equal(registeredInfo.topic, originalInfo.topic);
-    assert.equal(registeredInfo.message, originalInfo.message);
-    assert.equal(registeredInfo.sourceTemplateId, originalInfo.sourceTemplateId);
-    await publicationCard.getByRole("button", { name: "열기", exact: true }).click();
-    await listPage.getByRole("button", { name: "ZIP 내보내기", exact: true }).waitFor();
-    assert.equal(await listPage.getByText(/템플릿으로 등록된 콘텐츠/).count(), 0);
-    await listPage.screenshot({ path: "/tmp/content-studio-template-editor-banner.png", fullPage: true });
-    await listPage.getByRole("button", { name: "대시보드", exact: true }).click();
-    await listPage.getByRole("tab", {name:"템플릿 프로젝트",exact:true}).click();
-    await savedColumn.getByRole("heading", { name: "Template publication", exact: true }).waitFor();
-    console.log("PASS parent change/detach, confirmed removal/re-registration, template creation preserves parent, independent metadata and no redundant registration indicators");
-
+    await listPage.getByRole("button", { name: "제작 캔버스", exact: true }).waitFor();
+    assert.equal(await listPage.locator("#production-count").inputValue(), "1");
+    assert.equal(await listPage.getByText("템플릿 프로젝트", { exact: true }).count(), 0);
+    await listPage.getByText("제작 모델", { exact: true }).click();
+    await listPage.locator("#production-model").waitFor({ state: "visible" });
+    console.log("PASS permanent production tab, default count and sidebar model control");
 
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
     page.on("pageerror", error => console.error("Browser error", error.message));
@@ -321,7 +196,6 @@ try {
     console.log("PASS slideshow batch/cache preview and asynchronous full-resolution PNG ZIP export");
 
     const cloned = await cloneTemplate(id, "Clone");
-    await savedColumn.getByRole("heading", { name: "Clone", exact: true }).waitFor();
     assert.notEqual(cloned.id, id);
     assert.equal(cloned.editor.document.slides[0].name, "Live MCP");
     const undone = (await call("undo_project", { projectId: id, expectedRevision: 1 })).structuredContent as Project;
@@ -336,7 +210,6 @@ try {
     assert.equal(save.status, 201);
     const opened = (await call("open_project", { projectId: cloned.id })).structuredContent as Project;
     assert.equal(opened.name, "Saved clone");
-    await savedColumn.getByRole("heading", { name: "Saved clone", exact: true }).waitFor();
     recovery = await cloneTemplate(cloned.id, "Restart recovery");
     const listed = (await call("list_projects", {})).structuredContent as { projects: Array<{ id: string }> };
     assert.equal(listed.projects.filter((project) => project.id === cloned.id).length, 1);
@@ -536,8 +409,6 @@ try {
     await listPage.waitForURL(url => url.searchParams.get("job") === colorClone.id);
     await page.getByRole("button", { name: "Colored clone 탭 닫기", exact: true }).click();
     await page.getByRole("button", { name: "Colored clone 탭 닫기", exact: true }).waitFor({ state: "detached" });
-    await listPage.getByRole("tab", {name:"템플릿 프로젝트",exact:true}).click();
-    await listPage.getByRole("heading", { name: "템플릿 프로젝트", exact: true, level: 1 }).waitFor();
     assert.equal((await fetch(`${origin}/api/content-jobs/${colorClone.id}`)).status, 404);
     const closedEdit = await client.callTool({ name: "edit_project", arguments: { projectId: colorClone.id,
       expectedTabId: colorClone.tabId, expectedRevision: switchedClone.editor.revision,
@@ -629,15 +500,15 @@ try {
     await page.getByRole("dialog").getByLabel("프로젝트 이름", { exact: true }).fill("Saved renamed");
     await page.getByRole("dialog").getByRole("button", { name: "이름 변경", exact: true }).click();
     await page.getByRole("button", { name: "저장됨", exact: true }).waitFor();
-    await savedColumn.getByRole("heading", { name: "Saved renamed", exact: true }).waitFor();
     await page.getByRole("button", { name: "프로젝트 삭제", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "삭제", exact: true }).click();
     await tabBar.locator(`[data-project-tab="${savedTemporary.tabId}"]`).waitFor({ state: "detached" });
     assert.equal((await savedIds()).includes(temporary.id), false);
-    await savedColumn.getByRole("heading", { name: "Saved renamed", exact: true }).waitFor({ state: "detached" });
 
     const listDelete = await seedProject("Delete from list");
-    await listPage.getByRole("button", { name: "Delete from list 프로젝트 삭제", exact: true }).click();
+    await listPage.getByRole("button", { name: "새 탭", exact: true }).click();
+    await listPage.getByRole("dialog").getByRole("button", { name: /^Delete from list/ }).click();
+    await listPage.getByRole("button", { name: "프로젝트 삭제", exact: true }).click();
     await listPage.getByRole("dialog").getByRole("button", { name: "삭제", exact: true }).click();
     await tabBar.locator(`[data-project-tab="${listDelete.tabId}"]`).waitFor({ state: "detached" });
     assert.equal((await savedIds()).includes(listDelete.id), false);
@@ -668,15 +539,13 @@ try {
     }
 
     // The dashboard delegates a single project load to the workspace.
-    await tabBar.getByRole("button", { name: "대시보드", exact: true }).click();
-    await page.getByRole("tab", {name:"템플릿 프로젝트",exact:true}).click();
-    await page.getByRole("heading", { name: "템플릿 프로젝트", exact: true, level: 1 }).waitFor();
+    await tabBar.getByRole("button", { name: "제작 캔버스", exact: true }).click();
     let openRequests = 0;
     page.on("request", request => {
       if (request.method() === "POST" && request.url().endsWith(`/api/content-projects/${colorProject.id}`)) openRequests++;
     });
-    await page.getByRole("region", { name: "저장된 프로젝트", exact: true }).getByRole("listitem").filter({ has: page.getByRole("heading", { name: "Partial colors", exact: true }) })
-      .getByRole("button", { name: "열기", exact: true }).click();
+    await page.getByRole("button", { name: "새 탭", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: /^Partial colors/ }).click();
     await page.locator(`[data-tab-id="${colorProject.tabId}"]`).waitFor();
     assert.equal(openRequests, 1);
 

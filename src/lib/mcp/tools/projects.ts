@@ -27,7 +27,7 @@ import { json, guarded, annotations } from "../protocol/result";
 export function registerProjectTools(server: McpServer, origin: string) {
   registerTemplateTools(server);
   registerTool(server, "create_project", {
-    description: "Create and save a slideshow without a template. Topic/message must come from user or production planning. Follow docs/content-visual-rules.md and review all slides. Returns the open editor identity.",
+    description: "Create and save a slideshow without a template. Topic/message must come from user or production planning. Follow docs/content-guidelines.md, reference actual past post images and review all slides. Returns the open editor identity.",
     inputSchema: z.object({name:z.string().min(1).max(120),topic:z.string().min(1),message:z.string().min(1),slideCount:z.number().int().min(1).max(20).default(6),requestId:requestIdSchema}), annotations:annotations(false),deduplicate:true,
   }, input => guarded(() => {
     const job=new SlideshowProjectWrites(contentJobRegistry,getLocalDatabase()).create(input);

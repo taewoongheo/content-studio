@@ -33,7 +33,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## 콘텐츠 제작의 범위
 
 - 템플릿은 표현 방식을 재사용하는 단위다. 템플릿 순서나 게시 이력으로 다음 템플릿·주제·메시지를 자동 선정하지 않는다.
-- 자동 제작은 콘텐츠별 분석 단계에서 소재·답·표현 방향을 정하고 단계별 draft를 저장한다. 공통 시각 규칙은 [시각 규칙](docs/content-visual-rules.md)을 따른다. `create_project`는 템플릿 없이 생성하며 `clone_project`는 기존 독립 템플릿 복제 경로다.
+- 자동 제작은 콘텐츠별 분석 단계에서 소재·답·표현 방향을 정하고 단계별 draft를 저장한다. 시각적 방향은 과거 게시글과 선별 레퍼런스의 실제 이미지를 참고한다. `create_project`는 템플릿 없이 생성하며 `clone_project`는 기존 독립 템플릿 복제 경로다.
 - 제작할 내용은 사용자 요청이나 별도의 콘텐츠 기획에서 정한다. 내용이 정해지지 않았다면 필요한 주제·핵심 메시지를 확인한다. 기존 템플릿의 내용을 새 콘텐츠의 주제로 간주하지 않는다.
 - 정한 내용에 맞는 템플릿 선택·복제·검토 기준은 [콘텐츠 제작 가이드](docs/content-guidelines.md)를 따른다. 리서치는 [리서치 가이드](docs/research-guidelines.md)를 따른다.
 
