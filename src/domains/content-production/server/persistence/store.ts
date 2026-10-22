@@ -53,6 +53,9 @@ export class ProductionStore {
       )
       .all() as WorkItem[];
   }
+  hasOpenDrafts() {
+    return !!this.row("SELECT d.id FROM content_drafts d JOIN content_creation_logs l ON l.id=d.log_id WHERE l.completed_at IS NULL LIMIT 1");
+  }
   get(id: string): WorkDetail {
     const task = this.list().find((row) => row.id === id);
     if (!task) throw new Error("작업이 존재하지 않거나 취소되었습니다.");

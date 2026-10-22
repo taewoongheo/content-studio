@@ -92,9 +92,9 @@
 .production-save-dot { display: block; width: 7px; height: 7px; border-radius: 50%; background: var(--instance-color); }
 .production-stage .react-flow__handle {
   background: var(--instance-color);
-  border: 2px solid var(--background);
-  width: 9px;
-  height: 9px;
+  border: 0;
+  width: 10px;
+  height: 10px;
 }
 .production-write-pulse { animation: production-write 0.65s ease-out; }
 @keyframes production-write {

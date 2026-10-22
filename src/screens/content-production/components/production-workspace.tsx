@@ -2,6 +2,7 @@
 import { useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { Play, RefreshCw, X, Settings, History } from "lucide-react";
+import { getOpenDrafts, OPEN_DRAFT_MESSAGE } from "@/domains/content-production/domain/start-policy";
 import { useNodeDetails } from "../hooks/use-node-details";
 import { StepDetails } from "./step-details";
 import { LibraryPanel } from "./library/panel";
@@ -18,6 +19,8 @@ export function ProductionWorkspace({ runtime, readWork, settings, onOpen }: {
   onOpen: (id: string) => Promise<void>;
 }) {
   const { data, error, busy, writes, activity, reload, act } = runtime;
+  const openDraftIds = new Set(data ? getOpenDrafts(data.tasks, data.logs).map(task => task.id) : []);
+  const blockedByDraft = openDraftIds.size > 0;
   const details = useNodeDetails(data?.tasks, readWork);
   const [count, setCount] = useState(1);
   const [panel, setPanel] = useState<"library" | "settings" | null>(null);
@@ -27,18 +30,19 @@ export function ProductionWorkspace({ runtime, readWork, settings, onOpen }: {
   const select = (id: string, step: ProductionStep) => { setPanel(null); setSelected({ id, step }); };
   const startContent = (
       <div>
-        <form className="flex flex-wrap items-center gap-2" onSubmit={e => { e.preventDefault(); if (data?.configured.apify) safe({ action: "start", count }); }}>
+        <form className="flex flex-wrap items-center gap-2" onSubmit={e => { e.preventDefault(); if (data?.configured.apify && !blockedByDraft) safe({ action: "start", count }); }}>
           <label className="text-xs" htmlFor="production-count">제작 개수</label>
           <input id="production-count" className="production-field !w-16" type="number" min={1} value={count} onChange={e => setCount(Number(e.target.value))} required />
-          <button className="production-button primary" disabled={busy || !data?.configured.apify || data.sync.running}><Play size={14} />{data?.sync.running ? "성과 갱신 중" : "시작"}</button>
+          <button className="production-button primary" disabled={busy || !data?.configured.apify || data.sync.running || blockedByDraft}><Play size={14} />{data?.sync.running ? "성과 갱신 중" : "시작"}</button>
           <button type="button" className="production-button" aria-label="새로고침" onClick={() => void reload()}><RefreshCw size={14} /></button>
         </form>
+        {blockedByDraft && <p className="mt-3 text-xs leading-5 text-muted-foreground">{OPEN_DRAFT_MESSAGE}</p>}
         {error && <p role="alert" className="mt-2 max-w-md text-xs text-destructive">{error}</p>}
         {data && !data.configured.apify && <p role="alert" className="mt-2 max-w-sm text-xs text-destructive">Apify에 연결되지 않아 제작을 시작할 수 없습니다. 서버에 APIFY_API_TOKEN을 설정해 주세요.</p>}
       </div>
   );
   return <div className="flex h-full min-h-0 overflow-hidden">
-    <ProductionSidebar tasks={data?.tasks ?? []} model={data?.settings.model ?? "gpt-5.6-sol"} busy={busy} selectedId={selected?.id}
+    <ProductionSidebar openDraftIds={openDraftIds} tasks={data?.tasks ?? []} model={data?.settings.model ?? "gpt-5.6-sol"} busy={busy} selectedId={selected?.id}
       onSelect={task => select(task.id, task.current_step)} onAction={safe}
       onLibrary={() => { setPanel("library"); setSelected(null); }} onSettings={() => { setPanel("settings"); setSelected(null); }} />
     <main className="relative min-h-0 min-w-0 flex-1" aria-label="제작 작업 공간">

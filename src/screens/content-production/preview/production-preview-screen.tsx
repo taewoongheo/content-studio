@@ -14,7 +14,7 @@ export function ProductionPreviewScreen() {
     <header className="flex shrink-0 flex-wrap items-center gap-3 border-b bg-muted px-4 py-2 text-xs" aria-label="미리보기 제어">
       <Link href="/" prefetch={false} className="mr-2 underline underline-offset-4">실제 작업 공간</Link>
       <span className="font-semibold">미리보기 · 메모리 mock</span>
-      <button className="production-button" onClick={() => preview.start(4)}>4개 병렬 재생</button>
+      <button className="production-button" disabled={!preview.canStart} onClick={() => preview.start(4)}>4개 병렬 재생</button>
       <button className="production-button" onClick={() => preview.setPaused(!preview.paused)}>{preview.paused ? "계속 재생" : "일시정지"}</button>
       <button className="production-button" onClick={preview.step}>다음 이벤트</button>
       <button className="production-button" onClick={preview.reset}>초기화</button>

@@ -24,13 +24,13 @@ export function emptySimulation(): Simulation {
     details: {}, progress: {}, writes: {}, activity: {}, failedOnce: [], tick: 0, withFailure: false,
   };
 }
-export function startSimulation(count: number, withFailure: boolean): Simulation {
+export function startSimulation(count: number, withFailure: boolean, firstIndex = 1): Simulation {
   const model = emptySimulation();
   model.withFailure = withFailure;
   model.data.sync.running = true;
   for (let index = 0; index < count; index++) {
-    const id = `mock-task-${index + 1}`, example = examples[index % examples.length];
-    const task = { id, log_id: `mock-log-${index + 1}`, current_step: "analysis" as const, state: "pending", created_at: time(0), updated_at: time(0), project_id: null, topic: example.topic, content_type: example.type };
+    const id = `mock-task-${index + firstIndex}`, example = examples[index % examples.length];
+    const task = { id, log_id: `mock-log-${index + firstIndex}`, current_step: "analysis" as const, state: "pending", created_at: time(0), updated_at: time(0), project_id: null, topic: example.topic, content_type: example.type };
     model.data.tasks.push(task);
     model.progress[id] = 0;
     model.details[id] = { task, analysis: { state: "pending", updated_at: time(0) }, production: null, log: { id: task.log_id } };
@@ -62,7 +62,7 @@ export function advanceSimulation(previous: Simulation): Simulation {
       next.activity[task.id] = progress < 3 ? "과거 기록·레퍼런스 비교" : "제작 방향 정리·저장";
     } else {
       task.current_step = "production";
-      task.project_id = `mock-post-${index + 1}`;
+      task.project_id = `mock-post-${task.id.slice("mock-task-".length)}`;
       detail.analysis.state = "completed";
       detail.analysis.remaining_actions = [];
       const written = Math.min(4, progress - analysisEnd);

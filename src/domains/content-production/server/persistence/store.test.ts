@@ -97,3 +97,21 @@ test("중복 비교는 게시 후 24시간과 보존한 초안만 포함", () =>
     db.close();
   }
 });
+
+
+test("게시 전 draft는 완료 상태라도 새 제작을 막고 게시 연결 완료 후 해제한다", () => {
+  const db = openLocalDatabase(":memory:"), store = new ProductionStore(db);
+  try {
+    assert.equal(store.hasOpenDrafts(), false);
+    const [id] = store.create(1);
+    assert.equal(store.hasOpenDrafts(), true);
+    store.state(id, "finished");
+    assert.equal(store.hasOpenDrafts(), true);
+    db.prepare("UPDATE content_creation_logs SET completed_at=? WHERE id=?").run("2026-10-23T00:00:00Z", store.get(id).task.log_id);
+    assert.equal(store.hasOpenDrafts(), false);
+    const [second] = store.create(1);
+    assert.equal(store.hasOpenDrafts(), true);
+    store.remove(second);
+    assert.equal(store.hasOpenDrafts(), false);
+  } finally { db.close(); }
+});

@@ -3,12 +3,12 @@ import { useState } from "react";
 import { History, Settings, ChevronDown } from "lucide-react";
 import type { WorkItem } from "@/domains/content-production/domain/contracts";
 import { StatusIcon } from "../workflow/status-icon";
-export function ProductionSidebar({ tasks, model, busy, selectedId, onSelect, onAction, onLibrary, onSettings }: {
-  tasks: WorkItem[]; model: string; busy: boolean; selectedId?: string;
+export function ProductionSidebar({ openDraftIds, tasks, model, busy, selectedId, onSelect, onAction, onLibrary, onSettings }: {
+  openDraftIds: ReadonlySet<string>; tasks: WorkItem[]; model: string; busy: boolean; selectedId?: string;
   onSelect: (task: WorkItem) => void; onAction: (action: Record<string, unknown>) => void; onLibrary: () => void; onSettings: () => void;
 }) {
   const [showFinished, setShowFinished] = useState(false);
-  const visible = tasks.filter(t => showFinished || t.state !== "finished");
+  const visible = tasks.filter(t => showFinished || t.state !== "finished" || openDraftIds.has(t.id));
   return <aside className="flex h-full w-64 shrink-0 flex-col border-r bg-background max-md:w-52" aria-label="제작 사이드바">
     <header className="border-b px-4 py-5"><h1 className="text-sm font-semibold">Content Studio</h1><p className="mt-1 text-xs text-muted-foreground">콘텐츠 제작 작업 공간</p></header>
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">

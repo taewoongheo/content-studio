@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { hasOpenDrafts } from "@/domains/content-production/domain/start-policy";
 import { advanceSimulation, emptySimulation, mockAction, startSimulation } from "./simulation";
 
 export function usePreviewProduction() {
@@ -15,8 +16,12 @@ export function usePreviewProduction() {
   }, [paused, speed, active]);
   const start = useCallback((count: number) => {
     setModel(previous => {
-      const next = startSimulation(count, withFailure);
+      if (hasOpenDrafts(previous.data.tasks, previous.data.logs)) return previous;
+      const firstIndex = Math.max(0, ...previous.data.logs.map(log => Number(String(log.id).replace("mock-log-", "")) || 0)) + 1;
+      const next = startSimulation(count, withFailure, firstIndex);
       next.data.settings = previous.data.settings;
+      next.data.logs = previous.data.logs;
+      next.data.references = previous.data.references;
       return next;
     });
     setPaused(false);
@@ -35,6 +40,7 @@ export function usePreviewProduction() {
   return {
     runtime: { data: model.data, error: null, busy: false, writes: model.writes, activity: model.activity, reload, act },
     readWork, paused, setPaused, speed, setSpeed, withFailure, setWithFailure,
+    canStart: !hasOpenDrafts(model.data.tasks, model.data.logs),
     start, step: () => setModel(advanceSimulation), reset: () => { setModel(emptySimulation()); setPaused(false); },
   };
 }

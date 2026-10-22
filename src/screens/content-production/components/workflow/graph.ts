@@ -1,4 +1,4 @@
-import type { Edge } from "@xyflow/react";
+import { MarkerType, type Edge } from "@xyflow/react";
 import type { WorkDetail, WorkItem } from "@/domains/content-production/domain/contracts";
 import type { StartNodeModel } from "./start-node";
 import type { StageNodeModel } from "./stage-node";
@@ -20,7 +20,7 @@ export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, Wo
       title: "성과 갱신", stage: "sync", state: syncing ? "running" : tasks.some(task => task.state !== "pending") ? "completed" : "pending", color: "#475569", write: 0, kind: "",
       outputTitle: "최근 게시물 성과", outputText: syncing ? "최신 반응을 가져오고 있어요" : "조회 · 좋아요 · 저장 · 댓글 · 공유", facts: [], activity: syncing ? "성과 조회 중" : "",
     } });
-    edges.push({ id: "start-sync", source: "start", target: "sync", type: "smoothstep", animated: syncing, style: { stroke: "#475569", strokeWidth: 2 } });
+    edges.push({ id: "start-sync", source: "start", target: "sync", type: "smoothstep", animated: syncing, markerEnd: { type: MarkerType.ArrowClosed, color: "#475569" }, style: { stroke: "#475569", strokeWidth: 2.5 } });
   }
   tasks.forEach((task, index) => {
     if (task.state === "pending" && task.current_step === "analysis" && !writes[`${task.id}:analysis`]) return;
@@ -45,7 +45,7 @@ export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, Wo
         activity: state === "running" ? activity[task.id] || "진행 중" : state === "failed" ? "오류 확인" : state === "stopped" ? "중단됨" : "",
         color, state, write: stage === "result" ? 0 : stepWrites, kind: `콘텐츠 ${String(index + 1).padStart(2, "0")}`,
       } });
-      edges.push({ id: `${previous}-${id}`, source: previous, target: id, type: "smoothstep", animated: state === "running", style: { stroke: color, strokeWidth: 2, opacity: 0.75 } });
+      edges.push({ id: `${previous}-${id}`, source: previous, target: id, type: "smoothstep", animated: state === "running", markerEnd: { type: MarkerType.ArrowClosed, color }, style: { stroke: color, strokeWidth: 2.5 } });
       previous = id;
     }
   });

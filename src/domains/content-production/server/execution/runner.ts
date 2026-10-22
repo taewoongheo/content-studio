@@ -1,3 +1,4 @@
+import { OPEN_DRAFT_MESSAGE } from "../../domain/start-policy";
 import { readProductionSettings } from "../settings";
 import { randomUUID } from "node:crypto";
 import { getLocalDatabase } from "@/lib/local-db/database";
@@ -69,10 +70,11 @@ export async function startProduction(count: number, origin: string) {
     throw new Error("성과를 갱신하고 있습니다. 잠시 후 시작해 주세요.");
   if (!Number.isInteger(count) || count < 1)
     throw new Error("제작 개수를 양의 정수로 입력해 주세요.");
+  const store = productionStore();
+  if (store.hasOpenDrafts()) throw new Error(OPEN_DRAFT_MESSAGE);
   shared.productionSync = true;
   publishChange({ kind: "sync", detail: "running" });
   try {
-    const store = productionStore();
     await refreshMetrics(store.db);
     const ids = store.create(count);
     ids.forEach((id) => {

@@ -11,6 +11,37 @@ try {
   });
   await page.goto(`${process.env.CONTENT_STUDIO_TEST_ORIGIN ?? "http://127.0.0.1:3000"}/preview/production`);
   await page.locator('[data-id="start"]').waitFor();
+  await page.waitForFunction(() => {
+    const node = document.querySelector('[data-id="start"]')?.getBoundingClientRect();
+    const canvas = document.querySelector('.production-canvas')?.getBoundingClientRect();
+    return !!node && !!canvas && Math.abs(node.x + node.width / 2 - canvas.x - canvas.width / 2) < 1 && Math.abs(node.y + node.height / 2 - canvas.y - canvas.height / 2) < 1;
+  });
+  const viewport = () => page.locator(".react-flow__viewport").evaluate(element => {
+    const matrix = new DOMMatrix(getComputedStyle(element).transform);
+    return { x: matrix.m41, y: matrix.m42, zoom: matrix.m11 };
+  });
+  let before = await viewport();
+  await page.mouse.move(1200, 650);
+  await page.mouse.wheel(180, 0);
+  await page.waitForTimeout(100);
+  let after = await viewport();
+  assert.ok(after.x < before.x, "horizontal wheel must pan the canvas");
+  assert.equal(after.y, before.y);
+  assert.equal(after.zoom, before.zoom);
+  before = after;
+  await page.keyboard.down("Shift");
+  await page.mouse.wheel(0, 100);
+  await page.keyboard.up("Shift");
+  await page.waitForTimeout(100);
+  after = await viewport();
+  assert.ok(after.x < before.x, "Shift+wheel must pan horizontally");
+  assert.equal(after.zoom, before.zoom);
+  before = after;
+  await page.mouse.wheel(0, 100);
+  await page.waitForTimeout(300);
+  assert.notEqual((await viewport()).zoom, before.zoom, "vertical wheel must retain zoom");
+  await page.getByRole("button", { name: "시작 노드로 이동", exact: true }).click();
+  await page.waitForTimeout(350);
   await page.evaluate(`(() => {
     const state = { seen: new Set(), hidden: [], missing: [], camera: "", moved: false, stopped: false };
     window.visibilityCheck = state;
