@@ -41,7 +41,7 @@ export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, Wo
       nodes.push({ id, type: "stage", position: { x: stage === "analysis" ? 760 : stage === "production" ? 1140 : 1520, y: index * 320 }, data: {
         title: stage === "analysis" ? "분석·제작 방향" : stage === "production" ? "콘텐츠 제작" : "완성 포스트", stage,
         outputTitle: stage === "production" ? text(content.hook) || topic : topic,
-        outputText: stage === "analysis" ? answer : answer || text(content.message), facts: facts.filter((fact): fact is string => !!fact),
+        outputText: stage === "analysis" ? answer : "", facts: facts.filter((fact): fact is string => !!fact),
         activity: state === "running" ? activity[task.id] || "진행 중" : state === "failed" ? "오류 확인" : state === "stopped" ? "중단됨" : "",
         color, state, write: stage === "result" ? 0 : stepWrites, kind: `콘텐츠 ${String(index + 1).padStart(2, "0")}`,
       } });

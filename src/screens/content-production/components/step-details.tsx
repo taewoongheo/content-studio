@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { StructuredValue } from "./details/structured-value";
+import { StatusIcon } from "./workflow/status-icon";
 import type {
   ProductionStep,
   WorkDetail,
@@ -65,10 +66,8 @@ export function StepDetails({
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs text-muted-foreground">
-            {id.slice(0, 8)} · {String(context?.state ?? "pending")}
-          </p>
-          <h3 className="mt-1 font-semibold">
+          <h3 className="flex items-center gap-2 font-semibold">
+            <StatusIcon state={String(context?.state ?? "pending")} size={16} />
             {step === "analysis" ? "분석 및 제작 방향" : "콘텐츠 제작"}
           </h3>
         </div>
