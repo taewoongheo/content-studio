@@ -33,6 +33,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## 콘텐츠 제작의 범위
 
 - 템플릿은 표현 방식을 재사용하는 단위다. 템플릿 순서나 게시 이력으로 다음 템플릿·주제·메시지를 자동 선정하지 않는다.
+- 자동 제작은 콘텐츠별 분석 단계에서 소재·답·표현 방향을 정하고 단계별 draft를 저장한다. 공통 시각 규칙은 [시각 규칙](docs/content-visual-rules.md)을 따른다. `create_project`는 템플릿 없이 생성하며 `clone_project`는 기존 독립 템플릿 복제 경로다.
 - 제작할 내용은 사용자 요청이나 별도의 콘텐츠 기획에서 정한다. 내용이 정해지지 않았다면 필요한 주제·핵심 메시지를 확인한다. 기존 템플릿의 내용을 새 콘텐츠의 주제로 간주하지 않는다.
 - 정한 내용에 맞는 템플릿 선택·복제·검토 기준은 [콘텐츠 제작 가이드](docs/content-guidelines.md)를 따른다. 리서치는 [리서치 가이드](docs/research-guidelines.md)를 따른다.
 
@@ -58,7 +59,7 @@ pnpm dev
 ```
 
 - 앱은 `http://127.0.0.1:3000`에서 실행한다. `pnpm dev`와 `pnpm start`는 `127.0.0.1`에 바인딩한다. Host/Origin 검사는 인증을 대신하지 않으므로 외부 인터페이스나 역방향 프록시로 노출하려면 별도 인증이 필요하다.
-- 앱은 Next.js·React 기반의 로컬 시각 편집기다. Codex 실행과 AI 대화는 외부 에이전트가 담당한다.
+- 앱은 Next.js·React 기반의 로컬 시각 편집기다. 콘텐츠 제작 화면은 외부 Codex CLI를 단계별로 실행한다. 폴리싱 대화는 별도 데스크탑에서 진행한다.
 - DB·편집 상태·리서치 작업은 로컬 단일 서버 프로세스를 기준으로 한다. 여러 서버 프로세스나 서버리스 배포를 지원한다고 가정하지 않는다.
 - 기존 작업 트리의 브랜치·미커밋 변경을 먼저 확인하고 관련 없는 변경을 보존한다.
 - 개발은 원본 폴더 `/Users/taewoongheo/Projects/content-studio-workspace/content-studio`에서 `feat/*` 브랜치를 만들어 진행한다. 사용자가 별도로 요청하지 않으면 새 worktree나 작업 폴더를 만들지 않는다.
@@ -104,6 +105,8 @@ url = "http://127.0.0.1:3000/mcp"
 | `set_reuse_guide` | 템플릿의 `composition` 저장 |
 | `register_template`, `unregister_template` | 선택 페이지로 독립 템플릿 생성 / 템플릿 삭제 |
 | `clone_project` | 독립 템플릿에서 새 게시글 생성 |
+| `create_project` | 소재·메시지가 정해진 게시글을 템플릿 없이 생성·저장 |
+| `production_query`, `production_search`, `production_capture_reference`, `production_read_images` | 과거 로그·선별 사례 조회, Apify 동적 조사와 이미지 보존·조회 |
 | `edit_project` | 편집 명령 배열을 한 묶음으로 적용 |
 | `undo_project` | 직전 편집 묶음 되돌리기 |
 | `preview_slide` | 기존 단일 슬라이드 전체 해상도 PNG 확인 |
@@ -361,3 +364,14 @@ pnpm test:research-accounts --live-youtube
 
 - `test:search`는 합성 플랫폼 응답을 실제 Chromium에 제공해 로그인·쿠키 복원·검색 응답·인증 거절·유휴 프로세스 종료를 검증한다. 실제 TikTok·Instagram 로그인 검색 성공의 증거는 아니다.
 - `test:research-accounts`는 빌드 후 임시 DB·인증 폴더로 실제 대시보드와 HTTP MCP의 만료 상태·연결 해제·Origin 보호를 검증한다. `--live-youtube`는 실제 내부 채널 검색도 검증한다. 사용자 인증 폴더를 테스트에 사용하지 않는다.
+
+## 콘텐츠 제작 실행
+
+- `src/domains/content-production`은 작업·단계별 draft, 확정 로그, 선별 레퍼런스, 실행 제어와 게시 연결을 소유한다. 단계는 analysis / production 두 개다.
+- 실행 도구는 작업별 MCP 주소와 실행 토큰으로 제한한다. 분석에서는 편집 도구를 제공하지 않고, 제작에서는 연결한 프로젝트만 수정한다. 중간 저장과 상태 변경은 앱 API/MCP를 사용한다.
+- 서버의 `APIFY_API_TOKEN`으로 공개 TikTok 자료를 수집하며 운영 계정 쿠키를 사용하지 않는다. 키를 프롬프트나 클라이언트로 보내지 않는다.
+- 제작용 모델 기본값은 `gpt-5.6-sol`이며 콘텐츠 제작 화면 하단에서 변경한다. 설정은 작업공간의 `.content-studio-production/settings.json`에 저장하며 전역 Codex 설정은 변경하지 않는다. 검증에서는 `CONTENT_STUDIO_PRODUCTION_RUNTIME_DIR` 절대 경로로 설정 파일을 분리한다.
+- `CONTENT_STUDIO_CODEX_BIN`은 실행할 CLI 경로를 지정한다. 일반 실행은 `codex`를 사용한다. 자동 검사에서만 격리된 실행 fixture를 사용할 수 있고 실제 모델 제작 성공과 구분한다.
+- `production_context`, `production_save_draft`, `production_comparisons`, `production_change_direction`, `production_create_project`, `production_import_image`는 실행 중인 작업 전용 MCP에서만 제공한다. 단계 완료는 서버 실행기가 필수 출력·저장·실제 이미지 검토를 검사해 처리한다.
+- 취소·제거는 실행 권한과 프로세스를 종료하고 세 draft를 모두 삭제한다. 중단은 저장 내용을 유지한다. 게시 콘텐츠 중복 범위는 최근 24시간이고 성과 갱신 범위는 한국 날짜 오늘~3일 전이다.
+- DB v14는 생산 관련 7개 테이블을 추가한다. 기존 DB를 자동 변환하지 않는다. 사용자의 명시적 요청에 따라 일회성 백업·변환을 수행하고 프로젝트·자산 보존을 확인한다.

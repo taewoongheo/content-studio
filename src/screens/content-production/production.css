@@ -1,0 +1,110 @@
+.production-canvas {
+  position: relative;
+  height: 480px;
+  min-height: 360px;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.production-stage {
+  width: 260px;
+  padding: 19px 20px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--instance-color);
+  border-radius: 12px;
+  background: var(--background);
+  box-shadow: 0 3px 14px #00000008;
+  cursor: pointer;
+}
+.production-stage.selected {
+  outline: 2px solid var(--instance-color);
+  outline-offset: 3px;
+}
+.production-node-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  color: var(--instance-color);
+  background: color-mix(in srgb, var(--instance-color) 10%, transparent);
+}
+.production-stage .react-flow__handle {
+  background: var(--instance-color);
+  border: 2px solid var(--background);
+  width: 9px;
+  height: 9px;
+}
+.production-write-pulse {
+  animation: production-write 0.42s ease-out;
+}
+@keyframes production-write {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.03);
+    filter: brightness(1.08);
+  }
+}
+.production-details {
+  overflow-wrap: anywhere;
+}
+.production-details pre {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.production-field {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px 10px;
+  background: var(--background);
+  font-size: 13px;
+}
+.production-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 12px;
+  font-size: 12px;
+  background: var(--background);
+  cursor: pointer;
+}
+.production-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.production-button.primary {
+  background: var(--foreground);
+  color: var(--background);
+}
+.production-stage:focus-visible,
+.production-button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .production-write-pulse {
+    animation: none;
+    box-shadow: 0 0 0 3px var(--instance-color);
+  }
+  .production-canvas .animated path {
+    animation: none !important;
+  }
+  .production-canvas .animate-spin {
+    animation: none;
+  }
+}
+@media (max-width: 700px) {
+  .production-canvas {
+    height: 380px;
+  }
+}

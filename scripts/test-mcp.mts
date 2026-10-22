@@ -97,6 +97,7 @@ try {
   }
   const tools = (await client.listTools()).tools.map((tool) => tool.name);
   assert.deepEqual([...tools].sort(), [
+    "create_project", "production_query", "production_search", "production_capture_reference", "production_read_images",
     "list_projects", "set_content_metadata", "list_template_guides", "set_reuse_guide", "register_template", "unregister_template", "open_project", "clone_project", "read_project",
     "edit_project", "undo_project", "preview_slide", "preview_slides", "export_slideshow", "rename_project", "get_render_job", "cancel_render_job",
     "list_video_projects", "create_video_project", "open_video_project", "read_video_project", "edit_video_project", "undo_video_project", "redo_video_project", "rename_video_project", "clone_video_project", "preview_video", "export_video", "start_video_export", "close_video_project", "delete_video_project",
@@ -126,6 +127,7 @@ try {
   try {
     const listPage = await browser.newPage();
     await listPage.goto(origin);
+    await listPage.getByRole("tab", {name:"템플릿 프로젝트",exact:true}).click();
     const savedColumn = listPage.getByRole("region", { name: "저장된 프로젝트", exact: true });
     const templateColumn = listPage.getByRole("region", { name: "템플릿 프로젝트", exact: true });
     assert.equal(await listPage.getByRole("tab", { name: "저장된 프로젝트", exact: true }).count(), 0);
@@ -252,6 +254,7 @@ try {
     assert.equal(await listPage.getByText(/템플릿으로 등록된 콘텐츠/).count(), 0);
     await listPage.screenshot({ path: "/tmp/content-studio-template-editor-banner.png", fullPage: true });
     await listPage.getByRole("button", { name: "대시보드", exact: true }).click();
+    await listPage.getByRole("tab", {name:"템플릿 프로젝트",exact:true}).click();
     await savedColumn.getByRole("heading", { name: "Template publication", exact: true }).waitFor();
     console.log("PASS parent change/detach, confirmed removal/re-registration, template creation preserves parent, independent metadata and no redundant registration indicators");
 
@@ -533,6 +536,7 @@ try {
     await listPage.waitForURL(url => url.searchParams.get("job") === colorClone.id);
     await page.getByRole("button", { name: "Colored clone 탭 닫기", exact: true }).click();
     await page.getByRole("button", { name: "Colored clone 탭 닫기", exact: true }).waitFor({ state: "detached" });
+    await listPage.getByRole("tab", {name:"템플릿 프로젝트",exact:true}).click();
     await listPage.getByRole("heading", { name: "템플릿 프로젝트", exact: true, level: 1 }).waitFor();
     assert.equal((await fetch(`${origin}/api/content-jobs/${colorClone.id}`)).status, 404);
     const closedEdit = await client.callTool({ name: "edit_project", arguments: { projectId: colorClone.id,
@@ -665,6 +669,7 @@ try {
 
     // The dashboard delegates a single project load to the workspace.
     await tabBar.getByRole("button", { name: "대시보드", exact: true }).click();
+    await page.getByRole("tab", {name:"템플릿 프로젝트",exact:true}).click();
     await page.getByRole("heading", { name: "템플릿 프로젝트", exact: true, level: 1 }).waitFor();
     let openRequests = 0;
     page.on("request", request => {

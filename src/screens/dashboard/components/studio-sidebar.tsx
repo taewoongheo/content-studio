@@ -1,6 +1,12 @@
 "use client";
 
-import { CalendarDays, LayoutTemplate, Plus, Settings } from "lucide-react";
+import {
+  CalendarDays,
+  Workflow,
+  LayoutTemplate,
+  Plus,
+  Settings,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -48,23 +54,60 @@ export function StudioSidebar({
           </SidebarMenuButton>
           <SidebarMenuButton
             className="h-11"
+            isActive={activeTab === "production"}
+            render={
+              <TabsTrigger
+                value="production"
+                className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent"
+              />
+            }
+          >
+            <Workflow aria-hidden="true" />
+            <span>콘텐츠 제작</span>
+          </SidebarMenuButton>
+          <SidebarMenuButton
+            className="h-11"
             isActive={activeTab === "published"}
-            render={<TabsTrigger value="published" className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent" />}
+            render={
+              <TabsTrigger
+                value="published"
+                className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent"
+              />
+            }
           >
             <CalendarDays aria-hidden="true" />
             <span>게시 콘텐츠</span>
           </SidebarMenuButton>
           <SidebarMenuButton
-            className="h-11" isActive={activeTab === "templates"}
-            render={<TabsTrigger value="templates" className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent" />}
+            className="h-11"
+            isActive={activeTab === "templates"}
+            render={
+              <TabsTrigger
+                value="templates"
+                className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent"
+              />
+            }
           >
             <LayoutTemplate aria-hidden="true" />
             <span>템플릿 프로젝트</span>
           </SidebarMenuButton>
-          <SidebarMenuButton className="h-11" isActive={activeTab === "settings"}
-            render={<TabsTrigger value="settings" className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent" />}>
-            <Settings aria-hidden="true" /><span>설정</span>
-            {needsLogin && <span className="ml-auto text-xs text-destructive">재로그인 필요</span>}
+          <SidebarMenuButton
+            className="h-11"
+            isActive={activeTab === "settings"}
+            render={
+              <TabsTrigger
+                value="settings"
+                className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent"
+              />
+            }
+          >
+            <Settings aria-hidden="true" />
+            <span>설정</span>
+            {needsLogin && (
+              <span className="ml-auto text-xs text-destructive">
+                재로그인 필요
+              </span>
+            )}
           </SidebarMenuButton>
         </TabsList>
       </SidebarContent>
