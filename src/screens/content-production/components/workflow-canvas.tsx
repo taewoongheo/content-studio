@@ -33,6 +33,8 @@ export function WorkflowCanvas({
   selectedNode,
   onSelect,
   onOpen,
+  onStop,
+  stopDisabled,
 }: {
   startContent: ReactNode;
   tasks: WorkItem[];
@@ -43,6 +45,8 @@ export function WorkflowCanvas({
   selectedNode?: string;
   onSelect: (id: string, step: ProductionStep) => void;
   onOpen: (id: string) => void;
+  onStop: () => void;
+  stopDisabled: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { nodes, edges } = useMemo(() => buildWorkflowGraph(tasks, details, writes, activity, syncing), [tasks, details, writes, activity, syncing]);
@@ -91,7 +95,7 @@ export function WorkflowCanvas({
         <HorizontalWheelPan containerRef={containerRef} />
         <Background gap={24} size={1} />
         <Controls showInteractive={false} />
-        <StartNodeControl />
+        <StartNodeControl onStop={onStop} stopDisabled={stopDisabled} />
       </ReactFlow>
 
     </div>

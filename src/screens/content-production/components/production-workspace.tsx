@@ -24,9 +24,20 @@ export function ProductionWorkspace({ runtime, readWork, settings, onOpen }: {
   const blockedByDraft = openDraftIds.size > 0;
   const details = useNodeDetails(data?.tasks, readWork);
   const [count, setCount] = useState(1);
+  const [stopping, setStopping] = useState(false);
   const [panel, setPanel] = useState<"library" | "settings" | null>(null);
   const [selected, setSelected] = useState<{ id: string; step: ProductionStep | "project" } | null>(null);
   const safe = (action: Record<string, unknown>) => { void act(action).catch(() => {}); };
+  const activeTasks = data?.tasks.filter(task => task.state === "running" || task.state === "pending") ?? [];
+  const stopAll = async () => {
+    if (stopping) return;
+    setStopping(true);
+    try {
+      await Promise.allSettled(activeTasks.map(task => act({ action: "stop", id: task.id })));
+    } finally {
+      setStopping(false);
+    }
+  };
   const current = data?.tasks.find(t => t.id === selected?.id);
   const select = (id: string, step: ProductionStep) => { setPanel(null); setSelected({ id, step }); };
   const startContent = (
@@ -47,7 +58,7 @@ export function ProductionWorkspace({ runtime, readWork, settings, onOpen }: {
       onSelect={task => { setPanel(null); setSelected({ id: task.id, step: "project" }); }} onSelectStep={select} onAction={safe}
       onLibrary={() => { setPanel("library"); setSelected(null); }} onSettings={() => { setPanel("settings"); setSelected(null); }} />
     <main className="relative min-h-0 min-w-0 flex-1" aria-label="제작 작업 공간">
-      <WorkflowCanvas startContent={startContent} details={details} selectedNode={selected ? `${selected.id}:${selected.step}` : undefined} tasks={data?.tasks ?? []} writes={writes} activity={activity} syncing={data?.sync.running ?? false} onSelect={select} onOpen={id => void onOpen(id)} />
+      <WorkflowCanvas startContent={startContent} details={details} selectedNode={selected ? `${selected.id}:${selected.step}` : undefined} tasks={data?.tasks ?? []} writes={writes} activity={activity} syncing={data?.sync.running ?? false} onSelect={select} onOpen={id => void onOpen(id)} onStop={() => void stopAll()} stopDisabled={stopping || busy || !activeTasks.length} />
 
       {selected && current && <aside className="absolute inset-y-0 right-0 z-20 w-[420px] max-w-full overflow-y-auto border-l bg-background shadow-lg" aria-label="작업 상세">
         {selected.step === "project" ? <ProjectDetails task={current} onSelectStep={select} onOpen={id => void onOpen(id)} onClose={() => setSelected(null)} /> : <StepDetails id={selected.id} step={selected.step} updated={current.updated_at} write={writes[`${selected.id}:${selected.step}`] ?? 0} readWork={readWork} onClose={() => setSelected(null)} />}
