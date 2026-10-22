@@ -14,6 +14,11 @@ export class SlideshowProjectWrites {
   constructor(private readonly registry: ContentJobRegistry, private readonly database: Database.Database) {
     this.stores = { projects: new ContentProjectStore(database) };
   }
+  create(input: {name:string;topic:string;message:string;slideCount?:number}) {
+    return this.commit(() => createContentProject(this.registry, {name:input.name,slideCount:input.slideCount},this.stores), changed => {
+      this.stores.projects.updateMetadata(changed.id,{topic:input.topic,message:input.message});
+    });
+  }
   clone(input: { templateId: string; name?: string; topic?: string; message?: string }) {
     if ((input.topic === undefined) !== (input.message === undefined))
       throw new Error("주제와 메시지를 함께 입력해 주세요.");

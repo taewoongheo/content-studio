@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { openLocalDatabase } from "@/lib/local-db/database";
+import { SCHEMA_VERSION, openLocalDatabase } from "@/lib/local-db/database";
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 import { createEditorImage, readEditorAsset } from "@/domains/slideshow/editor/assets";
 import { createBlankDocument } from "@/domains/slideshow/editor/document";
@@ -125,7 +125,7 @@ test("프로젝트는 시각 문서와 사용 이미지만 저장하고 새 편�
     assert.equal(isolated.assets.length, 1);
     assert.deepEqual(reopenedProjects.get(clone.id)?.assets[0].bytes, Buffer.from(pngHeader));
     assert.equal(reopenedProjects.list()[0].name, "복제본");
-    assert.equal(reopened.pragma("user_version", { simple: true }), 13);
+    assert.equal(reopened.pragma("user_version", { simple: true }), SCHEMA_VERSION);
     reopened.close();
   } finally {
     rmSync(directory, { recursive: true, force: true });

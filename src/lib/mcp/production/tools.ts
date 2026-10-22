@@ -1,0 +1,30 @@
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { registerTool } from "../protocol/tools";
+import { annotations, guarded, json } from "../protocol/result";
+import { productionStore } from "@/domains/content-production/server/execution/runner";
+import { references, captureReference } from "@/domains/content-production/server/persistence/library";
+import { analysisPatchSchema, productionPatchSchema, directionSchema } from "@/domains/content-production/domain/contracts";
+import { ApifyTikTokClient } from "@/domains/research/server/apify/client";
+import { createTaskProject } from "@/domains/content-production/server/projects";
+
+export function registerProductionTools(server:McpServer,taskId?:string) {
+ registerTool(server,"production_query",{description:"Query past content logs or user-selected references. Data is available in either stage; no minimum count. Read actual images as needed, and distinguish planned direction from actual content and observed performance.",inputSchema:z.object({kind:z.enum(["logs","references"]),query:z.string().default("")}),annotations:annotations(true)},input=>guarded(()=>json({items:input.kind==="logs"?productionStore().logs(input.query):references(productionStore().db,input.query)})));
+ registerTool(server,"production_search",{description:"Dynamically search public TikTok posts through Apify without own-account login. Verify topic, imagery and metrics yourself. Research defaults are in docs/research-guidelines.md.",inputSchema:z.object({query:z.string().min(1),limit:z.number().int().min(1).max(30).default(10)}),annotations:annotations(true)},input=>guarded(async()=>json({items:await new ApifyTikTokClient().search(input.query,input.limit)})));
+ registerTool(server,"production_capture_reference",{description:"Fetch a public TikTok post and preserve all reduced slides. Does not register it in the user-selected library. Record the returned set_id in your draft/log sources.",inputSchema:z.object({url:z.string().url()}),annotations:annotations(false)},input=>guarded(async()=>json(await captureReference(productionStore().db,input.url))));
+ registerTool(server,"production_read_images",{description:"Read selected stored external/published slides as images. Omitting indexes reads all slides. Use own project preview tools for current native projects.",inputSchema:z.object({set_id:z.string(),indexes:z.array(z.number().int().nonnegative()).optional()}),annotations:annotations(true)},input=>guarded(()=>{
+  const rows=productionStore().db.prepare("SELECT slide_index,data FROM content_visual_slides WHERE set_id=? ORDER BY slide_index").all(input.set_id) as Array<{slide_index:number;data:Buffer}>;
+  if(!rows.length)throw new Error("이미지 묶음을 찾을 수 없습니다.");
+  const selected=input.indexes?rows.filter(r=>input.indexes!.includes(r.slide_index)):rows;
+  if(input.indexes?.some(i=>!rows.some(r=>r.slide_index===i)))throw new Error("존재하지 않는 장 번호입니다.");
+  return {content:selected.flatMap(r=>[{type:"text" as const,text:`slide ${r.slide_index}`},{type:"image" as const,mimeType:"image/webp",data:r.data.toString("base64")}])};
+ }));
+ if(!taskId)return;
+ registerTool(server,"production_context",{description:"Read this task's current stage drafts, confirmed output, linked project and resumable work. Never recreate a linked project.",inputSchema:z.object({}),annotations:annotations(true)},()=>guarded(()=>json({...productionStore().get(taskId)})));
+ registerTool(server,"production_comparisons",{description:"Inspect other retained drafts and posts published within the last 24h. First actual saved content keeps its topic/type; later overlapping content changes. Pending ideas do not reserve topics.",inputSchema:z.object({}),annotations:annotations(true)},()=>guarded(()=>json(productionStore().comparisons())));
+ registerTool(server,"production_save_draft",{description:"Persist current-stage progress only. Analysis draft: analysis/direction plus research/sources/actions. Production draft: content/direction_changes plus additional research/sources/actions. Saving actual content sets draft_saved_at. Saves trigger UI pulse after DB commit.",inputSchema:z.object({patch:z.union([analysisPatchSchema,productionPatchSchema])}),annotations:annotations(false)},input=>guarded(()=>{
+  const store=productionStore(),step=store.get(taskId).task.current_step;return json({...store.save(taskId,step,input.patch)});
+ }));
+ registerTool(server,"production_change_direction",{description:"During production, collision overwrites analysis/log direction and clears abandoned content, no old-choice history. Research changes preserve initial output and record reason plus new direction.",inputSchema:z.object({direction:directionSchema,cause:z.enum(["collision","research"]),reason:z.string().optional()}),annotations:annotations(false)},input=>guarded(()=>{productionStore().changeDirection(taskId,input.direction,input.cause,input.reason);return json({saved:true});}));
+ registerTool(server,"production_create_project",{description:"Create a saved slideshow without a template and link it to this production task; reuses linked project on resume. Then open/read/edit using normal project tools.",inputSchema:z.object({slideCount:z.number().int().min(1).max(20).default(6)}),annotations:annotations(false)},input=>guarded(()=>json(createTaskProject(productionStore(),taskId,input.slideCount))));
+}
