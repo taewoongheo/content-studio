@@ -13,7 +13,12 @@ const itemSchema = z
     commentCount: z.number().nonnegative().nullable().optional(),
     collectCount: z.number().nonnegative().nullable().optional(),
     shareCount: z.number().nonnegative().nullable().optional(),
-    slideshowImageLinks: z.array(z.string()).optional(),
+    slideshowImageLinks: z.array(z.union([
+      z.string().min(1),
+      z.object({ tiktokLink: z.string().optional(), downloadLink: z.string().nullable().optional() })
+        .refine(link => !!(link.tiktokLink || link.downloadLink), "Missing slideshow image URL")
+        .transform(link => link.tiktokLink || link.downloadLink!),
+    ])).optional(),
     imagePost: z
       .object({
         images: z.array(

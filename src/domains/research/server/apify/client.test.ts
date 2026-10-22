@@ -54,3 +54,14 @@ test("키·게시물·실제 게시 시각이 없으면 수집 완료를 조작�
     /조회하지 못/,
   );
 });
+
+
+test("실제 Actor의 슬라이드 링크 객체를 이미지 URL로 정규화한다", () => {
+  const post = parseApifyItem({ id: "123", slideshowImageLinks: [
+    { tiktokLink: "https://p.tiktokcdn.com/1.jpg", downloadLink: "" },
+    { tiktokLink: "", downloadLink: "https://api.apify.com/storage/2.jpg" },
+    "https://p.tiktokcdn.com/3.jpg",
+  ] });
+  assert.deepEqual(post.images, ["https://p.tiktokcdn.com/1.jpg", "https://api.apify.com/storage/2.jpg", "https://p.tiktokcdn.com/3.jpg"]);
+  assert.throws(() => parseApifyItem({ id: "123", slideshowImageLinks: [{}] }));
+});
