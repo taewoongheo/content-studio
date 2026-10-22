@@ -7,46 +7,96 @@
   overflow: hidden;
 }
 .production-stage {
-  width: 260px;
-  padding: 19px 20px;
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--instance-color);
-  border-radius: 12px;
+  width: 300px;
+  overflow: visible;
+  border: 1.5px solid color-mix(in srgb, var(--instance-color) 64%, white);
+  border-radius: 13px;
   background: var(--background);
-  box-shadow: 0 3px 14px #00000008;
+  color: var(--foreground);
   cursor: pointer;
 }
 .production-stage.selected {
-  outline: 2px solid var(--instance-color);
+  outline: 3px solid color-mix(in srgb, var(--instance-color) 24%, transparent);
   outline-offset: 3px;
 }
-.production-node-icon {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  color: var(--instance-color);
-  background: color-mix(in srgb, var(--instance-color) 10%, transparent);
+.production-stage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 46px;
+  padding: 12px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--instance-color) 22%, white);
+  border-radius: 11px 11px 0 0;
+  background: color-mix(in srgb, var(--instance-color) 9%, var(--background));
 }
+.production-stage-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--instance-color);
+  font-size: 13px;
+  font-weight: 650;
+}
+.production-status { display: inline-flex; color: var(--instance-color); }
+.production-status.is-complete { color: #15803d; }
+.production-status.is-failed { color: #b91c1c; }
+.production-stage-content { min-height: 150px; padding: 16px; }
+.production-instance-label { display: block; margin-bottom: 8px; color: #64748b; font-size: 11px; font-weight: 500; }
+.production-output-title {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+}
+.production-output-text {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  margin-top: 9px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #475569;
+}
+.production-output-facts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.production-output-facts span {
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--instance-color) 18%, white);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--instance-color) 4%, white);
+  color: var(--instance-color);
+  font-size: 11px;
+  font-weight: 500;
+}
+.production-stage-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 38px;
+  padding: 9px 16px;
+  border-top: 1px solid color-mix(in srgb, var(--instance-color) 16%, white);
+}
+.production-stage-action { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #64748b; }
+.production-save-indicator { display: inline-flex; padding: 4px; flex-shrink: 0; }
+.production-save-dot { display: block; width: 7px; height: 7px; border-radius: 50%; background: var(--instance-color); }
 .production-stage .react-flow__handle {
   background: var(--instance-color);
   border: 2px solid var(--background);
   width: 9px;
   height: 9px;
 }
-.production-write-pulse {
-  animation: production-write 0.42s ease-out;
-}
+.production-write-pulse { animation: production-write 0.65s ease-out; }
 @keyframes production-write {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  45% {
-    transform: scale(1.03);
-    filter: brightness(1.08);
-  }
+  0% { transform: scale(1); box-shadow: 0 0 0 0 color-mix(in srgb, var(--instance-color) 55%, transparent); }
+  45% { transform: scale(1.25); box-shadow: 0 0 0 6px color-mix(in srgb, var(--instance-color) 22%, transparent); }
+  100% { transform: scale(1); box-shadow: 0 0 0 10px transparent; }
 }
 .production-details {
   overflow-wrap: anywhere;
@@ -98,7 +148,7 @@
   .production-canvas .animated path {
     animation: none !important;
   }
-  .production-canvas .animate-spin {
+  .production-status .animate-spin {
     animation: none;
   }
 }

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { History, Settings, ChevronDown } from "lucide-react";
 import type { WorkItem } from "@/domains/content-production/domain/contracts";
-const labels: Record<string, string> = { running: "실행 중", pending: "대기", stopped: "중단", failed: "실패", finished: "제작 완료" };
+import { StatusIcon } from "../workflow/status-icon";
 export function ProductionSidebar({ tasks, model, busy, selectedId, onSelect, onAction, onLibrary, onSettings }: {
   tasks: WorkItem[]; model: string; busy: boolean; selectedId?: string;
   onSelect: (task: WorkItem) => void; onAction: (action: Record<string, unknown>) => void; onLibrary: () => void; onSettings: () => void;
@@ -15,7 +15,7 @@ export function ProductionSidebar({ tasks, model, busy, selectedId, onSelect, on
       <div className="flex items-center justify-between px-4 pt-5 pb-2"><h2 className="text-xs font-medium text-muted-foreground">작업 {visible.length}</h2><button className="text-[11px] text-muted-foreground" aria-pressed={showFinished} onClick={() => setShowFinished(!showFinished)}>{showFinished ? "진행 중만" : "완료 포함"}</button></div>
 
       {visible.map(task => <article key={task.id} className={`mx-2 mb-2 rounded-lg border p-3 ${selectedId === task.id ? "border-foreground/30 bg-muted" : "border-transparent hover:bg-muted/50"}`}>
-        <button className="w-full text-left" onClick={() => onSelect(task)}><span className="block truncate text-xs font-medium">{task.topic ?? "소재 분석 중"}</span><span className="mt-1 block text-[11px] text-muted-foreground">{labels[task.state] ?? task.state} · {task.current_step === "analysis" ? "분석·방향" : "콘텐츠 제작"}</span></button>
+        <button className="w-full text-left" onClick={() => onSelect(task)}><span className="block truncate text-xs font-medium">{task.topic ?? "소재 분석 중"}</span><span className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground"><StatusIcon state={task.state} size={14} />{task.current_step === "analysis" ? "분석·방향" : "콘텐츠 제작"}</span></button>
         <div className="mt-3 flex gap-3 text-[11px]">
           {["running", "pending"].includes(task.state) && <button disabled={busy} onClick={() => onAction({ action: "stop", id: task.id })}>중단</button>}
           {["stopped", "failed"].includes(task.state) && <button disabled={busy} onClick={() => onAction({ action: "resume", id: task.id })}>재개</button>}

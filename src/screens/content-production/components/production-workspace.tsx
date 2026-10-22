@@ -2,6 +2,7 @@
 import { useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { Play, RefreshCw, X, Settings, History, Workflow } from "lucide-react";
+import { useNodeDetails } from "../hooks/use-node-details";
 import { StepDetails } from "./step-details";
 import { LibraryPanel } from "./library/panel";
 import { ProductionSidebar } from "./navigation/production-sidebar";
@@ -17,6 +18,7 @@ export function ProductionWorkspace({ runtime, readWork, settings, onOpen }: {
   onOpen: (id: string) => Promise<void>;
 }) {
   const { data, error, busy, writes, activity, reload, act } = runtime;
+  const details = useNodeDetails(data?.tasks, readWork);
   const [count, setCount] = useState(1);
   const [panel, setPanel] = useState<"library" | "settings" | null>(null);
   const [selected, setSelected] = useState<{ id: string; step: ProductionStep } | null>(null);
@@ -28,7 +30,7 @@ export function ProductionWorkspace({ runtime, readWork, settings, onOpen }: {
       onSelect={task => select(task.id, task.current_step)} onAction={safe}
       onLibrary={() => { setPanel("library"); setSelected(null); }} onSettings={() => { setPanel("settings"); setSelected(null); }} />
     <main className="relative min-h-0 min-w-0 flex-1" aria-label="제작 작업 공간">
-      <WorkflowCanvas selectedNode={selected ? `${selected.id}:${selected.step}` : undefined} tasks={data?.tasks ?? []} writes={writes} activity={activity} syncing={data?.sync.running ?? false} onSelect={select} onOpen={id => void onOpen(id)} />
+      <WorkflowCanvas details={details} selectedNode={selected ? `${selected.id}:${selected.step}` : undefined} tasks={data?.tasks ?? []} writes={writes} activity={activity} syncing={data?.sync.running ?? false} onSelect={select} onOpen={id => void onOpen(id)} />
       <div className="absolute top-4 left-4 z-10 max-w-[calc(100%-2rem)] rounded-xl border bg-background p-3 shadow-sm">
         <form className="flex flex-wrap items-center gap-2" onSubmit={e => { e.preventDefault(); if (data?.configured.apify) safe({ action: "start", count }); }}>
           <Workflow size={16} className="mr-2 text-muted-foreground" /><label className="text-xs" htmlFor="production-count">제작 개수</label>
