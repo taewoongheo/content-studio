@@ -1,0 +1,53 @@
+import assert from "node:assert/strict";
+import { chromium } from "playwright";
+
+// Run against pnpm dev. Only the in-memory preview is used; API traffic fails the check.
+const browser = await chromium.launch();
+try {
+  const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+  const apiRequests: string[] = [];
+  page.on("request", request => {
+    if (new URL(request.url()).pathname.startsWith("/api/")) apiRequests.push(request.url());
+  });
+  await page.goto(`${process.env.CONTENT_STUDIO_TEST_ORIGIN ?? "http://127.0.0.1:3000"}/preview/production`);
+  await page.locator('[data-id="start"]').waitFor();
+  await page.evaluate(`(() => {
+    const state = { seen: new Set(), hidden: [], missing: [], camera: "", moved: false, stopped: false };
+    window.visibilityCheck = state;
+    const check = () => {
+      if (state.stopped) return;
+      const nodes = [...document.querySelectorAll(".react-flow__node")];
+      for (const node of nodes) {
+        const id = node.dataset.id;
+        const visible = getComputedStyle(node).visibility === "visible";
+        if (state.seen.has(id) && !visible) state.hidden.push(id);
+        if (visible) state.seen.add(id);
+      }
+      for (const id of state.seen) if (!nodes.some(node => node.dataset.id === id)) state.missing.push(id);
+      const transform = document.querySelector(".react-flow__viewport")?.style.transform;
+      if (transform) {
+        if (state.camera && transform !== state.camera) state.moved = true;
+        state.camera = transform;
+      }
+      requestAnimationFrame(check);
+    };
+    check();
+  })()`);
+  await page.getByRole("combobox", { name: "재생 속도" }).selectOption("2");
+  await page.getByRole("button", { name: "4개 병렬 재생", exact: true }).click();
+  await page.waitForFunction(() => document.querySelectorAll('.react-flow__node [aria-label="완료"]').length === 13, undefined, { timeout: 25_000 });
+  await page.waitForTimeout(600);
+  const result = await page.evaluate(() => {
+    const state = (window as unknown as { visibilityCheck: { hidden: string[]; missing: string[]; moved: boolean; stopped: boolean } }).visibilityCheck;
+    state.stopped = true;
+    return { hidden: state.hidden, missing: state.missing, moved: state.moved, count: document.querySelectorAll(".react-flow__node").length };
+  });
+  assert.deepEqual(result.hidden, [], "existing nodes must never become hidden during data updates");
+  assert.deepEqual(result.missing, [], "existing nodes must not disappear from the node list");
+  assert.equal(result.moved, false, "progress must preserve the viewport");
+  assert.equal(result.count, 14);
+  assert.deepEqual(apiRequests, [], "preview must not call real APIs");
+  console.log("PASS continuous parallel playback: node visibility, retained nodes, fixed camera and zero API calls");
+} finally {
+  await browser.close();
+}

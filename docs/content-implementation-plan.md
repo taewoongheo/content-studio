@@ -150,3 +150,5 @@ React Flow로 확대·이동 가능한 고정 파이프라인을 구성한다. �
 - Codex·Apify·제작 API·외부 계정 API를 호출하지 않는다. 모델·기록 변경과 포스트 열기도 mock 동작이며 새로고침하면 사라진다.
 - 실제 제작 훅·서버·DB 로직은 수정하지 않았다. 화면 구성과 데이터 연결만 분리했다.
 - 시각 조정 후 `src/app/preview/production`과 `src/screens/content-production/preview`를 제거한다. 공용 화면 컴포넌트는 실제 제작 화면에서 계속 사용한다.
+
+- 미리보기 가시성 재현 검증: 개발 서버 실행 후 `pnpm exec tsx src/screens/content-production/preview/visibility.browser.mts`. 병렬 자동 재생 중 기존 노드의 숨김·삭제와 시점 이동, 실제 API 호출이 없는지 매 프레임 확인한다.

@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, useCallback, type ReactNode } from "react";
 import {
   useReactFlow,
   Background,
@@ -7,6 +7,7 @@ import {
   Panel,
   ReactFlow,
   type NodeMouseHandler,
+  type OnNodesChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { LocateFixed } from "lucide-react";
@@ -55,7 +56,22 @@ export function WorkflowCanvas({
   onOpen: (id: string) => void;
 }) {
   const { nodes, edges } = useMemo(() => buildWorkflowGraph(tasks, details, writes, activity, syncing), [tasks, details, writes, activity, syncing]);
-  const renderedNodes = nodes.map(node => node.type === "start" ? { ...node, data: { content: startContent } } : { ...node, selected: node.id === selectedNode });
+  const [measurements, setMeasurements] = useState<Record<string, { width: number; height: number }>>({});
+  const onNodesChange = useCallback<OnNodesChange<WorkflowNode>>(changes => {
+    setMeasurements(previous => {
+      let next = previous;
+      for (const change of changes) {
+        if (change.type !== "dimensions" || !change.dimensions) continue;
+        const old = next[change.id], size = change.dimensions;
+        if (old?.width === size.width && old?.height === size.height) continue;
+        if (next === previous) next = { ...previous };
+        next[change.id] = size;
+      }
+      return next;
+    });
+  }, []);
+  // Controlled nodes must retain ResizeObserver measurements when their data changes.
+  const renderedNodes = nodes.map(node => ({ ...node, measured: measurements[node.id] })).map(node => node.type === "start" ? { ...node, data: { content: startContent } } : { ...node, selected: node.id === selectedNode });
   const click: NodeMouseHandler<WorkflowNode> = (_, node) => {
     if (node.id === "sync" || node.id === "start") return;
     const [id, step] = node.id.split(":");
@@ -71,6 +87,7 @@ export function WorkflowCanvas({
         edges={edges}
         nodeTypes={nodeTypes}
         onNodeClick={click}
+        onNodesChange={onNodesChange}
         defaultViewport={initialViewport}
         autoPanOnNodeFocus={false}
         nodesDraggable={false}
