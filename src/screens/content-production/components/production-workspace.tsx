@@ -5,6 +5,7 @@ import { Play, RefreshCw, X, Settings, History } from "lucide-react";
 import { getOpenDrafts, OPEN_DRAFT_MESSAGE } from "@/domains/content-production/domain/start-policy";
 import { useNodeDetails } from "../hooks/use-node-details";
 import { StepDetails } from "./step-details";
+import { ProjectDetails } from "./details/project-details";
 import { LibraryPanel } from "./library/panel";
 import { ProductionSidebar } from "./navigation/production-sidebar";
 import type { useProduction } from "../hooks/use-production";
@@ -24,7 +25,7 @@ export function ProductionWorkspace({ runtime, readWork, settings, onOpen }: {
   const details = useNodeDetails(data?.tasks, readWork);
   const [count, setCount] = useState(1);
   const [panel, setPanel] = useState<"library" | "settings" | null>(null);
-  const [selected, setSelected] = useState<{ id: string; step: ProductionStep } | null>(null);
+  const [selected, setSelected] = useState<{ id: string; step: ProductionStep | "project" } | null>(null);
   const safe = (action: Record<string, unknown>) => { void act(action).catch(() => {}); };
   const current = data?.tasks.find(t => t.id === selected?.id);
   const select = (id: string, step: ProductionStep) => { setPanel(null); setSelected({ id, step }); };
@@ -42,14 +43,14 @@ export function ProductionWorkspace({ runtime, readWork, settings, onOpen }: {
       </div>
   );
   return <div className="flex h-full min-h-0 overflow-hidden">
-    <ProductionSidebar openDraftIds={openDraftIds} tasks={data?.tasks ?? []} model={data?.settings.model ?? "gpt-5.6-sol"} busy={busy} selectedId={selected?.id}
-      onSelect={task => select(task.id, task.current_step)} onAction={safe}
+    <ProductionSidebar openDraftIds={openDraftIds} tasks={data?.tasks ?? []} model={data?.settings.model ?? "gpt-5.6-sol"} busy={busy} selectedId={selected?.id} selectedStep={selected?.step}
+      onSelect={task => { setPanel(null); setSelected({ id: task.id, step: "project" }); }} onSelectStep={select} onAction={safe}
       onLibrary={() => { setPanel("library"); setSelected(null); }} onSettings={() => { setPanel("settings"); setSelected(null); }} />
     <main className="relative min-h-0 min-w-0 flex-1" aria-label="제작 작업 공간">
       <WorkflowCanvas startContent={startContent} details={details} selectedNode={selected ? `${selected.id}:${selected.step}` : undefined} tasks={data?.tasks ?? []} writes={writes} activity={activity} syncing={data?.sync.running ?? false} onSelect={select} onOpen={id => void onOpen(id)} />
 
       {selected && current && <aside className="absolute inset-y-0 right-0 z-20 w-[420px] max-w-full overflow-y-auto border-l bg-background shadow-lg" aria-label="작업 상세">
-        <StepDetails id={selected.id} step={selected.step} updated={current.updated_at} write={writes[`${selected.id}:${selected.step}`] ?? 0} readWork={readWork} onClose={() => setSelected(null)} />
+        {selected.step === "project" ? <ProjectDetails task={current} onSelectStep={select} onOpen={id => void onOpen(id)} onClose={() => setSelected(null)} /> : <StepDetails id={selected.id} step={selected.step} updated={current.updated_at} write={writes[`${selected.id}:${selected.step}`] ?? 0} readWork={readWork} onClose={() => setSelected(null)} />}
       </aside>}
       {panel && <section className={`absolute inset-y-0 right-0 z-20 flex max-w-full flex-col border-l bg-background shadow-lg ${panel === "library" ? "w-[560px]" : "w-[480px]"}`} aria-label={panel === "library" ? "기록과 레퍼런스" : "연결 설정"}>
         <header className="flex shrink-0 items-center justify-between border-b px-6 py-4"><h2 className="flex items-center gap-2 text-sm font-semibold">{panel === "library" ? <><History size={16} />기록과 레퍼런스</> : <><Settings size={16} />연결 설정</>}</h2><button className="production-button" onClick={() => setPanel(null)} aria-label="캔버스로 돌아가기"><X size={14} />닫기</button></header>
