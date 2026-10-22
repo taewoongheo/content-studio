@@ -1,6 +1,7 @@
 "use client";
 import { LogEditor } from "./log-editor";
 import { ReferenceForm } from "./reference-form";
+import { StructuredValue } from "../details/structured-value";
 import { useState } from "react";
 import Image from "next/image";
 import type { Row } from "@/domains/content-production/domain/contracts";
@@ -221,9 +222,7 @@ export function LibraryPanel({
               <p className="mt-2 text-xs text-muted-foreground">
                 {String(ref.topic)} · {String(ref.content_type)}
               </p>
-              <pre className="mt-3 whitespace-pre-wrap text-xs leading-6">
-                {JSON.stringify(ref.parts, null, 2)}
-              </pre>
+              <div className="mt-3"><StructuredValue value={ref.parts} /></div>
               {!!ref.project_id && (
                 <button
                   className="production-button mt-3"

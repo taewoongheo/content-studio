@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { StructuredValue } from "./details/structured-value";
 import type {
   ProductionStep,
   WorkDetail,
@@ -101,11 +102,7 @@ export function StepDetails({
               .map(([key, label]) => (
                 <div key={key} className="min-w-0 rounded-lg bg-muted/35 p-4">
                   <h4 className="mb-2 text-xs font-semibold">{label}</h4>
-                  <pre>
-                    {typeof context[key] === "string"
-                      ? String(context[key])
-                      : JSON.stringify(context[key], null, 2)}
-                  </pre>
+                  <StructuredValue value={context[key]} field={key} />
                 </div>
               ))}
           </div>

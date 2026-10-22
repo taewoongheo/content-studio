@@ -105,12 +105,6 @@
 .production-details {
   overflow-wrap: anywhere;
 }
-.production-details pre {
-  white-space: pre-wrap;
-  line-height: 1.7;
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
 .production-field {
   width: 100%;
   border: 1px solid var(--border);
