@@ -1,19 +1,9 @@
 "use client";
+import { LogEditor } from "./log-editor";
+import { ReferenceForm } from "./reference-form";
 import { useState } from "react";
 import Image from "next/image";
 import type { Row } from "@/domains/content-production/domain/contracts";
-const fields: Record<string, string> = {
-  analysis: "분석",
-  topic: "소재",
-  content_type: "유형",
-  message: "메시지",
-  answer: "제공할 답",
-  presentation: "표현 방향",
-  reason: "선택 이유",
-  expected_response: "기대 반응",
-  goal_connection: "목표와의 연결",
-  difference_from_recent: "최근 콘텐츠와 다른 가치",
-};
 type Action = (input: Record<string, unknown>) => Promise<unknown>;
 export function LibraryPanel({
   logs,
@@ -73,113 +63,15 @@ export function LibraryPanel({
         </p>
       )}
       {reference && tab === "references" && (
-        <form
-          className="mt-5 grid gap-3 rounded-xl border p-5 md:grid-cols-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const f = new FormData(e.currentTarget);
-            const project_id = String(f.get("project_id") || "");
+        <ReferenceForm
+          logs={logs}
+          onSave={(input) =>
             void safe(async () => {
-              await act({
-                action: "reference",
-                reference: {
-                  title: f.get("title"),
-                  topic: f.get("topic"),
-                  content_type: f.get("content_type"),
-                  ...(project_id
-                    ? { project_id }
-                    : { source_url: f.get("url") }),
-                  parts: [
-                    {
-                      aspect: f.get("aspect"),
-                      location: f.get("location"),
-                      reason: f.get("reason"),
-                      usage_context: f.get("usage_context"),
-                    },
-                  ],
-                },
-              });
+              await act({ action: "reference", reference: input });
               setReference(false);
-            });
-          }}
-        >
-          <input
-            className="production-field"
-            name="title"
-            placeholder="이름"
-            aria-label="레퍼런스 이름"
-            required
-          />
-          <input
-            className="production-field"
-            name="topic"
-            placeholder="소재"
-            aria-label="레퍼런스 소재"
-            required
-          />
-          <input
-            className="production-field"
-            name="content_type"
-            placeholder="유형 (루틴 목록, 대안 비교 등)"
-            aria-label="레퍼런스 유형"
-            required
-          />
-          <select
-            className="production-field"
-            name="project_id"
-            aria-label="자체 게시글 선택"
-          >
-            <option value="">외부 TikTok URL로 등록</option>
-            {logs
-              .filter((l) => l.project_id)
-              .map((l) => (
-                <option key={String(l.id)} value={String(l.project_id)}>
-                  {String(l.name ?? l.topic ?? l.id)}
-                </option>
-              ))}
-          </select>
-          <input
-            className="production-field md:col-span-2"
-            type="url"
-            name="url"
-            placeholder="외부 TikTok URL (자체 게시글 선택 시 생략)"
-            aria-label="외부 레퍼런스 URL"
-          />
-          <select
-            className="production-field"
-            name="aspect"
-            aria-label="참고할 부분"
-          >
-            <option value="hook">훅</option>
-            <option value="body">본문</option>
-            <option value="visual">시각적 표현</option>
-            <option value="cta">CTA</option>
-          </select>
-          <input
-            className="production-field"
-            name="location"
-            placeholder="위치 (첫 장, 전체 등)"
-            aria-label="참고 위치"
-            required
-          />
-          <textarea
-            className="production-field"
-            name="reason"
-            placeholder="무엇이 좋은가"
-            aria-label="선별 이유"
-            required
-          />
-          <textarea
-            className="production-field"
-            name="usage_context"
-            placeholder="어떤 콘텐츠에 활용할 만한가"
-            aria-label="적용 맥락"
-            required
-          />
-          <button className="production-button primary md:col-span-2">
-            등록
-          </button>
-        </form>
+            })
+          }
+        />
       )}
       {tab === "logs" ? (
         <div className="mt-4 divide-y rounded-xl border">
@@ -245,43 +137,15 @@ export function LibraryPanel({
                   </p>
                 )}
                 {editing?.id === log.id && (
-                  <form
-                    className="mt-5 grid gap-4 md:grid-cols-2"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const patch = Object.fromEntries(
-                        new FormData(e.currentTarget),
-                      );
+                  <LogEditor
+                    log={log}
+                    onSave={(patch) =>
                       void safe(async () => {
                         await act({ action: "edit_log", id: log.id, patch });
                         setEditing(null);
-                      });
-                    }}
-                  >
-                    {Object.entries(fields).map(([name, label]) => (
-                      <label
-                        key={name}
-                        className="text-xs"
-                        htmlFor={`log-${log.id}-${name}`}
-                      >
-                        {label}
-                        <textarea
-                          className="production-field mt-1"
-                          rows={2}
-                          name={name}
-                          id={`log-${log.id}-${name}`}
-                          defaultValue={String(log[name] ?? "")}
-                        />
-                      </label>
-                    ))}
-                    <p className="text-xs text-muted-foreground md:col-span-2">
-                      기존 자료의 빈 정보를 직접 보완합니다. 에이전트가 생성한
-                      기록으로 표시하지 않습니다.
-                    </p>
-                    <button className="production-button primary md:col-span-2">
-                      정보 저장
-                    </button>
-                  </form>
+                      })
+                    }
+                  />
                 )}
                 {!log.completed_at && (
                   <form

@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { Play, RefreshCw } from "lucide-react";
 import { useProduction } from "./hooks/use-production";
 import { StepDetails } from "./components/step-details";
-import { LibraryPanel } from "./components/library-panel";
+import { LibraryPanel } from "./components/library/panel";
 import type { ProductionStep } from "@/domains/content-production/domain/contracts";
 import "./production.css";
 const WorkflowCanvas = dynamic(

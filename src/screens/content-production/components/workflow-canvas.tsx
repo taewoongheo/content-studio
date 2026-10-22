@@ -1,6 +1,9 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import {
+  useReactFlow,
+  useNodesInitialized,
+  useStore,
   Background,
   Controls,
   ReactFlow,
@@ -14,6 +17,17 @@ import type {
   ProductionStep,
 } from "@/domains/content-production/domain/contracts";
 const nodeTypes = { stage: StageNode };
+function FitWorkflow({ layoutKey }: { layoutKey: string }) {
+  const { fitView } = useReactFlow();
+  const ready = useNodesInitialized();
+  const width = useStore((state) => state.width),
+    height = useStore((state) => state.height);
+  useEffect(() => {
+    if (ready && width && height) void fitView({ padding: 0.22, maxZoom: 1 });
+  }, [ready, width, height, layoutKey, fitView]);
+  return null;
+}
+
 const colors = new Map<string, string>();
 export function instanceColor(id: string) {
   if (!colors.has(id))
@@ -142,6 +156,7 @@ export function WorkflowCanvas({
         maxZoom={1.4}
         aria-label="콘텐츠 제작 파이프라인"
       >
+        <FitWorkflow layoutKey={tasks.map((task) => task.id).join(",")} />
         <Background gap={24} size={1} />
         <Controls showInteractive={false} />
       </ReactFlow>
