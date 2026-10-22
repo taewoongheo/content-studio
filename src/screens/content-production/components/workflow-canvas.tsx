@@ -1,9 +1,7 @@
 "use client";
-import { useMemo, useEffect, useRef } from "react";
+import { useMemo, type ReactNode } from "react";
 import {
   useReactFlow,
-  useNodesInitialized,
-  useStore,
   Background,
   Controls,
   Panel,
@@ -12,46 +10,31 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { LocateFixed } from "lucide-react";
-import { StageNode, type StageNodeModel } from "./workflow/stage-node";
-import { buildWorkflowGraph } from "./workflow/graph";
+import { StageNode } from "./workflow/stage-node";
+import { StartNode } from "./workflow/start-node";
+import { buildWorkflowGraph, type WorkflowNode } from "./workflow/graph";
 import type {
   WorkItem,
   WorkDetail,
   ProductionStep,
 } from "@/domains/content-production/domain/contracts";
-const nodeTypes = { stage: StageNode };
-function FitWorkflow({ layoutKey, selectedNode }: { layoutKey: string; selectedNode?: string }) {
-  const fitted = useRef<string | null>(null);
-  const focused = useRef<string | undefined>(undefined);
-  const { fitView } = useReactFlow();
-  const ready = useNodesInitialized();
-  const width = useStore((state) => state.width),
-    height = useStore((state) => state.height);
-  useEffect(() => {
-    if (ready && width && height && fitted.current !== layoutKey) {
-      fitted.current = layoutKey;
-      void fitView({ padding: 0.22, maxZoom: 1 });
-    }
-  }, [ready, width, height, layoutKey, fitView]);
-  useEffect(() => {
-    if (!selectedNode) { focused.current = undefined; return; }
-    if (ready && width && height && focused.current !== selectedNode) {
-      focused.current = selectedNode;
-      void fitView({ nodes: [{ id: selectedNode }], padding: 0.6, maxZoom: 1, duration: 200 });
-    }
-  }, [selectedNode, ready, width, height, fitView]);
-  return null;
-}
+const nodeTypes = { stage: StageNode, start: StartNode };
+const initialViewport = { x: 48, y: 64, zoom: 1 };
 
 function StartNodeControl() {
-  const { getNode, setCenter } = useReactFlow();
-  return <Panel position="bottom-center"><button type="button" className="production-button shadow-sm" aria-label="시작 노드로 이동" onClick={() => {
-    const node = getNode("sync");
-    if (node) void setCenter(node.position.x + (node.measured?.width ?? 300) / 2, node.position.y + (node.measured?.height ?? 120) / 2, { zoom: 1, duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 250 });
-  }}><LocateFixed size={15} />시작 노드</button></Panel>;
+  const { getNode, setCenter, fitView } = useReactFlow();
+  const duration = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 250;
+  return <Panel position="bottom-center" className="flex gap-2">
+    <button type="button" className="production-button shadow-sm" aria-label="시작 노드로 이동" onClick={() => {
+      const node = getNode("start");
+      if (node) void setCenter(node.position.x + (node.measured?.width ?? 300) / 2, node.position.y + (node.measured?.height ?? 120) / 2, { zoom: 1, duration: duration() });
+    }}><LocateFixed size={15} />시작 노드</button>
+    <button type="button" className="production-button shadow-sm" aria-label="전체 흐름 보기" onClick={() => void fitView({ padding: 0.15, maxZoom: 1, duration: duration() })}>전체 보기</button>
+  </Panel>;
 }
 
 export function WorkflowCanvas({
+  startContent,
   tasks,
   details,
   writes,
@@ -61,6 +44,7 @@ export function WorkflowCanvas({
   onSelect,
   onOpen,
 }: {
+  startContent: ReactNode;
   tasks: WorkItem[];
   details: Record<string, WorkDetail>;
   writes: Record<string, number>;
@@ -71,8 +55,9 @@ export function WorkflowCanvas({
   onOpen: (id: string) => void;
 }) {
   const { nodes, edges } = useMemo(() => buildWorkflowGraph(tasks, details, writes, activity, syncing), [tasks, details, writes, activity, syncing]);
-  const click: NodeMouseHandler<StageNodeModel> = (_, node) => {
-    if (node.id === "sync") return;
+  const renderedNodes = nodes.map(node => node.type === "start" ? { ...node, data: { content: startContent } } : { ...node, selected: node.id === selectedNode });
+  const click: NodeMouseHandler<WorkflowNode> = (_, node) => {
+    if (node.id === "sync" || node.id === "start") return;
     const [id, step] = node.id.split(":");
     if (step === "result") {
       const task = tasks.find((t) => t.id === id);
@@ -82,19 +67,18 @@ export function WorkflowCanvas({
   return (
     <div className="production-canvas">
       <ReactFlow
-        nodes={nodes}
+        nodes={renderedNodes}
         edges={edges}
         nodeTypes={nodeTypes}
         onNodeClick={click}
-        fitView
-        fitViewOptions={{ padding: 0.25, maxZoom: 1 }}
+        defaultViewport={initialViewport}
+        autoPanOnNodeFocus={false}
         nodesDraggable={false}
         nodesConnectable={false}
         minZoom={0.25}
         maxZoom={1.4}
         aria-label="콘텐츠 제작 파이프라인"
       >
-        <FitWorkflow layoutKey={nodes.map(node => node.id).join(",")} selectedNode={selectedNode} />
         <Background gap={24} size={1} />
         <Controls showInteractive={false} />
         <StartNodeControl />

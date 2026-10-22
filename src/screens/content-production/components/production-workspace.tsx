@@ -1,7 +1,7 @@
 "use client";
 import { useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
-import { Play, RefreshCw, X, Settings, History, Workflow } from "lucide-react";
+import { Play, RefreshCw, X, Settings, History } from "lucide-react";
 import { useNodeDetails } from "../hooks/use-node-details";
 import { StepDetails } from "./step-details";
 import { LibraryPanel } from "./library/panel";
@@ -25,15 +25,10 @@ export function ProductionWorkspace({ runtime, readWork, settings, onOpen }: {
   const safe = (action: Record<string, unknown>) => { void act(action).catch(() => {}); };
   const current = data?.tasks.find(t => t.id === selected?.id);
   const select = (id: string, step: ProductionStep) => { setPanel(null); setSelected({ id, step }); };
-  return <div className="flex h-full min-h-0 overflow-hidden">
-    <ProductionSidebar tasks={data?.tasks ?? []} model={data?.settings.model ?? "gpt-5.6-sol"} busy={busy} selectedId={selected?.id}
-      onSelect={task => select(task.id, task.current_step)} onAction={safe}
-      onLibrary={() => { setPanel("library"); setSelected(null); }} onSettings={() => { setPanel("settings"); setSelected(null); }} />
-    <main className="relative min-h-0 min-w-0 flex-1" aria-label="제작 작업 공간">
-      <WorkflowCanvas details={details} selectedNode={selected ? `${selected.id}:${selected.step}` : undefined} tasks={data?.tasks ?? []} writes={writes} activity={activity} syncing={data?.sync.running ?? false} onSelect={select} onOpen={id => void onOpen(id)} />
-      <div className="absolute top-4 left-4 z-10 max-w-[calc(100%-2rem)] rounded-xl border bg-background p-3 shadow-sm">
+  const startContent = (
+      <div>
         <form className="flex flex-wrap items-center gap-2" onSubmit={e => { e.preventDefault(); if (data?.configured.apify) safe({ action: "start", count }); }}>
-          <Workflow size={16} className="mr-2 text-muted-foreground" /><label className="text-xs" htmlFor="production-count">제작 개수</label>
+          <label className="text-xs" htmlFor="production-count">제작 개수</label>
           <input id="production-count" className="production-field !w-16" type="number" min={1} value={count} onChange={e => setCount(Number(e.target.value))} required />
           <button className="production-button primary" disabled={busy || !data?.configured.apify || data.sync.running}><Play size={14} />{data?.sync.running ? "성과 갱신 중" : "시작"}</button>
           <button type="button" className="production-button" aria-label="새로고침" onClick={() => void reload()}><RefreshCw size={14} /></button>
@@ -41,6 +36,14 @@ export function ProductionWorkspace({ runtime, readWork, settings, onOpen }: {
         {error && <p role="alert" className="mt-2 max-w-md text-xs text-destructive">{error}</p>}
         {data && !data.configured.apify && <p role="alert" className="mt-2 max-w-sm text-xs text-destructive">Apify에 연결되지 않아 제작을 시작할 수 없습니다. 서버에 APIFY_API_TOKEN을 설정해 주세요.</p>}
       </div>
+  );
+  return <div className="flex h-full min-h-0 overflow-hidden">
+    <ProductionSidebar tasks={data?.tasks ?? []} model={data?.settings.model ?? "gpt-5.6-sol"} busy={busy} selectedId={selected?.id}
+      onSelect={task => select(task.id, task.current_step)} onAction={safe}
+      onLibrary={() => { setPanel("library"); setSelected(null); }} onSettings={() => { setPanel("settings"); setSelected(null); }} />
+    <main className="relative min-h-0 min-w-0 flex-1" aria-label="제작 작업 공간">
+      <WorkflowCanvas startContent={startContent} details={details} selectedNode={selected ? `${selected.id}:${selected.step}` : undefined} tasks={data?.tasks ?? []} writes={writes} activity={activity} syncing={data?.sync.running ?? false} onSelect={select} onOpen={id => void onOpen(id)} />
+
       {selected && current && <aside className="absolute inset-y-0 right-0 z-20 w-[420px] max-w-full overflow-y-auto border-l bg-background shadow-lg" aria-label="작업 상세">
         <StepDetails id={selected.id} step={selected.step} updated={current.updated_at} write={writes[`${selected.id}:${selected.step}`] ?? 0} readWork={readWork} onClose={() => setSelected(null)} />
       </aside>}

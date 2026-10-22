@@ -18,7 +18,7 @@ const stageIcons = { sync: Database, analysis: ScanText, production: Layers, res
 export function StageNode({ data, selected }: NodeProps<StageNodeModel>) {
   const StageIcon = stageIcons[data.stage];
   return <div className={`production-stage ${selected ? "selected" : ""}`} style={{ "--instance-color": data.color } as React.CSSProperties}>
-    {data.stage !== "sync" && <Handle type="target" position={Position.Left} />}
+    <Handle type="target" position={Position.Left} />
     <div className="production-stage-header">
       <span className="production-stage-title"><StageIcon size={17} />{data.title}</span>
       <StatusIcon state={data.state} />

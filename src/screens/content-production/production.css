@@ -15,6 +15,10 @@
   color: var(--foreground);
   cursor: pointer;
 }
+.production-start-node { --instance-color: #334155; border-width: 2px; }
+.production-start-content { padding: 18px 16px; }
+.production-start-content form { gap: 8px; }
+.production-start-content .production-button.primary { flex: 1; }
 .production-stage.selected {
   outline: 3px solid color-mix(in srgb, var(--instance-color) 24%, transparent);
   outline-offset: 3px;
