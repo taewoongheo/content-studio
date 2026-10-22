@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   productionStore,
+  startProduction,
   execute,
   stopProduction,
   recordReview,
@@ -106,5 +107,19 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
   } finally {
     store.db.close();
     await rm(dir, { recursive: true, force: true });
+  }
+});
+
+
+test("Apify 미연결이면 작업 생성 전에 시작을 거절한다", async () => {
+  const previous = process.env.APIFY_API_TOKEN;
+  try {
+    delete process.env.APIFY_API_TOKEN;
+    await assert.rejects(startProduction(1, "http://127.0.0.1:3000"), /Apify에 연결되지 않아/);
+    process.env.APIFY_API_TOKEN = "   ";
+    await assert.rejects(startProduction(1, "http://127.0.0.1:3000"), /Apify에 연결되지 않아/);
+  } finally {
+    if (previous === undefined) delete process.env.APIFY_API_TOKEN;
+    else process.env.APIFY_API_TOKEN = previous;
   }
 });

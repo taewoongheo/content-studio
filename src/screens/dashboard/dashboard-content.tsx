@@ -1,5 +1,4 @@
 "use client";
-import { ContentProductionScreen } from "@/screens/content-production/content-production-screen";
 import { ResearchAccounts } from "./components/settings/research-accounts";
 import { useResearchAccounts } from "./components/settings/use-research-accounts";
 import { useState } from "react";
@@ -7,17 +6,14 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { StudioSidebar } from "./components/studio-sidebar";
 import { PublishedContentPage } from "./components/published/published-content-page";
-import { TemplateProjectsPage } from "./components/projects/templates/template-projects-page";
 
 export function DashboardContent({
-  onOpen,
   onNew,
 }: {
-  onOpen: (projectId: string) => Promise<void>;
   onNew: () => void;
 }) {
   const accounts = useResearchAccounts();
-  const [tab, setTab] = useState("templates");
+  const [tab, setTab] = useState("published");
   return (
     <Tabs
       orientation="vertical"
@@ -48,18 +44,13 @@ export function DashboardContent({
           tabIndex={-1}
           className="mx-auto w-full min-w-0 max-w-[1280px] flex-1 px-12 pt-12 pb-16 outline-none max-xl:p-8 max-md:px-5 max-md:pt-6"
         >
-          <TabsContent value="production" className="data-[hidden]:hidden">
-            {tab === "production" && <ContentProductionScreen onOpen={onOpen} />}
-          </TabsContent>
           <TabsContent value="settings" className="data-[hidden]:hidden">
             <ResearchAccounts state={accounts} />
           </TabsContent>
           <TabsContent value="published" className="data-[hidden]:hidden">
             <PublishedContentPage />
           </TabsContent>
-          <TabsContent value="templates" className="data-[hidden]:hidden">
-            <TemplateProjectsPage onOpen={onOpen} />
-          </TabsContent>
+
         </main>
       </SidebarProvider>
     </Tabs>

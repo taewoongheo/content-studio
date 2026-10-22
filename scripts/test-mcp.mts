@@ -132,7 +132,15 @@ try {
     assert.equal(await listPage.getByText("템플릿 프로젝트", { exact: true }).count(), 0);
     await listPage.getByText("제작 모델", { exact: true }).click();
     await listPage.locator("#production-model").waitFor({ state: "visible" });
-    console.log("PASS permanent production tab, default count and sidebar model control");
+    await listPage.getByRole("button", { name: "대시보드", exact: true }).click();
+    await listPage.getByRole("heading", { name: "게시 콘텐츠", exact: true }).waitFor();
+    await listPage.getByRole("button", { name: "제작 캔버스", exact: true }).click();
+    await listPage.getByRole("button", { name: "시작 노드로 이동", exact: true }).waitFor();
+    await listPage.getByRole("button", { name: "제작 기록·레퍼런스", exact: true }).click();
+    const recordPanel = await listPage.getByRole("region", { name: "기록과 레퍼런스", exact: true }).boundingBox();
+    assert.ok(recordPanel && recordPanel.width <= 560 && recordPanel.x > 256, "records open beside the canvas");
+    await listPage.getByRole("button", { name: "캔버스로 돌아가기", exact: true }).click();
+    console.log("PASS fixed production/dashboard tabs, default count, right records panel and sidebar model control");
 
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
     page.on("pageerror", error => console.error("Browser error", error.message));

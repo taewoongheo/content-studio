@@ -13,7 +13,7 @@ export function ProductionSidebar({ tasks, model, busy, selectedId, onSelect, on
     <header className="border-b px-4 py-5"><h1 className="text-sm font-semibold">Content Studio</h1><p className="mt-1 text-xs text-muted-foreground">콘텐츠 제작 작업 공간</p></header>
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <div className="flex items-center justify-between px-4 pt-5 pb-2"><h2 className="text-xs font-medium text-muted-foreground">작업 {visible.length}</h2><button className="text-[11px] text-muted-foreground" aria-pressed={showFinished} onClick={() => setShowFinished(!showFinished)}>{showFinished ? "진행 중만" : "완료 포함"}</button></div>
-      {visible.length === 0 && <p className="px-4 py-5 text-xs leading-5 text-muted-foreground">진행 중인 작업이 없습니다.<br />캔버스에서 제작을 시작하세요.</p>}
+
       {visible.map(task => <article key={task.id} className={`mx-2 mb-2 rounded-lg border p-3 ${selectedId === task.id ? "border-foreground/30 bg-muted" : "border-transparent hover:bg-muted/50"}`}>
         <button className="w-full text-left" onClick={() => onSelect(task)}><span className="block truncate text-xs font-medium">{task.topic ?? "소재 분석 중"}</span><span className="mt-1 block text-[11px] text-muted-foreground">{labels[task.state] ?? task.state} · {task.current_step === "analysis" ? "분석·방향" : "콘텐츠 제작"}</span></button>
         <div className="mt-3 flex gap-3 text-[11px]">

@@ -2,8 +2,6 @@
 
 import {
   CalendarDays,
-  Workflow,
-  LayoutTemplate,
   Plus,
   Settings,
 } from "lucide-react";
@@ -52,19 +50,7 @@ export function StudioSidebar({
             <Plus aria-hidden="true" />
             <span>편집기 열기</span>
           </SidebarMenuButton>
-          <SidebarMenuButton
-            className="h-11"
-            isActive={activeTab === "production"}
-            render={
-              <TabsTrigger
-                value="production"
-                className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent"
-              />
-            }
-          >
-            <Workflow aria-hidden="true" />
-            <span>콘텐츠 제작</span>
-          </SidebarMenuButton>
+
           <SidebarMenuButton
             className="h-11"
             isActive={activeTab === "published"}
@@ -78,19 +64,7 @@ export function StudioSidebar({
             <CalendarDays aria-hidden="true" />
             <span>게시 콘텐츠</span>
           </SidebarMenuButton>
-          <SidebarMenuButton
-            className="h-11"
-            isActive={activeTab === "templates"}
-            render={
-              <TabsTrigger
-                value="templates"
-                className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent"
-              />
-            }
-          >
-            <LayoutTemplate aria-hidden="true" />
-            <span>템플릿 프로젝트</span>
-          </SidebarMenuButton>
+
           <SidebarMenuButton
             className="h-11"
             isActive={activeTab === "settings"}

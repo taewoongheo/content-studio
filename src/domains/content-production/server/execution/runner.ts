@@ -63,6 +63,8 @@ export function syncState() {
   return { running: !!shared.productionSync };
 }
 export async function startProduction(count: number, origin: string) {
+  if (!process.env.APIFY_API_TOKEN?.trim())
+    throw new Error("Apify에 연결되지 않아 제작을 시작할 수 없습니다. APIFY_API_TOKEN을 설정해 주세요.");
   if (shared.productionSync)
     throw new Error("성과를 갱신하고 있습니다. 잠시 후 시작해 주세요.");
   if (!Number.isInteger(count) || count < 1)

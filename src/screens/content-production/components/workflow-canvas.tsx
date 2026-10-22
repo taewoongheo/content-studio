@@ -6,11 +6,13 @@ import {
   useStore,
   Background,
   Controls,
+  Panel,
   ReactFlow,
   type Edge,
   type NodeMouseHandler,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { LocateFixed } from "lucide-react";
 import { StageNode, type StageNodeModel } from "./stage-node";
 import type {
   WorkItem,
@@ -38,6 +40,14 @@ function FitWorkflow({ layoutKey, selectedNode }: { layoutKey: string; selectedN
     }
   }, [selectedNode, ready, width, height, fitView]);
   return null;
+}
+
+function StartNodeControl() {
+  const { getNode, setCenter } = useReactFlow();
+  return <Panel position="bottom-center"><button type="button" className="production-button shadow-sm" aria-label="시작 노드로 이동" onClick={() => {
+    const node = getNode("sync");
+    if (node) void setCenter(node.position.x + (node.measured?.width ?? 260) / 2, node.position.y + (node.measured?.height ?? 120) / 2, { zoom: 1, duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 250 });
+  }}><LocateFixed size={15} />시작 노드</button></Panel>;
 }
 
 const colors = new Map<string, string>();
@@ -79,11 +89,11 @@ export function WorkflowCanvas({
         position: { x: 0, y: Math.max(0, (tasks.length - 1) * 95) },
         data: {
           title: "성과 갱신",
-          subtitle: syncing ? "최근 게시물 수집 중" : "시작 요청당 한 번",
+          subtitle: syncing ? "최근 게시물 수집 중" : "",
           state: syncing ? "running" : "pending",
           color: "#58645d",
           write: 0,
-          kind: "SHARED",
+          kind: "공통",
         },
       },
     ];
@@ -173,12 +183,9 @@ export function WorkflowCanvas({
         <FitWorkflow layoutKey={tasks.map((task) => task.id).join(",")} selectedNode={selectedNode} />
         <Background gap={24} size={1} />
         <Controls showInteractive={false} />
+        <StartNodeControl />
       </ReactFlow>
-      {!tasks.length && (
-        <div className="pointer-events-none absolute inset-x-4 top-32 text-center text-sm text-muted-foreground">
-          제작을 시작하면 각 작업의 흐름이 여기에 표시됩니다.
-        </div>
-      )}
+
     </div>
   );
 }

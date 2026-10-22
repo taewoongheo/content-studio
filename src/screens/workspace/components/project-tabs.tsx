@@ -1,17 +1,19 @@
 "use client";
 import { ProjectTypeTag } from "@/components/projects/project-type-tag";
-import { Plus, Workflow, Pencil, X } from "lucide-react";
+import { Plus, Workflow, LayoutDashboard, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { OpenProjectTab } from "@/domains/workspace/model";
 
-export function ProjectTabs({ tabs, activeTabId, busy, onSelect, onClose, onRename, onNew, onDashboard }: {
+export function ProjectTabs({ tabs, activeTabId, busy, onSelect, onClose, onRename, onNew, onDashboard, onCanvas, dashboardActive }: {
   tabs: OpenProjectTab[]; activeTabId?: string; busy: boolean;
   onSelect: (tab: OpenProjectTab) => void; onClose: (tab: OpenProjectTab) => void; onRename: (tab: OpenProjectTab) => void;
-  onNew: () => void; onDashboard: () => void;
+  onNew: () => void; onDashboard: () => void; onCanvas: () => void; dashboardActive: boolean;
 }) {
   return <nav aria-label="프로젝트 탭" aria-keyshortcuts="Meta+[ Meta+]" title="이전 탭 ⌘[ · 다음 탭 ⌘]" className="flex h-11 shrink-0 items-end border-b bg-muted px-2">
-    <button type="button" aria-label="제작 캔버스" aria-current={!activeTabId ? "page" : undefined} disabled={busy} onClick={onDashboard}
-      className={`-mb-px mr-1 flex h-10 shrink-0 items-center gap-2 rounded-t-lg border px-4 text-xs font-medium ${!activeTabId ? "border-b-background bg-background" : "bg-muted"}`}><Workflow className="size-4" />제작 캔버스</button>
+    <button type="button" aria-label="제작 캔버스" aria-current={!activeTabId && !dashboardActive ? "page" : undefined} disabled={busy} onClick={onCanvas}
+      className={`-mb-px mr-1 flex h-10 shrink-0 items-center gap-2 rounded-t-lg border px-4 text-xs font-medium ${!activeTabId && !dashboardActive ? "border-b-background bg-background" : "bg-muted"}`}><Workflow className="size-4" />제작 캔버스</button>
+    <button type="button" aria-label="대시보드" aria-current={!activeTabId && dashboardActive ? "page" : undefined} disabled={busy} onClick={onDashboard}
+      className={`-mb-px mr-1 flex h-10 shrink-0 items-center gap-2 rounded-t-lg border px-4 text-xs font-medium ${!activeTabId && dashboardActive ? "border-b-background bg-background" : "bg-muted"}`}><LayoutDashboard className="size-4" />대시보드</button>
     <div className="flex h-full min-w-0 flex-1 items-end overflow-x-auto">
       {tabs.map(tab => <div data-project-tab={tab.tabId} key={tab.tabId}
         className={`group relative -mb-px flex h-10 w-64 shrink-0 items-center rounded-t-lg border ${activeTabId === tab.tabId ? "border-b-background bg-background" : "border-b-muted bg-muted hover:bg-background/50"}`}>

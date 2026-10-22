@@ -77,7 +77,7 @@ export async function GET(request: Request) {
             visuals: listVisuals(store.db),
             sync: syncState(),
             settings: readProductionSettings(),
-            configured: { apify: !!process.env.APIFY_API_TOKEN },
+            configured: { apify: !!process.env.APIFY_API_TOKEN?.trim() },
           },
       { headers: { "Cache-Control": "no-store" } },
     );
