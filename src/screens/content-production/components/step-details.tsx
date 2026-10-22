@@ -58,7 +58,7 @@ export function StepDetails({
   const context = step === "analysis" ? detail?.analysis : detail?.production;
   return (
     <section
-      className="production-details mt-5 rounded-xl border p-6"
+      className="production-details p-5"
       aria-label="단계 상세"
     >
       <div className="flex items-start justify-between gap-4">
@@ -89,7 +89,7 @@ export function StepDetails({
             마지막 저장:{" "}
             {new Date(String(context.updated_at)).toLocaleString("ko-KR")}
           </p>
-          <div className="mt-5 grid gap-5 md:grid-cols-2">
+          <div className="mt-5 grid gap-5">
             {Object.entries(labels)
               .filter(
                 ([key]) =>

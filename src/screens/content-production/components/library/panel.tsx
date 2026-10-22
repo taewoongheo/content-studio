@@ -31,7 +31,7 @@ export function LibraryPanel({
     }
   };
   return (
-    <section className="mt-10">
+    <section className="min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-5">
           <button

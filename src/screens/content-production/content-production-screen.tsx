@@ -1,202 +1,48 @@
 "use client";
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { Play, RefreshCw } from "lucide-react";
+import { Play, RefreshCw, X, Settings, History, Workflow } from "lucide-react";
 import { useProduction } from "./hooks/use-production";
 import { StepDetails } from "./components/step-details";
 import { LibraryPanel } from "./components/library/panel";
+import { ProductionSidebar } from "./components/navigation/production-sidebar";
+import { ResearchAccounts } from "@/screens/dashboard/components/settings/research-accounts";
+import { useResearchAccounts } from "@/screens/dashboard/components/settings/use-research-accounts";
 import type { ProductionStep } from "@/domains/content-production/domain/contracts";
 import "./production.css";
-const WorkflowCanvas = dynamic(
-  () => import("./components/workflow-canvas").then((m) => m.WorkflowCanvas),
-  { ssr: false, loading: () => <div className="production-canvas" /> },
-);
-export function ContentProductionScreen({
-  onOpen,
-}: {
-  onOpen: (id: string) => Promise<void>;
-}) {
+const WorkflowCanvas = dynamic(() => import("./components/workflow-canvas").then(m => m.WorkflowCanvas), { ssr: false, loading: () => <div className="production-canvas" /> });
+export function ContentProductionScreen({ onOpen }: { onOpen: (id: string) => Promise<void> }) {
   const { data, error, busy, writes, activity, reload, act } = useProduction();
-  const [count, setCount] = useState(4),
-    [selected, setSelected] = useState<{
-      id: string;
-      step: ProductionStep;
-    } | null>(null);
-  const safe = (action: Record<string, unknown>) => {
-    void act(action).catch(() => {});
-  };
-  const current = data?.tasks.find((t) => t.id === selected?.id);
-  return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-5">
-        <div>
-          <p className="text-xs uppercase tracking-[.16em] text-muted-foreground">
-            Content production
-          </p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-            콘텐츠 제작
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            이전 기록과 레퍼런스를 읽고, 콘텐츠마다 독립적으로 제작합니다.
-          </p>
-        </div>
-        <form
-          className="flex items-center gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            safe({ action: "start", count });
-          }}
-        >
-          <label
-            className="text-xs text-muted-foreground"
-            htmlFor="production-count"
-          >
-            제작 개수
-          </label>
-          <input
-            id="production-count"
-            className="production-field !w-16"
-            type="number"
-            min={1}
-            value={count}
-            onChange={(e) => setCount(Number(e.target.value))}
-            required
-          />
-          <button
-            className="production-button primary"
-            disabled={busy || data?.sync.running}
-          >
-            <Play size={14} />
-            {data?.sync.running ? "성과 갱신 중" : "시작"}
-          </button>
-          <button
-            type="button"
-            className="production-button"
-            aria-label="새로고침"
-            onClick={() => void reload()}
-          >
-            <RefreshCw size={14} />
-          </button>
+  const accounts = useResearchAccounts();
+  const [count, setCount] = useState(1);
+  const [panel, setPanel] = useState<"library" | "settings" | null>(null);
+  const [selected, setSelected] = useState<{ id: string; step: ProductionStep } | null>(null);
+  const safe = (action: Record<string, unknown>) => { void act(action).catch(() => {}); };
+  const current = data?.tasks.find(t => t.id === selected?.id);
+  const select = (id: string, step: ProductionStep) => { setPanel(null); setSelected({ id, step }); };
+  return <div className="flex h-full min-h-0 overflow-hidden">
+    <ProductionSidebar tasks={data?.tasks ?? []} model={data?.settings.model ?? "gpt-5.6-sol"} busy={busy} selectedId={selected?.id}
+      onSelect={task => select(task.id, task.current_step)} onAction={safe}
+      onLibrary={() => { setPanel("library"); setSelected(null); }} onSettings={() => { setPanel("settings"); setSelected(null); }} />
+    <main className="relative min-h-0 min-w-0 flex-1" aria-label="제작 작업 공간">
+      <WorkflowCanvas selectedNode={selected ? `${selected.id}:${selected.step}` : undefined} tasks={data?.tasks ?? []} writes={writes} activity={activity} syncing={data?.sync.running ?? false} onSelect={select} onOpen={id => void onOpen(id)} />
+      <div className="absolute top-4 left-4 z-10 max-w-[calc(100%-2rem)] rounded-xl border bg-background p-3 shadow-sm">
+        <form className="flex flex-wrap items-center gap-2" onSubmit={e => { e.preventDefault(); safe({ action: "start", count }); }}>
+          <Workflow size={16} className="mr-2 text-muted-foreground" /><label className="text-xs" htmlFor="production-count">제작 개수</label>
+          <input id="production-count" className="production-field !w-16" type="number" min={1} value={count} onChange={e => setCount(Number(e.target.value))} required />
+          <button className="production-button primary" disabled={busy || data?.sync.running}><Play size={14} />{data?.sync.running ? "성과 갱신 중" : "시작"}</button>
+          <button type="button" className="production-button" aria-label="새로고침" onClick={() => void reload()}><RefreshCw size={14} /></button>
         </form>
-      </header>
-      {error && (
-        <p
-          role="alert"
-          className="rounded-lg border border-destructive/30 p-4 text-sm text-destructive"
-        >
-          {error}
-        </p>
-      )}
-      {data && !data.configured.apify && (
-        <p className="text-xs text-muted-foreground">
-          Apify 미연결 · 성과 수집과 외부 자료 조회에는 서버의 APIFY_API_TOKEN이
-          필요합니다.
-        </p>
-      )}
-      <WorkflowCanvas
-        tasks={data?.tasks ?? []}
-        writes={writes}
-        activity={activity}
-        syncing={data?.sync.running ?? false}
-        onSelect={(id, step) => setSelected({ id, step })}
-        onOpen={(id) => void onOpen(id)}
-      />
-      {!!data?.tasks.length && (
-        <div className="flex flex-wrap gap-3">
-          {data.tasks.map((task, i) => (
-            <div
-              key={task.id}
-              className="flex items-center gap-2 rounded-lg border px-3 py-2 text-xs"
-            >
-              <span className="font-medium">
-                {String(i + 1).padStart(2, "0")} ·{" "}
-                {task.topic ?? "소재 분석 중"}
-              </span>
-              {["running", "pending"].includes(task.state) && (
-                <button
-                  className="production-button"
-                  disabled={busy}
-                  onClick={() => safe({ action: "stop", id: task.id })}
-                >
-                  중단
-                </button>
-              )}
-              {["stopped", "failed"].includes(task.state) && (
-                <button
-                  className="production-button"
-                  disabled={busy}
-                  onClick={() => safe({ action: "resume", id: task.id })}
-                >
-                  재개
-                </button>
-              )}
-              <button
-                className="production-button"
-                disabled={busy}
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      "이 작업의 모든 draft를 삭제할까요? 저장된 포스트는 유지됩니다.",
-                    )
-                  )
-                    safe({ action: "remove", id: task.id });
-                }}
-              >
-                취소·제거
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-      {selected && current && (
-        <StepDetails
-          id={selected.id}
-          step={selected.step}
-          updated={current.updated_at}
-          write={writes[`${selected.id}:${selected.step}`] ?? 0}
-          onClose={() => setSelected(null)}
-        />
-      )}
-      {data && (
-        <LibraryPanel
-          logs={data.logs}
-          references={data.references}
-          visuals={data.visuals}
-          act={act}
-          onOpen={(id) => void onOpen(id)}
-        />
-      )}
-      {data && (
-        <form
-          className="mt-10 flex flex-wrap items-end gap-3 border-t pt-6"
-          key={data.settings.model}
-          onSubmit={(event) => {
-            event.preventDefault();
-            const model = new FormData(event.currentTarget).get("model");
-            safe({ action: "settings", settings: { model } });
-          }}
-        >
-          <label
-            className="text-xs text-muted-foreground"
-            htmlFor="production-model"
-          >
-            제작용 Codex 모델
-            <input
-              id="production-model"
-              name="model"
-              className="production-field mt-2 !w-64"
-              defaultValue={data.settings.model}
-              required
-            />
-          </label>
-          <button className="production-button" disabled={busy}>
-            모델 저장
-          </button>
-          <p className="w-full text-xs text-muted-foreground">
-            새 시작·재개부터 적용합니다. 전역 Codex 설정은 유지합니다.
-          </p>
-        </form>
-      )}
-    </div>
-  );
+        {error && <p role="alert" className="mt-2 max-w-md text-xs text-destructive">{error}</p>}
+        {data && !data.configured.apify && <p className="mt-2 text-[11px] text-muted-foreground">Apify 미연결 · 외부 조회에는 APIFY_API_TOKEN이 필요합니다.</p>}
+      </div>
+      {selected && current && <aside className="absolute inset-y-0 right-0 z-20 w-[420px] max-w-full overflow-y-auto border-l bg-background shadow-lg" aria-label="작업 상세">
+        <StepDetails id={selected.id} step={selected.step} updated={current.updated_at} write={writes[`${selected.id}:${selected.step}`] ?? 0} onClose={() => setSelected(null)} />
+      </aside>}
+      {panel && <section className="absolute inset-0 z-20 flex flex-col bg-background" aria-label={panel === "library" ? "기록과 레퍼런스" : "연결 설정"}>
+        <header className="flex shrink-0 items-center justify-between border-b px-6 py-4"><h2 className="flex items-center gap-2 text-sm font-semibold">{panel === "library" ? <><History size={16} />기록과 레퍼런스</> : <><Settings size={16} />연결 설정</>}</h2><button className="production-button" onClick={() => setPanel(null)} aria-label="캔버스로 돌아가기"><X size={14} />닫기</button></header>
+        <div className="min-h-0 flex-1 overflow-auto p-6">{panel === "library" && data ? <LibraryPanel logs={data.logs} references={data.references} visuals={data.visuals} act={act} onOpen={id => void onOpen(id)} /> : panel === "settings" ? <ResearchAccounts state={accounts} /> : null}</div>
+      </section>}
+    </main>
+  </div>;
 }

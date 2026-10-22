@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import {
   useReactFlow,
   useNodesInitialized,
@@ -17,14 +17,21 @@ import type {
   ProductionStep,
 } from "@/domains/content-production/domain/contracts";
 const nodeTypes = { stage: StageNode };
-function FitWorkflow({ layoutKey }: { layoutKey: string }) {
+function FitWorkflow({ layoutKey, selectedNode }: { layoutKey: string; selectedNode?: string }) {
+  const fitted = useRef<string | null>(null);
   const { fitView } = useReactFlow();
   const ready = useNodesInitialized();
   const width = useStore((state) => state.width),
     height = useStore((state) => state.height);
   useEffect(() => {
-    if (ready && width && height) void fitView({ padding: 0.22, maxZoom: 1 });
+    if (ready && width && height && fitted.current !== layoutKey) {
+      fitted.current = layoutKey;
+      void fitView({ padding: 0.22, maxZoom: 1 });
+    }
   }, [ready, width, height, layoutKey, fitView]);
+  useEffect(() => {
+    if (ready && selectedNode) void fitView({ nodes: [{ id: selectedNode }], padding: 0.6, maxZoom: 1, duration: 200 });
+  }, [selectedNode, ready, fitView]);
   return null;
 }
 
@@ -47,6 +54,7 @@ export function WorkflowCanvas({
   writes,
   activity,
   syncing,
+  selectedNode,
   onSelect,
   onOpen,
 }: {
@@ -54,6 +62,7 @@ export function WorkflowCanvas({
   writes: Record<string, number>;
   activity: Record<string, string>;
   syncing: boolean;
+  selectedNode?: string;
   onSelect: (id: string, step: ProductionStep) => void;
   onOpen: (id: string) => void;
 }) {
@@ -156,12 +165,12 @@ export function WorkflowCanvas({
         maxZoom={1.4}
         aria-label="콘텐츠 제작 파이프라인"
       >
-        <FitWorkflow layoutKey={tasks.map((task) => task.id).join(",")} />
+        <FitWorkflow layoutKey={tasks.map((task) => task.id).join(",")} selectedNode={selectedNode} />
         <Background gap={24} size={1} />
         <Controls showInteractive={false} />
       </ReactFlow>
       {!tasks.length && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
+        <div className="pointer-events-none absolute inset-x-4 top-32 text-center text-sm text-muted-foreground">
           제작을 시작하면 각 작업의 흐름이 여기에 표시됩니다.
         </div>
       )}
