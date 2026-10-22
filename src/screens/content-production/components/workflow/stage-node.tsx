@@ -1,5 +1,6 @@
 "use client";
-import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
+import { useEffect } from "react";
+import { Handle, Position, useUpdateNodeInternals, type Node, type NodeProps } from "@xyflow/react";
 import { ArrowUpRight, Database, FileText, Layers, ScanText } from "lucide-react";
 import { StatusIcon } from "./status-icon";
 export type StageNodeModel = Node<{
@@ -15,7 +16,11 @@ export type StageNodeModel = Node<{
   kind: string;
 }, "stage">;
 const stageIcons = { sync: Database, analysis: ScanText, production: Layers, result: FileText };
-export function StageNode({ data, selected }: NodeProps<StageNodeModel>) {
+export function StageNode({ id, data, selected }: NodeProps<StageNodeModel>) {
+  const updateNodeInternals = useUpdateNodeInternals();
+  // A controlled node can lose its handle measurements without changing size.
+  // ResizeObserver alone cannot restore connections in that case.
+  useEffect(() => { updateNodeInternals(id); }, [id, data, updateNodeInternals]);
   const StageIcon = stageIcons[data.stage];
   return <div className={`production-stage ${selected ? "selected" : ""}`} style={{ "--instance-color": data.color } as React.CSSProperties}>
     <Handle type="target" position={Position.Left} />

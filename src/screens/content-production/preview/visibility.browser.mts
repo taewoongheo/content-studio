@@ -82,6 +82,12 @@ try {
     const start = path.getPointAtLength(0), end = path.getPointAtLength(path.getTotalLength());
     return { id: (edge as HTMLElement).dataset.id, startY: start.y, endY: end.y, path: path.getAttribute("d")! };
   }));
+  const expectedEdges = ["start-sync", "sync-branch-trunk"];
+  for (let index = 1; index <= 4; index++) {
+    const id = `mock-task-${index}`;
+    expectedEdges.push(`sync-${id}:analysis`, `${id}:analysis-${id}:production`, `${id}:production-${id}:result`);
+  }
+  assert.deepEqual(paths.map(path => path.id).sort(), expectedEdges.sort(), "every visible stage must retain its connecting edge");
   assert.equal(paths.filter(path => path.id === "sync-branch-trunk").length, 1, "parallel branches share a single trunk");
   for (const path of paths.filter(path => path.id !== "sync-branch-trunk")) {
     assert.ok(Math.abs(path.startY - path.endY) < 0.01, `${path.id} must stay horizontal despite differing card heights`);
