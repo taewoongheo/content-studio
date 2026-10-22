@@ -10,8 +10,8 @@ test("제작 모델은 5.6 sol로 시작하고 전역 CLI 설정 없이 별도 �
   process.env.CONTENT_STUDIO_PRODUCTION_RUNTIME_DIR = directory;
   try {
     assert.equal(readProductionSettings().model, "gpt-5.6-sol");
-    saveProductionSettings({ model: "gpt-5.6-sol" });
-    assert.equal(readProductionSettings().model, "gpt-5.6-sol");
+    saveProductionSettings({ model: "example-test-model" });
+    assert.equal(readProductionSettings().model, "example-test-model");
     assert.throws(() => saveProductionSettings({ model: "x; command" }));
   } finally {
     if (before === undefined)
