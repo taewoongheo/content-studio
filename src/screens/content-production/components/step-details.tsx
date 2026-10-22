@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import { fetchWork } from "@/domains/content-production/client";
 import type {
   ProductionStep,
   WorkDetail,
@@ -30,18 +29,20 @@ export function StepDetails({
   updated,
   write,
   onClose,
+  readWork,
 }: {
   id: string;
   step: ProductionStep;
   updated: string;
   write: number;
   onClose: () => void;
+  readWork: (id: string) => Promise<WorkDetail>;
 }) {
   const [detail, setDetail] = useState<WorkDetail | null>(null),
     [error, setError] = useState("");
   useEffect(() => {
     let active = true;
-    fetchWork(id)
+    readWork(id)
       .then((value) => {
         if (active) {
           setDetail(value);
@@ -54,7 +55,7 @@ export function StepDetails({
     return () => {
       active = false;
     };
-  }, [id, step, updated, write]);
+  }, [id, step, updated, write, readWork]);
   const context = step === "analysis" ? detail?.analysis : detail?.production;
   return (
     <section
