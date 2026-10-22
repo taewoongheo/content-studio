@@ -94,12 +94,12 @@ export function WorkspaceScreen() {
       document.querySelector("[role='dialog'], [role='alertdialog']")) return;
     if (!activeTab) {
       if (shortcut === "next") {
-        if (!dashboardActive) dashboard(true);
+        if (dashboardActive) dashboard();
         else if (tabs?.[0]) void select(tabs[0].projectId);
-      } else if (shortcut === "previous" && dashboardActive) dashboard();
+      } else if (shortcut === "previous" && !dashboardActive) dashboard(true);
       return;
     }
-    if (shortcut === "previous" && tabs?.[0]?.tabId === activeTab.tabId) { dashboard(true); return; }
+    if (shortcut === "previous" && tabs?.[0]?.tabId === activeTab.tabId) { dashboard(); return; }
     if (shortcut === "close") lifecycle.close(activeTab);
     else {
       const neighbor = adjacentTab(tabs ?? [], activeTab.tabId, shortcut);
