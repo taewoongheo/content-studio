@@ -10,3 +10,7 @@ export const displayFields = [
 export function displayContent(context: Row): Row {
   return Object.fromEntries(displayFields.filter(key => context[key] != null).map(key => [key, context[key]]));
 }
+
+export function displayContentKey(context: Row | null | undefined): string {
+  return context ? JSON.stringify(displayContent(context)) : "";
+}

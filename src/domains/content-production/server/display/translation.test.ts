@@ -24,3 +24,16 @@ test("reject incomplete or altered-number translations and allow retry", async (
   await assert.rejects(translate({ answer: "Use 3 sets" }), /수치/);
   assert.deepEqual(await translate({ answer: "Use 3 sets" }), { answer: "3세트를 수행한다" });
 });
+
+test("cache keys and CLI requests use the same selected model", async () => {
+  const models: string[] = [];
+  const translate = createDisplayTranslator(async (_strings, _signal, model) => {
+    models.push(model);
+    return ["3세트를 수행한다"];
+  });
+  const source = { answer: "Use 3 sets" };
+  await translate(source, "model-a");
+  await translate(source, "model-a");
+  await translate(source, "model-b");
+  assert.deepEqual(models, ["model-a", "model-b"]);
+});

@@ -1,9 +1,6 @@
 import { francAll } from "franc-min";
 import { OperationError } from "@/lib/errors/operation";
-
-// IDs and URLs are data, not prose. Descriptions beside them are still checked.
-export const isDataField = (key: string) =>
-  /(^|_)(id|ids|url|uri|path|at)$|^(kind|role|state|status|type|format|aspect_ratio|fontFamily|color)$/.test(key);
+import { isDataField } from "./fields";
 
 export function assertEnglish(value: unknown, path = "output"): void {
   if (typeof value === "string") {

@@ -1,5 +1,5 @@
 import type { PerformanceRefresh } from "./domain/performance";
-import type { Row, WorkDetail, WorkItem } from "./domain/contracts";
+import type { ProductionStep, Row, WorkDetail, WorkItem } from "./domain/contracts";
 export interface ProductionSnapshot {
   tasks: WorkItem[];
   logs: Row[];
@@ -29,3 +29,10 @@ export async function productionAction(action: Record<string, unknown>) {
 }
 export const fetchWork = (id: string) =>
   fetchProduction<WorkDetail>(`?id=${encodeURIComponent(id)}`);
+
+export async function requestDisplayTranslation(id: string, step: ProductionStep, sourceKey: string): Promise<Row> {
+  const response = await productionAction({ action: "translate_display", id, step }) as { source: Row; translated: Row };
+  if (JSON.stringify(response.source) !== sourceKey)
+    throw new Error("내용이 갱신되었습니다. 다시 번역해 주세요.");
+  return response.translated;
+}

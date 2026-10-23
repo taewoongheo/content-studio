@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { productionAction } from "@/domains/content-production/client";
-import { displayContent } from "@/domains/content-production/domain/display";
+import { requestDisplayTranslation } from "@/domains/content-production/client";
+import { displayContentKey } from "@/domains/content-production/domain/display";
 import type { ProductionStep, Row } from "@/domains/content-production/domain/contracts";
 
 export function useDisplayTranslation(id: string, step: ProductionStep, context: Row | undefined | null, enabled: boolean) {
-  const sourceKey = context ? JSON.stringify(displayContent(context)) : "";
+  const sourceKey = displayContentKey(context);
   const key = `${id}:${step}:${sourceKey}`;
   const [result, setResult] = useState<{ key: string; value?: Row; error?: string } | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -13,13 +13,9 @@ export function useDisplayTranslation(id: string, step: ProductionStep, context:
     let active = true;
     // Avoid launching a translation for each intermediate save in a burst.
     const timer = setTimeout(() => {
-      productionAction({ action: "translate_display", id, step }).then(response => {
+      requestDisplayTranslation(id, step, sourceKey).then(value => {
         if (!active) return;
-        if (JSON.stringify(response.source) !== sourceKey) {
-          setResult({ key, error: "내용이 갱신되었습니다. 다시 번역해 주세요." });
-          return;
-        }
-        setResult({ key, value: response.translated });
+        setResult({ key, value });
       }).catch(error => {
         if (active) setResult({ key, error: error instanceof Error ? error.message : "번역 실패" });
       });
