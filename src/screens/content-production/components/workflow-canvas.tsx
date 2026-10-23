@@ -11,8 +11,9 @@ import "@xyflow/react/dist/style.css";
 import { CenterInitialStart, HorizontalWheelPan, StartNodeControl } from "./workflow/viewport/viewport-controls";
 import { StageNode } from "./workflow/stage-node";
 import { StartNode } from "./workflow/start-node";
-import { BranchEdge, BranchTrunk } from "./workflow/edges/branch-edges";
+import { AdaptiveEdge, BranchEdge, BranchTrunk } from "./workflow/edges/branch-edges";
 import { buildWorkflowGraph, type WorkflowNode } from "./workflow/graph";
+import { layoutNodes } from "../model/layout";
 import { useNodeMeasurements } from "../hooks/use-node-measurements";
 import { getPlaybackAction, type TaskActionHandler, type TaskControlAction } from "../model/task-controls";
 import type {
@@ -21,7 +22,7 @@ import type {
   ProductionStep,
 } from "@/domains/content-production/domain/contracts";
 const nodeTypes = { stage: StageNode, start: StartNode };
-const edgeTypes = { branch: BranchEdge, trunk: BranchTrunk };
+const edgeTypes = { straight: AdaptiveEdge, branch: BranchEdge, trunk: BranchTrunk };
 const initialViewport = { x: 48, y: 64, zoom: 1 };
 
 
@@ -65,7 +66,7 @@ export function WorkflowCanvas({
   const { measurements, onNodesChange } = useNodeMeasurements();
   const tasksById = new Map(tasks.map(task => [task.id, task]));
   // Controlled nodes must retain ResizeObserver measurements when their data changes.
-  const renderedNodes = nodes.map(node => {
+  const renderedNodes = layoutNodes(nodes, measurements).map(node => {
     const measured = measurements[node.id];
     if (node.type === "start") return { ...node, measured, data: { content: startContent } };
     const task = tasksById.get(node.id.split(":")[0]);
