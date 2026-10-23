@@ -34,7 +34,7 @@ Explain what was weak, why the chosen hook is better, or why no change was justi
 Call preview_slides for ALL slides at the latest saved revision and inspect the result.
 
 Return project_id, summary_json containing the full updated content summary (preserve body/CTA information),
-sources_json, reviewed_slide_ids, reviewed_revision, review (English assessment and actual changes),
+sources, reviewed_slide_ids, reviewed_revision, review (English assessment and actual changes),
 and review_passed. Set review_passed=true only when the criteria above are met.
 If the hook cannot pass while preserving the body, set review_passed=false and explain the blocker.
 Do not create another project or register publication.

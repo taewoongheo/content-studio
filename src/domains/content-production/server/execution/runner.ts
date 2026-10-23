@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { PerformanceRefresh } from "../../domain/performance";
 import { discardTask } from "../projects";
 import { OPEN_DRAFT_MESSAGE } from "../../domain/start-policy";
@@ -11,6 +12,7 @@ import { runCodex } from "./process";
 import { resultSchema, stageImages, stagePrompt } from "./prompts";
 import {
   productionResultSchema,
+  sourceSchema,
   type ProductionStep,
 } from "../../domain/contracts";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
@@ -161,8 +163,12 @@ export async function execute(
           }),
       });
       run.controller.signal.throwIfAborted();
-      const { sources_json, ...fields } = result;
-      const sources = JSON.parse(String(sources_json));
+      const { sources: rawSources, ...fields } = result;
+      const sources = z.array(sourceSchema).parse(
+        z.array(z.record(z.string(), z.unknown())).parse(rawSources).map(source =>
+          Object.fromEntries(Object.entries(source).filter(([key, value]) =>
+            !(["id", "url", "visual_set_id"].includes(key) && value === null)))),
+      );
       if (run.step === "analysis") {
         store.completeAnalysis(id, { ...fields, sources });
         continue;

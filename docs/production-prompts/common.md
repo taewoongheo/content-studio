@@ -67,3 +67,12 @@ An interrupted run resumes from saved database context, not from your earlier CL
 
 
 The fixed order is analysis → production (first draft) → hook review → visual verification. Review stages do not reselect the topic or change the approved body. CTA currently asks readers to follow the account, with a short content-relevant reason; do not ask readers to install or try an unreleased app.
+
+
+## Final source output
+
+Return sources as an actual array following the output schema, not a JSON-encoded string.
+Each source must include kind, id, url, part, used_for and visual_set_id.
+part describes the specific part you referenced; used_for describes how it informed this content.
+Use null for unused id, url or visual_set_id fields. Provide an id or a URL for every source.
+Reuse accurate descriptions already saved in the current draft when appropriate; do not invent missing source context.

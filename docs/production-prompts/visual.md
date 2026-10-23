@@ -35,7 +35,7 @@ Review can leave a strong draft unchanged; do not invent edits just to show acti
 After all edits, call preview_slides for ALL slides at the latest saved revision and inspect every result.
 Check for clipping, overlap, legibility, image proportions, visual consistency and agreement with the source direction.
 
-Return project_id, summary_json containing the full final content summary, sources_json,
+Return project_id, summary_json containing the full final content summary, sources,
 reviewed_slide_ids, reviewed_revision, review (English findings and changes), and review_passed.
 Set review_passed=true only when the visual criteria pass. If unresolved problems remain, set it to false
 and describe them. The harness only finishes production after this step passes.

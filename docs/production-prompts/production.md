@@ -9,7 +9,7 @@ completed/remaining work. Reuse the linked project rather than creating another.
 must be complete, natural English and actually reviewed. Call preview_slides for ALL slides at the
 latest saved revision; read each resulting image, fix issues, then re-review affected slides. The
 harness verifies real preview calls, revision and slide coverage. Save the actual final content and
-deviation reasons in summary_json (JSON-encoded object), sources_json (JSON-encoded array),
+deviation reasons in summary_json (JSON-encoded object), sources (structured array),
 project_id, reviewed_slide_ids and reviewed_revision. Do not register a publication or claim the
 user uploaded it.
 

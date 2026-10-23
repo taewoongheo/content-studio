@@ -27,7 +27,7 @@ const direction = {
   expected_response: "save",
   goal_connection: "install",
   difference_from_recent: "new",
-  sources_json: "[]",
+  sources: [{ kind: "url", id: null, url: "https://example.com", part: "Research summary", used_for: "Checked the prescription.", visual_set_id: null }],
 };
 test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소 후 쓰기를 검증한다", async () => {
   const dir = await mkdtemp(join(tmpdir(), "production-runner-"));
@@ -58,7 +58,7 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       if (step === "hook" || step === "visual") {
         recordSourceReview(id);
         recordReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => s.id));
-        return { project_id: projectId, summary_json: '{"hook":"test"}', sources_json: "[]",
+        return { project_id: projectId, summary_json: '{"hook":"test"}', sources: [],
           review: "The current content meets the review criteria.", review_passed: true,
           reviewed_slide_ids: job.editor.document.slides.map(s => s.id), reviewed_revision: job.editor.revision };
       }
@@ -95,7 +95,7 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       return {
         project_id: projectId,
         summary_json: '{"hook":"test"}',
-        sources_json: "[]",
+        sources: [],
         reviewed_slide_ids: job.editor.document.slides.map((s) => s.id),
         reviewed_revision: final.editor.revision,
       };
@@ -106,13 +106,14 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
     assert.equal(store.get(id).visual?.state, "completed");
     assert.equal(store.get(id).task.state, "finished");
     assert.equal(store.get(id).task.current_step, "visual");
+    assert.equal((store.get(id).log.sources as Array<{ part: string }>)[0].part, "Research summary");
     const projectId = store.get(id).task.project_id!;
     // Resume a review without reading source images: earlier stages' reviews cannot satisfy it.
     store.db.prepare("UPDATE content_drafts SET current_step='visual',state='stopped' WHERE id=?").run(id);
     await execute(id, "http://127.0.0.1:3000", async () => {
       const job = contentJobRegistry.get(projectId);
       recordReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => s.id));
-      return { project_id: projectId, summary_json: '{"hook":"test"}', sources_json: "[]",
+      return { project_id: projectId, summary_json: '{"hook":"test"}', sources: [],
         review: "The layout appears readable.", review_passed: true,
         reviewed_slide_ids: job.editor.document.slides.map(s => s.id), reviewed_revision: job.editor.revision };
     });
