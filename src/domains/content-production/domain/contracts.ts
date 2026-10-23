@@ -1,7 +1,13 @@
 import { z } from "zod";
 
-export const stepSchema = z.enum(["analysis", "production"]);
+export const stepSchema = z.enum(["analysis", "production", "hook", "visual"]);
 export type ProductionStep = z.infer<typeof stepSchema>;
+export const productionSteps = [
+  { id: "analysis", label: "분석 및 제작 방향" },
+  { id: "production", label: "초안 제작" },
+  { id: "hook", label: "훅 검토·수정" },
+  { id: "visual", label: "시각 검증·수정" },
+] as const;
 export const directionSchema = z.object({
   topic: z.string().trim().min(1),
   content_type: z.string().trim().min(1),
@@ -36,6 +42,11 @@ const progress = {
   completed_actions: z.array(z.string()).optional(),
   remaining_actions: z.array(z.string()).optional(),
 };
+export const reviewDraftPatchSchema = z.object({
+  review: z.string().optional(),
+  content: z.record(z.string(), z.unknown()).optional(),
+  ...progress,
+}).strict();
 export const analysisPatchSchema = directionSchema
   .partial()
   .extend({ analysis: z.string().optional(), ...progress })
@@ -102,6 +113,8 @@ export interface WorkDetail {
   analysis: Row;
   production: Row | null;
   log: Row;
+  hook?: Row | null;
+  visual?: Row | null;
 }
 export interface ChangeEvent {
   task_id?: string;

@@ -18,7 +18,7 @@ CREATE INDEX IF NOT EXISTS content_logs_created_idx ON content_creation_logs(cre
 CREATE TABLE IF NOT EXISTS content_drafts (
  id TEXT PRIMARY KEY, log_id TEXT UNIQUE NOT NULL REFERENCES content_creation_logs(id),
  project_id TEXT UNIQUE REFERENCES content_projects(id) ON DELETE SET NULL,
- current_step TEXT NOT NULL CHECK(current_step IN ('analysis','production')),
+ current_step TEXT NOT NULL CHECK(current_step IN ('analysis','production','hook','visual')),
  state TEXT NOT NULL CHECK(state IN ('pending','running','stopped','failed','finished')),
  created_at TEXT NOT NULL, updated_at TEXT NOT NULL
 );
@@ -32,6 +32,16 @@ CREATE TABLE IF NOT EXISTS content_production_drafts (
  state TEXT NOT NULL DEFAULT 'pending', content_json TEXT CHECK(content_json IS NULL OR json_valid(content_json)),
  direction_changes TEXT, draft_saved_at TEXT, ${progress},
  created_at TEXT NOT NULL, updated_at TEXT NOT NULL, completed_at TEXT
+);
+CREATE TABLE IF NOT EXISTS content_hook_drafts (
+ draft_id TEXT PRIMARY KEY REFERENCES content_drafts(id) ON DELETE CASCADE,
+ state TEXT NOT NULL DEFAULT 'pending', review TEXT, content_json TEXT CHECK(content_json IS NULL OR json_valid(content_json)),
+ ${progress}, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, completed_at TEXT
+);
+CREATE TABLE IF NOT EXISTS content_visual_drafts (
+ draft_id TEXT PRIMARY KEY REFERENCES content_drafts(id) ON DELETE CASCADE,
+ state TEXT NOT NULL DEFAULT 'pending', review TEXT, content_json TEXT CHECK(content_json IS NULL OR json_valid(content_json)),
+ ${progress}, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, completed_at TEXT
 );
 CREATE TABLE IF NOT EXISTS content_visual_sets (
  id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK(kind IN ('reference','published')),

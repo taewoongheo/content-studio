@@ -1,6 +1,6 @@
 import type { PerformanceRefresh } from "@/domains/content-production/domain/performance";
 import { MarkerType, type Edge } from "@xyflow/react";
-import type { WorkDetail, WorkItem } from "@/domains/content-production/domain/contracts";
+import { productionSteps, type WorkDetail, type WorkItem } from "@/domains/content-production/domain/contracts";
 import type { StartNodeModel } from "./start-node";
 import type { StageNodeModel } from "./stage-node";
 import { getStepState } from "../../model/task-controls";
@@ -27,23 +27,23 @@ export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, Wo
   tasks.forEach((task, index) => {
     if (task.state === "pending" && task.current_step === "analysis" && !writes[`${task.id}:analysis`]) return;
     const color = instanceColor(task.id), detail = details[task.id], analysis = detail?.analysis ?? {};
-    const content = record(detail?.production?.content ?? detail?.log.content_summary);
+    const content = record(detail?.visual?.content ?? detail?.hook?.content ?? detail?.production?.content ?? detail?.log.content_summary);
     const topic = text(analysis.topic) || task.topic || "소재 분석 중";
     const answer = text(analysis.answer) || text(detail?.log.answer) || text(analysis.message);
-    const activeProduction = task.current_step === "production";
+    const currentIndex = productionSteps.findIndex(value => value.id === task.current_step);
     const completed = task.state === "finished";
     let previous = "sync";
-    for (const stage of ["analysis", "production", "result"] as const) {
-      if (stage === "production" && !activeProduction) continue;
-      if (stage === "result" && (!completed || !task.project_id)) continue;
+    for (const [stageIndex, stage] of ([...productionSteps.map(value => value.id), "result"] as const).entries()) {
+      if (stage !== "result" && stageIndex > currentIndex) continue;
+      if (stage === "result" && (!completed || task.current_step !== "visual" || !task.project_id)) continue;
       const state = stage === "result" ? "completed" : getStepState(task, stage);
-      const stepWrites = writes[`${task.id}:${stage === "result" ? "production" : stage}`] ?? 0;
+      const stepWrites = writes[`${task.id}:${stage === "result" ? "visual" : stage}`] ?? 0;
       const facts = stage === "analysis" ? [text(analysis.content_type) || task.content_type, count(analysis.sources) ? `참고 자료 ${count(analysis.sources)}개` : null] : [count(content.slides) ? `${count(content.slides)}장` : null, text(analysis.content_type) || task.content_type];
       const id = `${task.id}:${stage}`;
-      nodes.push({ id, type: "stage", position: { x: stage === "analysis" ? 760 : stage === "production" ? 1140 : 1520, y: index * 320 }, data: {
-        title: stage === "analysis" ? "분석·제작 방향" : stage === "production" ? "콘텐츠 제작" : "완성 포스트", stage,
-        outputTitle: stage === "production" ? text(content.hook) || topic : topic,
-        outputText: stage === "analysis" ? answer : "", facts: facts.filter((fact): fact is string => !!fact),
+      nodes.push({ id, type: "stage", position: { x: 760 + stageIndex * 380, y: index * 320 }, data: {
+        title: stage === "result" ? "완성 포스트" : productionSteps.find(value => value.id === stage)!.label, stage,
+        outputTitle: stage === "hook" ? text(detail?.hook?.content && record(detail.hook.content).hook) || text(content.hook) || topic : stage === "production" ? text(content.hook) || topic : topic,
+        outputText: stage === "analysis" ? answer : stage === "hook" || stage === "visual" ? text(detail?.[stage]?.review) : "", facts: facts.filter((fact): fact is string => !!fact),
         activity: state === "running" ? activity[task.id] || "진행 중" : state === "failed" ? "오류 확인" : state === "stopped" ? "중단됨" : "",
         color, state, write: stage === "result" ? 0 : stepWrites, kind: `콘텐츠 ${String(index + 1).padStart(2, "0")}`,
       } });

@@ -1,13 +1,14 @@
 "use client";
 import { useEffect } from "react";
 import { Handle, Position, useUpdateNodeInternals, type Node, type NodeProps } from "@xyflow/react";
-import { ArrowUpRight, Database, FileText, Layers, ScanText } from "lucide-react";
+import { ArrowUpRight, Database, FileText, Layers, ScanText, MessageSquare, Eye } from "lucide-react";
 import { StatusIcon } from "./status-icon";
 import { StageControlButton } from "./controls/stage-control-button";
+import type { ProductionStep } from "@/domains/content-production/domain/contracts";
 import type { StageControl } from "../../model/task-controls";
 export type StageNodeModel = Node<{
   title: string;
-  stage: "sync" | "analysis" | "production" | "result";
+  stage: "sync" | ProductionStep | "result";
   outputTitle: string;
   outputText: string;
   facts: string[];
@@ -18,7 +19,7 @@ export type StageNodeModel = Node<{
   kind: string;
   controls?: StageControl;
 }, "stage">;
-const stageIcons = { sync: Database, analysis: ScanText, production: Layers, result: FileText };
+const stageIcons = { sync: Database, analysis: ScanText, production: Layers, result: FileText, hook: MessageSquare, visual: Eye };
 export function StageNode({ id, data, selected }: NodeProps<StageNodeModel>) {
   const updateNodeInternals = useUpdateNodeInternals();
   // A controlled node can lose its handle measurements without changing size.
@@ -38,7 +39,7 @@ export function StageNode({ id, data, selected }: NodeProps<StageNodeModel>) {
       {!!data.facts.length && <div className="production-output-facts">{data.facts.map(fact => <span key={fact}>{fact}</span>)}</div>}
     </div>
     <div className="production-stage-footer">
-      <span className="production-stage-action">{data.stage === "result" ? <>포스트 열기<ArrowUpRight size={14} /></> : data.activity || (data.stage === "analysis" ? "분석 보기" : data.stage === "production" ? "작성 내용 보기" : "성과 보기")}</span>
+      <span className="production-stage-action">{data.stage === "result" ? <>포스트 열기<ArrowUpRight size={14} /></> : data.activity || (data.stage === "analysis" ? "분석 보기" : data.stage === "production" ? "작성 내용 보기" : data.stage === "hook" || data.stage === "visual" ? "검토 보기" : "성과 보기")}</span>
       <div className="flex items-center gap-2">
       <StageControlButton title={data.title} control={data.controls} />
       {data.write > 0 && <span className="production-save-indicator" aria-label="draft 저장" title="draft 저장">

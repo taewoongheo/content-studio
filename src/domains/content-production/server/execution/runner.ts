@@ -21,6 +21,7 @@ type Run = {
   controller: AbortController;
   token: string;
   step: ProductionStep;
+  sourceImages: boolean;
   reviews: Map<string, { revision: number; slides: Set<string> }>;
 };
 const shared = globalThis as typeof globalThis & {
@@ -63,6 +64,10 @@ export function recordReview(
     previous?.revision === revision ? previous.slides : new Set<string>();
   slides.forEach((s) => reviewed.add(s));
   run.reviews.set(projectId, { revision, slides: reviewed });
+}
+export function recordSourceReview(id: string) {
+  const run = runs.get(id);
+  if (run) run.sourceImages = true;
 }
 export function syncState() {
   return { running: !!shared.productionSync, report: shared.productionRefresh ?? null };
@@ -128,6 +133,7 @@ export async function execute(
     token: randomUUID(),
     step: detail.task.current_step,
     reviews: new Map(),
+    sourceImages: false,
   };
   runs.set(id, run);
   try {
@@ -135,6 +141,8 @@ export async function execute(
       run.controller.signal.throwIfAborted();
       run.step = store.get(id).task.current_step;
       store.state(id, "running");
+      run.reviews.clear();
+      run.sourceImages = false;
       const result = await executor({
         model,
         prompt: stagePrompt(id, run.step),
@@ -159,7 +167,14 @@ export async function execute(
         store.completeAnalysis(id, { ...fields, sources });
         continue;
       }
-      const { summary_json, ...rest } = fields;
+      const { summary_json, review: reviewText, review_passed, ...rest } = fields;
+      if (run.step === "hook" || run.step === "visual") {
+        store.save(id, run.step, { review: reviewText, sources });
+        if (review_passed !== true || typeof reviewText !== "string" || !reviewText.trim())
+          throw new Error("검토를 통과하지 못했습니다. 검토 결과를 확인해 주세요.");
+        if (!run.sourceImages)
+          throw new Error("이번 검토 단계에서 참고 게시글의 실제 이미지를 확인해 주세요.");
+      }
       const output = productionResultSchema.parse({
         ...rest,
         summary: JSON.parse(String(summary_json)),
@@ -210,8 +225,8 @@ export async function execute(
         )
       )
         throw new Error("모든 슬라이드를 이미지로 검토해 주세요.");
-      store.completeProduction(id, output);
-      break;
+      store.completeProduction(id, { ...output, review: typeof reviewText === "string" ? reviewText : undefined });
+      if (run.step === "visual") break;
     }
   } catch (error) {
     if (!run.controller.signal.aborted) {

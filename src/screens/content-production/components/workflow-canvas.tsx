@@ -70,7 +70,7 @@ export function WorkflowCanvas({
     const measured = measurements[node.id];
     if (node.type === "start") return { ...node, measured, data: { content: startContent } };
     const task = tasksById.get(node.id.split(":")[0]);
-    const step = node.data.stage === "analysis" ? "analysis" : "production";
+    const step = node.data.stage === "result" || node.data.stage === "sync" ? "visual" : node.data.stage;
     const action: TaskControlAction | null = task ? node.data.stage === "result" ? "delete_post" : getPlaybackAction(task, step) : null;
     return { ...node, measured, selected: node.id === selectedNode, data: { ...node.data, controls: task ? {
       action,

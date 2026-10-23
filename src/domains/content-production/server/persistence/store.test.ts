@@ -172,3 +172,40 @@ test("소재 선정 로그 조회는 URL이 등록된 게시물만, 전체 기�
     assert.equal(store.comparisons().drafts.length,2);
   } finally { db.close(); }
 });
+
+test("검토 draft는 분리 저장하고 훅 통과 후 시각 검증까지 끝나야 완료된다", () => {
+  const db = openLocalDatabase(":memory:"), store = new ProductionStore(db);
+  try {
+    const [id] = store.create(1);
+    store.state(id, "running");
+    store.completeAnalysis(id, { ...direction, analysis: "A clear starting plan.", sources: [] });
+    store.state(id, "running");
+    db.prepare("INSERT INTO content_projects(id,name,aspect_ratio,slide_count,output_language,document_json,created_at,updated_at) VALUES('review-project','Review','4:5',1,'English','{}','now','now')").run();
+    db.prepare("UPDATE content_drafts SET project_id='review-project' WHERE id=?").run(id);
+    store.completeProduction(id, { project_id: "review-project", summary: { hook: "Start with three sets" }, sources: [] });
+    assert.equal(store.get(id).task.current_step, "hook");
+    assert.equal(store.get(id).task.state, "pending");
+    assert.equal(store.get(id).production?.state, "completed");
+    assert.equal(store.get(id).visual, null);
+    store.state(id, "running");
+    const before = store.get(id);
+    assert.throws(() => store.save(id, "hook", { review: "훅 검토 결과" }), /ENGLISH_REQUIRED/);
+    assert.throws(() => store.save(id, "hook", { direction_changes: "A different topic" }));
+    assert.deepEqual(store.get(id), before);
+    store.save(id, "hook", { review: "The hook now states the answer clearly." });
+    store.state(id, "stopped");
+    assert.throws(() => store.save(id, "hook", { review: "A late write." }), /현재 실행 단계/);
+    store.state(id, "running");
+    const result = { project_id: "review-project", summary: { hook: "Three sets to start" }, sources: [], review: "The hook matches the existing body." };
+    store.completeProduction(id, result);
+    assert.equal(store.get(id).task.current_step, "visual");
+    assert.equal(store.get(id).hook?.state, "completed");
+    assert.equal(store.get(id).production?.content && (store.get(id).production!.content as {hook:string}).hook, "Start with three sets");
+    store.state(id, "running");
+    store.completeProduction(id, { ...result, review: "The hierarchy and spacing match the selected visual references." });
+    assert.equal(store.get(id).task.state, "finished");
+    store.remove(id);
+    assert.equal((db.prepare("SELECT count(*) n FROM content_hook_drafts").get() as {n:number}).n, 0);
+    assert.equal((db.prepare("SELECT count(*) n FROM content_visual_drafts").get() as {n:number}).n, 0);
+  } finally { db.close(); }
+});

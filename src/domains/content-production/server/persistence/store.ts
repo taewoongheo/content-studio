@@ -5,6 +5,7 @@ import {
   analysisPatchSchema,
   analysisResultSchema,
   productionPatchSchema,
+  reviewDraftPatchSchema,
   directionSchema,
   type Direction,
   type ProductionStep,
@@ -78,6 +79,10 @@ export class ProductionStore {
       analysis: decode(analysis),
       production: production ? decode(production) : null,
       log: decode(log),
+      ...Object.fromEntries((["hook", "visual"] as const).map(step => {
+        const row = this.row(`SELECT * FROM content_${step}_drafts WHERE draft_id=?`, id);
+        return [step, row ? decode(row) : null];
+      })),
     };
   }
   create(count: number) {
@@ -139,7 +144,7 @@ export class ProductionStore {
   save(id: string, step: ProductionStep, raw: unknown) {
     this.assertActive(id, step);
     const patch = (
-      step === "analysis" ? analysisPatchSchema : productionPatchSchema
+      step === "analysis" ? analysisPatchSchema : step === "production" ? productionPatchSchema : reviewDraftPatchSchema
     ).parse(raw);
     assertEnglish(patch, `${step}_draft`);
     const values: Row = { updated_at: this.now() };
@@ -198,10 +203,15 @@ export class ProductionStore {
   }
   completeProduction(
     id: string,
-    result: { project_id: string; summary: Row; sources: unknown[] },
+    result: { project_id: string; summary: Row; sources: unknown[]; review?: string },
   ) {
-    const detail = this.assertActive(id, "production"),
+    const step = this.get(id).task.current_step;
+    if (step === "analysis") throw new Error("분석 단계는 제작 완료로 저장할 수 없습니다.");
+    const detail = this.assertActive(id, step),
       now = this.now();
+    const next = step === "production" ? "hook" : step === "hook" ? "visual" : null;
+    if (step !== "production" && !result.review?.trim()) throw new Error("검토 결과를 남겨 주세요.");
+    if (result.review) assertEnglish(result.review, "review_result.review");
     assertEnglish(result.summary, "production_result.summary");
     assertEnglish(result.sources, "production_result.sources");
     this.db.transaction(() => {
@@ -217,17 +227,24 @@ export class ProductionStore {
         sources_json: JSON.stringify(sources),
         updated_at: now,
       });
-      this.update("content_production_drafts", "draft_id", id, {
+      this.update(`content_${step}_drafts`, "draft_id", id, {
         state: "completed",
+        content_json: JSON.stringify(result.summary),
+        sources_json: JSON.stringify(result.sources),
+        ...(step !== "production" ? { review: result.review } : {}),
         completed_at: now,
         updated_at: now,
       });
+      if (next) this.db.prepare(
+        `INSERT INTO content_${next}_drafts(draft_id,created_at,updated_at) VALUES(?,?,?)`,
+      ).run(id, now, now);
       this.update("content_drafts", "id", id, {
-        state: "finished",
+        current_step: next ?? step,
+        state: next ? "pending" : "finished",
         updated_at: now,
       });
     })();
-    publishChange({ task_id: id, step: "production", kind: "saved" });
+    publishChange({ task_id: id, step, kind: "saved" });
   }
   changeDirection(
     id: string,

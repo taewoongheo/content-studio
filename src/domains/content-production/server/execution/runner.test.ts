@@ -11,6 +11,7 @@ import {
   execute,
   stopProduction,
   recordReview,
+  recordSourceReview,
 } from "./runner";
 import { createTaskProject, deleteTaskProject } from "../projects";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
@@ -51,8 +52,16 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
         return direction;
       }
       assert.equal(store.get(id).analysis.state, "completed");
-      const { projectId } = createTaskProject(store, id, 1),
-        job = contentJobRegistry.get(projectId);
+      const step = store.get(id).task.current_step;
+      const { projectId } = step === "production" ? createTaskProject(store, id, 1) : { projectId: store.get(id).task.project_id! };
+      const job = contentJobRegistry.get(projectId);
+      if (step === "hook" || step === "visual") {
+        recordSourceReview(id);
+        recordReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => s.id));
+        return { project_id: projectId, summary_json: '{"hook":"test"}', sources_json: "[]",
+          review: "The current content meets the review criteria.", review_passed: true,
+          reviewed_slide_ids: job.editor.document.slides.map(s => s.id), reviewed_revision: job.editor.revision };
+      }
       new SlideshowProjectWrites(contentJobRegistry, store.db).edit(
         projectId,
         [
@@ -92,9 +101,24 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       };
     };
     await execute(id, "http://127.0.0.1:3000", executor);
-    assert.equal(calls, 2);
+    assert.equal(calls, 4);
+    assert.equal(store.get(id).hook?.state, "completed");
+    assert.equal(store.get(id).visual?.state, "completed");
     assert.equal(store.get(id).task.state, "finished");
+    assert.equal(store.get(id).task.current_step, "visual");
     const projectId = store.get(id).task.project_id!;
+    // Resume a review without reading source images: earlier stages' reviews cannot satisfy it.
+    store.db.prepare("UPDATE content_drafts SET current_step='visual',state='stopped' WHERE id=?").run(id);
+    await execute(id, "http://127.0.0.1:3000", async () => {
+      const job = contentJobRegistry.get(projectId);
+      recordReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => s.id));
+      return { project_id: projectId, summary_json: '{"hook":"test"}', sources_json: "[]",
+        review: "The layout appears readable.", review_passed: true,
+        reviewed_slide_ids: job.editor.document.slides.map(s => s.id), reviewed_revision: job.editor.revision };
+    });
+    assert.equal(store.get(id).task.state, "failed");
+    assert.match(String((store.get(id).visual?.error as {message:string}).message), /실제 이미지/);
+    store.state(id, "finished");
     store.db.prepare("INSERT INTO content_project_assets(project_id,asset_id,name,mime_type,byte_size,data) VALUES(?,?,?,?,?,?)")
       .run(projectId, "delete-test", "image", "image/png", 1, Buffer.from([1]));
     store.db.exec("CREATE TRIGGER fail_draft_removal BEFORE DELETE ON content_drafts BEGIN SELECT RAISE(ABORT, 'draft removal failed'); END;");

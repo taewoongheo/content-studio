@@ -30,7 +30,7 @@ TikTok, Instagram or other social feeds for new content ideas, visual formats or
 
 ## Research
 
-External research is optional in either stage. Investigate only questions needed for the current
+External research is optional in every stage. Investigate only questions needed for the current
 content; examples include: (1) verify a factual, scientific or quantitative claim against original
 papers or official sources; (2) investigate community experience about execution, equipment or
 real-world obstacles that papers may not address; (3) understand how target users describe their
@@ -53,7 +53,7 @@ and local assets.
 
 ## Duplicate checks
 
-Compare other draft CONTENT and published posts from the last 24h with production_comparisons at
+During analysis and production, compare other draft CONTENT and published posts from the last 24h with production_comparisons at
 topic choice, before saving real draft, and before completion. Same topic AND content type counts as
 duplicate. First saved actual content keeps it; later draft changes. Unfinished ideas do not reserve
 topics. Use production_change_direction for collisions (overwrite, no abandoned idea history) or
@@ -64,3 +64,6 @@ posts. No mandatory narrative sequence.
 ## Resuming
 
 An interrupted run resumes from saved database context, not from your earlier CLI memory.
+
+
+The fixed order is analysis → production (first draft) → hook review → visual verification. Review stages do not reselect the topic or change the approved body. CTA currently asks readers to follow the account, with a short content-relevant reason; do not ask readers to install or try an unreleased app.

@@ -1,3 +1,5 @@
+import { assertReviewWrite } from "@/domains/content-production/server/execution/review/write-policy";
+import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { isLocalRequest } from "@/lib/http/local-request";
 import { createStudioMcpServer } from "@/lib/mcp/server";
@@ -6,6 +8,7 @@ import {
   authorizeRun,
   productionStore,
   recordReview,
+  recordSourceReview,
 } from "@/domains/content-production/server/execution/runner";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,7 +51,8 @@ export async function POST(
     {
       allowed: new Set([
         ...readTools,
-        ...(run.step === "production" ? [...editorReadTools,...writeTools] : []),
+        ...(run.step === "production" ? [...editorReadTools, ...writeTools] :
+          run.step === "hook" || run.step === "visual" ? [...editorReadTools, "edit_project"] : []),
       ]),
       before(name, input) {
         authorizeRun(taskId, request.headers.get("authorization"));
@@ -57,9 +61,13 @@ export async function POST(
           if (projectId !== productionStore().get(taskId).task.project_id)
             throw new Error("이 작업에 연결된 프로젝트만 수정할 수 있습니다.");
           if (writeTools.includes(name)) assertEnglish(input, name);
+          if (name === "edit_project" && projectId)
+            assertReviewWrite(run.step, input, contentJobRegistry.get(projectId).editor.document);
         }
       },
       after(name, input, result) {
+        if (!result.isError && result.content?.some(item => item.type === "image") && (name === "production_preview_project" || name === "production_read_images"))
+          recordSourceReview(taskId);
         if (
           result.isError ||
           !(name === "preview_slide" || name === "preview_slides")

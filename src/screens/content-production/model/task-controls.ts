@@ -1,17 +1,16 @@
-import type { ProductionStep, WorkItem } from "@/domains/content-production/domain/contracts";
+import { productionSteps, type ProductionStep, type WorkItem } from "@/domains/content-production/domain/contracts";
 
-export const productionSteps = [
-  { id: "analysis", label: "분석 및 제작 방향" },
-  { id: "production", label: "콘텐츠 제작" },
-] as const;
+export { productionSteps };
 
 export type TaskControlAction = "stop" | "resume" | "delete_post";
 export type TaskActionHandler = (id: string, action: TaskControlAction, step?: ProductionStep) => void;
 export type StageControl = { action: TaskControlAction | null; disabled: boolean; onAction: () => void };
 
 export function getStepState(task: WorkItem, step: ProductionStep) {
-  if (step === "analysis" && task.current_step === "production") return "completed";
-  if (step === "production" && task.current_step === "analysis") return "pending";
+  const requested = productionSteps.findIndex(value => value.id === step);
+  const current = productionSteps.findIndex(value => value.id === task.current_step);
+  if (requested < current) return "completed";
+  if (requested > current) return "pending";
   return task.state;
 }
 

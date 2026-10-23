@@ -120,6 +120,8 @@ export function finalizePublication(
       summary.draft_context = {
         analysis: db.prepare("SELECT * FROM content_analysis_drafts WHERE draft_id=?").get(draft.id),
         production: db.prepare("SELECT * FROM content_production_drafts WHERE draft_id=?").get(draft.id),
+        hook: db.prepare("SELECT * FROM content_hook_drafts WHERE draft_id=?").get(draft.id),
+        visual: db.prepare("SELECT * FROM content_visual_drafts WHERE draft_id=?").get(draft.id),
       };
     }
     saveVisuals(db, { kind: "published", log_id: logId, url, slides });

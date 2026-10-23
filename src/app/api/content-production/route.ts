@@ -108,7 +108,7 @@ export async function POST(request: Request) {
     switch (input.action) {
       case "translate_display": {
         const detail = store.get(input.id);
-        const context = input.step === "analysis" ? detail.analysis : detail.production;
+        const context = detail[input.step];
         const source = displayContent(context ?? {});
         return Response.json({ source, translated: await translateDisplay(source) }, { headers: { "Cache-Control": "no-store" } });
       }

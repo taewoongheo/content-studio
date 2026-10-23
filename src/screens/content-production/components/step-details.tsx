@@ -7,8 +7,10 @@ import type {
   ProductionStep,
   WorkDetail,
 } from "@/domains/content-production/domain/contracts";
+import { productionSteps } from "../model/task-controls";
 const labels: Record<string, string> = {
   analysis: "분석",
+  review: "검토 결과",
   topic: "소재",
   content_type: "유형",
   message: "메시지",
@@ -59,7 +61,7 @@ export function StepDetails({
       active = false;
     };
   }, [id, step, updated, write, readWork]);
-  const context = step === "analysis" ? detail?.analysis : detail?.production;
+  const context = detail?.[step];
   const [original, setOriginal] = useState(false);
   const translation = useDisplayTranslation(id, step, context, !original);
   const visible = !original && translation.translated ? { ...context, ...translation.translated } : context;
@@ -72,7 +74,7 @@ export function StepDetails({
         <div>
           <h3 className="flex items-center gap-2 font-semibold">
             <StatusIcon state={String(context?.state ?? "pending")} size={16} />
-            {step === "analysis" ? "분석 및 제작 방향" : "콘텐츠 제작"}
+            {productionSteps.find(value => value.id === step)?.label}
           </h3>
         </div>
         <button className="production-button" onClick={onClose}>

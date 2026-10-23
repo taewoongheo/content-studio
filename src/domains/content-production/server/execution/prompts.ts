@@ -23,6 +23,7 @@ export function resultSchema(step: ProductionStep) {
           ]),
         )
       : {
+          ...(step === "hook" || step === "visual" ? { review: stringField, review_passed: { type: "boolean" } } : {}),
           project_id: stringField,
           summary_json: stringField,
           sources_json: stringField,

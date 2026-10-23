@@ -1,4 +1,4 @@
-# Content production
+# First draft production
 
 Read the confirmed analysis and direction, plus your production draft to resume. If no project is
 linked call production_create_project (reuses task project after resume). Write hook/body/CTA and
@@ -28,3 +28,6 @@ When an image-generation tool is available, pass the actual reference images to 
 mentioning filenames in a text prompt is not a substitute for reference-image input.
 Provide an exercise-specific pose/equipment source when needed by the character rules.
 If generation is unavailable, record the missing capability honestly; do not claim an image was generated.
+
+
+Complete a usable first draft with hook, body, CTA and visuals. Mark the first slide as hook and the final CTA slide as cta. The next CLI stages review the hook and visual quality separately; this stage does not finish the overall task. Use a follow CTA with a brief reason relevant to the content.
