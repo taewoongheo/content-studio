@@ -12,29 +12,31 @@ function fixture(count: number) {
     db.prepare(`INSERT INTO content_projects(id,name,aspect_ratio,slide_count,output_language,document_json,created_at,updated_at)
       VALUES(?,?,'4:5',1,'English','{}',?,?)`).run(id, index < 15 ? "Arms" : "Back", created, created);
     db.prepare(`INSERT INTO content_creation_logs(id,project_id,post_url,actual_published_at,view_count,like_count,comment_count,save_count,created_at,updated_at)
-      VALUES(?,?,?,?,10000,?,0,0,?,?)`).run(id, id, `https://example.com/${id}`, published, index < 12 ? 1000 - index : 1, created, created);
+      VALUES(?,?,?,?,10000,?,0,0,?,?)`).run(id, id, `https://example.com/${id}`, published, 1000 - index, created, created);
   }
   return { db, store: new ProductionStore(db) };
 }
 
-test("성과 12개를 먼저 선택하고 중복을 건너뛰어 실제 게시일 최신 12개를 채운다", () => {
-  const { db, store } = fixture(30);
+test("상위·하위 각 12개를 고른 뒤 중복 없이 실제 게시일 최신 12개를 채운다", () => {
+  const { db, store } = fixture(40);
   try {
     const rows = store.planningLogs();
-    assert.equal(rows.length, 24);
-    assert.equal(new Set(rows.map(row => row.id)).size, 24);
+    assert.equal(rows.length, 36);
+    assert.equal(new Set(rows.map(row => row.id)).size, 36);
     assert.deepEqual(rows.slice(0, 12).map(row => row.id), Array.from({ length: 12 }, (_, i) => `post-${i}`));
-    assert.deepEqual(rows.slice(12).map(row => row.id), Array.from({ length: 12 }, (_, i) => `post-${i + 12}`));
+    assert.deepEqual(rows.slice(12, 24).map(row => row.id), Array.from({ length: 12 }, (_, i) => `post-${39 - i}`));
     assert.ok(rows.slice(0, 12).every(row => row.selection_group === "performance"));
-    assert.ok(rows.slice(12).every(row => row.selection_group === "recent"));
+    assert.ok(rows.slice(12, 24).every(row => row.selection_group === "low_performance"));
+    assert.deepEqual(rows.slice(24).map(row => row.id), Array.from({ length: 12 }, (_, i) => `post-${i + 12}`));
+    assert.ok(rows.slice(24).every(row => row.selection_group === "recent"));
     assert.equal(rows[0].engagement_rate, 0.1);
-    assert.equal(store.logs().length, 30);
+    assert.equal(store.logs().length, 40);
     assert.equal(store.planningLogs("Arms").length, 15);
     assert.equal(store.planningLogs("missing").length, 0);
   } finally { db.close(); }
 });
 
-test("좋아요·댓글·저장을 합산하고 조회로 나누며, 성과 미제공은 최근 그룹에만 포함한다", () => {
+test("좋아요·댓글·저장을 합산하고 조회로 나누며, 성과 미제공은 상·하위 순위에 넣지 않고 최근 그룹에만 포함한다", () => {
   const { db, store } = fixture(6);
   try {
     db.prepare("UPDATE content_creation_logs SET view_count=100,like_count=1,comment_count=40,save_count=0 WHERE id='post-0'").run();
@@ -49,5 +51,20 @@ test("좋아요·댓글·저장을 합산하고 조회로 나누며, 성과 미�
     assert.equal(rows[0].engagement_rate, 0.41);
     assert.equal(rows[3].engagement_rate, null);
     assert.equal(rows[4].engagement_rate, null);
+  } finally { db.close(); }
+});
+
+test("작은 풀은 중복으로 채우지 않고 실제 반응 0건은 하위 순위에 포함한다", () => {
+  const { db, store } = fixture(23);
+  try {
+    db.prepare("UPDATE content_creation_logs SET like_count=0,comment_count=0,save_count=0 WHERE id='post-22'").run();
+    const rows = store.planningLogs();
+    assert.equal(rows.length, 23);
+    assert.equal(new Set(rows.map(row => row.id)).size, 23);
+    assert.equal(rows.filter(row => row.selection_group === "performance").length, 12);
+    assert.equal(rows.filter(row => row.selection_group === "low_performance").length, 11);
+    assert.equal(rows.filter(row => row.selection_group === "recent").length, 0);
+    assert.equal(rows[12].id, "post-22");
+    assert.equal(rows[12].engagement_rate, 0);
   } finally { db.close(); }
 });

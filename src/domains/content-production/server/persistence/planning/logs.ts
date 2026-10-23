@@ -2,9 +2,10 @@ import type Database from "better-sqlite3";
 import type { Row } from "../../../domain/contracts";
 
 const PERFORMANCE_COUNT = 12;
+const LOW_PERFORMANCE_COUNT = 12;
 const RECENT_COUNT = 12;
 
-/** Rank first, then fill a separate recent group without counting overlaps. */
+/** Select high/low engagement, then fill recent posts without counting overlaps. */
 export function readPlanningLogs(db: Database.Database, query: string): Row[] {
   return db.prepare(`
     WITH eligible AS (
@@ -21,17 +22,25 @@ export function readPlanningLogs(db: Database.Database, query: string): Row[] {
       SELECT id FROM eligible WHERE engagement_rate IS NOT NULL
       ORDER BY engagement_rate DESC, actual_published_at DESC, id DESC
       LIMIT ${PERFORMANCE_COUNT}
+    ), worst AS (
+      SELECT id FROM eligible
+      WHERE engagement_rate IS NOT NULL AND id NOT IN (SELECT id FROM best)
+      ORDER BY engagement_rate ASC, actual_published_at DESC, id DESC
+      LIMIT ${LOW_PERFORMANCE_COUNT}
     ), recent AS (
-      SELECT id FROM eligible WHERE id NOT IN (SELECT id FROM best)
+      SELECT id FROM eligible
+      WHERE id NOT IN (SELECT id FROM best) AND id NOT IN (SELECT id FROM worst)
       ORDER BY actual_published_at DESC, id DESC
       LIMIT ${RECENT_COUNT}
     )
     SELECT eligible.*,
-      CASE WHEN id IN (SELECT id FROM best) THEN 'performance' ELSE 'recent' END AS selection_group
+      CASE WHEN id IN (SELECT id FROM best) THEN 'performance'
+        WHEN id IN (SELECT id FROM worst) THEN 'low_performance' ELSE 'recent' END AS selection_group
     FROM eligible
-    WHERE id IN (SELECT id FROM best) OR id IN (SELECT id FROM recent)
-    ORDER BY CASE WHEN id IN (SELECT id FROM best) THEN 0 ELSE 1 END,
+    WHERE id IN (SELECT id FROM best) OR id IN (SELECT id FROM worst) OR id IN (SELECT id FROM recent)
+    ORDER BY CASE WHEN id IN (SELECT id FROM best) THEN 0 WHEN id IN (SELECT id FROM worst) THEN 1 ELSE 2 END,
       CASE WHEN id IN (SELECT id FROM best) THEN engagement_rate END DESC,
+      CASE WHEN id IN (SELECT id FROM worst) THEN engagement_rate END ASC,
       actual_published_at DESC, id DESC
   `).all(`%${query}%`, `%${query}%`) as Row[];
 }
