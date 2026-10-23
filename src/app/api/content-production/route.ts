@@ -21,6 +21,8 @@ import {
 } from "@/domains/content-production/server/persistence/library";
 import { listVisuals } from "@/domains/content-production/server/publication/visuals";
 import { registerPublication } from "@/domains/content-production/server/publication/service";
+import { deleteTaskProject } from "@/domains/content-production/server/projects";
+import { stepSchema } from "@/domains/content-production/domain/contracts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const requestSchema = z.discriminatedUnion("action", [
@@ -29,7 +31,9 @@ const requestSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.enum(["stop", "resume", "remove"]),
     id: z.string().min(1),
+    step: stepSchema.optional(),
   }),
+  z.object({ action: z.literal("delete_post"), id: z.string().min(1) }),
   z.object({
     action: z.literal("edit_log"),
     id: z.string(),
@@ -105,13 +109,23 @@ export async function POST(request: Request) {
           ids: await startProduction(input.count, origin),
         });
       case "stop":
+        if (input.step) {
+          const task = store.get(input.id).task;
+          if (task.current_step !== input.step || !["running", "pending"].includes(task.state))
+            throw new Error("현재 실행 중인 단계가 변경되었습니다.");
+        }
         stopProduction(input.id);
+        break;
+      case "delete_post":
+        deleteTaskProject(store, input.id);
         break;
       case "remove":
         stopProduction(input.id, true);
         break;
       case "resume": {
         const detail = store.get(input.id);
+        if (input.step && detail.task.current_step !== input.step)
+          throw new Error("현재 실행 단계가 변경되었습니다.");
         if (!["stopped", "failed"].includes(detail.task.state))
           throw new Error("중단·실패한 작업만 재개할 수 있습니다.");
         void execute(input.id, origin).catch((error) => {

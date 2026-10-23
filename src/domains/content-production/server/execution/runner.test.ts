@@ -12,7 +12,7 @@ import {
   stopProduction,
   recordReview,
 } from "./runner";
-import { createTaskProject } from "../projects";
+import { createTaskProject, deleteTaskProject } from "../projects";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import type { runCodex } from "./process";
 const direction = {
@@ -94,7 +94,24 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
     await execute(id, "http://127.0.0.1:3000", executor);
     assert.equal(calls, 2);
     assert.equal(store.get(id).task.state, "finished");
+    const projectId = store.get(id).task.project_id!;
+    store.db.prepare("INSERT INTO content_project_assets(project_id,asset_id,name,mime_type,byte_size,data) VALUES(?,?,?,?,?,?)")
+      .run(projectId, "delete-test", "image", "image/png", 1, Buffer.from([1]));
+    store.db.exec("CREATE TRIGGER fail_draft_removal BEFORE DELETE ON content_drafts BEGIN SELECT RAISE(ABORT, 'draft removal failed'); END;");
+    assert.throws(() => deleteTaskProject(store, id), /draft removal failed/);
+    assert.equal(contentJobRegistry.has(projectId), true, "failed deletion must restore the editor tab");
+    assert.ok(store.db.prepare("SELECT id FROM content_projects WHERE id=?").get(projectId));
+    assert.ok(store.db.prepare("SELECT asset_id FROM content_project_assets WHERE project_id=?").get(projectId));
+    store.db.exec("DROP TRIGGER fail_draft_removal");
+    deleteTaskProject(store, id);
+    assert.equal(contentJobRegistry.has(projectId), false);
+    assert.equal(store.db.prepare("SELECT id FROM content_projects WHERE id=?").get(projectId), undefined);
+    assert.equal(store.db.prepare("SELECT asset_id FROM content_project_assets WHERE project_id=?").get(projectId), undefined);
+    assert.equal(store.db.prepare("SELECT draft_id FROM content_analysis_drafts WHERE draft_id=?").get(id), undefined);
+    assert.equal(store.db.prepare("SELECT draft_id FROM content_production_drafts WHERE draft_id=?").get(id), undefined);
+    assert.throws(() => store.get(id), /취소/);
     const [canceled] = store.create(1);
+    assert.throws(() => deleteTaskProject(store, canceled), /완성된 포스트/);
     let unblock!: (value: Record<string, unknown>) => void;
     const execution = execute(
       canceled,

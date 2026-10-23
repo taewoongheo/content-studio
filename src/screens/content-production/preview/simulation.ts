@@ -102,11 +102,16 @@ export function mockAction(previous: Simulation, input: Record<string, unknown>)
   if (input.action === "settings") next.data.settings.model = String((input.settings as Row).model);
   else if (input.action === "stop" || input.action === "resume") {
     if (task) {
+      if (input.step && input.step !== task.current_step) return previous;
       task.state = input.action === "stop" ? "stopped" : "running";
       const context = task.current_step === "analysis" ? next.details[id].analysis : next.details[id].production;
       if (context) { context.state = task.state; delete context.error; }
     }
-  } else if (input.action === "remove") {
+  } else if (input.action === "remove" || input.action === "delete_post") {
+    if (input.action === "delete_post") {
+      if (task?.state !== "finished") return previous;
+      next.data.logs = next.data.logs.filter(log => log.project_id !== task.project_id);
+    }
     next.data.tasks = next.data.tasks.filter(task => task.id !== id);
     delete next.details[id]; delete next.progress[id];
   } else if (input.action === "edit_log") {

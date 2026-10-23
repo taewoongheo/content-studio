@@ -35,6 +35,8 @@ export function WorkflowCanvas({
   onOpen,
   onStop,
   stopDisabled,
+  onTaskAction,
+  busy,
 }: {
   startContent: ReactNode;
   tasks: WorkItem[];
@@ -47,6 +49,8 @@ export function WorkflowCanvas({
   onOpen: (id: string) => void;
   onStop: () => void;
   stopDisabled: boolean;
+  onTaskAction: (id: string, action: "stop" | "resume" | "delete_post", step?: ProductionStep) => void;
+  busy: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { nodes, edges } = useMemo(() => buildWorkflowGraph(tasks, details, writes, activity, syncing), [tasks, details, writes, activity, syncing]);
@@ -65,7 +69,21 @@ export function WorkflowCanvas({
     });
   }, []);
   // Controlled nodes must retain ResizeObserver measurements when their data changes.
-  const renderedNodes = nodes.map(node => ({ ...node, measured: measurements[node.id] })).map(node => node.type === "start" ? { ...node, data: { content: startContent } } : { ...node, selected: node.id === selectedNode });
+  const renderedNodes = nodes.map(node => {
+    const measured = measurements[node.id];
+    if (node.type === "start") return { ...node, measured, data: { content: startContent } };
+    const task = tasks.find(task => node.id.startsWith(`${task.id}:`));
+    const step = node.data.stage === "analysis" ? "analysis" : "production";
+    const current = task?.current_step === node.data.stage;
+    return { ...node, measured, selected: node.id === selectedNode, data: { ...node.data, controls: task ? {
+      busy,
+      canStop: current && ["running", "pending"].includes(task.state),
+      canResume: current && ["stopped", "failed"].includes(task.state),
+      onStop: () => onTaskAction(task.id, "stop", step),
+      onResume: () => onTaskAction(task.id, "resume", step),
+      onDelete: () => onTaskAction(task.id, "delete_post"),
+    } : undefined } };
+  });
   const click: NodeMouseHandler<WorkflowNode> = (_, node) => {
     if (node.id === "sync" || node.id === "start") return;
     const [id, step] = node.id.split(":");

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { History, Settings, ChevronDown, Folder, ListFilter } from "lucide-react";
+import { History, Settings, ChevronDown, Folder, ListFilter, Trash2 } from "lucide-react";
 import type { ProductionStep, WorkItem } from "@/domains/content-production/domain/contracts";
 import { StatusIcon } from "../workflow/status-icon";
 export function ProductionSidebar({ openDraftIds, tasks, model, busy, selectedId, selectedStep, onSelect, onSelectStep, onAction, onLibrary, onSettings }: {
@@ -22,10 +22,12 @@ export function ProductionSidebar({ openDraftIds, tasks, model, busy, selectedId
             return <button key={step} aria-pressed={selected} className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[11px] hover:bg-muted ${selected ? "bg-muted font-medium text-foreground" : "text-muted-foreground"}`} onClick={() => onSelectStep(task.id, step)}><StatusIcon state={state} size={14} />{step === "analysis" ? "분석 및 제작 방향" : "콘텐츠 제작"}</button>;
           })}
         </div>
-        <div className="mt-3 flex gap-3 px-2 pb-1 text-[11px]">
-          {["running", "pending"].includes(task.state) && <button disabled={busy} onClick={() => onAction({ action: "stop", id: task.id })}>중단</button>}
-          {["stopped", "failed"].includes(task.state) && <button disabled={busy} onClick={() => onAction({ action: "resume", id: task.id })}>재개</button>}
-          <button disabled={busy} className="text-muted-foreground" onClick={() => { if (window.confirm("모든 단계 draft를 제거할까요? 저장된 포스트는 유지됩니다.")) onAction({ action: "remove", id: task.id }); }}>취소·제거</button>
+        <div className="mt-1 flex justify-end px-1">
+          <button type="button" disabled={busy} aria-label="프로젝트 삭제" title="삭제" className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-destructive disabled:opacity-40" onClick={() => {
+            const finished = task.state === "finished" && !!task.project_id;
+            if (window.confirm(finished ? "포스트와 이미지, 제작 draft를 DB에서 삭제할까요? 되돌릴 수 없습니다." : "모든 단계 draft를 삭제할까요? 저장된 포스트는 유지됩니다."))
+              onAction({ action: finished ? "delete_post" : "remove", id: task.id });
+          }}><Trash2 size={16} /></button>
         </div>
       </article>)}
     </div>

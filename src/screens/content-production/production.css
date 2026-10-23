@@ -88,6 +88,26 @@
   border-top: 1px solid color-mix(in srgb, var(--instance-color) 16%, white);
 }
 .production-stage-action { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #64748b; }
+.production-node-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  min-width: 36px;
+  padding: 7px 12px;
+  border: 1px solid color-mix(in srgb, var(--instance-color) 45%, white);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--instance-color) 9%, var(--background));
+  color: var(--instance-color);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.production-node-button:hover { background: color-mix(in srgb, var(--instance-color) 16%, var(--background)); }
+.production-node-button.is-destructive { color: var(--destructive); border-color: color-mix(in srgb, var(--destructive) 35%, transparent); background: color-mix(in srgb, var(--destructive) 6%, var(--background)); }
+.production-node-button:disabled { opacity: 0.45; cursor: default; }
+.production-node-button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .production-save-indicator { display: inline-flex; padding: 4px; flex-shrink: 0; }
 .production-save-dot { display: block; width: 7px; height: 7px; border-radius: 50%; background: var(--instance-color); }
 .production-stage .react-flow__handle {
