@@ -45,7 +45,7 @@ content_visual_sets ── 여러 content_visual_slides</pre></div></section><se
 <p><code>(set_id, slide_index)</code>가 복합 PK다. 묶음과 전체 장을 한 트랜잭션으로 저장한다. 자체 프로젝트의 현재 모습은 기존 미리보기를 쓰며 이 테이블에 복사하지 않는다.</p></div></section><section id="rules"><h2 class="schema-title">저장·조회 규칙</h2><div class="body"><ul class="clean-list">
 <li>작업 전체 draft와 로그는 1:1이다. 분석·제작 draft는 작업별로 각 한 행이며, 단계별 진행 내용은 해당 테이블에만 저장한다. 로그는 확정한 판단과 결과다.</li>
 <li>시각은 UTC ISO로 저장하고, 최근 게시물 갱신 날짜는 한국 시간으로 판단한다.</li>
-<li>프로젝트 삭제 시 로그·레퍼런스 연결은 NULL로 바꾸고, 로그와 게시 당시 이미지 보존본은 남긴다.</li>
+<li>프로젝트 삭제 시 로그·레퍼런스 연결은 NULL로 바꾼다. 내용이 있는 로그와 게시 당시 이미지 보존본은 남긴다. 프로젝트와 draft가 없고 분석·방향·내용·게시 정보가 모두 빈 로그는 제거한다.</li>
 <li>로그의 생성·실제 게시 시각과 draft의 실행 상태를 조회할 인덱스를 둔다. 표준 URL로 중복 연결을 막는다.</li>
 <li>성과 갱신은 성과 컬럼과 관측 시각만 변경한다. 기존 분석·기대·제작 방향을 바꾸지 않는다.</li>
 <li>저장·조회·상태 전환은 앱 API로 제공한다. 에이전트가 SQLite에 직접 쓰지 않는다.</li>

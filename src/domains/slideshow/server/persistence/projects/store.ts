@@ -1,7 +1,6 @@
 import type Database from "better-sqlite3";
 import { SlideshowMetadataError } from "@/domains/slideshow/domain/errors";
 import { contentMetadataSchema, type ContentMetadata } from "@/domains/slideshow/projects/metadata";
-import { ContentTemplateStore } from "@/domains/slideshow/server/persistence/templates/store";
 import { saveAssets, readAssets, readAsset, type SavedSlideshowAsset } from "../assets";
 
 import type { SavedProjectSummary } from "@/domains/slideshow/domain/projects";
@@ -18,19 +17,14 @@ type ProjectRow = {
   aspect_ratio: string;
   slide_count: number;
   output_language: string;
-  source_template_id: string | null;
-  source_template_name: string | null;
   topic: string;
   message: string;
-  published_at: string | null;
   document_json: string;
   created_at: string;
   updated_at: string;
 };
 
-const SUMMARY_COLUMNS = `id, name, aspect_ratio, slide_count, output_language, topic, message, published_at, created_at, updated_at,
-  template_id AS source_template_id,
-  (SELECT name FROM content_templates WHERE id = content_projects.template_id) AS source_template_name`;
+const SUMMARY_COLUMNS = `id, name, aspect_ratio, slide_count, output_language, topic, message, created_at, updated_at`;
 const PROJECT_COLUMNS = `${SUMMARY_COLUMNS}, document_json`;
 
 function summary(row: ProjectRow): SavedProjectSummary {
@@ -40,11 +34,8 @@ function summary(row: ProjectRow): SavedProjectSummary {
     aspectRatio: row.aspect_ratio,
     slideCount: row.slide_count,
     outputLanguage: row.output_language,
-    sourceTemplateId: row.source_template_id,
-    sourceTemplateName: row.source_template_name,
     topic: row.topic,
     message: row.message,
-    publishedAt: row.published_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -58,43 +49,10 @@ export class ContentProjectStore {
     return this.database.transaction(() => {
       const project = this.getSummary(id);
       if (!project) throw new SlideshowMetadataError("PROJECT_NOT_FOUND");
-      if (metadata.templateId !== undefined) {
-        if (metadata.templateId !== null && !new ContentTemplateStore(this.database).get(metadata.templateId))
-          throw new SlideshowMetadataError("INVALID_METADATA", "존재하는 부모 템플릿을 선택해 주세요.");
-        this.database.prepare("UPDATE content_projects SET template_id = ? WHERE id = ?").run(metadata.templateId, id);
-      }
       this.database.prepare("UPDATE content_projects SET topic = ?, message = ?, updated_at = ? WHERE id = ?")
         .run(metadata.topic, metadata.message, new Date().toISOString(), id);
       return this.getSummary(id)!;
     })();
-  }
-
-  setCloneSource(id: string, sourceId: string) {
-    const template = new ContentTemplateStore(this.database).get(sourceId);
-    if (id === sourceId || !template)
-      throw new SlideshowMetadataError("INVALID_METADATA", "존재하는 템플릿을 선택해 주세요.");
-    this.database.prepare("UPDATE content_projects SET template_id = ? WHERE id = ?").run(sourceId, id);
-  }
-
-  publish(id: string) {
-    const project = this.getSummary(id);
-    if (!project) throw new SlideshowMetadataError("PROJECT_NOT_FOUND");
-    if (project.publishedAt) return project;
-    if (!project.topic.trim() || !project.message.trim())
-      throw new SlideshowMetadataError("INVALID_METADATA", "게시 전에 주제와 메시지를 입력해 주세요.");
-    this.database.prepare("UPDATE content_projects SET published_at = ? WHERE id = ? AND published_at IS NULL")
-      .run(new Date().toISOString(), id);
-    return this.getSummary(id)!;
-  }
-
-  unpublish(id: string) {
-    if (!this.getSummary(id)) throw new SlideshowMetadataError("PROJECT_NOT_FOUND");
-    this.database.prepare("UPDATE content_projects SET published_at = NULL WHERE id = ?").run(id);
-  }
-
-  listPublished() {
-    return (this.database.prepare(`SELECT ${SUMMARY_COLUMNS} FROM content_projects
-      WHERE published_at IS NOT NULL ORDER BY published_at DESC, id DESC`).all() as ProjectRow[]).map(summary);
   }
 
   save(input: {
@@ -126,13 +84,13 @@ export class ContentProjectStore {
           document_json = excluded.document_json,
           updated_at = excluded.updated_at
       `).run(input.id, name, input.aspectRatio, input.slideCount, input.outputLanguage, document, now, now);
-      saveAssets(this.database, "project", input.id, input.assets);
+      saveAssets(this.database, input.id, input.assets);
     })();
     return this.getSummary(input.id)!;
   }
 
   getAsset(projectId: string, assetId: string) {
-    return readAsset(this.database, "project", projectId, assetId);
+    return readAsset(this.database, projectId, assetId);
   }
 
   getContent(id: string) {
@@ -171,7 +129,7 @@ export class ContentProjectStore {
     return {
       ...summary(row),
       document: JSON.parse(row.document_json) as unknown,
-      assets: readAssets(this.database, "project", id),
+      assets: readAssets(this.database, id),
     };
   }
 }

@@ -265,8 +265,11 @@ export class ProductionStore {
     publishChange({ task_id: id, step: "production", kind: "saved" });
   }
   remove(id: string) {
-    this.get(id);
-    this.db.prepare("DELETE FROM content_drafts WHERE id=?").run(id);
+    const detail = this.get(id);
+    this.db.transaction(() => {
+      this.db.prepare("DELETE FROM content_drafts WHERE id=?").run(id);
+      this.db.prepare("DELETE FROM content_creation_logs WHERE id=? AND project_id IS NULL AND analysis IS NULL AND topic IS NULL AND content_summary_json IS NULL AND post_url IS NULL").run(detail.task.log_id);
+    })();
     publishChange({ task_id: id, kind: "removed" });
   }
   recover() {

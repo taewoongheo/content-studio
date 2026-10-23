@@ -1,5 +1,4 @@
 import { usedImageAssetIds } from "../editor/inspection/used-assets";
-import { documentStore, savedDocument } from "./persistence/document-store";
 import { ensureSharedBackground, validateEditorDocument } from "@/domains/slideshow/editor/document";
 import type { EditorDocument } from "@/domains/slideshow/editor/types";
 import { ContentJobError, type ContentJobRegistry } from "@/domains/slideshow/workflow/registry";
@@ -60,7 +59,7 @@ export function saveContentProject(
   const errors = validateEditorDocument(document);
   if (errors.length > 0)
     throw new ContentJobError("INVALID_OUTPUT", `편집 문서를 저장할 수 없습니다: ${errors[0]}`);
-  const saved = documentStore(stores, jobId).save({
+  const saved = stores.projects.save({
     id: record.id,
     name,
     aspectRatio: document.aspectRatio,
@@ -85,7 +84,7 @@ export function loadContentProject(
   stores = defaultProjectStores(),
 ) {
   if (registry.has(projectId)) return registry.get(projectId);
-  const project = savedDocument(stores, projectId);
+  const project = stores.projects.get(projectId);
   if (!project)
     throw new ContentJobError("JOB_NOT_FOUND", "저장된 프로젝트를 찾을 수 없습니다.");
   const document = parseDocument(project.document);
@@ -138,7 +137,7 @@ export function createContentProject(
 
 function readCloneSource(registry: ContentJobRegistry, projectId: string, stores: ReturnType<typeof defaultProjectStores>) {
   if (registry.has(projectId)) return registry.getRecord(projectId);
-  const saved = savedDocument(stores, projectId);
+  const saved = stores.projects.get(projectId);
   if (!saved) throw new ContentJobError("JOB_NOT_FOUND", "저장된 프로젝트를 찾을 수 없습니다.");
   const document = parseDocument(saved.document);
   return { name: saved.name, structure: document.structure, aspectRatio: document.aspectRatio,

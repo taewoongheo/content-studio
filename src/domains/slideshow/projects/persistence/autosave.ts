@@ -1,4 +1,3 @@
-import { documentStore } from "./document-store";
 import type { ContentJobSnapshot } from "@/domains/slideshow/domain/types";
 import type { ContentJobRegistry } from "@/domains/slideshow/workflow/registry";
 import { getLocalDatabase } from "@/lib/local-db/database";
@@ -24,7 +23,7 @@ export class ProjectAutosave {
         const stores = this.stores();
         const current = this.registry.getRecord(job.id);
         if (!hasUnsavedChanges(current, stores)) {
-          if (documentStore(stores, job.id).getSummary(job.id)) this.registry.update(job.id, record => {
+          if (stores.projects.getSummary(job.id)) this.registry.update(job.id, record => {
             record.savedRevision = record.editor.revision;
             delete record.saveError;
           });

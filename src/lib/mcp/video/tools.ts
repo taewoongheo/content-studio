@@ -26,7 +26,7 @@ export function registerVideoTools(server: McpServer, origin: string) {
     inputSchema: z.strictObject({}), annotations: annotations(true),
   }, () => guarded(() => json({ saved: videoStore().list(), open: videoTabs().map(tab => summary(readVideo(tab.projectId))) })));
   registerTool(server, "create_video_project", {
-    description: "Create an independent video editor tab without switching the browser. Default 1080x1920, 30fps, white, 5 seconds. Optional settings are document pixels and frames. Unlike slideshow template cloning, blank video creation is supported. Empty drafts are not persisted until first edit. Read the returned tabId/revision for editing.",
+    description: "Create an independent video editor tab without switching the browser. Default 1080x1920, 30fps, white, 5 seconds. Optional settings are document pixels and frames. Empty drafts are not persisted until first edit. Read the returned tabId/revision for editing.",
     inputSchema: z.strictObject({ requestId: requestIdSchema, name: z.string().trim().min(1).max(120).optional(), settings: settingsSchema.optional() }), annotations: annotations(false), deduplicate: true,
   }, ({ name, settings }) => guarded(() => {
     // Validate before creating an observable tab.

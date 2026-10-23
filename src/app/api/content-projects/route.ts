@@ -1,4 +1,3 @@
-import { documentStore } from "@/domains/slideshow/projects/persistence/document-store";
 import { contentJobErrorResponse } from "@/domains/slideshow/http/http";
 import { hasUnsavedChanges } from "@/domains/slideshow/projects/lifecycle/management";
 import { saveContentProject } from "@/domains/slideshow/projects/service";
@@ -32,7 +31,7 @@ export async function POST(request: Request) {
     if (onlyIfChanged === true) {
       const stores = { projects: new ContentProjectStore(getLocalDatabase()) };
       if (!hasUnsavedChanges(contentJobRegistry.getRecord(jobId), stores)) {
-        const saved = documentStore(stores, jobId).getSummary(jobId);
+        const saved = stores.projects.getSummary(jobId);
         if (saved) contentJobRegistry.update(jobId, job => {
           job.savedRevision = job.editor.revision;
           delete job.saveError;

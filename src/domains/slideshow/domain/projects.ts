@@ -9,11 +9,4 @@ export type SlideshowSummary = {
   createdAt: string;
   updatedAt: string;
 };
-export type SavedProjectSummary = SlideshowSummary & {
-  sourceTemplateId: string | null;
-  sourceTemplateName: string | null;
-  publishedAt: string | null;
-};
-export type SavedTemplateSummary = SlideshowSummary & {
-  composition: string;
-};
+export type SavedProjectSummary = SlideshowSummary;

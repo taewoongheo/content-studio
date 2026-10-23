@@ -1,4 +1,3 @@
-import { documentStore } from "@/domains/slideshow/projects/persistence/document-store";
 import { defaultProjectStores } from "@/domains/slideshow/projects/service";
 import { isLocalRequest } from "@/lib/http/local-request";
 import { contentJobErrorResponse } from "@/domains/slideshow/http/http";
@@ -10,7 +9,7 @@ export async function GET(request: Request, context: { params: Promise<{ project
   if (!isLocalRequest(request)) return new Response(null, { status: 403 });
   try {
     const { projectId, assetId } = await context.params;
-    const source = documentStore(defaultProjectStores(), projectId).getAsset(projectId, assetId);
+    const source = defaultProjectStores().projects.getAsset(projectId, assetId);
     if (!source) return new Response(null, { status: 404 });
     const size = imageRenderSize(new URL(request.url).searchParams);
     const { bytes, type } = size ? await cachedRenderImage(source, size) : source;

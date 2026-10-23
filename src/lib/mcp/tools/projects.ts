@@ -1,6 +1,3 @@
-import { ContentTemplateStore } from "@/domains/slideshow/server/persistence/templates/store";
-import { registerTemplateTools } from "./templates";
-import { documentStore } from "@/domains/slideshow/projects/persistence/document-store";
 import { requestIdSchema } from "../protocol/requests";
 import { OperationError } from "@/lib/errors/operation";
 import { registerTool } from "../protocol/tools";
@@ -25,7 +22,6 @@ import { notifyProjectsChanged } from "@/domains/workspace/server/project-events
 import { json, guarded, annotations } from "../protocol/result";
 
 export function registerProjectTools(server: McpServer, origin: string) {
-  registerTemplateTools(server);
   registerTool(server, "create_project", {
     description: "Create and save a slideshow without a template. Topic/message must come from user or production planning. Follow docs/content-guidelines.md, reference actual past post images and review all slides. Returns the open editor identity.",
     inputSchema: z.object({name:z.string().min(1).max(120),topic:z.string().min(1),message:z.string().min(1),slideCount:z.number().int().min(1).max(20).default(6),requestId:requestIdSchema}), annotations:annotations(false),deduplicate:true,
@@ -35,31 +31,28 @@ export function registerProjectTools(server: McpServer, origin: string) {
   }));
   const describe = (id: string) => {
     const job = contentJobRegistry.get(id);
-    return { ...job, project: documentStore(defaultProjectStores(), id).getSummary(id), url: `${origin}/?job=${encodeURIComponent(id)}` };
+    return { ...job, project: defaultProjectStores().projects.getSummary(id), url: `${origin}/?job=${encodeURIComponent(id)}` };
   };
   registerTool(server, "list_projects", {
     description: "Find saved projects and active drafts. Match user-provided names or URL ?job IDs. Active drafts take precedence over saved versions of the same ID; do not guess between ambiguous matches.",
     inputSchema: z.strictObject({}), annotations: annotations(true),
   }, () => guarded(() => {
     const stores = defaultProjectStores();
-    const templateIds = new Set(new ContentTemplateStore(stores.projects.database).list().map(template => template.id));
     const saved = stores.projects.list();
     const entries = new Map(saved.map((project) => [project.id, { ...project, state: "saved", url: `${origin}/?job=${encodeURIComponent(project.id)}` }]));
     for (const job of contentJobRegistry.list()) {
-      if (templateIds.has(job.id)) continue;
       entries.set(job.id, { id: job.id, name: job.name ?? entries.get(job.id)?.name ?? "새 프로젝트",
         aspectRatio: job.aspectRatio, slideCount: job.slideCount, outputLanguage: job.outputLanguage,
-        sourceTemplateId: entries.get(job.id)?.sourceTemplateId ?? null, sourceTemplateName: entries.get(job.id)?.sourceTemplateName ?? null,
-        topic: entries.get(job.id)?.topic ?? "", message: entries.get(job.id)?.message ?? "", publishedAt: entries.get(job.id)?.publishedAt ?? null,
+        topic: entries.get(job.id)?.topic ?? "", message: entries.get(job.id)?.message ?? "",
         createdAt: job.createdAt, updatedAt: job.updatedAt, state: job.savedRevision === job.editor.revision ? "saved" : "draft", url: `${origin}/?job=${encodeURIComponent(job.id)}` });
     }
     return json({ projects: [...entries.values()] });
   }));
   registerTool(server, "set_content_metadata", {
-    description: "Save this specific content's topic and concrete message (what the reader should learn or do). These describe the current post, unlike composition which describes a reusable communication purpose and visual structure. Required before publication; update when research changes the message. Optional templateId changes or clears the parent of ordinary content; Parent changes affect current history classification, not slides. Does not save active slide edits or mark the project published.",
+    description: "Save the current post topic and concrete message. Does not save active slide edits or register a publication.",
     inputSchema: setContentMetadataSchema, annotations: annotations(false),
-  }, ({ projectId, topic, message, templateId }) => guarded(() => {
-    const project = defaultProjectStores().projects.updateMetadata(projectId, { topic, message, templateId });
+  }, ({ projectId, topic, message }) => guarded(() => {
+    const project = defaultProjectStores().projects.updateMetadata(projectId, { topic, message });
     notifyProjectsChanged();
     return json({ project });
   }));
@@ -71,7 +64,7 @@ export function registerProjectTools(server: McpServer, origin: string) {
     return json(describe(projectId));
   }));
   registerTool(server, "clone_project", {
-    description: "Create and save a new project by copying an independent template and its assets. Record its template link for history classification. Choose a template for the visual expression of an already established topic/message; pass topic and message together for this specific content. templateId is required and must come from list_template_guides. Preserves the source. No blank creation or cloning unregistered projects. New projects are not registered as templates.",
+    description: "Duplicate an existing slideshow and its assets into an independent project. Preserve the source; optionally supply topic and message together. This is manual duplication, not automatic content planning.",
     inputSchema: cloneSchema, annotations: annotations(false), deduplicate: true,
   }, (input) => guarded(() => {
     const job = new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase()).clone(input);
@@ -81,7 +74,7 @@ export function registerProjectTools(server: McpServer, origin: string) {
     description: "Read active slideshow state. Default returns the complete document. Use outline=true for content/IDs without styles, slideIds/elementIds for focused reads, includeAssets=false to omit image metadata. Filtered document responses have partial=true and retain the current tabId/revision. Unknown IDs are errors. Open saved projects first. Frame coordinates are normalized to slide size; fontSize is pixels. Element definitions are shared, placements contain per-slide values and overrides.",
     inputSchema: readProjectSchema, annotations: annotations(true),
   }, ({ projectId, ...options }) => guarded(() => json({ ...inspectSlideshow(contentJobRegistry.get(projectId), options),
-    project: documentStore(defaultProjectStores(), projectId).getSummary(projectId), url: `${origin}/?job=${encodeURIComponent(projectId)}` })));
+    project: defaultProjectStores().projects.getSummary(projectId), url: `${origin}/?job=${encodeURIComponent(projectId)}` })));
   registerTool(server, "edit_project", {
     description: "Apply an ordered command batch atomically as one undo step and save it to the database before returning success. includeDocument defaults true for compatibility; set false for a compact revision and resulting ID summary when the edited content is already known. Use expectedTabId and expectedRevision from read/edit/undo; on conflict re-read. update_visual common changes the shared definition AND clears matching local overrides on all placements; local changes only the specified slide placement. style.rotation is clockwise degrees (-360 to 360) around the element center; omission means 0. Set it in add_element or update_visual (common/local); read, undo, save, preview and export preserve it. Rectangle/circle/triangle/text/image are elements: add_element then place_element. set_local_image loads a PNG/JPG/WebP absolute localPath (max 10MB) into an existing image placement, including one created earlier in this batch. set_text_colors replaces a text placement’s color ranges (start/end are UTF-16 offsets, end exclusive, grapheme boundaries, sorted and non-overlapping; [] clears colors). set_text_weights replaces textWeights ranges (start/end UTF-16 offsets with the same boundary rules; fontWeight integer 100–900, resolved to supported font weights; [] clears). Color and weight ranges are independent and may overlap each other. set_slot_value optionally accepts textColors and textWeights for an atomic text/style replacement; omitted existing ranges adjust to the text edit. Non-background placements render back-to-front; the background sentinel must be last in reorder_layers. No separate image-upload tool is needed. Batch related commands in one call. The final document is inspected once after the batch; warnings are advisory. set_slide_role changes hook/body/cta metadata without changing the page appearance. remove_element deletes an unused non-background definition and rejects definitions still used by placements. Use rebind_element to connect an existing placement to a same-kind Element while preserving its content and resolved appearance.",
     inputSchema: editSchema, annotations: annotations(false),

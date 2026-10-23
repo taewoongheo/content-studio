@@ -20,7 +20,7 @@ export const previewSchema = projectSchema.extend({ slideId: z.string().min(1) }
 export const cloneSchema = z.strictObject({
   requestId: requestIdSchema,
   name: z.string().trim().min(1).max(120).optional(),
-  templateId: z.string().min(1),
+  projectId: z.string().min(1),
   topic: contentMetadataSchema.shape.topic.optional(),
   message: contentMetadataSchema.shape.message.optional(),
 }).refine(input => (input.topic === undefined) === (input.message === undefined), { message: "주제와 메시지를 함께 입력해 주세요." });

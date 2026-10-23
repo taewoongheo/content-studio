@@ -1,4 +1,3 @@
-import { ContentTemplateStore } from "./persistence/templates/store";
 import { inspectSharedElements } from "../editor/inspection/shared-elements";
 import type Database from "better-sqlite3";
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
@@ -45,7 +44,7 @@ export class SlideshowProjectWrites {
     );
   }
   clone(input: {
-    templateId: string;
+    projectId: string;
     name?: string;
     topic?: string;
     message?: string;
@@ -54,16 +53,9 @@ export class SlideshowProjectWrites {
       throw new Error("주제와 메시지를 함께 입력해 주세요.");
     return this.commit(
       () => {
-        const template = new ContentTemplateStore(this.database).get(
-          input.templateId,
-        );
-        if (!template || !template.composition.trim())
-          throw new Error(
-            "구성이 작성된 등록된 템플릿 프로젝트를 선택해 주세요.",
-          );
         const created = createContentProject(
           this.registry,
-          { sourceProjectId: template.id, name: input.name },
+          { sourceProjectId: input.projectId, name: input.name },
           this.stores,
         );
         return this.registry.update(created.id, (job) => {
@@ -71,7 +63,6 @@ export class SlideshowProjectWrites {
         });
       },
       (changed) => {
-        this.stores.projects.setCloneSource(changed.id, input.templateId);
         if (input.topic !== undefined && input.message !== undefined)
           this.stores.projects.updateMetadata(changed.id, {
             topic: input.topic,

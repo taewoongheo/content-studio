@@ -4,7 +4,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { defaultDatabasePath, openLocalDatabase } from "./database";
+import { SCHEMA_VERSION, defaultDatabasePath, openLocalDatabase } from "./database";
+import { listPublishedPosts } from "@/domains/content-production/server/publication/list";
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 
 test("DB 경로는 실행 폴더가 바뀌어도 고정되며 상대 경로 설정은 거부한다", () => {
@@ -24,7 +25,7 @@ test("DB 경로는 실행 폴더가 바뀌어도 고정되며 상대 경로 설�
   }
 });
 
-test("DB를 다시 열어도 프로젝트의 게시 시각이 유지되고 영상 테이블과 함께 유지된다", () => {
+test("DB 재연결 후 URL 기반 게시 기록과 현재 테이블 구조가 유지된다", () => {
   const directory = mkdtempSync(join(tmpdir(), "content-studio-db-test-"));
   const path = join(directory, "studio.sqlite");
   try {
@@ -32,12 +33,13 @@ test("DB를 다시 열어도 프로젝트의 게시 시각이 유지되고 영�
     const store = new ContentProjectStore(database);
     store.save({ id: "post", name: "게시물", aspectRatio: "4:5", slideCount: 1, outputLanguage: "English", document: {}, assets: [] });
     store.updateMetadata("post", { topic: "등 운동", message: "허리 부담을 줄이는 운동 선택 기준" });
-    const publishedAt = store.publish("post").publishedAt;
-    assert.equal(store.publish("post").publishedAt, publishedAt, "재클릭은 게시 시각을 바꾸지 않는다");
+    const publishedAt = "2026-10-23T00:00:00Z";
+    database.prepare(`INSERT INTO content_creation_logs(id,project_id,post_url,actual_published_at,created_at,updated_at)
+      VALUES('log','post','https://www.tiktok.com/@a/photo/123',?,?,?)`).run(publishedAt,publishedAt,publishedAt);
     database.close();
     const reopened = openLocalDatabase(path);
-    assert.equal(new ContentProjectStore(reopened).listPublished()[0].publishedAt, publishedAt);
-    assert.deepEqual((reopened.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all() as Array<{name:string}>).map(row => row.name), ["content_analysis_drafts", "content_creation_logs", "content_drafts", "content_production_drafts", "content_project_assets", "content_projects", "content_references", "content_template_assets", "content_templates", "content_visual_sets", "content_visual_slides", "video_project_assets", "video_projects"]);
+    assert.equal(listPublishedPosts(reopened)[0].publishedAt, publishedAt);
+    assert.deepEqual((reopened.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all() as Array<{name:string}>).map(row => row.name), ["content_analysis_drafts", "content_creation_logs", "content_drafts", "content_production_drafts", "content_project_assets", "content_projects", "content_references", "content_visual_sets", "content_visual_slides", "video_project_assets", "video_projects"]);
     reopened.close();
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
@@ -69,20 +71,16 @@ test("지원하지 않는 프로젝트 스키마는 데이터와 버전을 변�
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
-test("구형 템플릿 순서 스키마는 자동 변환 없이 거부한다", () => {
-  const directory = mkdtempSync(join(tmpdir(), "studio-template-order-db-"));
+test("이전 버전 DB는 자동 변환 없이 거부한다", () => {
+  const directory = mkdtempSync(join(tmpdir(), "studio-old-db-"));
   const path = join(directory, "legacy.sqlite");
   try {
-    const legacy = openLocalDatabase(path);
-    legacy.exec("ALTER TABLE content_templates ADD COLUMN loop_order INTEGER");
-    legacy.pragma("user_version = 12");
-    const schema = legacy.prepare("SELECT name, sql FROM sqlite_master ORDER BY name").all();
-    legacy.close();
-    assert.throws(() => openLocalDatabase(path), /템플릿 순서 컬럼 제거/);
+    const db = openLocalDatabase(path);
+    db.pragma(`user_version = ${SCHEMA_VERSION - 1}`);
+    db.close();
+    assert.throws(() => openLocalDatabase(path), /지원하지 않는 프로젝트 DB 스키마/);
     const unchanged = new Database(path);
-    try {
-      assert.equal(unchanged.pragma("user_version", { simple: true }), 12);
-      assert.deepEqual(unchanged.prepare("SELECT name, sql FROM sqlite_master ORDER BY name").all(), schema);
-    } finally { unchanged.close(); }
+    assert.equal(unchanged.pragma("user_version", { simple: true }), SCHEMA_VERSION - 1);
+    unchanged.close();
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });

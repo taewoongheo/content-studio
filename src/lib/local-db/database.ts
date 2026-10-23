@@ -4,9 +4,8 @@ import Database from "better-sqlite3";
 import { mkdirSync } from "node:fs";
 import { dirname, isAbsolute } from "node:path";
 import { PROJECT_SCHEMA } from "@/domains/slideshow/server/persistence/projects/schema";
-import { TEMPLATE_SCHEMA } from "@/domains/slideshow/server/persistence/templates/schema";
 
-export const SCHEMA_VERSION = 14;
+export const SCHEMA_VERSION = 15;
 
 export function defaultDatabasePath() {
   const override = process.env.CONTENT_STUDIO_DB_PATH;
@@ -26,20 +25,11 @@ export function openLocalDatabase(path = defaultDatabasePath()) {
     if (version > SCHEMA_VERSION)
       throw new Error(`지원하지 않는 Content Studio DB 버전입니다: ${version}`);
     const projectColumns = database.prepare("PRAGMA table_info(content_projects)").all() as Array<{ name: string }>;
-    const missingColumns = ["template_id", "topic", "message", "published_at"].filter(name => !projectColumns.some(column => column.name === name));
-    const hasTemplateColor = (database.prepare("PRAGMA table_info(content_templates)").all() as Array<{ name: string }>).some(column => column.name === "color");
-    if (projectColumns.length && (missingColumns.length || hasTemplateColor))
-      throw new Error(`지원하지 않는 프로젝트 DB 스키마입니다 (${missingColumns.join(", ")} 누락). 자동 마이그레이션은 제공하지 않습니다. 서버를 종료하고 로컬 DB를 확인해 주세요.`);
-    const templateColumns = database.prepare("PRAGMA table_info(content_templates)").all() as Array<{ name: string }>;
-    if (templateColumns.length && !templateColumns.some(column => column.name === "document_json"))
-      throw new Error("독립 템플릿 DB 전환이 필요합니다. 서버를 종료하고 로컬 DB를 변환해 주세요.");
-    if (templateColumns.some(column => column.name === "loop_order"))
-      throw new Error("템플릿 순서 컬럼 제거가 필요합니다. 서버를 종료하고 로컬 DB를 변환해 주세요.");
-    if (projectColumns.length && version < 14)
-      throw new Error("콘텐츠 생산 DB 전환이 필요합니다. 서버를 종료하고 백업 후 일회성 변환을 실행해 주세요.");
+    const missingColumns = ["topic", "message", "document_json"].filter(name => !projectColumns.some(column => column.name === name));
+    if (projectColumns.length && (version !== SCHEMA_VERSION || missingColumns.length))
+      throw new Error("지원하지 않는 프로젝트 DB 스키마입니다. 서버를 종료하고 DB를 확인해 주세요. 자동 변환은 제공하지 않습니다.");
     database.pragma("journal_mode = WAL");
     database.transaction(() => {
-      database.exec(TEMPLATE_SCHEMA);
       database.exec(PROJECT_SCHEMA);
       database.exec(VIDEO_SCHEMA);
       database.exec(PRODUCTION_SCHEMA);

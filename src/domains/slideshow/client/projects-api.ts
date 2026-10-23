@@ -38,15 +38,11 @@ export function deleteProject(id: string, expectedTabId?: string) {
   return projectMutation(id, "DELETE", { expectedTabId });
 }
 
-export async function updateProjectMetadata(id: string, input: { topic: string; message: string; templateId?: string | null }) {
+export async function updateProjectMetadata(id: string, input: { topic: string; message: string }) {
   const response = await fetch(`/api/content-projects/${encodeURIComponent(id)}/metadata`, {
     method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
   });
   return readJson<SavedProjectSummary>(response);
-}
-
-export async function publishProject(id: string) {
-  return readJson<SavedProjectSummary>(await fetch(`/api/content-projects/${encodeURIComponent(id)}/publication`, { method: "POST" }));
 }
 
 export async function readSavedDocument(projectId: string) {

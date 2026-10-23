@@ -115,3 +115,22 @@ test("게시 전 draft는 완료 상태라도 새 제작을 막고 게시 연결
     assert.equal(store.hasOpenDrafts(), false);
   } finally { db.close(); }
 });
+
+
+test("빈 작업 제거는 빈 로그도 지우고 기존 프로젝트·이미지는 보존한다", () => {
+  const db = openLocalDatabase(":memory:"), store = new ProductionStore(db);
+  try {
+    db.prepare(`INSERT INTO content_projects(id,name,aspect_ratio,slide_count,output_language,document_json,created_at,updated_at)
+      VALUES('existing','Existing','4:5',1,'English','{}','now','now')`).run();
+    const image = Buffer.from("existing image");
+    db.prepare(`INSERT INTO content_project_assets(project_id,asset_id,name,mime_type,byte_size,data)
+      VALUES('existing','image','Image','image/png',?,?)`).run(image.length,image);
+    const [id] = store.create(1), logId = store.get(id).task.log_id;
+    store.remove(id);
+    assert.equal(db.prepare("SELECT id FROM content_creation_logs WHERE id=?").get(logId),undefined);
+    assert.equal(db.prepare("SELECT id FROM content_drafts WHERE id=?").get(id),undefined);
+    assert.ok(db.prepare("SELECT id FROM content_projects WHERE id='existing'").get());
+    assert.deepEqual((db.prepare("SELECT data FROM content_project_assets WHERE project_id='existing'").get() as {data:Buffer}).data,image);
+    assert.deepEqual(db.pragma("foreign_key_check"),[]);
+  } finally {db.close();}
+});

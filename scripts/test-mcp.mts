@@ -12,7 +12,6 @@ import sharp from "sharp";
 import JSZip from "jszip";
 import type { ContentJobSnapshot } from "@/domains/slideshow/domain/types";
 
-const routineGuide = "도입 후 그룹별로 여러 선택지를 함께 보여주고 하나를 선택하도록 안내한다.";
 
 type Project = ContentJobSnapshot & { url: string };
 const directory = await mkdtemp(join(tmpdir(), "studio-mcp-smoke-"));
@@ -78,27 +77,13 @@ try {
     assert.equal(saved.status, 201);
     return (await call("read_project", { projectId: job.id })).structuredContent as Project;
   }
-  const templateIds = new Map<string, string>();
-  async function registerTemplate(projectId: string) {
-    const source = (await call("read_project", { projectId })).structuredContent as Project;
-    const saved = await fetch(`${origin}/api/content-projects`, { method: "POST", headers: { origin, "content-type": "application/json" },
-      body: JSON.stringify({ jobId: projectId, name: source.name ?? "Template", expectedTabId: source.tabId }) });
-    assert.equal(saved.status, 201);
-    const result = await call("register_template", { projectId, slideIds: source.editor.document.slides.map(slide => slide.id),
-      templateName: source.name ?? "Template", templateTopic: "Exercise guide", templateMessage: "Compare exercise options", composition: routineGuide });
-    const templateId = (result.structuredContent as { template: { id: string } }).template.id;
-    assert.notEqual(templateId, projectId);
-    templateIds.set(projectId, templateId);
-    return templateId;
-  }
-  async function cloneTemplate(projectId: string, name: string) {
-    const templateId = await registerTemplate(projectId);
-    return (await call("clone_project", { templateId, name })).structuredContent as Project;
+  async function duplicateProject(projectId: string, name: string) {
+    return (await call("clone_project", { projectId, name })).structuredContent as Project;
   }
   const tools = (await client.listTools()).tools.map((tool) => tool.name);
   assert.deepEqual([...tools].sort(), [
     "create_project", "production_query", "production_search", "production_capture_reference", "production_read_images",
-    "list_projects", "set_content_metadata", "list_template_guides", "set_reuse_guide", "register_template", "unregister_template", "open_project", "clone_project", "read_project",
+    "list_projects", "set_content_metadata", "open_project", "clone_project", "read_project",
     "edit_project", "undo_project", "preview_slide", "preview_slides", "export_slideshow", "rename_project", "get_render_job", "cancel_render_job",
     "list_video_projects", "create_video_project", "open_video_project", "read_video_project", "edit_video_project", "undo_video_project", "redo_video_project", "rename_video_project", "clone_video_project", "preview_video", "export_video", "start_video_export", "close_video_project", "delete_video_project",
     "search_social_candidates", "get_research_accounts", "list_account_posts", "read_social_post", "read_post_images", "get_collection_job",
@@ -114,10 +99,6 @@ try {
   }).then((response) => response.json()) as ContentJobSnapshot;
   const readUiJob = (await call("read_project", { projectId: uiJob.id })).structuredContent as Project;
   assert.equal(readUiJob.id, uiJob.id);
-  const emptyGuides = await call("list_template_guides", {});
-  assert.deepEqual(emptyGuides.structuredContent, { templates: [] });
-  const blocked = CallToolResultSchema.parse(await client.callTool({ name: "clone_project", arguments: { templateId: uiJob.id } }));
-  assert.equal(blocked.isError, true);
   const created = await seedProject("MCP smoke");
   const id = created.id;
   const api = await fetch(`${origin}/api/content-jobs/${id}`).then((response) => response.json()) as ContentJobSnapshot;
@@ -203,7 +184,7 @@ try {
     assert.deepEqual(await archive.file("slide-01.png")!.async("nodebuffer"), bytes, "ZIP uses the same full-resolution preview renderer");
     console.log("PASS slideshow batch/cache preview and asynchronous full-resolution PNG ZIP export");
 
-    const cloned = await cloneTemplate(id, "Clone");
+    const cloned = await duplicateProject(id, "Clone");
     assert.notEqual(cloned.id, id);
     assert.equal(cloned.editor.document.slides[0].name, "Live MCP");
     const undone = (await call("undo_project", { projectId: id, expectedRevision: 1 })).structuredContent as Project;
@@ -218,7 +199,7 @@ try {
     assert.equal(save.status, 201);
     const opened = (await call("open_project", { projectId: cloned.id })).structuredContent as Project;
     assert.equal(opened.name, "Saved clone");
-    recovery = await cloneTemplate(cloned.id, "Restart recovery");
+    recovery = await duplicateProject(cloned.id, "Restart recovery");
     const listed = (await call("list_projects", {})).structuredContent as { projects: Array<{ id: string }> };
     assert.equal(listed.projects.filter((project) => project.id === cloned.id).length, 1);
     const invalid = await client.callTool({ name: "edit_project", arguments: {
@@ -297,7 +278,7 @@ try {
       Math.min(data[i * 3], data[i * 3 + 1], data[i * 3 + 2])));
     assert.deepEqual(ink(afterPixels), ink(beforePixels), "color changes must preserve glyph positions, wrapping and alignment");
     assert.ok(afterPixels.some((value, i) => i % 3 === 0 && value > 200 && afterPixels[i + 1] < 30), "selected word must contain red ink");
-    const colorClone = await cloneTemplate(colorProject.id, "Colored clone");
+    const colorClone = await duplicateProject(colorProject.id, "Colored clone");
     assert.deepEqual(colorClone.editor.document, colored.editor.document);
     const colorUndo = (await call("undo_project", { projectId: colorProject.id, expectedRevision: colored.editor.revision })).structuredContent as Project;
     assert.equal(colorUndo.editor.document.slides[0].placements.find(p => p.id === "color-title-1")?.textColors, undefined);
@@ -369,7 +350,7 @@ try {
     const rgbAt = (x: number, y: number) => [...roundedPixels.subarray((y * 1080 + x) * 3, (y * 1080 + x) * 3 + 3)];
     assert.deepEqual(rgbAt(110, 205), [255, 255, 255], "rounded corner must reveal the slide background");
     assert.deepEqual(rgbAt(150, 215), [0, 0, 0], "text background must be painted inside the rounded frame");
-    const weightedClone = await cloneTemplate(colorProject.id, "Weighted clone");
+    const weightedClone = await duplicateProject(colorProject.id, "Weighted clone");
     assert.deepEqual(weightedClone.editor.document, rounded.editor.document);
     await page.getByRole("button", { name: "Weighted clone 탭 닫기", exact: true }).click();
     await page.getByRole("button", { name: "Weighted clone 탭 닫기", exact: true }).waitFor({ state: "detached" });

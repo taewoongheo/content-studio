@@ -1,3 +1,4 @@
+import { notifyProjectsChanged } from "@/domains/workspace/server/project-events";
 import type Database from "better-sqlite3";
 import {
   ApifyTikTokClient,
@@ -114,6 +115,7 @@ async function registerPost(db: Database.Database, logId: string, raw: string) {
     );
     updateMetrics(db, logId, post);
   })();
+  notifyProjectsChanged();
   publishChange({ kind: "library" });
   return { completed: true };
 }

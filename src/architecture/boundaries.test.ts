@@ -36,7 +36,6 @@ test("공통 라이브러리는 기능 구현을 소유하지 않고 DB 초기�
   const allowedSchemas = new Set([
     "src/domains/content-production/server/persistence/schema.ts",
     "src/domains/slideshow/server/persistence/projects/schema.ts",
-    "src/domains/slideshow/server/persistence/templates/schema.ts",
     "src/domains/video/server/persistence/schema.ts",
   ]);
   const violations: string[] = [];
