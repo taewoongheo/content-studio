@@ -14,6 +14,7 @@ import {
 } from "../../domain/contracts";
 import { publishChange } from "../events";
 import { assertEnglish } from "@/lib/text/english";
+import { readPlanningLogs } from "./planning/logs";
 
 const directionKeys = Object.keys(directionSchema.shape) as Array<
   keyof Direction
@@ -304,6 +305,9 @@ export class ProductionStore {
           l.actual_published_at >= since,
       ),
     };
+  }
+  planningLogs(query = "") {
+    return readPlanningLogs(this.db, query).map(decode);
   }
   editLog(id: string, raw: unknown) {
     const nullableText = z

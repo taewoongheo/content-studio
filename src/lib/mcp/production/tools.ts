@@ -22,7 +22,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     "production_query",
     {
       description:
-        "Query published content logs (post_url registered) or user-selected references. Unpublished drafts are available through production_comparisons for duplication checks. Data is available in either stage; no minimum count. Read actual images as needed, and distinguish planned direction from actual content and observed performance.",
+        "Query published content logs or user-selected references. Logs return up to 12 best posts by engagement_rate=(likes+comments+saves)/views, followed by up to 12 newest remaining posts by actual publication time; overlaps are excluded before counting the recent group. selection_group identifies performance/recent. Missing metrics or zero views exclude a post from performance ranking, but not recency. query filters eligible topic/name before selection. References are unchanged. Unpublished drafts are available through production_comparisons for duplication checks. Read actual images as needed and distinguish plans from observed performance.",
       inputSchema: z.object({
         kind: z.enum(["logs", "references"]),
         query: z.string().default(""),
@@ -34,7 +34,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
         json({
           items:
             input.kind === "logs"
-              ? productionStore().logs(input.query, true)
+              ? productionStore().planningLogs(input.query)
               : references(productionStore().db, input.query),
         }),
       ),
