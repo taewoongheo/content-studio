@@ -1,78 +1,70 @@
-## Goal and scope
+# Shared production instructions
 
-Goal: bring people who fit LiftCode to the app and installation. Read liftcode.md,
-docs/content-guidelines.md and docs/research-guidelines.md. Automated production has user
-authorization to choose content and create without a template. There is no human in this CLI run;
-research failures must be reported honestly.
+## Goal and workflow
+
+Create one LiftCode TikTok slideshow per task. Read liftcode.md,
+docs/content-guidelines.md and docs/research-guidelines.md before working.
+The content guide is the source of truth for slide quality and visual rules; older reference
+posts do not override it.
+
+The fixed sequence is analysis → production (first draft) → hook review → visual verification.
+Each stage can research questions relevant to its own work. Review stages keep the approved
+topic, claims and body meaning. There is no human in this CLI run.
+
+The long-term goal is to bring people who fit LiftCode to the app. For now, the CTA asks readers
+to follow the account with a short, relevant reason. Do not invite installs or use "Try LiftCode."
 
 ## Language
 
-Write ALL saved prose in English: analysis, every direction field, research
-questions/findings/judgments, source descriptions, action lists, change reasons, content, slide
-copy, project metadata and final summaries. Translate non-English evidence into English when
-describing it; retain original URLs/IDs. The server rejects detected non-English prose with
-ENGLISH_REQUIRED before writing. Correct the named field and retry. Korean is a separate
-display-only translation; never use it as a production input.
+Save all prose in English, including analysis, direction, research, source descriptions, actions,
+changes, slide copy, metadata and final summaries. Keep original URLs and IDs.
+If the server returns ENGLISH_REQUIRED, correct the named field and retry.
+Korean translations are display-only and must not become production inputs.
 
-## Past posts and selected references
+## Context and references
 
-Use the production MCP server. First call production_context. Read production_query(kind="logs")
-without a query for the initial comparison pool: up to 12 best posts by
-(likes+comments+saves)/views, then up to 12 newest other posts by actual publication time, with no
-duplicates. Use both performance and recent groups; a high rate alone does not establish causation
-or app installs. You may query data whenever useful; keyword queries narrow eligible logs before the
-same selection. For topics, hooks and presentation, use ONLY your own published logs and references
-explicitly selected by the user; use production_read_project and production_preview_project to read
-saved source documents/images without opening their editors, and improve the answer for this
-audience. Use production_read_images for stored external/published slide sets. Never call
-open_project for a source; editor tools are only for the project being produced. Do not search
-TikTok, Instagram or other social feeds for new content ideas, visual formats or reference slides.
+First call production_context and resume from saved drafts and the linked project.
+Then call production_query(kind="logs") without a keyword: it returns up to 12 best posts by
+(likes + comments + saves) / views, then 12 newest other posts, excluding overlaps.
+Consider both groups. Engagement does not establish causation or app installs.
+Query again when useful; keyword queries apply the same selection within matching posts.
 
-## Research
+Use owned published posts and user-selected references for topics, hooks and presentation.
+Read saved source documents through production_read_project and actual images through
+production_preview_project or production_read_images. Do not open source editors.
+Editor tools are only for the project being produced.
+Do not search TikTok, Instagram or other social feeds for new ideas, formats or reference slides.
 
-External research is optional in every stage. Investigate only questions needed for the current
-content; examples include: (1) verify a factual, scientific or quantitative claim against original
-papers or official sources; (2) investigate community experience about execution, equipment or
-real-world obstacles that papers may not address; (3) understand how target users describe their
-situation, frustration or desired outcome. These are examples, not an exhaustive list,
-classification scheme or required checklist. Research none, one or several questions as needed. Use
-native web search for content-specific questions, not broad content-idea searches. Community
-anecdotes are experience, not proof of training effects or representative user demand. Lack of a
-paper does not make a practical tip false, but does not prove it works; state its context and avoid
-unsupported efficacy claims. Existing relevant evidence may be reused after checking applicability.
-If a necessary claim cannot be verified, narrow it, omit it or record the unresolved question; never
-invent support, metrics, images or prior user feedback.
+## Research and recording
 
-## Progress and permissions
+Use docs/research-guidelines.md to investigate questions needed for this content.
+Research is optional, not a checklist. Do not fabricate evidence, metrics, images or feedback.
+If a necessary claim remains unsupported, narrow or omit it; review stages report a blocker
+when the correction exceeds their allowed scope.
 
-Save progress frequently using production_save_draft: research questions/results/sources/judgments,
-completed/remaining actions, partial analysis/direction or content. Do not directly write SQLite or
-source files. Do not install packages, commit, use worktrees, launch other agents or modify
-application code. Use API/MCP only for project changes. Ordinary shell is read-only for reading docs
-and local assets.
+Save progress with production_save_draft: current analysis/content/review, research, sources,
+completed actions and remaining actions. Resume from this DB context after interruption,
+not from earlier CLI memory.
+
+Use API/MCP for project changes. Do not write SQLite or source files, install packages, commit,
+create worktrees, launch other agents or modify application code.
+Ordinary shell is read-only for documents and local assets.
 
 ## Duplicate checks
 
-During analysis and production, compare other draft CONTENT and published posts from the last 24h with production_comparisons at
-topic choice, before saving real draft, and before completion. Same topic AND content type counts as
-duplicate. First saved actual content keeps it; later draft changes. Unfinished ideas do not reserve
-topics. Use production_change_direction for collisions (overwrite, no abandoned idea history) or
-research-driven changes (keep original and record reasons). Good performance is evidence, not an
-inherited limit on future topics. Describe the new answer readers receive compared with recent
-posts. No mandatory narrative sequence.
+In analysis and first-draft production, call production_comparisons at topic choice, before
+saving actual content and before completion. It compares retained drafts and posts from the last 24h.
+The same topic AND content type is a duplicate. First saved actual content keeps it;
+unfinished ideas do not reserve a topic.
 
-## Resuming
+Use production_change_direction for collisions (overwrite without abandoned-choice history)
+or research-driven changes (preserve the original and record the reason).
+Past success is a reference, not a limit on later topics. Explain the new answer this post provides.
 
-An interrupted run resumes from saved database context, not from your earlier CLI memory.
+## Final output
 
-
-The fixed order is analysis → production (first draft) → hook review → visual verification. Review stages do not reselect the topic or change the approved body. CTA currently asks readers to follow the account, with a short content-relevant reason; do not ask readers to install or try an unreleased app.
-
-
-## Final source output
-
-Return sources as an actual array following the output schema, not a JSON-encoded string.
-Each source must include kind, id, url, part, used_for and visual_set_id.
-part describes the specific part you referenced; used_for describes how it informed this content.
-Use null for unused id, url or visual_set_id fields. Provide an id or a URL for every source.
-Reuse accurate descriptions already saved in the current draft when appropriate; do not invent missing source context.
+Follow the current stage's output schema. Return sources as an array, not an encoded JSON string.
+Each entry includes kind, id, url, part, used_for and visual_set_id.
+part states what you referenced; used_for explains how you used it.
+Use null for unused id, url or visual_set_id fields, and provide an id or URL for every source.
+Reuse accurate source context from the draft rather than inventing missing descriptions.

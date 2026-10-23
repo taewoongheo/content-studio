@@ -2,39 +2,36 @@
 
 ## Scope
 
-Read production_context, including the confirmed answer and the completed production draft.
-Open/read only the linked project being produced. This is a fixed review step after the first draft,
-not a new topic-selection task. Keep the body and CTA unchanged. Do not change the topic, claims,
-exercise selection, prescriptions or promised result. Never add a stronger promise than the body supports.
-If the body must change to make a proposed hook true, reject that candidate and choose a hook the current body fulfills.
+Read production_context, the completed production draft and the latest linked project.
+Keep the topic, claims, exercise selection, prescriptions, body and CTA unchanged.
+If a candidate hook requires a different body or a stronger promise, reject that candidate.
 
-## Review
+## Assess and revise
 
-Read the current hook and all body slides. Query relevant owned published logs and user-selected references.
-Use production_preview_project or production_read_images to actually view their hook slides in this run.
-Compare the wording AND the first-slide presentation; do not infer visual quality from metadata.
+Read the hook and body. Query relevant owned posts and user-selected references,
+then view actual hook-slide images with production_preview_project or production_read_images.
 
-Assess whether the hook:
-- Makes the useful answer or reader benefit immediately clear.
-- Is specific to this content and understandable without a paragraph of explanation.
-- Gives the intended reader a reason to continue without exaggerated claims.
-- Is natural US English and short enough to scan in the existing slide.
-- Accurately describes what the current body delivers.
+Choose wording that makes the useful answer immediately clear, gives the intended reader
+a specific reason to continue, and accurately describes what the body delivers.
+Use natural US English. Compare a few candidates and keep the current hook if it is stronger.
 
-Compare a few candidate phrasings internally and pick the best supported one. Keep the original if it is stronger.
-Research only if a specific question requires it; record evidence and interpretation in this step's draft.
+Follow docs/content-guidelines.md when fitting the hook: keep the image prominent, use large,
+clear type and avoid auxiliary slogans or scattered labels. Oswald is allowed on the hook page.
+Preserve the fixed LIFTCODE badge.
 
-## Allowed edits and completion
+Only edit text placements on hook-role slides and their local visual properties.
+Do not alter the badge, body, CTA, images, slide roles or shared styles.
+Undo and project creation are unavailable. Research only questions needed for this review.
 
-Only edit text placements on slides whose role is hook. Use local visual adjustments if needed to fit the revised hook.
-Do not use common visual updates, undo previous-stage work, change slide roles, replace images, or rewrite body/CTA.
-The harness restricts writes accordingly. Re-read the latest revision after edits.
-Save review notes, the chosen hook, candidates considered, references and changes in production_save_draft.
-Explain what was weak, why the chosen hook is better, or why no change was justified.
-Call preview_slides for ALL slides at the latest saved revision and inspect the result.
+## Record and finish
 
-Return project_id, summary_json containing the full updated content summary (preserve body/CTA information),
-sources, reviewed_slide_ids, reviewed_revision, review (English assessment and actual changes),
-and review_passed. Set review_passed=true only when the criteria above are met.
-If the hook cannot pass while preserving the body, set review_passed=false and explain the blocker.
+Save the chosen hook, assessment, relevant candidates, actual changes and references to this draft.
+Explain why the chosen wording is better, or why keeping it is justified.
+Do not invent changes to demonstrate activity.
+
+Preview ALL slides at the latest saved revision and inspect the results.
+Return project_id, summary_json (the complete updated summary, retaining body/CTA information),
+sources, reviewed_slide_ids, reviewed_revision, review and review_passed.
+review is the English assessment and change explanation.
+Set review_passed=true only when the hook criteria pass; otherwise explain the blocker.
 Do not create another project or register publication.

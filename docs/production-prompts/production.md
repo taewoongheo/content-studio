@@ -1,33 +1,48 @@
 # First draft production
 
-Read the confirmed analysis and direction, plus your production draft to resume. If no project is
-linked call production_create_project (reuses task project after resume). Write hook/body/CTA and
-visual layout through editing tools; set actual topic/message metadata. Use production_import_image
-to reuse an existing project asset or stored reference slide in an image placement; it imports
-through the app and cleans temporary files. Use production_save_draft to save current content and
-completed/remaining work. Reuse the linked project rather than creating another. All slide content
-must be complete, natural English and actually reviewed. Call preview_slides for ALL slides at the
-latest saved revision; read each resulting image, fix issues, then re-review affected slides. The
-harness verifies real preview calls, revision and slide coverage. Save the actual final content and
-deviation reasons in summary_json (JSON-encoded object), sources (structured array),
-project_id, reviewed_slide_ids and reviewed_revision. Do not register a publication or claim the
-user uploaded it.
+## Build the draft
 
+Read the confirmed analysis/direction and saved production draft.
+If no project is linked, call production_create_project. Otherwise reuse the linked project.
+Set the actual topic/message metadata. Mark the first slide as hook and the final CTA slide as cta.
 
-## Character image references
+Build a complete hook, body, follow CTA and visual layout using docs/content-guidelines.md.
+Its visual rules apply from the first draft: compose around the image first, retain essential
+copy, and plan the slide count so the minimum type size and spacing are achievable.
+Use Inter throughout body pages; Oswald is allowed only on hook/CTA pages.
+Use the fixed LIFTCODE badge described in the guide.
 
-Before preparing character images, read [the character rules](character/guidelines.md).
-The three attached images are provided in this order:
+Use production_import_image to reuse a suitable owned asset or stored reference image.
+Never use an unrelated asset or a text-only page to conceal a missing image.
+Record missing capabilities/assets honestly and leave the work incomplete if the guide cannot be met.
 
-1. [Full-body turnaround](character/turnaround.png): body proportions, clothing, skin tone and rendering style.
-2. [Face and sunglasses](character/face-sunglasses.png): head shape and sunglasses structure. The turnaround controls skin tone and shading.
-3. [Finished exercise example](character/example.png): supporting example of character, equipment and muscle highlighting together. It does not override the two official character references or prescribe a pose for other exercises.
+## Character images
 
-These files are available under docs/production-prompts/character/ in the project.
-When an image-generation tool is available, pass the actual reference images to that tool as well;
-mentioning filenames in a text prompt is not a substitute for reference-image input.
-Provide an exercise-specific pose/equipment source when needed by the character rules.
-If generation is unavailable, record the missing capability honestly; do not claim an image was generated.
+Read [the character rules](character/guidelines.md) before preparing character artwork.
+The attached images are provided in this order:
 
+1. [Full-body turnaround](character/turnaround.png): proportions, clothing, skin tone and style.
+2. [Face and sunglasses](character/face-sunglasses.png): head shape and sunglasses.
+   The turnaround controls skin tone and shading.
+3. [Finished example](character/example.png): supporting example of the character, equipment and
+   highlighted muscles together. It does not override the two official references or specify
+   the pose for other exercises.
 
-Complete a usable first draft with hook, body, CTA and visuals. Mark the first slide as hook and the final CTA slide as cta. The next CLI stages review the hook and visual quality separately; this stage does not finish the overall task. Use a follow CTA with a brief reason relevant to the content.
+These files are under docs/production-prompts/character/.
+When a generation tool is available, pass the actual references to it as image inputs as well.
+Text filenames alone do not transmit images. Supply an exercise-specific pose/equipment source
+when required by the character rules. Do not claim generation succeeded if no tool was available.
+
+Character-source rules govern the generated asset itself. Its placement may extend beyond the
+slide under the content guide's crop rule; judge the visible pose in the final slide.
+
+## Review and output
+
+Save current content, research, sources, changes and completed/remaining actions as you work.
+Preview ALL slides at the latest saved revision, inspect the actual images and fix draft issues.
+The harness verifies saved revision and full-slide preview coverage.
+
+Return project_id, summary_json (the complete content summary and deviation reasons),
+sources, reviewed_slide_ids and reviewed_revision.
+This completes the first draft, not the whole task. Hook and visual review follow separately.
+Do not register publication or claim the user uploaded the post.

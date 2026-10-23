@@ -171,8 +171,8 @@ url = "http://127.0.0.1:3000/mcp"
 
 | 역할 | `fontFamily` | 지원 굵기 |
 | --- | --- | --- |
-| 훅 | `oswald` | 700 (Bold) |
-| 본문 | `inter` | 100–900, 권장 400–500 |
+| 훅·CTA 페이지의 강조 제목 | `oswald` | 700 (Bold) |
+| 본문 페이지 전체·일반 설명 | `inter` | 100–900, 권장 400–500 |
 
 - 지원 글꼴은 Oswald와 Inter 두 개뿐이며 새 텍스트는 Inter로 시작한다. 별도 Fallback 글꼴은 제공하거나 로딩하지 않는다.
 - `update_visual`의 `fontStyle`은 `normal` 또는 `italic`이다. Inter는 실제 이탤릭, Oswald는 합성 기울임을 사용한다. 편집기·미리보기·내보내기는 같은 렌더링을 사용한다.

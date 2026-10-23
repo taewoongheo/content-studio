@@ -2,40 +2,53 @@
 
 ## Scope
 
-This is the final fixed stage, after hook review. Read production_context and the latest linked project.
-Keep the approved hook, body, CTA, topic and factual claims unchanged.
-Use the latest content summary from the hook draft or log; do not restore the original production hook.
+This is the final fixed stage after hook review.
+Read production_context and the latest linked project.
+Use the hook draft or log's latest summary; do not restore the original production hook.
+Keep approved wording, claims, topic and image identity unchanged.
 
-## Compare actual images
+## Inspect actual slides
 
-Query relevant published owned posts and user-selected references. Use production_preview_project
-or production_read_images to view actual source slide images in this run.
-Use preview_slides to view ALL current slides. Compare the images side by side in your reasoning.
+Read the visual rules in docs/content-guidelines.md and use them as the pass criteria.
+Query relevant owned posts and user-selected references. View actual source images using
+production_preview_project or production_read_images, and ALL current slides with preview_slides.
+Choose references for the answer and layout being delivered, not only for topic similarity.
+Record which visual features you reuse and where. Older posts never override the current rules.
 
-Choose appropriate source slides for the current content, not just the same topic. Record their IDs,
-which visual features you carry over and where you apply them:
-- Heading/body hierarchy, type size and weight.
-- Information density, whitespace and alignment.
-- Image scale, cropping and balance with text.
-- Color emphasis and consistency across slides.
+Check every slide against the guide:
+- One to three meaningful images, with image-first composition.
+- Essential action/pose remains clear inside the final slide boundary.
+  Intentional image overflow is allowed; do not shrink an image just to contain its entire frame.
+- Text meets the minimum size, headings are clearly larger, and body pages use Inter only.
+  Oswald is allowed only on hook/CTA pages.
+- Only essential copy remains, grouped with consistent hierarchy, spacing and alignment.
+- The fixed black LIFTCODE badge is visible at the bottom left on every slide.
+- Text is legible and unclipped; image proportions, contrast and page-to-page consistency hold.
 
-Follow docs/content-guidelines.md and docs/production-prompts/character/guidelines.md where relevant.
-Match the chosen visual direction while adapting layout to the current answer. No fixed template is required.
+Judge the exported slide area, not the editor's off-slide workspace.
+Do not flag an intentional crop as a defect when the key pose remains clear.
+Do flag cropping that removes necessary movement cues or equipment relationships.
 
-## Revise and finish
+## Correct within scope
 
-Correct layout, visual styles and layer order without changing copy or image identity.
-This stage supports update_visual and reorder_layers; content edits, undo, project creation,
-metadata changes and replacing images are blocked. Use common/shared styles where appropriate.
-Do not hide or crop necessary information to make a slide look clean.
-If missing or inaccurate assets prevent a usable result, report the blocker instead of approving it.
+Use update_visual, reorder_layers, set_slide_background, set_text_colors and set_text_weights
+to correct layout, styles and hierarchy. Preserve badge wording/color/location and keep its
+geometry and margins consistent across pages.
 
-Save the visual assessment, chosen references, actual adjustments and any remaining problems to this step's draft.
-Review can leave a strong draft unchanged; do not invent edits just to show activity.
-After all edits, call preview_slides for ALL slides at the latest saved revision and inspect every result.
-Check for clipping, overlap, legibility, image proportions, visual consistency and agreement with the source direction.
+Copy edits, adding/removing placements, replacing images, undo, project creation and metadata
+changes are blocked. If unnecessary auxiliary copy must be deleted or an image is missing,
+record the specific blocker and fail review. Do not hide copy off-slide, under an image,
+at tiny size or in the background color to bypass the restriction.
+Keep essential exercise names, sets/reps and decision conditions visible.
 
-Return project_id, summary_json containing the full final content summary, sources,
-reviewed_slide_ids, reviewed_revision, review (English findings and changes), and review_passed.
-Set review_passed=true only when the visual criteria pass. If unresolved problems remain, set it to false
-and describe them. The harness only finishes production after this step passes.
+## Record and finish
+
+Save the assessment, references, actual adjustments and unresolved issues to this draft.
+An already strong draft may pass unchanged.
+After edits, preview ALL slides at the latest saved revision and inspect every result.
+
+Return project_id, summary_json (the complete final summary), sources, reviewed_slide_ids,
+reviewed_revision, review and review_passed.
+review records the English findings and changes.
+Set review_passed=true only when all applicable criteria pass; otherwise describe what prevents
+completion. The harness only finishes the task after this stage passes.
