@@ -45,6 +45,6 @@ export async function updateProjectMetadata(id: string, input: { topic: string; 
   return readJson<SavedProjectSummary>(response);
 }
 
-export async function readSavedDocument(projectId: string) {
-  return readJson<import("../editor/types").EditorDocument>(await fetch(`/api/content-projects/${encodeURIComponent(projectId)}/preview`, { cache: "no-store" }));
+export async function readSavedDocument(projectId: string, signal?: AbortSignal) {
+  return readJson<import("../editor/types").EditorDocument>(await fetch(`/api/content-projects/${encodeURIComponent(projectId)}/preview`, { cache: "no-store", signal }));
 }

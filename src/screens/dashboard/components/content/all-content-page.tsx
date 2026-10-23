@@ -1,5 +1,6 @@
 "use client";
 
+import { SavedSlideshowPreview } from "@/domains/slideshow/client/components/saved-slideshow-preview";
 import { useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { useSavedProjects } from "@/domains/workspace/client/use-saved-projects";
@@ -27,8 +28,9 @@ export function AllContentPage({ onOpen }: { onOpen: (id: string) => Promise<voi
     <h1 id="all-content-heading" className="text-3xl font-semibold tracking-tight">모든 콘텐츠</h1>
     {(error || openError) && <p role="alert" className="text-sm text-destructive">{error || openError}</p>}
     {loading ? <p role="status" className="text-sm text-muted-foreground">불러오는 중…</p> :
-      <div role="list" className="divide-y rounded-xl border">
-        {ordered.map(project => <article role="listitem" key={project.id} className="flex items-center justify-between gap-4 p-5">
+      <div role="list" className="min-w-0 divide-y rounded-xl border">
+        {ordered.map(project => <article role="listitem" key={project.id} className="min-w-0 p-5">
+          <div className="flex items-center justify-between gap-4">
           <button type="button" className="min-w-0 flex-1 text-left hover:underline disabled:opacity-50" disabled={opening !== null} onClick={() => void open(project.id)}>
             <span className="block truncate font-medium">{project.name}</span>
             {project.topic && <span className="mt-1 block text-sm text-muted-foreground">{project.topic}</span>}
@@ -38,6 +40,8 @@ export function AllContentPage({ onOpen }: { onOpen: (id: string) => Promise<voi
             <ProjectMetadataButton project={project} disabled={opening !== null} />
             <Button type="button" variant="outline" size="icon" aria-label={`${project.name} 열기`} disabled={opening !== null} onClick={() => void open(project.id)}><ArrowUpRight aria-hidden="true" /></Button>
           </div>
+          </div>
+          <SavedSlideshowPreview key={project.updatedAt} project={project} />
         </article>)}
         {!ordered.length && <p className="p-8 text-sm text-muted-foreground">저장된 콘텐츠가 없습니다.</p>}
       </div>}
