@@ -1,3 +1,4 @@
+import { referenceImagesAllowed } from "@/domains/content-production/server/references/selection";
 import { assertReviewWrite } from "@/domains/content-production/server/execution/review/write-policy";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
@@ -8,6 +9,7 @@ import {
   authorizeRun,
   productionStore,
   recordReview,
+  recordExternalComparison,
   recordSourceReview,
 } from "@/domains/content-production/server/execution/runner";
 export const runtime = "nodejs";
@@ -15,6 +17,8 @@ export const dynamic = "force-dynamic";
 const readTools = [
   "production_context",
   "production_query",
+  "production_external_references",
+  "production_describe_reference",
   "production_comparisons",
   "production_read_images",
   "production_save_draft",
@@ -56,6 +60,11 @@ export async function POST(
       ]),
       before(name, input) {
         authorizeRun(taskId, request.headers.get("authorization"));
+        if (name === "production_read_images") {
+          const setId = (input as {set_id:string}).set_id;
+          if (!referenceImagesAllowed(productionStore().db,taskId,run.step,setId))
+            throw new Error("먼저 이번 단계의 외부 레퍼런스로 조회해 주세요. 단계별 한도는 3개입니다.");
+        }
         if ((writeTools.includes(name) || editorReadTools.includes(name)) && !name.startsWith("production_")) {
           const projectId = (input as { projectId?: string }).projectId;
           if (projectId !== productionStore().get(taskId).task.project_id)
@@ -66,6 +75,7 @@ export async function POST(
         }
       },
       after(name, input, result) {
+        if (!result.isError && name === "production_external_references") recordExternalComparison(taskId);
         if (!result.isError && result.content?.some(item => item.type === "image") && (name === "production_preview_project" || name === "production_read_images"))
           recordSourceReview(taskId);
         if (

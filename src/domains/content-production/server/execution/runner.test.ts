@@ -12,6 +12,7 @@ import {
   stopProduction,
   recordReview,
   recordSourceReview,
+  recordExternalComparison,
 } from "./runner";
 import { createTaskProject, deleteTaskProject } from "../projects";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
@@ -49,6 +50,7 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       calls++;
       if (calls === 1) {
         assert.equal(store.get(id).task.current_step, "analysis");
+        recordExternalComparison(id);
         return direction;
       }
       assert.equal(store.get(id).analysis.state, "completed");
@@ -150,6 +152,11 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
     unblock(direction);
     await execution;
     assert.throws(() => store.get(canceled), /취소/);
+    const [withoutComparison] = store.create(1);
+    await execute(withoutComparison, "http://127.0.0.1:3000", async () => direction);
+    assert.equal(store.get(withoutComparison).task.state, "failed");
+    assert.match(String((store.get(withoutComparison).analysis.error as { message: string }).message), /外部|외부/);
+    stopProduction(withoutComparison, true);
     const [invalid] = store.create(1);
     await execute(invalid, "http://127.0.0.1:3000", async () => ({
       bad: true,

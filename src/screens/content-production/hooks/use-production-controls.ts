@@ -31,7 +31,7 @@ export function useProductionControls({ data, act, busy }: Pick<ReturnType<typeo
   };
   const resetAll = async () => {
     if (busy || stopping || data?.sync.running) return false;
-    if (!window.confirm("현재 제작 작업과 모든 draft·미게시 결과물을 삭제하고 캔버스를 초기화할까요? 게시된 콘텐츠와 선별 레퍼런스는 유지됩니다.")) return false;
+    if (!window.confirm("현재 제작 작업과 모든 draft·미게시 결과물을 삭제하고 캔버스를 초기화할까요? 게시된 콘텐츠와 외부 레퍼런스는 유지됩니다.")) return false;
     try {
       await act({ action: "reset" });
       return true;

@@ -55,11 +55,16 @@ CREATE TABLE IF NOT EXISTS content_visual_slides (
  width INTEGER NOT NULL, height INTEGER NOT NULL, byte_size INTEGER NOT NULL, data BLOB NOT NULL,
  PRIMARY KEY(set_id,slide_index)
 );
-CREATE TABLE IF NOT EXISTS content_references (
- id TEXT PRIMARY KEY, source_kind TEXT NOT NULL CHECK(source_kind IN ('own','external')),
- title TEXT NOT NULL, topic TEXT NOT NULL, content_type TEXT NOT NULL,
- project_id TEXT UNIQUE REFERENCES content_projects(id) ON DELETE SET NULL,
- log_id TEXT UNIQUE REFERENCES content_creation_logs(id) ON DELETE SET NULL,
- source_url TEXT UNIQUE, visual_set_id TEXT REFERENCES content_visual_sets(id),
- parts_json TEXT NOT NULL CHECK(json_valid(parts_json)), created_at TEXT NOT NULL, updated_at TEXT NOT NULL
-);`;
+CREATE TABLE IF NOT EXISTS content_reference_accounts (
+ username TEXT PRIMARY KEY, url TEXT NOT NULL UNIQUE, enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)),
+ last_fetched_at TEXT, created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS content_external_references (
+ id TEXT PRIMARY KEY, url TEXT NOT NULL UNIQUE, account TEXT NOT NULL, caption TEXT NOT NULL,
+ title TEXT NOT NULL DEFAULT '', topic TEXT NOT NULL DEFAULT '', content_type TEXT NOT NULL DEFAULT '', notes TEXT NOT NULL DEFAULT '',
+ published_at TEXT, observed_at TEXT NOT NULL, view_count INTEGER, like_count INTEGER, comment_count INTEGER, save_count INTEGER, share_count INTEGER,
+ images_json TEXT NOT NULL CHECK(json_valid(images_json)), visual_set_id TEXT REFERENCES content_visual_sets(id), image_error TEXT,
+ excluded INTEGER NOT NULL DEFAULT 0 CHECK(excluded IN (0,1)), created_at TEXT NOT NULL, last_selected_at TEXT
+);
+CREATE INDEX IF NOT EXISTS external_references_account_idx ON content_external_references(account);
+`;

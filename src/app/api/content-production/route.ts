@@ -14,12 +14,9 @@ import {
 } from "@/domains/content-production/server/execution/runner";
 import {
   productionEvents,
-  publishChange,
 } from "@/domains/content-production/server/events";
-import {
-  addReference,
-  references,
-} from "@/domains/content-production/server/persistence/library";
+import { addReferenceAccount, referenceAccounts, externalReferences, toggleReferenceAccount, removeReferenceAccount, setReferenceExcluded } from "@/domains/content-production/server/references/library";
+import { collectReferenceAccount } from "@/domains/content-production/server/references/collection";
 import { listVisuals } from "@/domains/content-production/server/publication/visuals";
 import { registerPublication } from "@/domains/content-production/server/publication/service";
 import { deleteTaskProject } from "@/domains/content-production/server/projects";
@@ -50,8 +47,11 @@ const requestSchema = z.discriminatedUnion("action", [
     id: z.string(),
     url: z.string().url(),
   }),
-  z.object({ action: z.literal("reference"), reference: z.unknown() }),
-  z.object({ action: z.literal("remove_reference"), id: z.string() }),
+  z.object({ action: z.literal("reference_account"), account: z.string().min(1) }),
+  z.object({ action: z.literal("toggle_reference_account"), username: z.string(), enabled: z.boolean() }),
+  z.object({ action: z.literal("remove_reference_account"), username: z.string() }),
+  z.object({ action: z.literal("collect_reference_account"), username: z.string() }),
+  z.object({ action: z.literal("exclude_reference"), id: z.string(), excluded: z.boolean() }),
 ]);
 export async function GET(request: Request) {
   if (!isLocalRequest(request)) return new Response(null, { status: 403 });
@@ -84,7 +84,8 @@ export async function GET(request: Request) {
             tasks: store.list(),
             logs: store.logs(params.get("query") ?? ""),
             planningLogs: store.planningLogs(),
-            references: references(store.db),
+            externalReferences: externalReferences(store.db, "", "", true),
+            referenceAccounts: referenceAccounts(store.db),
             visuals: listVisuals(store.db),
             sync: syncState(),
             settings: readProductionSettings(),
@@ -168,14 +169,16 @@ export async function POST(request: Request) {
         return Response.json(
           await registerPublication(store.db, input.id, input.url),
         );
-      case "reference":
-        return Response.json(await addReference(store.db, input.reference));
-      case "remove_reference":
-        store.db
-          .prepare("DELETE FROM content_references WHERE id=?")
-          .run(input.id);
-        publishChange({ kind: "library" });
-        break;
+      case "reference_account":
+        addReferenceAccount(store.db,input.account); break;
+      case "toggle_reference_account":
+        toggleReferenceAccount(store.db, input.username, input.enabled); break;
+      case "remove_reference_account":
+        removeReferenceAccount(store.db, input.username); break;
+      case "collect_reference_account":
+        return Response.json({collected:await collectReferenceAccount(store.db,input.username,true)});
+      case "exclude_reference":
+        setReferenceExcluded(store.db,input.id,input.excluded); break;
     }
     return Response.json({ ok: true });
   } catch (error) {

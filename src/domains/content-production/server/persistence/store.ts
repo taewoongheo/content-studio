@@ -1,4 +1,4 @@
-import { DISCOVERY_QUESTION, discoveryRecord, readDiscovery, type DiscoveryBatch } from "../../domain/discovery";
+import { EXTERNAL_CONTEXT, readExternalContext } from "../../domain/references/context";
 import { z } from "zod";
 import type Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
@@ -76,21 +76,22 @@ export class ProductionStore {
       "SELECT * FROM content_creation_logs WHERE id=?",
       task.log_id,
     )!;
-    const decoded = decode(analysis);
-    const research = decoded.research as Array<z.infer<typeof researchSchema>>;
+    const stage = (row: Row) => {
+      const decoded = decode(row), research = decoded.research as Array<z.infer<typeof researchSchema>>;
+      return { data: { ...decoded, research: research.filter(item => item.question !== EXTERNAL_CONTEXT) }, external: readExternalContext(research) };
+    };
+    const decoded = stage(analysis);
+    const reviews = (["hook", "visual"] as const).map(step => {
+      const row = this.row(`SELECT * FROM content_${step}_drafts WHERE draft_id=?`, id);
+      return { step, value: row ? stage(row) : null };
+    });
     return {
-      task,
-      discovery: readDiscovery(research),
-      analysis: { ...decoded, research: research.filter(item => item.question !== DISCOVERY_QUESTION) },
-      production: production ? decode(production) : null,
-      log: decode(log),
-      ...Object.fromEntries((["hook", "visual"] as const).map(step => {
-        const row = this.row(`SELECT * FROM content_${step}_drafts WHERE draft_id=?`, id);
-        return [step, row ? decode(row) : null];
-      })),
+      task, analysis: decoded.data, production: production ? decode(production) : null, log: decode(log),
+      ...Object.fromEntries(reviews.map(({step,value}) => [step,value?.data ?? null])),
+      external: { analysis: decoded.external, ...Object.fromEntries(reviews.map(({step,value}) => [step,value?.external ?? null])) },
     };
   }
-  create(count: number, discovery?: DiscoveryBatch) {
+  create(count: number) {
     const ids: string[] = [];
     this.db.transaction(() => {
       for (let i = 0; i < count; i++) {
@@ -111,7 +112,7 @@ export class ProductionStore {
           .prepare(
             "INSERT INTO content_analysis_drafts(draft_id,created_at,updated_at,research_json) VALUES(?,?,?,?)",
           )
-          .run(id, now, now, JSON.stringify(discovery ? [discoveryRecord(discovery)] : []));
+          .run(id, now, now, "[]");
         ids.push(id);
       }
     })();
@@ -152,14 +153,14 @@ export class ProductionStore {
       step === "analysis" ? analysisPatchSchema : step === "production" ? productionPatchSchema : reviewDraftPatchSchema
     ).parse(raw);
     // Collection snapshots are server-owned evidence, not agent-authored prose.
-    if (step === "analysis" && patch.research) {
-      patch.research = patch.research.filter(item => item.question !== DISCOVERY_QUESTION);
+    if (patch.research) {
+      patch.research = patch.research.filter(item => item.question !== EXTERNAL_CONTEXT);
     }
     assertEnglish(patch, `${step}_draft`);
-    if (step === "analysis" && patch.research) {
-      const row = this.row("SELECT research_json FROM content_analysis_drafts WHERE draft_id=?", id)!;
+    if (patch.research) {
+      const row = this.row(`SELECT research_json FROM content_${step}_drafts WHERE draft_id=?`, id)!;
       const existing = JSON.parse(String(row.research_json)) as Array<z.infer<typeof researchSchema>>;
-      patch.research = [...existing.filter(item => item.question === DISCOVERY_QUESTION), ...patch.research];
+      patch.research = [...existing.filter(item => item.question === EXTERNAL_CONTEXT), ...patch.research];
     }
     const values: Row = { updated_at: this.now() };
     for (const [key, value] of Object.entries(patch))

@@ -29,7 +29,7 @@ test("reset removes drafts/projects/assets, cancels late output and preserves fo
     const log = store.get(ids[0]).task.log_id;
     store.db.prepare("UPDATE content_creation_logs SET project_id=?,post_url='https://example.com/post' WHERE id=?").run(projects[0], log);
     store.db.prepare("DELETE FROM content_drafts WHERE id=?").run(ids[0]);
-    store.db.prepare("INSERT INTO content_references(id,source_kind,title,topic,content_type,project_id,parts_json,created_at,updated_at) VALUES('reference','own','Reference','arms','routine',?,'[]','now','now')").run(projects[0]);
+    store.db.prepare("INSERT INTO content_external_references(id,url,account,caption,observed_at,images_json,created_at) VALUES('reference','https://www.tiktok.com/@example/photo/123','example','A routine','now','[]','now')").run();
     store.state(ids[1], "stopped");
     store.state(ids[2], "stopped");
     let finish!: (value: Record<string, unknown>) => void;
@@ -48,7 +48,7 @@ test("reset removes drafts/projects/assets, cancels late output and preserves fo
     assert.ok(store.db.prepare("SELECT id FROM content_projects WHERE id=?").get(projects[0]));
     assert.ok(store.db.prepare("SELECT asset_id FROM content_project_assets WHERE project_id=?").get(projects[0]));
     assert.ok(store.db.prepare("SELECT id FROM content_creation_logs WHERE id=?").get(log));
-    assert.ok(store.db.prepare("SELECT id FROM content_references WHERE id='reference'").get());
+    assert.ok(store.db.prepare("SELECT id FROM content_external_references WHERE id='reference'").get());
     assert.deepEqual(store.db.pragma("foreign_key_check"), []);
     resetProduction(); // Empty canvas reset is safe.
   } finally {

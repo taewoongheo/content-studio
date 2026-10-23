@@ -64,7 +64,7 @@ export function ProductionWorkspace({ runtime, readWork, onOpen }: {
       </aside>}
       {panel === "library" && <section className="absolute inset-y-0 right-0 z-20 flex w-[560px] max-w-full flex-col border-l bg-background shadow-lg" aria-label="기록과 레퍼런스">
         <header className="flex shrink-0 items-center justify-between border-b px-6 py-4"><h2 className="flex items-center gap-2 text-sm font-semibold"><History size={16} />기록과 레퍼런스</h2><button className="production-button" onClick={() => setPanel(null)} aria-label="캔버스로 돌아가기"><X size={14} />닫기</button></header>
-        <div className="min-h-0 flex-1 overflow-auto p-6">{data ? <LibraryPanel logs={data.logs} references={data.references} visuals={data.visuals} act={act} onOpen={id => void onOpen(id)} /> : null}</div>
+        <div className="min-h-0 flex-1 overflow-auto p-6">{data ? <LibraryPanel logs={data.logs} externalReferences={data.externalReferences} referenceAccounts={data.referenceAccounts} visuals={data.visuals} act={act} onOpen={id => void onOpen(id)} /> : null}</div>
       </section>}
     </main>
   </div>;

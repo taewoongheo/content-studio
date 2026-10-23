@@ -1,4 +1,3 @@
-import { collectDiscovery } from "../persistence/planning/discovery";
 import { z } from "zod";
 import type { PerformanceRefresh } from "../../domain/performance";
 import { discardTask } from "../projects";
@@ -25,6 +24,7 @@ type Run = {
   token: string;
   step: ProductionStep;
   sourceImages: boolean;
+  externalCompared: boolean;
   reviews: Map<string, { revision: number; slides: Set<string> }>;
 };
 const shared = globalThis as typeof globalThis & {
@@ -72,12 +72,16 @@ export function recordSourceReview(id: string) {
   const run = runs.get(id);
   if (run) run.sourceImages = true;
 }
+export function recordExternalComparison(id: string) {
+  const run = runs.get(id);
+  if (run) run.externalCompared = true;
+}
 export function syncState() {
   return { running: !!shared.productionSync, report: shared.productionRefresh ?? null };
 }
 export async function startProduction(
   count: number, origin: string,
-  services = { refreshMetrics, collectDiscovery, execute },
+  services = { refreshMetrics, execute },
 ) {
   if (!process.env.APIFY_API_TOKEN?.trim())
     throw new Error("Apify에 연결되지 않아 제작을 시작할 수 없습니다. APIFY_API_TOKEN을 설정해 주세요.");
@@ -92,23 +96,13 @@ export async function startProduction(
   shared.productionRefresh = report;
   publishChange({ kind: "sync", detail: "running" });
   try {
-    const [metrics, discovery] = await Promise.allSettled([
-      services.refreshMetrics(store.db, undefined, undefined, records => {
-        report.records = records;
-        publishChange({ kind: "sync", detail: "snapshot" });
-      }),
-      services.collectDiscovery(store.db),
-    ]);
-    if (discovery.status === "fulfilled") {
-      report.discovery = discovery.value;
-      publishChange({ kind: "sync", detail: "discovery" });
-    }
-    // Wait for both collectors before releasing the start lock, including failures.
-    if (metrics.status === "rejected") throw metrics.reason;
-    if (discovery.status === "rejected") throw discovery.reason;
+    await services.refreshMetrics(store.db, undefined, undefined, records => {
+      report.records = records;
+      publishChange({ kind: "sync", detail: "snapshot" });
+    });
     report.state = "completed";
     report.completed_at = new Date().toISOString();
-    const ids = store.create(count, report.discovery);
+    const ids = store.create(count);
     ids.forEach((id) => {
       void services.execute(id, origin).catch((error) => {
         try {
@@ -150,6 +144,7 @@ export async function execute(
     step: detail.task.current_step,
     reviews: new Map(),
     sourceImages: false,
+    externalCompared: false,
   };
   runs.set(id, run);
   try {
@@ -159,6 +154,7 @@ export async function execute(
       store.state(id, "running");
       run.reviews.clear();
       run.sourceImages = false;
+      run.externalCompared = false;
       const result = await executor({
         model,
         prompt: stagePrompt(id, run.step),
@@ -184,6 +180,7 @@ export async function execute(
             !(["id", "url", "visual_set_id"].includes(key) && value === null)))),
       );
       if (run.step === "analysis") {
+        if (!run.externalCompared) throw new Error("소재 확정 전에 외부 레퍼런스 선택지를 조회해 비교해 주세요.");
         store.completeAnalysis(id, { ...fields, sources });
         continue;
       }

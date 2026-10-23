@@ -10,7 +10,8 @@ Keep approved wording, claims, topic and image identity unchanged.
 ## Inspect actual slides
 
 Read the visual rules in docs/content-guidelines.md and use them as the pass criteria.
-Query relevant owned posts and user-selected references. View actual source images using
+Query relevant owned posts. When an external comparison helps the current layout problem, use
+production_external_references for up to three suitable examples. View actual source images using
 production_preview_project or production_read_images, and ALL current slides with preview_slides.
 Choose references for the answer and layout being delivered, not only for topic similarity.
 Record which visual features you reuse and where. Older posts never override the current rules.

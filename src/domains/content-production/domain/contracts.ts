@@ -1,4 +1,4 @@
-import type { DiscoveryBatch } from "./discovery";
+import type { ExternalContext, ReferenceStep } from "./references/context";
 import { z } from "zod";
 
 export const stepSchema = z.enum(["analysis", "production", "hook", "visual"]);
@@ -74,29 +74,6 @@ export const productionResultSchema = z
     reviewed_revision: z.number().int().nonnegative(),
   })
   .strict();
-export const referenceSchema = z
-  .object({
-    title: z.string().trim().min(1),
-    topic: z.string().trim().min(1),
-    content_type: z.string().trim().min(1),
-    project_id: z.string().optional(),
-    log_id: z.string().optional(),
-    source_url: z.string().url().optional(),
-    parts: z
-      .array(
-        z.object({
-          aspect: z.enum(["hook", "body", "visual", "cta"]),
-          location: z.string(),
-          reason: z.string().min(1),
-          usage_context: z.string().min(1),
-        }),
-      )
-      .min(1),
-  })
-  .refine(
-    (r) => !!r.project_id || !!r.log_id || !!r.source_url,
-    "원본 자료가 필요합니다.",
-  );
 export type Row = Record<string, unknown>;
 export interface WorkItem extends Row {
   id: string;
@@ -110,7 +87,7 @@ export interface WorkItem extends Row {
   content_type: string | null;
 }
 export interface WorkDetail {
-  discovery?: DiscoveryBatch | null;
+  external?: Partial<Record<ReferenceStep, ExternalContext | null>>;
   task: WorkItem;
   analysis: Row;
   production: Row | null;

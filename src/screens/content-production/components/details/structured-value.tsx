@@ -11,7 +11,7 @@ const labels: Record<string, string> = {
   project_id: "프로젝트 ID", slide_id: "슬라이드 ID", reviewed_slide_ids: "검토한 슬라이드",
   reviewed_revision: "검토 버전", index: "순서", name: "이름", description: "설명",
 };
-const kinds: Record<string, string> = { log: "과거 제작 기록", reference: "선별 레퍼런스", url: "외부 자료" };
+const kinds: Record<string, string> = { log: "과거 제작 기록", reference: "외부 레퍼런스", url: "외부 자료" };
 const aspects: Record<string, string> = { hook: "훅", body: "본문", cta: "CTA", visual: "시각 표현" };
 
 function TextValue({ value, field }: { value: unknown; field?: string }) {

@@ -1,27 +1,27 @@
 "use client";
 import { LogEditor } from "./log-editor";
-import { ReferenceForm } from "./reference-form";
-import { StructuredValue } from "../details/structured-value";
+import { ExternalLibrary } from "./external-library";
 import { useState } from "react";
 import Image from "next/image";
 import type { Row } from "@/domains/content-production/domain/contracts";
 type Action = (input: Record<string, unknown>) => Promise<unknown>;
 export function LibraryPanel({
   logs,
-  references,
+  externalReferences,
+  referenceAccounts,
   visuals,
   act,
   onOpen,
 }: {
   logs: Row[];
-  references: Row[];
+  externalReferences: Row[];
+  referenceAccounts: Row[];
   visuals: Row[];
   act: Action;
   onOpen: (id: string) => void;
 }) {
   const [tab, setTab] = useState("logs"),
     [editing, setEditing] = useState<Row | null>(null),
-    [reference, setReference] = useState(false),
     [error, setError] = useState("");
   const safe = async (callback: () => Promise<unknown>) => {
     try {
@@ -45,34 +45,16 @@ export function LibraryPanel({
             className={`text-sm ${tab === "references" ? "font-semibold" : "text-muted-foreground"}`}
             onClick={() => setTab("references")}
           >
-            선별 레퍼런스{" "}
-            <span className="ml-1 text-xs">{references.length}</span>
+            외부 레퍼런스{" "}
+            <span className="ml-1 text-xs">{externalReferences.filter(post=>!post.excluded).length}</span>
           </button>
         </div>
-        {tab === "references" && (
-          <button
-            className="production-button"
-            onClick={() => setReference(!reference)}
-          >
-            레퍼런스 등록
-          </button>
-        )}
+
       </div>
       {error && (
         <p className="mt-4 text-sm text-destructive" role="alert">
           {error}
         </p>
-      )}
-      {reference && tab === "references" && (
-        <ReferenceForm
-          logs={logs}
-          onSave={(input) =>
-            void safe(async () => {
-              await act({ action: "reference", reference: input });
-              setReference(false);
-            })
-          }
-        />
       )}
       {tab === "logs" ? (
         <div className="mt-4 divide-y rounded-xl border">
@@ -203,52 +185,7 @@ export function LibraryPanel({
           )}
         </div>
       ) : (
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          {references.map((ref) => (
-            <article key={String(ref.id)} className="rounded-xl border p-5">
-              <div className="flex justify-between gap-3">
-                <h3 className="font-semibold text-sm">{String(ref.title)}</h3>
-                <button
-                  className="text-xs text-muted-foreground"
-                  onClick={() =>
-                    void safe(() =>
-                      act({ action: "remove_reference", id: ref.id }),
-                    )
-                  }
-                >
-                  제거
-                </button>
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                {String(ref.topic)} · {String(ref.content_type)}
-              </p>
-              <div className="mt-3"><StructuredValue value={ref.parts} /></div>
-              {!!ref.project_id && (
-                <button
-                  className="production-button mt-3"
-                  onClick={() => onOpen(String(ref.project_id))}
-                >
-                  원본 열기
-                </button>
-              )}
-              {!!ref.source_url && (
-                <a
-                  className="mt-3 block text-xs underline"
-                  href={String(ref.source_url)}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  원본 게시물
-                </a>
-              )}
-            </article>
-          ))}
-          {references.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              별도로 선별해 저장한 레퍼런스가 없습니다.
-            </p>
-          )}
-        </div>
+        <ExternalLibrary posts={externalReferences} accounts={referenceAccounts} act={act} />
       )}
     </section>
   );

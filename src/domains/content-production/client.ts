@@ -4,7 +4,8 @@ export interface ProductionSnapshot {
   tasks: WorkItem[];
   logs: Row[];
   planningLogs: Row[];
-  references: Row[];
+  externalReferences: Row[];
+  referenceAccounts: Row[];
   visuals: Row[];
   sync: { running: boolean; report: PerformanceRefresh | null };
   settings: { model: string };

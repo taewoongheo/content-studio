@@ -1,4 +1,5 @@
 "use client";
+import { ReferenceCard } from "./library/reference-card";
 import { useEffect, useState } from "react";
 import { StructuredValue } from "./details/structured-value";
 import { StatusIcon } from "./workflow/status-icon";
@@ -62,6 +63,7 @@ export function StepDetails({
     };
   }, [id, step, updated, write, readWork]);
   const context = detail?.[step];
+  const external = detail?.external?.[step === "production" ? "analysis" : step];
   const [original, setOriginal] = useState(false);
   const translation = useDisplayTranslation(id, step, context, !original);
   const visible = !original && translation.translated ? { ...context, ...translation.translated } : context;
@@ -101,6 +103,11 @@ export function StepDetails({
             {!original && <span role="status" className="text-muted-foreground">{translation.loading ? "한국어 번역 중…" : translation.translated ? "화면용 번역" : "영어 원문 표시 중"}</span>}
           </div>
           {!original && translation.error && <p role="alert" className="mt-2 text-xs text-destructive">{translation.error}<button className="ml-2 underline" onClick={translation.retry}>다시 번역</button></p>}
+          {external && <section className="mt-5 space-y-3" aria-label="이번 단계 외부 레퍼런스">
+            <h4 className="text-sm font-semibold">외부 레퍼런스 · {external.posts.length}/3</h4>
+            {!external.posts.length && <p className="text-xs text-muted-foreground">일치하는 자료 없음{external.collection_attempted ? " · 추가 수집 확인" : ""}</p>}
+            {external.posts.map(post=><ReferenceCard key={String(post.id)} post={post} />)}
+          </section>}
           <div className="mt-5 grid gap-5">
             {Object.entries(labels)
               .filter(

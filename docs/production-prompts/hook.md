@@ -8,8 +8,8 @@ If a candidate hook requires a different body or a stronger promise, reject that
 
 ## Assess and revise
 
-Read the hook and body. Query relevant owned posts and user-selected references,
-then view actual hook-slide images with production_preview_project or production_read_images.
+Read the hook and body. Query relevant owned posts and, when useful, up to three external examples for the hook decision
+with production_external_references. Compare the promised answer and wording in actual hook-slide images with production_preview_project or production_read_images.
 
 Choose wording that makes the useful answer immediately clear, gives the intended reader
 a specific reason to continue, and accurately describes what the body delivers.
