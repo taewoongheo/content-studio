@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { StructuredValue } from "./details/structured-value";
 import { StatusIcon } from "./workflow/status-icon";
+import { useDisplayTranslation } from "../hooks/display/use-display-translation";
 import type {
   ProductionStep,
   WorkDetail,
@@ -59,6 +60,9 @@ export function StepDetails({
     };
   }, [id, step, updated, write, readWork]);
   const context = step === "analysis" ? detail?.analysis : detail?.production;
+  const [original, setOriginal] = useState(false);
+  const translation = useDisplayTranslation(id, step, context, !original);
+  const visible = !original && translation.translated ? { ...context, ...translation.translated } : context;
   return (
     <section
       className="production-details p-5"
@@ -90,6 +94,11 @@ export function StepDetails({
             마지막 저장:{" "}
             {new Date(String(context.updated_at)).toLocaleString("ko-KR")}
           </p>
+          <div className="mt-3 flex items-center gap-3 text-xs">
+            <button className="production-button" onClick={() => setOriginal(value => !value)}>{original ? "한국어 보기" : "영어 원문"}</button>
+            {!original && <span role="status" className="text-muted-foreground">{translation.loading ? "한국어 번역 중…" : translation.translated ? "화면용 번역" : "영어 원문 표시 중"}</span>}
+          </div>
+          {!original && translation.error && <p role="alert" className="mt-2 text-xs text-destructive">{translation.error}<button className="ml-2 underline" onClick={translation.retry}>다시 번역</button></p>}
           <div className="mt-5 grid gap-5">
             {Object.entries(labels)
               .filter(
@@ -101,7 +110,7 @@ export function StepDetails({
               .map(([key, label]) => (
                 <div key={key} className="min-w-0 rounded-lg bg-muted/35 p-4">
                   <h4 className="mb-2 text-xs font-semibold">{label}</h4>
-                  <StructuredValue value={context[key]} field={key} />
+                  <StructuredValue value={visible?.[key]} field={key} />
                 </div>
               ))}
           </div>

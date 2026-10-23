@@ -32,6 +32,14 @@ if (args[0] === "mcp") {
     assert.ok(overrides.includes("mcp_servers.production.enabled=true"));
     assert.ok(overrides.includes('mcp_servers.production.url="http://127.0.0.1:3000/api/content-production/agent/task"'));
     assert.equal(args.includes("test-token"), false);
+    await runCodex({ prompt: "Translate data only", schema: {}, origin: "", taskId: "", token: "", displayOnly: true, signal: new AbortController().signal, onActivity() {} });
+    const displayArgs: string[] = JSON.parse(await readFile(argsPath, "utf8"));
+    const displayOverrides = displayArgs.flatMap((value, index) => value === "-c" ? [displayArgs[index + 1]] : []);
+    assert.ok(displayOverrides.includes('web_search="disabled"'));
+    assert.ok(displayOverrides.includes("mcp_servers.other.enabled=false"));
+    assert.ok(displayOverrides.includes("features.shell_tool=false"));
+    assert.ok(displayOverrides.includes("features.unified_exec=false"));
+    assert.equal(displayOverrides.some(value => value.includes("/api/content-production/agent/") || value === "mcp_servers.production.enabled=true"), false);
   } finally {
     if (previous === undefined) delete process.env.CONTENT_STUDIO_CODEX_BIN;
     else process.env.CONTENT_STUDIO_CODEX_BIN = previous;

@@ -1,6 +1,7 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { isLocalRequest } from "@/lib/http/local-request";
 import { createStudioMcpServer } from "@/lib/mcp/server";
+import { assertEnglish } from "@/lib/text/english";
 import {
   authorizeRun,
   productionStore,
@@ -55,6 +56,7 @@ export async function POST(
           const projectId = (input as { projectId?: string }).projectId;
           if (projectId !== productionStore().get(taskId).task.project_id)
             throw new Error("이 작업에 연결된 프로젝트만 수정할 수 있습니다.");
+          if (writeTools.includes(name)) assertEnglish(input, name);
         }
       },
       after(name, input, result) {

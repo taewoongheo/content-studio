@@ -23,10 +23,13 @@ import { listVisuals } from "@/domains/content-production/server/publication/vis
 import { registerPublication } from "@/domains/content-production/server/publication/service";
 import { deleteTaskProject } from "@/domains/content-production/server/projects";
 import { stepSchema } from "@/domains/content-production/domain/contracts";
+import { displayContent } from "@/domains/content-production/domain/display";
+import { translateDisplay } from "@/domains/content-production/server/display/translation";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("settings"), settings: z.unknown() }),
+  z.object({ action: z.literal("translate_display"), id: z.string().min(1), step: stepSchema }),
   z.object({ action: z.literal("start"), count: z.number().int().positive() }),
   z.object({
     action: z.enum(["stop", "resume", "remove"]),
@@ -102,6 +105,12 @@ export async function POST(request: Request) {
       `${new URL(request.url).protocol}//${request.headers.get("host")}`,
     ).origin;
     switch (input.action) {
+      case "translate_display": {
+        const detail = store.get(input.id);
+        const context = input.step === "analysis" ? detail.analysis : detail.production;
+        const source = displayContent(context ?? {});
+        return Response.json({ source, translated: await translateDisplay(source) }, { headers: { "Cache-Control": "no-store" } });
+      }
       case "settings":
         return Response.json(saveProductionSettings(input.settings));
       case "start":

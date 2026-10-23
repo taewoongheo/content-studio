@@ -32,7 +32,7 @@ test("DB 재연결 후 URL 기반 게시 기록과 현재 테이블 구조가 �
     const database = openLocalDatabase(path);
     const store = new ContentProjectStore(database);
     store.save({ id: "post", name: "게시물", aspectRatio: "4:5", slideCount: 1, outputLanguage: "English", document: {}, assets: [] });
-    store.updateMetadata("post", { topic: "등 운동", message: "허리 부담을 줄이는 운동 선택 기준" });
+    store.updateMetadata("post", { topic: "Back training", message: "Choose back exercises with less lower-back strain" });
     const publishedAt = "2026-10-23T00:00:00Z";
     database.prepare(`INSERT INTO content_creation_logs(id,project_id,post_url,actual_published_at,created_at,updated_at)
       VALUES('log','post','https://www.tiktok.com/@a/photo/123',?,?,?)`).run(publishedAt,publishedAt,publishedAt);

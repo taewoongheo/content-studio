@@ -14,6 +14,28 @@ const direction = {
   difference_from_recent: "new",
 };
 
+test("비영어 draft·완료 결과·방향 변경·로그 수정은 DB 변경 전에 거부한다", () => {
+  const db = openLocalDatabase(":memory:"), store = new ProductionStore(db);
+  try {
+    const [id] = store.create(1);
+    store.state(id, "running");
+    const before = store.get(id);
+    assert.throws(() => store.save(id, "analysis", { analysis: "영문이 아님" }), /ENGLISH_REQUIRED/);
+    assert.throws(() => store.completeAnalysis(id, { ...direction, analysis: "분석", sources: [] }), /ENGLISH_REQUIRED/);
+    assert.deepEqual(store.get(id), before);
+    store.completeAnalysis(id, { ...direction, analysis: "A practical plan for beginners.", sources: [] });
+    store.state(id, "running");
+    const productionBefore = store.get(id);
+    for (const patch of [{ content: { slides: [{ body: "한국어 본문" }] } }, { research: [{ question: "Why?", source: "https://example.com", finding: "검증 결과", judgment: "useful" }] }, { sources: [{ kind: "log", id: "log", part: "hook", used_for: "참고 이유" }] }])
+      assert.throws(() => store.save(id, "production", patch), /ENGLISH_REQUIRED/);
+    assert.throws(() => store.changeDirection(id, { ...direction, answer: "한국어" }, "collision"), /ENGLISH_REQUIRED/);
+    assert.throws(() => store.changeDirection(id, direction, "research", "수정 이유"), /ENGLISH_REQUIRED/);
+    assert.throws(() => store.completeProduction(id, { project_id: "none", summary: { hook: "한국어" }, sources: [] }), /ENGLISH_REQUIRED/);
+    assert.throws(() => store.editLog(productionBefore.task.log_id, { topic: "한국어" }), /ENGLISH_REQUIRED/);
+    assert.deepEqual(store.get(id), productionBefore);
+  } finally { db.close(); }
+});
+
 test("단계 출력 검사·분리 저장·재개·취소 후 쓰기 거부", () => {
   const db = openLocalDatabase(":memory:"),
     store = new ProductionStore(db);

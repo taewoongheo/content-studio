@@ -13,6 +13,7 @@ export async function runCodex(input: {
   token: string;
   signal: AbortSignal;
   onActivity: (message: string) => void;
+  displayOnly?: boolean;
 }) {
   const directory = await mkdtemp(join(tmpdir(), "content-production-")),
     schema = join(directory, "output-schema.json"),
@@ -48,24 +49,24 @@ export async function runCodex(input: {
           "--json",
           "--ephemeral",
           "-c",
-          'web_search="live"',
+          input.displayOnly ? 'web_search="disabled"' : 'web_search="live"',
+          ...(input.displayOnly ? ["--skip-git-repo-check", "-c", "features.shell_tool=false", "-c", "features.unified_exec=false", "-c", 'model_reasoning_effort="low"'] : []),
           "--sandbox",
           "read-only",
           "--output-schema",
           schema,
           "--output-last-message",
           output,
-          "-c",
-          `mcp_servers.production.url=${JSON.stringify(`${input.origin}/api/content-production/agent/${input.taskId}`)}`,
-          "-c",
-          'mcp_servers.production.bearer_token_env_var="CONTENT_PRODUCTION_RUN_TOKEN"',
           ...disableServers,
-          "-c",
-          "mcp_servers.production.enabled=true",
+          ...(!input.displayOnly ? [
+            "-c", `mcp_servers.production.url=${JSON.stringify(`${input.origin}/api/content-production/agent/${input.taskId}`)}`,
+            "-c", 'mcp_servers.production.bearer_token_env_var="CONTENT_PRODUCTION_RUN_TOKEN"',
+            "-c", "mcp_servers.production.enabled=true",
+          ] : []),
           "-",
         ],
         {
-          cwd: process.cwd(),
+          cwd: input.displayOnly ? directory : process.cwd(),
           env: { ...process.env, CONTENT_PRODUCTION_RUN_TOKEN: input.token },
           stdio: ["pipe", "pipe", "pipe"],
           shell: false,
@@ -129,7 +130,7 @@ export async function runCodex(input: {
         else
           reject(
             new Error(
-              `Codex 실행 실패 (${code}): ${(protocolError || errorTail).replaceAll(input.token, "[redacted]")}`,
+              `Codex 실행 실패 (${code}): ${input.token ? (protocolError || errorTail).replaceAll(input.token, "[redacted]") : protocolError || errorTail}`,
             ),
           );
       });

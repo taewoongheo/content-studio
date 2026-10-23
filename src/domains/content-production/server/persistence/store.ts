@@ -13,6 +13,7 @@ import {
   type WorkDetail,
 } from "../../domain/contracts";
 import { publishChange } from "../events";
+import { assertEnglish } from "@/lib/text/english";
 
 const directionKeys = Object.keys(directionSchema.shape) as Array<
   keyof Direction
@@ -139,6 +140,7 @@ export class ProductionStore {
     const patch = (
       step === "analysis" ? analysisPatchSchema : productionPatchSchema
     ).parse(raw);
+    assertEnglish(patch, `${step}_draft`);
     const values: Row = { updated_at: this.now() };
     for (const [key, value] of Object.entries(patch))
       values[typeof value === "object" ? `${key}_json` : key] =
@@ -165,6 +167,7 @@ export class ProductionStore {
     const detail = this.assertActive(id, "analysis"),
       result = analysisResultSchema.parse(raw),
       now = this.now();
+    assertEnglish(result, "analysis_result");
     this.db.transaction(() => {
       const values: Row = {
         analysis: result.analysis,
@@ -198,6 +201,8 @@ export class ProductionStore {
   ) {
     const detail = this.assertActive(id, "production"),
       now = this.now();
+    assertEnglish(result.summary, "production_result.summary");
+    assertEnglish(result.sources, "production_result.sources");
     this.db.transaction(() => {
       if (detail.task.project_id !== result.project_id)
         throw new Error("이 작업의 프로젝트만 완료할 수 있습니다.");
@@ -232,6 +237,8 @@ export class ProductionStore {
     const detail = this.assertActive(id, "production"),
       direction = directionSchema.parse(raw),
       now = this.now();
+    assertEnglish(direction, "direction");
+    if (reason) assertEnglish(reason, "direction.reason");
     if (cause === "research" && !reason?.trim())
       throw new Error("추가 조사에 따른 변경 이유가 필요합니다.");
     this.db.transaction(() => {
@@ -313,6 +320,7 @@ export class ProductionStore {
       )
       .strict()
       .parse(raw);
+    assertEnglish(patch, "log");
     if (!this.row("SELECT id FROM content_creation_logs WHERE id=?", id))
       throw new Error("로그를 찾을 수 없습니다.");
     this.update("content_creation_logs", "id", id, {
