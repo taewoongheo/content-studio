@@ -11,16 +11,17 @@ export function useDisplayTranslation(id: string, step: ProductionStep, context:
   useEffect(() => {
     if (!enabled || !sourceKey || sourceKey === "{}") return;
     let active = true;
+    const controller = new AbortController();
     // Avoid launching a translation for each intermediate save in a burst.
     const timer = setTimeout(() => {
-      requestDisplayTranslation(id, step, sourceKey).then(value => {
+      requestDisplayTranslation(id, step, sourceKey, controller.signal).then(value => {
         if (!active) return;
         setResult({ key, value });
       }).catch(error => {
         if (active) setResult({ key, error: error instanceof Error ? error.message : "번역 실패" });
       });
     }, 600);
-    return () => { active = false; clearTimeout(timer); };
+    return () => { active = false; clearTimeout(timer); controller.abort(); };
   }, [id, step, key, sourceKey, enabled, attempt]);
   const current = result?.key === key ? result : null;
   return { translated: current?.value, error: current?.error, loading: enabled && !!sourceKey && sourceKey !== "{}" && !current, retry: () => setAttempt(value => value + 1) };

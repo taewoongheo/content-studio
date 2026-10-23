@@ -1,4 +1,4 @@
-import { runCodex } from "../execution/process";
+import { runCodex } from "../../execution/process";
 
 export async function translateWithCodex(strings: string[], signal: AbortSignal, model: string) {
   const entries = Object.fromEntries(strings.map((value, index) => [`text_${index}`, value]));

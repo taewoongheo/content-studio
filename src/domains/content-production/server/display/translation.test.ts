@@ -37,3 +37,53 @@ test("cache keys and CLI requests use the same selected model", async () => {
   await translate(source, "model-b");
   assert.deepEqual(models, ["model-a", "model-b"]);
 });
+
+test("sentence cache translates only changed sentences and reuses duplicates across scopes", async () => {
+  const calls: string[][] = [];
+  const translate = createDisplayTranslator(async strings => {
+    calls.push(strings);
+    return strings.map(text => text.startsWith("Use") ? "3세트를 수행한다." : text.includes("90") ? "90초 쉰다." : "60초 쉰다.");
+  });
+  const source = { analysis: "Use 3 sets. Rest 60 seconds.\n", answer: "Use 3 sets." };
+  const result = await translate(source);
+  assert.deepEqual(result, { analysis: "3세트를 수행한다. 60초 쉰다.\n", answer: "3세트를 수행한다." });
+  await translate({ analysis: "Use 3 sets. Rest 90 seconds.\n" });
+  assert.deepEqual(calls, [["Use 3 sets.", "Rest 60 seconds."], ["Rest 90 seconds."]]);
+  assert.equal(source.analysis, "Use 3 sets. Rest 60 seconds.\n");
+});
+
+test("cancelling one viewer keeps a shared CLI request alive for another viewer", async () => {
+  let finish!: (value: string[]) => void;
+  let worker!: AbortSignal;
+  const translate = createDisplayTranslator(async (_strings, signal) => {
+    worker = signal;
+    return new Promise<string[]>(resolve => { finish = resolve; });
+  });
+  const controller = new AbortController();
+  const a = translate({ answer: "Use 3 sets" }, "model", controller.signal);
+  const b = translate({ answer: "Use 3 sets" }, "model");
+  await Promise.resolve();
+  controller.abort(new DOMException("Closed", "AbortError"));
+  await assert.rejects(a, { name: "AbortError" });
+  assert.equal(worker.aborted, false);
+  finish(["3세트를 수행한다"]);
+  assert.deepEqual(await b, { answer: "3세트를 수행한다" });
+});
+
+test("last viewer cancellation stops the worker and a subsequent request can retry", async () => {
+  let calls = 0;
+  let worker!: AbortSignal;
+  const translate = createDisplayTranslator(async (_strings, signal) => {
+    calls++; worker = signal;
+    if (calls > 1) return ["3세트를 수행한다"];
+    return new Promise<string[]>((_resolve, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true }));
+  });
+  const controller = new AbortController();
+  const a = translate({ answer: "Use 3 sets" }, "model", controller.signal);
+  await Promise.resolve();
+  controller.abort(new DOMException("Closed", "AbortError"));
+  await assert.rejects(a, { name: "AbortError" });
+  assert.equal(worker.aborted, true);
+  assert.deepEqual(await translate({ answer: "Use 3 sets" }, "model"), { answer: "3세트를 수행한다" });
+  assert.equal(calls, 2);
+});
