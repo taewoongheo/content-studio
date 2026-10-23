@@ -23,22 +23,21 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     "production_query",
     {
       description:
-        "Query published content logs or user-selected references. Logs return up to 10 best posts by engagement_rate=(likes+comments+saves)/views, then up to 10 lowest-rate posts excluding the best group, then up to 10 newest remaining posts by actual publication time. All groups exclude previously selected IDs before counting, for up to 30 distinct posts. selection_group identifies performance/low_performance/recent. Missing metrics or zero views exclude a post from both performance rankings, but not recency. query filters eligible topic/name before selection. References are unchanged. Unpublished drafts are available through production_comparisons for duplication checks. Read actual images as needed and distinguish plans from observed performance.",
+        "Query published content logs, user-selected references, or this task's shared TikTok discovery candidates. discovery returns up to five posts collected once at batch start, with query, metrics, engagement_rate and stored visual_set_id; these are unvalidated popular-search candidates, not curated references. Logs return up to 10 best posts by engagement_rate=(likes+comments+saves)/views, then up to 10 lowest-rate posts excluding the best group, then up to 10 newest remaining posts by actual publication time. All groups exclude previously selected IDs before counting, for up to 30 distinct posts. selection_group identifies performance/low_performance/recent. Missing metrics or zero views exclude a post from both performance rankings, but not recency. query filters eligible topic/name before selection. References are unchanged. Unpublished drafts are available through production_comparisons for duplication checks. Read actual images as needed and distinguish plans from observed performance.",
       inputSchema: z.object({
-        kind: z.enum(["logs", "references"]),
+        kind: z.enum(["logs", "references", "discovery"]),
         query: z.string().default(""),
       }),
       annotations: annotations(true),
     },
-    (input) =>
-      guarded(() =>
-        json({
-          items:
-            input.kind === "logs"
-              ? productionStore().planningLogs(input.query)
-              : references(productionStore().db, input.query),
-        }),
-      ),
+    (input) => guarded(() => {
+      const store = productionStore();
+      if (input.kind === "discovery") {
+        const batch = taskId ? store.get(taskId).discovery : null;
+        return json({ query: batch?.query ?? null, collected_at: batch?.collected_at ?? null, items: batch?.posts ?? [] });
+      }
+      return json({ items: input.kind === "logs" ? store.planningLogs(input.query) : references(store.db, input.query) });
+    }),
   );
   registerTool(
     server,

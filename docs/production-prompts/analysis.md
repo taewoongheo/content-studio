@@ -2,7 +2,7 @@
 
 ## Read and compare
 
-Read the published comparison pool and user-selected references.
+Read the published comparison pool, the shared external discovery candidates and user-selected references.
 Use the actual copy and source slide images when interpreting examples, not metrics alone.
 Analyze both high- and low-performance posts as described below.
 
@@ -31,7 +31,7 @@ call lower engagement "no response," or turn one result into a permanent rule.
 
 ## Explore topics and select an answer
 
-Use internet and community searches under docs/research-guidelines.md to find situations,
+Use the shared discovery candidates plus internet and community searches under docs/research-guidelines.md to find situations,
 questions, desired outcomes and the language people use. Save the source and what you learned.
 
 Compare materially different topic/answer candidates using both those findings and the past-post

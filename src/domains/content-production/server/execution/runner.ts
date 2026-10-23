@@ -1,3 +1,4 @@
+import { collectDiscovery } from "../persistence/planning/discovery";
 import { z } from "zod";
 import type { PerformanceRefresh } from "../../domain/performance";
 import { discardTask } from "../projects";
@@ -74,7 +75,10 @@ export function recordSourceReview(id: string) {
 export function syncState() {
   return { running: !!shared.productionSync, report: shared.productionRefresh ?? null };
 }
-export async function startProduction(count: number, origin: string) {
+export async function startProduction(
+  count: number, origin: string,
+  services = { refreshMetrics, collectDiscovery, execute },
+) {
   if (!process.env.APIFY_API_TOKEN?.trim())
     throw new Error("Apify에 연결되지 않아 제작을 시작할 수 없습니다. APIFY_API_TOKEN을 설정해 주세요.");
   if (shared.productionSync)
@@ -88,15 +92,25 @@ export async function startProduction(count: number, origin: string) {
   shared.productionRefresh = report;
   publishChange({ kind: "sync", detail: "running" });
   try {
-    await refreshMetrics(store.db, undefined, undefined, records => {
-      report.records = records;
-      publishChange({ kind: "sync", detail: "snapshot" });
-    });
+    const [metrics, discovery] = await Promise.allSettled([
+      services.refreshMetrics(store.db, undefined, undefined, records => {
+        report.records = records;
+        publishChange({ kind: "sync", detail: "snapshot" });
+      }),
+      services.collectDiscovery(store.db),
+    ]);
+    if (discovery.status === "fulfilled") {
+      report.discovery = discovery.value;
+      publishChange({ kind: "sync", detail: "discovery" });
+    }
+    // Wait for both collectors before releasing the start lock, including failures.
+    if (metrics.status === "rejected") throw metrics.reason;
+    if (discovery.status === "rejected") throw discovery.reason;
     report.state = "completed";
     report.completed_at = new Date().toISOString();
-    const ids = store.create(count);
+    const ids = store.create(count, report.discovery);
     ids.forEach((id) => {
-      void execute(id, origin).catch((error) => {
+      void services.execute(id, origin).catch((error) => {
         try {
           store.state(
             id,
@@ -110,7 +124,7 @@ export async function startProduction(count: number, origin: string) {
   } catch (error) {
     if (report.state === "running") {
       report.state = "failed";
-      report.error = error instanceof Error ? error.message : "성과 갱신 실패";
+      report.error = error instanceof Error ? error.message : "분석 자료 수집 실패";
       report.completed_at = new Date().toISOString();
     }
     throw error;

@@ -17,10 +17,11 @@ const count = (value: unknown) => Array.isArray(value) ? value.length : 0;
 export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, WorkDetail>, writes: Record<string, number>, activity: Record<string, string>, syncing: boolean, report?: PerformanceRefresh | null, planningCount = 0) {
   const nodes: WorkflowNode[] = [{ id: "start", type: "start", position: { x: 0, y: 0 }, data: {} }];
   const edges: Edge[] = [];
+  const discovery = report?.discovery ?? Object.values(details).find(detail => detail.discovery)?.discovery;
   if (syncing || tasks.length || report) {
     nodes.push({ id: "sync", type: "stage", position: { x: 380, y: 0 }, data: {
       title: "분석 자료", stage: "sync", state: syncing ? "running" : report?.state === "failed" ? "failed" : report?.state === "completed" || tasks.some(task => task.state !== "pending") ? "completed" : "pending", color: "#475569", write: 0, kind: "",
-      outputTitle: "분석 참고 게시글", outputText: syncing ? "최신 반응을 가져오고 있어요" : "조회 · 좋아요 · 저장 · 댓글 · 공유", facts: [`${planningCount}개 게시글`], activity: syncing ? "성과 조회 중" : report?.state === "failed" ? "수집 실패" : "",
+      outputTitle: "분석 참고 게시글", outputText: syncing ? "성과와 외부 검색 자료를 가져오고 있어요" : "조회 · 좋아요 · 저장 · 댓글 · 공유", facts: [`기존 ${planningCount}개`, ...(discovery ? [`외부 ${discovery.posts.length}개`] : [])], activity: syncing ? "성과 조회 중" : report?.state === "failed" ? "수집 실패" : "",
     } });
     edges.push({ id: "start-sync", source: "start", target: "sync", type: "straight", animated: syncing, markerEnd: { type: MarkerType.ArrowClosed, color: "#475569" }, style: { stroke: "#475569", strokeWidth: 2.5 } });
   }

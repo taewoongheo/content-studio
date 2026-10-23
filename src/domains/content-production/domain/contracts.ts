@@ -1,3 +1,4 @@
+import type { DiscoveryBatch } from "./discovery";
 import { z } from "zod";
 
 export const stepSchema = z.enum(["analysis", "production", "hook", "visual"]);
@@ -109,6 +110,7 @@ export interface WorkItem extends Row {
   content_type: string | null;
 }
 export interface WorkDetail {
+  discovery?: DiscoveryBatch | null;
   task: WorkItem;
   analysis: Row;
   production: Row | null;

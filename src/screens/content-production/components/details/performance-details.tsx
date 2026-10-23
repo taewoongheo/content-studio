@@ -1,3 +1,4 @@
+import { DiscoveryDetails } from "./discovery-details";
 import { X } from "lucide-react";
 import { metricKeys, type PerformanceRefresh } from "@/domains/content-production/domain/performance";
 import type { Row, WorkDetail } from "@/domains/content-production/domain/contracts";
@@ -25,18 +26,20 @@ export function PerformanceDetails({ report, logs, details, onClose }: {
   }
   const refreshedIds = new Set(report?.records.map(row => row.log_id) ?? []);
   const rows = logs;
+  const discovery = report?.discovery ?? Object.values(details).find(detail => detail.discovery)?.discovery;
   return <section className="p-5" aria-label="분석 참고 게시글">
     <header className="flex items-center justify-between gap-4">
       <h2 className="font-semibold">분석 참고 게시글</h2>
       <button className="production-button" aria-label="성과 상세 닫기" onClick={onClose}><X size={16} /></button>
     </header>
     <p className="mt-3 text-xs text-muted-foreground">{report
-      ? report.state === "running" ? "최근 게시글 성과 갱신 중 · 아래 수치는 마지막 저장값입니다."
+      ? report.state === "running" ? "게시글 성과·외부 검색 자료 수집 중 · 아래 수치는 마지막 저장값입니다."
         : report.state === "failed" ? "갱신 실패 · 이전 저장값을 유지합니다."
         : `최근 게시글 ${report.records.length}개 갱신 완료 · ${time(report.completed_at)}`
       : "저장된 최신 성과"}</p>
     {report?.error && <p role="alert" className="mt-3 text-sm text-destructive">{report.error}</p>}
     <p className="mt-2 text-xs leading-5 text-muted-foreground">성과 상위 10개, 하위 10개, 최신 10개를 중복 없이 보여줍니다. 반응률은 (좋아요 + 댓글 + 저장) ÷ 조회 수로 계산합니다.</p>
+    {discovery && <DiscoveryDetails batch={discovery} />}
     <div className="mt-5 space-y-4">
       {rows.map(row => <article key={String(row.id)} className="rounded-lg border p-4">
         <a className="text-sm font-semibold hover:underline" href={String(row.post_url)} target="_blank" rel="noreferrer">{String(row.name ?? row.topic ?? "콘텐츠")}</a>

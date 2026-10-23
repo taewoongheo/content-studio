@@ -1,3 +1,4 @@
+import { DISCOVERY_QUESTION, discoveryRecord, readDiscovery, type DiscoveryBatch } from "../../domain/discovery";
 import { z } from "zod";
 import type Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
@@ -6,6 +7,7 @@ import {
   analysisResultSchema,
   productionPatchSchema,
   reviewDraftPatchSchema,
+  researchSchema,
   directionSchema,
   type Direction,
   type ProductionStep,
@@ -74,9 +76,12 @@ export class ProductionStore {
       "SELECT * FROM content_creation_logs WHERE id=?",
       task.log_id,
     )!;
+    const decoded = decode(analysis);
+    const research = decoded.research as Array<z.infer<typeof researchSchema>>;
     return {
       task,
-      analysis: decode(analysis),
+      discovery: readDiscovery(research),
+      analysis: { ...decoded, research: research.filter(item => item.question !== DISCOVERY_QUESTION) },
       production: production ? decode(production) : null,
       log: decode(log),
       ...Object.fromEntries((["hook", "visual"] as const).map(step => {
@@ -85,7 +90,7 @@ export class ProductionStore {
       })),
     };
   }
-  create(count: number) {
+  create(count: number, discovery?: DiscoveryBatch) {
     const ids: string[] = [];
     this.db.transaction(() => {
       for (let i = 0; i < count; i++) {
@@ -104,9 +109,9 @@ export class ProductionStore {
           .run(id, log, now, now);
         this.db
           .prepare(
-            "INSERT INTO content_analysis_drafts(draft_id,created_at,updated_at) VALUES(?,?,?)",
+            "INSERT INTO content_analysis_drafts(draft_id,created_at,updated_at,research_json) VALUES(?,?,?,?)",
           )
-          .run(id, now, now);
+          .run(id, now, now, JSON.stringify(discovery ? [discoveryRecord(discovery)] : []));
         ids.push(id);
       }
     })();
@@ -146,7 +151,16 @@ export class ProductionStore {
     const patch = (
       step === "analysis" ? analysisPatchSchema : step === "production" ? productionPatchSchema : reviewDraftPatchSchema
     ).parse(raw);
+    // Collection snapshots are server-owned evidence, not agent-authored prose.
+    if (step === "analysis" && patch.research) {
+      patch.research = patch.research.filter(item => item.question !== DISCOVERY_QUESTION);
+    }
     assertEnglish(patch, `${step}_draft`);
+    if (step === "analysis" && patch.research) {
+      const row = this.row("SELECT research_json FROM content_analysis_drafts WHERE draft_id=?", id)!;
+      const existing = JSON.parse(String(row.research_json)) as Array<z.infer<typeof researchSchema>>;
+      patch.research = [...existing.filter(item => item.question === DISCOVERY_QUESTION), ...patch.research];
+    }
     const values: Row = { updated_at: this.now() };
     for (const [key, value] of Object.entries(patch))
       values[typeof value === "object" ? `${key}_json` : key] =

@@ -20,18 +20,18 @@ export const productionSettingsSchema = z
   })
   .strict();
 export type ProductionSettings = z.infer<typeof productionSettingsSchema>;
-function settingsPath() {
+export function productionRuntimePath(file: string) {
   const directory =
     process.env.CONTENT_STUDIO_PRODUCTION_RUNTIME_DIR ??
     join(dirname(defaultDatabasePath()), ".content-studio-production");
   if (!isAbsolute(directory))
     throw new Error("콘텐츠 제작 설정 경로는 절대 경로여야 합니다.");
-  return join(directory, "settings.json");
+  return join(directory, file);
 }
 export function readProductionSettings(): ProductionSettings {
   try {
     return productionSettingsSchema.parse(
-      JSON.parse(readFileSync(settingsPath(), "utf8")),
+      JSON.parse(readFileSync(productionRuntimePath("settings.json"), "utf8")),
     );
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT")
@@ -41,7 +41,7 @@ export function readProductionSettings(): ProductionSettings {
 }
 export function saveProductionSettings(raw: unknown) {
   const settings = productionSettingsSchema.parse(raw),
-    path = settingsPath(),
+    path = productionRuntimePath("settings.json"),
     temporary = `${path}.${randomUUID()}.tmp`;
   mkdirSync(dirname(path), { recursive: true });
   try {

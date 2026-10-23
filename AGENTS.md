@@ -33,7 +33,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ## 콘텐츠 제작의 범위
 
 - 자동 제작의 분석·방향·조사·참고 이유·콘텐츠·최종 요약은 영어로 저장한다. 서버가 비영어로 감지한 값은 거부하므로 해당 필드를 영어로 고쳐 다시 저장한다. 생산기의 한국어는 화면용 번역이며 제작 입력이나 원본에 사용하지 않는다.
-- 자동 제작은 콘텐츠별 분석 단계에서 소재·답·표현 방향을 정하고 단계별 draft를 저장한다. 시각적 방향은 과거 게시글과 선별 레퍼런스의 실제 이미지를 참고한다. `create_project`는 새 게시글을 생성한다. `clone_project`는 사용자가 지정한 기존 게시글을 독립 사본으로 복사하는 수동 경로다.
+- 자동 제작은 콘텐츠별 분석 단계에서 소재·답·표현 방향을 정하고 단계별 draft를 저장한다. 시각적 방향은 과거 게시글·선별 레퍼런스와 시작 시 수집한 외부 후보의 실제 이미지를 참고한다. 외부 후보는 사용자 선별 레퍼런스와 별개이며 적합성을 확인한 뒤 사용한다. `create_project`는 새 게시글을 생성한다. `clone_project`는 사용자가 지정한 기존 게시글을 독립 사본으로 복사하는 수동 경로다.
 - 제작할 내용은 사용자 요청이나 별도의 콘텐츠 기획에서 정한다. 내용이 정해지지 않았다면 필요한 주제·핵심 메시지를 확인한다. 기존 게시글의 내용을 새 콘텐츠의 주제로 간주하지 않는다.
 - 정한 내용의 제작·검토 기준은 [콘텐츠 제작 가이드](docs/content-guidelines.md)를 따른다. 리서치는 [리서치 가이드](docs/research-guidelines.md)를 따른다.
 
@@ -103,7 +103,7 @@ url = "http://127.0.0.1:3000/mcp"
 | `set_content_metadata` | 개별 콘텐츠의 주제·메시지 저장 |
 | `clone_project` | 기존 게시글을 독립 사본으로 복사 (`projectId`) |
 | `create_project` | 소재·메시지가 정해진 게시글을 생성·저장 |
-| `production_query`, `production_read_images` | 과거 게시 로그·사용자 선별 사례 조회와 보존 이미지 확인 |
+| `production_query`, `production_read_images` | 과거 게시 로그·사용자 선별 사례·현재 작업의 외부 검색 후보 조회와 보존 이미지 확인 |
 | `production_read_project`, `production_preview_project` | 참고 게시글의 DB 저장 문서·이미지 조회. 편집기 탭을 열지 않음 |
 | `edit_project` | 편집 명령 배열을 한 묶음으로 적용 |
 | `undo_project` | 직전 편집 묶음 되돌리기 |
