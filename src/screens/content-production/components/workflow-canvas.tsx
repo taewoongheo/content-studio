@@ -1,4 +1,5 @@
 "use client";
+import type { PerformanceRefresh } from "@/domains/content-production/domain/performance";
 import { useMemo, useRef, type ReactNode } from "react";
 import {
   Background,
@@ -31,8 +32,10 @@ export function WorkflowCanvas({
   writes,
   activity,
   syncing,
+  syncReport,
   selectedNode,
   onSelect,
+  onSelectSync,
   onOpen,
   onStop,
   stopDisabled,
@@ -45,8 +48,10 @@ export function WorkflowCanvas({
   writes: Record<string, number>;
   activity: Record<string, string>;
   syncing: boolean;
+  syncReport: PerformanceRefresh | null;
   selectedNode?: string;
   onSelect: (id: string, step: ProductionStep) => void;
+  onSelectSync: () => void;
   onOpen: (id: string) => void;
   onStop: () => void;
   stopDisabled: boolean;
@@ -54,7 +59,7 @@ export function WorkflowCanvas({
   busy: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { nodes, edges } = useMemo(() => buildWorkflowGraph(tasks, details, writes, activity, syncing), [tasks, details, writes, activity, syncing]);
+  const { nodes, edges } = useMemo(() => buildWorkflowGraph(tasks, details, writes, activity, syncing, syncReport), [tasks, details, writes, activity, syncing, syncReport]);
   const { measurements, onNodesChange } = useNodeMeasurements();
   const tasksById = new Map(tasks.map(task => [task.id, task]));
   // Controlled nodes must retain ResizeObserver measurements when their data changes.
@@ -71,7 +76,8 @@ export function WorkflowCanvas({
     } : undefined } };
   });
   const click: NodeMouseHandler<WorkflowNode> = (_, node) => {
-    if (node.id === "sync" || node.id === "start") return;
+    if (node.id === "sync") { onSelectSync(); return; }
+    if (node.id === "start") return;
     const [id, step] = node.id.split(":");
     if (step === "result") {
       const task = tasksById.get(id);

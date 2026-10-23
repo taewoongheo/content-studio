@@ -1,3 +1,4 @@
+import type { PerformanceRefresh } from "@/domains/content-production/domain/performance";
 import { MarkerType, type Edge } from "@xyflow/react";
 import type { WorkDetail, WorkItem } from "@/domains/content-production/domain/contracts";
 import type { StartNodeModel } from "./start-node";
@@ -13,13 +14,13 @@ export function instanceColor(id: string) {
 const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
 const record = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const count = (value: unknown) => Array.isArray(value) ? value.length : 0;
-export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, WorkDetail>, writes: Record<string, number>, activity: Record<string, string>, syncing: boolean) {
+export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, WorkDetail>, writes: Record<string, number>, activity: Record<string, string>, syncing: boolean, report?: PerformanceRefresh | null) {
   const nodes: WorkflowNode[] = [{ id: "start", type: "start", position: { x: 0, y: 0 }, data: {} }];
   const edges: Edge[] = [];
-  if (syncing || tasks.length) {
+  if (syncing || tasks.length || report) {
     nodes.push({ id: "sync", type: "stage", position: { x: 380, y: 0 }, data: {
-      title: "성과 갱신", stage: "sync", state: syncing ? "running" : tasks.some(task => task.state !== "pending") ? "completed" : "pending", color: "#475569", write: 0, kind: "",
-      outputTitle: "최근 게시물 성과", outputText: syncing ? "최신 반응을 가져오고 있어요" : "조회 · 좋아요 · 저장 · 댓글 · 공유", facts: [], activity: syncing ? "성과 조회 중" : "",
+      title: "성과 갱신", stage: "sync", state: syncing ? "running" : report?.state === "failed" ? "failed" : report?.state === "completed" || tasks.some(task => task.state !== "pending") ? "completed" : "pending", color: "#475569", write: 0, kind: "",
+      outputTitle: "최근 게시물 성과", outputText: syncing ? "최신 반응을 가져오고 있어요" : "조회 · 좋아요 · 저장 · 댓글 · 공유", facts: report ? [`${report.records.length}개 게시글`] : [], activity: syncing ? "성과 조회 중" : report?.state === "failed" ? "수집 실패" : "",
     } });
     edges.push({ id: "start-sync", source: "start", target: "sync", type: "straight", animated: syncing, markerEnd: { type: MarkerType.ArrowClosed, color: "#475569" }, style: { stroke: "#475569", strokeWidth: 2.5 } });
   }

@@ -47,3 +47,13 @@ test("시작 노드는 고정 원점에 있고 모든 경로의 출발점이다"
   for (const edge of graph.edges) if (reachable.has(edge.source)) reachable.add(edge.target);
   assert.equal(reachable.size, graph.nodes.length);
 });
+
+test("성과 갱신 실패 기록은 제작 작업이 없어도 노드에서 열 수 있다", () => {
+  const graph=buildWorkflowGraph([],{}, {},{},false,{
+    started_at:"2026-10-23T00:00:00Z",completed_at:"2026-10-23T00:01:00Z",state:"failed",records:[],error:"unavailable",
+  });
+  const sync=graph.nodes.find(node=>node.id==="sync");
+  assert.ok(sync && sync.type==="stage");
+  assert.equal(sync.data.state,"failed");
+  assert.equal(graph.edges[0].target,"sync");
+});

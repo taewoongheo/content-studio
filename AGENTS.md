@@ -103,6 +103,7 @@ url = "http://127.0.0.1:3000/mcp"
 | `clone_project` | 기존 게시글을 독립 사본으로 복사 (`projectId`) |
 | `create_project` | 소재·메시지가 정해진 게시글을 생성·저장 |
 | `production_query`, `production_read_images` | 과거 게시 로그·사용자 선별 사례 조회와 보존 이미지 확인 |
+| `production_read_project`, `production_preview_project` | 참고 게시글의 DB 저장 문서·이미지 조회. 편집기 탭을 열지 않음 |
 | `edit_project` | 편집 명령 배열을 한 묶음으로 적용 |
 | `undo_project` | 직전 편집 묶음 되돌리기 |
 | `preview_slide` | 기존 단일 슬라이드 전체 해상도 PNG 확인 |
@@ -291,8 +292,9 @@ pnpm test:mcp --production
 ## 콘텐츠 제작 실행
 
 - `src/domains/content-production`은 작업·단계별 draft, 확정 로그, 선별 레퍼런스, 실행 제어와 게시 연결을 소유한다. 단계는 analysis / production 두 개다.
-- 실행 도구는 작업별 MCP 주소와 실행 토큰으로 제한한다. 분석에서는 편집 도구를 제공하지 않고, 제작에서는 연결한 프로젝트만 수정한다. 중간 저장과 상태 변경은 앱 API/MCP를 사용한다.
+- 실행 도구는 작업별 MCP 주소와 실행 토큰으로 제한한다. 분석에는 편집기 열기·읽기·미리보기를 제공하지 않는다. 참고 게시글은 production_read_project / production_preview_project로 DB 저장본을 읽는다. 제작의 일반 편집기 도구도 해당 작업 프로젝트만 열고 읽고 수정할 수 있다. 중간 저장과 상태 변경은 앱 API/MCP를 사용한다.
 - 서버의 `APIFY_API_TOKEN`으로 공개 TikTok 자료를 수집하며 운영 계정 쿠키를 사용하지 않는다. 키를 프롬프트나 클라이언트로 보내지 않는다.
+- 성과 갱신 노드를 누르면 오른쪽에서 갱신 대상·실제 수치·관측 시각과 분석에 기록된 활용 근거를 확인한다. 최신 갱신 실행의 성공·실패와 결과는 서버 메모리에 유지한다. 서버 재시작 후에는 DB 최신 성과와 남은 분석 draft의 출처를 표시하며 과거 실행의 갱신 결과로 단정하지 않는다.
 - 제작용 모델 기본값은 `gpt-5.6-sol`이며 콘텐츠 제작 화면 하단에서 변경한다. 설정은 작업공간의 `.content-studio-production/settings.json`에 저장하며 전역 Codex 설정은 변경하지 않는다. 검증에서는 `CONTENT_STUDIO_PRODUCTION_RUNTIME_DIR` 절대 경로로 설정 파일을 분리한다.
 - `CONTENT_STUDIO_CODEX_BIN`은 실행할 CLI 경로를 지정한다. 일반 실행은 `codex`를 사용한다. 자동 검사에서만 격리된 실행 fixture를 사용할 수 있고 실제 모델 제작 성공과 구분한다.
 - `production_context`, `production_save_draft`, `production_comparisons`, `production_change_direction`, `production_create_project`, `production_import_image`는 실행 중인 작업 전용 MCP에서만 제공한다. 단계 완료는 서버 실행기가 필수 출력·저장·실제 이미지 검토를 검사해 처리한다.

@@ -1,3 +1,4 @@
+import { registerSourceTools } from "./sources";
 import { importSlideshowImage } from "@/domains/slideshow/server/import-image";
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
@@ -14,7 +15,8 @@ import {
 } from "@/domains/content-production/domain/contracts";
 import { createTaskProject } from "@/domains/content-production/server/projects";
 
-export function registerProductionTools(server: McpServer, taskId?: string) {
+export function registerProductionTools(server: McpServer, taskId?: string, origin = "http://127.0.0.1:3000") {
+  registerSourceTools(server, origin);
   registerTool(
     server,
     "production_query",

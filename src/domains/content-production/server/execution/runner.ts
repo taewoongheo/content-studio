@@ -1,3 +1,4 @@
+import type { PerformanceRefresh } from "../../domain/performance";
 import { discardTask } from "../projects";
 import { OPEN_DRAFT_MESSAGE } from "../../domain/start-policy";
 import { readProductionSettings } from "../settings";
@@ -25,6 +26,7 @@ const shared = globalThis as typeof globalThis & {
   productionRuns?: Map<string, Run>;
   productionRecovered?: boolean;
   productionSync?: boolean;
+  productionRefresh?: PerformanceRefresh;
 };
 const runs = (shared.productionRuns ??= new Map<string, Run>());
 export function productionStore() {
@@ -62,7 +64,7 @@ export function recordReview(
   run.reviews.set(projectId, { revision, slides: reviewed });
 }
 export function syncState() {
-  return { running: !!shared.productionSync };
+  return { running: !!shared.productionSync, report: shared.productionRefresh ?? null };
 }
 export async function startProduction(count: number, origin: string) {
   if (!process.env.APIFY_API_TOKEN?.trim())
@@ -74,9 +76,16 @@ export async function startProduction(count: number, origin: string) {
   const store = productionStore();
   if (store.hasOpenDrafts()) throw new Error(OPEN_DRAFT_MESSAGE);
   shared.productionSync = true;
+  const report: PerformanceRefresh = { started_at: new Date().toISOString(), completed_at: null, state: "running", records: [], error: null };
+  shared.productionRefresh = report;
   publishChange({ kind: "sync", detail: "running" });
   try {
-    await refreshMetrics(store.db);
+    await refreshMetrics(store.db, undefined, undefined, records => {
+      report.records = records;
+      publishChange({ kind: "sync", detail: "snapshot" });
+    });
+    report.state = "completed";
+    report.completed_at = new Date().toISOString();
     const ids = store.create(count);
     ids.forEach((id) => {
       void execute(id, origin).catch((error) => {
@@ -90,6 +99,13 @@ export async function startProduction(count: number, origin: string) {
       });
     });
     return ids;
+  } catch (error) {
+    if (report.state === "running") {
+      report.state = "failed";
+      report.error = error instanceof Error ? error.message : "성과 갱신 실패";
+      report.completed_at = new Date().toISOString();
+    }
+    throw error;
   } finally {
     shared.productionSync = false;
     publishChange({ kind: "sync", detail: "idle" });

@@ -14,12 +14,10 @@ const readTools = [
   "production_comparisons",
   "production_read_images",
   "production_save_draft",
-  "list_projects",
-  "open_project",
-  "read_project",
-  "preview_slide",
-  "preview_slides",
+  "production_read_project",
+  "production_preview_project",
 ];
+const editorReadTools = ["open_project", "read_project", "preview_slide", "preview_slides"];
 const writeTools = [
   "production_create_project",
   "production_import_image",
@@ -49,11 +47,11 @@ export async function POST(
     {
       allowed: new Set([
         ...readTools,
-        ...(run.step === "production" ? writeTools : []),
+        ...(run.step === "production" ? [...editorReadTools,...writeTools] : []),
       ]),
       before(name, input) {
         authorizeRun(taskId, request.headers.get("authorization"));
-        if (writeTools.includes(name) && !name.startsWith("production_")) {
+        if ((writeTools.includes(name) || editorReadTools.includes(name)) && !name.startsWith("production_")) {
           const projectId = (input as { projectId?: string }).projectId;
           if (projectId !== productionStore().get(taskId).task.project_id)
             throw new Error("이 작업에 연결된 프로젝트만 수정할 수 있습니다.");

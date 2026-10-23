@@ -1,3 +1,5 @@
+import { recentKoreanDate, type PerformanceRecord } from "../../domain/performance";
+export { recentKoreanDate } from "../../domain/performance";
 import { notifyProjectsChanged } from "@/domains/workspace/server/project-events";
 import type Database from "better-sqlite3";
 import {
@@ -25,35 +27,17 @@ export function updateMetrics(
     `UPDATE content_creation_logs SET ${metricsKeys.map((k) => `${k}=?`).join(",")},observed_at=?,updated_at=? WHERE id=?`,
   ).run(...metricsKeys.map((k) => post[k]), now, now, id);
 }
-export function recentKoreanDate(iso: string, now = new Date()) {
-  const day = (date: Date) =>
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Seoul",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(date);
-  const today = day(now),
-    cutoff = day(new Date(now.getTime() - 3 * 86400000)),
-    published = day(new Date(iso));
-  return published >= cutoff && published <= today;
-}
 export async function refreshMetrics(
   db: Database.Database,
   signal?: AbortSignal,
   client = new ApifyTikTokClient(),
+  onSnapshot?: (records: PerformanceRecord[]) => void,
 ) {
-  const targets = (
-    db
-      .prepare(
-        "SELECT id,post_url,actual_published_at FROM content_creation_logs WHERE post_url IS NOT NULL AND actual_published_at IS NOT NULL",
-      )
-      .all() as Array<{
-      id: string;
-      post_url: string;
-      actual_published_at: string;
-    }>
-  ).filter((r) => recentKoreanDate(r.actual_published_at));
+  const read = () => db.prepare(
+    "SELECT l.id AS log_id,l.project_id,COALESCE(p.name,l.topic,'콘텐츠') AS name,l.post_url,l.actual_published_at,l.observed_at,l.view_count,l.like_count,l.save_count,l.comment_count,l.share_count FROM content_creation_logs l LEFT JOIN content_projects p ON p.id=l.project_id WHERE l.post_url IS NOT NULL AND l.actual_published_at IS NOT NULL ORDER BY l.actual_published_at DESC",
+  ).all() as PerformanceRecord[];
+  const targets = read().filter(record => recentKoreanDate(record.actual_published_at));
+  onSnapshot?.(targets);
   if (!targets.length) return 0;
   const posts = await client.posts(
     targets.map((r) => r.post_url),
@@ -61,8 +45,10 @@ export async function refreshMetrics(
   );
   signal?.throwIfAborted();
   db.transaction(() =>
-    targets.forEach((target, i) => updateMetrics(db, target.id, posts[i])),
+    targets.forEach((target, i) => updateMetrics(db, target.log_id, posts[i])),
   )();
+  const ids = new Set(targets.map(record => record.log_id));
+  onSnapshot?.(read().filter(record => ids.has(record.log_id)));
   return targets.length;
 }
 const registrations = new Map<string, Promise<unknown>>();

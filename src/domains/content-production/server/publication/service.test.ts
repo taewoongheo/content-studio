@@ -121,3 +121,21 @@ test("수집 중 삭제된 작업은 게시 처리로 되살아나지 않는다"
     assert.equal((db.prepare("SELECT count(*) n FROM content_visual_sets").get() as {n:number}).n,0);
   } finally {db.close();}
 });
+
+test("성과 갱신 스냅샷은 실제 대상·저장 수치를 표시하고 누락된 지표를 0으로 바꾸지 않는다", async () => {
+  const db=openLocalDatabase(":memory:"),store=new ProductionStore(db);
+  try {
+    const [id]=store.create(1),logId=store.get(id).task.log_id;
+    db.prepare("UPDATE content_creation_logs SET topic='Test post',post_url=?,actual_published_at=?,view_count=10 WHERE id=?")
+      .run("https://www.tiktok.com/@a/photo/123",new Date().toISOString(),logId);
+    const snapshots: Array<Array<{log_id:string;view_count:number|null;like_count:number|null}>>=[];
+    const client=new ApifyTikTokClient("test-key",async()=>Response.json([{id:"123",playCount:99,diggCount:0}]));
+    assert.equal(await refreshMetrics(db,undefined,client,rows=>snapshots.push(rows)),1);
+    assert.equal(snapshots.length,2);
+    assert.equal(snapshots[0][0].log_id,logId);
+    assert.equal(snapshots[0][0].view_count,10);
+    assert.equal(snapshots[1][0].view_count,99);
+    assert.equal(snapshots[1][0].like_count,0);
+    assert.equal(store.get(id).log.save_count,null);
+  }finally{db.close();}
+});

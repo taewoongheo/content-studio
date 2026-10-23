@@ -82,7 +82,7 @@ try {
   }
   const tools = (await client.listTools()).tools.map((tool) => tool.name);
   assert.deepEqual([...tools].sort(), [
-    "create_project", "production_query", "production_read_images",
+    "create_project", "production_query", "production_read_project", "production_preview_project", "production_read_images",
     "list_projects", "set_content_metadata", "open_project", "clone_project", "read_project",
     "edit_project", "undo_project", "preview_slide", "preview_slides", "export_slideshow", "rename_project", "get_render_job", "cancel_render_job",
     "list_video_projects", "create_video_project", "open_video_project", "read_video_project", "edit_video_project", "undo_video_project", "redo_video_project", "rename_video_project", "clone_video_project", "preview_video", "export_video", "start_video_export", "close_video_project", "delete_video_project",
@@ -183,6 +183,30 @@ try {
     assert.equal(Object.keys(archive.files).length, updated.editor.document.slides.length);
     assert.deepEqual(await archive.file("slide-01.png")!.async("nodebuffer"), bytes, "ZIP uses the same full-resolution preview renderer");
     console.log("PASS slideshow batch/cache preview and asynchronous full-resolution PNG ZIP export");
+
+    const source = await duplicateProject(id, "Saved reference preview");
+    const referenceResponse = await fetch(origin + "/api/content-production", {method:"POST",headers:{origin,"content-type":"application/json"},body:JSON.stringify({
+      action:"reference",reference:{title:"Source",topic:"test",content_type:"test",project_id:source.id,
+        parts:[{aspect:"visual",location:"slide 1",reason:"test",usage_context:"test"}]},
+    })});
+    assert.ok(referenceResponse.ok);
+    const referenceId = (await referenceResponse.json()).id;
+    const closed = await fetch(origin + "/api/content-jobs/" + source.id,{method:"DELETE",headers:{origin,"content-type":"application/json"},
+      body:JSON.stringify({expectedTabId:source.tabId,expectedRevision:source.editor.revision,decision:"check"})});
+    assert.equal(closed.status,204);
+    const tabsBefore = await fetch(origin + "/api/content-jobs").then(response=>response.json());
+    const savedSource = (await call("production_read_project",{projectId:source.id,outline:true})).structuredContent as {source:string;slides:unknown[]};
+    assert.equal(savedSource.source,"saved"); assert.ok(savedSource.slides.length);
+    const savedPreview = await call("production_preview_project",{projectId:source.id,slideIds:["slide-1"],width:540});
+    const savedImage = savedPreview.content.find(item=>item.type==="image");
+    assert.ok(savedImage?.type==="image");
+    assert.equal((await sharp(Buffer.from(savedImage.data,"base64")).metadata()).width,540);
+    assert.deepEqual(await fetch(origin + "/api/content-jobs").then(response=>response.json()),tabsBefore);
+    await fetch(origin + "/api/content-production",{method:"POST",headers:{origin,"content-type":"application/json"},
+      body:JSON.stringify({action:"remove_reference",id:referenceId})});
+    await fetch(origin + "/api/content-projects/" + source.id,{method:"DELETE",headers:{origin,"content-type":"application/json"},body:"{}"});
+    console.log("PASS saved reference document and image previews do not open editor tabs");
+
 
     const cloned = await duplicateProject(id, "Clone");
     assert.notEqual(cloned.id, id);

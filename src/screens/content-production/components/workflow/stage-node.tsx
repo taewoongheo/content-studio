@@ -37,15 +37,15 @@ export function StageNode({ id, data, selected }: NodeProps<StageNodeModel>) {
       {data.outputText && <p className="production-output-text">{data.outputText}</p>}
       {!!data.facts.length && <div className="production-output-facts">{data.facts.map(fact => <span key={fact}>{fact}</span>)}</div>}
     </div>
-    {(data.stage !== "sync" || data.activity) && <div className="production-stage-footer">
-      <span className="production-stage-action">{data.stage === "result" ? <>포스트 열기<ArrowUpRight size={14} /></> : data.activity || (data.stage === "analysis" ? "분석 보기" : data.stage === "production" ? "작성 내용 보기" : "시작")}</span>
+    <div className="production-stage-footer">
+      <span className="production-stage-action">{data.stage === "result" ? <>포스트 열기<ArrowUpRight size={14} /></> : data.activity || (data.stage === "analysis" ? "분석 보기" : data.stage === "production" ? "작성 내용 보기" : "성과 보기")}</span>
       <div className="flex items-center gap-2">
       <StageControlButton title={data.title} control={data.controls} />
       {data.write > 0 && <span className="production-save-indicator" aria-label="draft 저장" title="draft 저장">
         <span key={data.write} className="production-save-dot production-write-pulse" />
       </span>}
       </div>
-    </div>}
+    </div>
     {data.stage !== "result" && <Handle type="source" position={Position.Right} />}
   </div>;
 }

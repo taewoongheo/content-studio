@@ -1,10 +1,11 @@
+import type { PerformanceRefresh } from "./domain/performance";
 import type { Row, WorkDetail, WorkItem } from "./domain/contracts";
 export interface ProductionSnapshot {
   tasks: WorkItem[];
   logs: Row[];
   references: Row[];
   visuals: Row[];
-  sync: { running: boolean };
+  sync: { running: boolean; report: PerformanceRefresh | null };
   settings: { model: string };
   configured: { apify: boolean };
 }
