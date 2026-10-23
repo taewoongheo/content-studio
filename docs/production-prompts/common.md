@@ -24,9 +24,9 @@ Korean translations are display-only and must not become production inputs.
 ## Context and references
 
 First call production_context and resume from saved drafts and the linked project.
-Then call production_query(kind="logs") without a keyword: it returns up to 12 best posts by
-(likes + comments + saves) / views, then up to 12 lowest-rate posts excluding the best group,
-then up to 12 newest posts excluding both earlier groups. The pool contains up to 36 distinct posts;
+Then call production_query(kind="logs") without a keyword: it returns up to 10 best posts by
+(likes + comments + saves) / views, then up to 10 lowest-rate posts excluding the best group,
+then up to 10 newest posts excluding both earlier groups. The pool contains up to 30 distinct posts;
 smaller groups are returned when there are fewer eligible posts. Missing metrics or zero views
 exclude a post from both rate rankings but not recency.
 Consider all available groups. Compare lower-performing examples with stronger ones to identify

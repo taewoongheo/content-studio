@@ -1,9 +1,9 @@
 import type Database from "better-sqlite3";
 import type { Row } from "../../../domain/contracts";
 
-const PERFORMANCE_COUNT = 12;
-const LOW_PERFORMANCE_COUNT = 12;
-const RECENT_COUNT = 12;
+const PERFORMANCE_COUNT = 10;
+const LOW_PERFORMANCE_COUNT = 10;
+const RECENT_COUNT = 10;
 
 /** Select high/low engagement, then fill recent posts without counting overlaps. */
 export function readPlanningLogs(db: Database.Database, query: string): Row[] {

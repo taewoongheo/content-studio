@@ -17,18 +17,18 @@ function fixture(count: number) {
   return { db, store: new ProductionStore(db) };
 }
 
-test("상위·하위 각 12개를 고른 뒤 중복 없이 실제 게시일 최신 12개를 채운다", () => {
+test("상위·하위 각 10개를 고른 뒤 중복 없이 실제 게시일 최신 10개를 채운다", () => {
   const { db, store } = fixture(40);
   try {
     const rows = store.planningLogs();
-    assert.equal(rows.length, 36);
-    assert.equal(new Set(rows.map(row => row.id)).size, 36);
-    assert.deepEqual(rows.slice(0, 12).map(row => row.id), Array.from({ length: 12 }, (_, i) => `post-${i}`));
-    assert.deepEqual(rows.slice(12, 24).map(row => row.id), Array.from({ length: 12 }, (_, i) => `post-${39 - i}`));
-    assert.ok(rows.slice(0, 12).every(row => row.selection_group === "performance"));
-    assert.ok(rows.slice(12, 24).every(row => row.selection_group === "low_performance"));
-    assert.deepEqual(rows.slice(24).map(row => row.id), Array.from({ length: 12 }, (_, i) => `post-${i + 12}`));
-    assert.ok(rows.slice(24).every(row => row.selection_group === "recent"));
+    assert.equal(rows.length, 30);
+    assert.equal(new Set(rows.map(row => row.id)).size, 30);
+    assert.deepEqual(rows.slice(0, 10).map(row => row.id), Array.from({ length: 10 }, (_, i) => `post-${i}`));
+    assert.deepEqual(rows.slice(10, 20).map(row => row.id), Array.from({ length: 10 }, (_, i) => `post-${39 - i}`));
+    assert.ok(rows.slice(0, 10).every(row => row.selection_group === "performance"));
+    assert.ok(rows.slice(10, 20).every(row => row.selection_group === "low_performance"));
+    assert.deepEqual(rows.slice(20).map(row => row.id), Array.from({ length: 10 }, (_, i) => `post-${i + 10}`));
+    assert.ok(rows.slice(20).every(row => row.selection_group === "recent"));
     assert.equal(rows[0].engagement_rate, 0.1);
     assert.equal(store.logs().length, 40);
     assert.equal(store.planningLogs("Arms").length, 15);
@@ -61,10 +61,10 @@ test("작은 풀은 중복으로 채우지 않고 실제 반응 0건은 하위 �
     const rows = store.planningLogs();
     assert.equal(rows.length, 23);
     assert.equal(new Set(rows.map(row => row.id)).size, 23);
-    assert.equal(rows.filter(row => row.selection_group === "performance").length, 12);
-    assert.equal(rows.filter(row => row.selection_group === "low_performance").length, 11);
-    assert.equal(rows.filter(row => row.selection_group === "recent").length, 0);
-    assert.equal(rows[12].id, "post-22");
-    assert.equal(rows[12].engagement_rate, 0);
+    assert.equal(rows.filter(row => row.selection_group === "performance").length, 10);
+    assert.equal(rows.filter(row => row.selection_group === "low_performance").length, 10);
+    assert.equal(rows.filter(row => row.selection_group === "recent").length, 3);
+    assert.equal(rows[10].id, "post-22");
+    assert.equal(rows[10].engagement_rate, 0);
   } finally { db.close(); }
 });

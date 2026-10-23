@@ -36,7 +36,7 @@ export function PerformanceDetails({ report, logs, details, onClose }: {
         : `최근 게시글 ${report.records.length}개 갱신 완료 · ${time(report.completed_at)}`
       : "저장된 최신 성과"}</p>
     {report?.error && <p role="alert" className="mt-3 text-sm text-destructive">{report.error}</p>}
-    <p className="mt-2 text-xs leading-5 text-muted-foreground">성과 상위 12개, 하위 12개, 최신 12개를 중복 없이 보여줍니다. 반응률은 (좋아요 + 댓글 + 저장) ÷ 조회 수로 계산합니다.</p>
+    <p className="mt-2 text-xs leading-5 text-muted-foreground">성과 상위 10개, 하위 10개, 최신 10개를 중복 없이 보여줍니다. 반응률은 (좋아요 + 댓글 + 저장) ÷ 조회 수로 계산합니다.</p>
     <div className="mt-5 space-y-4">
       {rows.map(row => <article key={String(row.id)} className="rounded-lg border p-4">
         <a className="text-sm font-semibold hover:underline" href={String(row.post_url)} target="_blank" rel="noreferrer">{String(row.name ?? row.topic ?? "콘텐츠")}</a>
