@@ -51,14 +51,14 @@ export function ProductionWorkspace({ runtime, readWork, onOpen }: {
       onSelect={task => { setPanel(null); setSelected({ id: task.id, step: "project" }); }} onSelectStep={select} onAction={safe} onDelete={removeTask}
       onLibrary={() => { setPanel("library"); setSelected(null); }} />
     <main className="relative min-h-0 min-w-0 flex-1" aria-label="제작 작업 공간">
-      <WorkflowCanvas startContent={startContent} details={display.details} selectedNode={panel === "performance" ? "sync" : selected ? `${selected.id}:${selected.step}` : undefined} tasks={displayTasks ?? []} writes={writes} activity={activity} syncing={data?.sync.running ?? false} syncReport={data?.sync.report ?? null} onSelect={select} onSelectSync={() => { setSelected(null); setPanel("performance"); }} onOpen={id => void onOpen(id)} onStop={() => void stopAll()} stopDisabled={stopDisabled} onTaskAction={taskAction} busy={controlsBusy} />
+      <WorkflowCanvas startContent={startContent} details={display.details} selectedNode={panel === "performance" ? "sync" : selected ? `${selected.id}:${selected.step}` : undefined} tasks={displayTasks ?? []} writes={writes} activity={activity} syncing={data?.sync.running ?? false} syncReport={data?.sync.report ?? null} planningCount={data?.planningLogs.length ?? 0} onSelect={select} onSelectSync={() => { setSelected(null); setPanel("performance"); }} onOpen={id => void onOpen(id)} onStop={() => void stopAll()} stopDisabled={stopDisabled} onTaskAction={taskAction} busy={controlsBusy} />
       {display.error && <p role="alert" className="absolute bottom-4 left-16 right-16 z-10 rounded border bg-background p-3 text-xs text-destructive">{display.error}</p>}
 
       {selected && current && <aside className="absolute inset-y-0 right-0 z-20 w-[420px] max-w-full overflow-y-auto border-l bg-background shadow-lg" aria-label="작업 상세">
         {selected.step === "project" ? <ProjectDetails key={current.id} onPublish={url => act({ action: "register", id: current.log_id, url })} task={displayTasks?.find(task => task.id === current.id) ?? current} onSelectStep={select} onOpen={id => void onOpen(id)} onClose={() => setSelected(null)} /> : <StepDetails id={selected.id} step={selected.step} updated={current.updated_at} write={writes[`${selected.id}:${selected.step}`] ?? 0} readWork={readWork} onClose={() => setSelected(null)} />}
       </aside>}
       {panel === "performance" && data && <aside className="absolute inset-y-0 right-0 z-20 w-[440px] max-w-full overflow-y-auto border-l bg-background shadow-lg">
-        <PerformanceDetails report={data.sync.report} logs={data.logs} details={details} onClose={() => setPanel(null)} />
+        <PerformanceDetails report={data.sync.report} logs={data.planningLogs} details={details} onClose={() => setPanel(null)} />
       </aside>}
       {panel === "library" && <section className="absolute inset-y-0 right-0 z-20 flex w-[560px] max-w-full flex-col border-l bg-background shadow-lg" aria-label="기록과 레퍼런스">
         <header className="flex shrink-0 items-center justify-between border-b px-6 py-4"><h2 className="flex items-center gap-2 text-sm font-semibold"><History size={16} />기록과 레퍼런스</h2><button className="production-button" onClick={() => setPanel(null)} aria-label="캔버스로 돌아가기"><X size={14} />닫기</button></header>

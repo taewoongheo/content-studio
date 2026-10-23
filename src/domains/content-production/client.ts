@@ -3,6 +3,7 @@ import type { ProductionStep, Row, WorkDetail, WorkItem } from "./domain/contrac
 export interface ProductionSnapshot {
   tasks: WorkItem[];
   logs: Row[];
+  planningLogs: Row[];
   references: Row[];
   visuals: Row[];
   sync: { running: boolean; report: PerformanceRefresh | null };

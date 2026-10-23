@@ -80,6 +80,7 @@ export async function GET(request: Request) {
         : {
             tasks: store.list(),
             logs: store.logs(params.get("query") ?? ""),
+            planningLogs: store.planningLogs(),
             references: references(store.db),
             visuals: listVisuals(store.db),
             sync: syncState(),

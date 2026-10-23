@@ -33,6 +33,7 @@ export function WorkflowCanvas({
   activity,
   syncing,
   syncReport,
+  planningCount,
   selectedNode,
   onSelect,
   onSelectSync,
@@ -49,6 +50,7 @@ export function WorkflowCanvas({
   activity: Record<string, string>;
   syncing: boolean;
   syncReport: PerformanceRefresh | null;
+  planningCount: number;
   selectedNode?: string;
   onSelect: (id: string, step: ProductionStep) => void;
   onSelectSync: () => void;
@@ -59,7 +61,7 @@ export function WorkflowCanvas({
   busy: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { nodes, edges } = useMemo(() => buildWorkflowGraph(tasks, details, writes, activity, syncing, syncReport), [tasks, details, writes, activity, syncing, syncReport]);
+  const { nodes, edges } = useMemo(() => buildWorkflowGraph(tasks, details, writes, activity, syncing, syncReport, planningCount), [tasks, details, writes, activity, syncing, syncReport, planningCount]);
   const { measurements, onNodesChange } = useNodeMeasurements();
   const tasksById = new Map(tasks.map(task => [task.id, task]));
   // Controlled nodes must retain ResizeObserver measurements when their data changes.
