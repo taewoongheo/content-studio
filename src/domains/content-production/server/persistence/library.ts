@@ -64,13 +64,3 @@ export async function addReference(db: Database.Database, raw: unknown) {
   publishChange({ kind: "library" });
   return { id };
 }
-export async function captureReference(db: Database.Database, url: string) {
-  const source = normalizeTikTokUrl(url).url;
-  const [post] = await new ApifyTikTokClient().posts([source]);
-  const set_id = saveVisuals(db, {
-    kind: "reference",
-    url: source,
-    slides: await collectVisuals(post.images),
-  });
-  return { ...post, set_id };
-}

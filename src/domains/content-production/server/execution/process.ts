@@ -47,6 +47,8 @@ export async function runCodex(input: {
           ...(input.model ? ["--model", input.model] : []),
           "--json",
           "--ephemeral",
+          "-c",
+          'web_search="live"',
           "--sandbox",
           "read-only",
           "--output-schema",

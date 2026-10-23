@@ -102,7 +102,7 @@ url = "http://127.0.0.1:3000/mcp"
 | `set_content_metadata` | 개별 콘텐츠의 주제·메시지 저장 |
 | `clone_project` | 기존 게시글을 독립 사본으로 복사 (`projectId`) |
 | `create_project` | 소재·메시지가 정해진 게시글을 생성·저장 |
-| `production_query`, `production_search`, `production_capture_reference`, `production_read_images` | 과거 로그·선별 사례 조회, Apify 동적 조사와 이미지 보존·조회 |
+| `production_query`, `production_read_images` | 과거 게시 로그·사용자 선별 사례 조회와 보존 이미지 확인 |
 | `edit_project` | 편집 명령 배열을 한 묶음으로 적용 |
 | `undo_project` | 직전 편집 묶음 되돌리기 |
 | `preview_slide` | 기존 단일 슬라이드 전체 해상도 PNG 확인 |
@@ -238,15 +238,23 @@ url = "http://127.0.0.1:3000/mcp"
 
 선별 정책은 [리서치 기준](docs/research-guidelines.md)을 먼저 읽는다. 분석·제작 중 필요한 자료를 조회하고, 기존 자료로 충분하면 재사용한다.
 
-### TikTok: Apify
+### 게시 정보와 사용자 지정 레퍼런스: Apify
 
 - `APIFY_API_TOKEN`은 서버 환경 변수로 설정한다. 운영 TikTok 계정의 로그인·쿠키를 사용하지 않는다.
-- 자동 제작과 일반 MCP에서 `production_search`로 키워드 검색, `production_capture_reference`로 개별 게시글과 전체 슬라이드 축소본 저장, `production_read_images`로 보존 이미지를 확인한다.
+- 소재·표현 방식은 과거 게시 로그와 사용자가 직접 등록한 선별 레퍼런스로 정한다. 자동 TikTok 검색·게시글 수집 도구는 제공하지 않는다.
+- `production_read_images`로 지정 레퍼런스와 실제 게시 당시의 보존 이미지를 확인한다. 외부 URL 등록은 사용자의 레퍼런스 등록 동작에서만 수집한다.
 - 과거 게시 로그와 선별 레퍼런스는 `production_query`로 조회한다. 자체 게시글은 기존 미리보기를 사용한다.
 - 게시 URL 등록과 최근 성과 갱신도 같은 Apify 클라이언트를 사용한다. 확인되지 않은 수치는 `null`로 유지한다.
 - TikTok·Instagram의 로그인, Safari 쿠키 가져오기, 로컬 브라우저 검색·수집, Python 워커와 CAPTCHA 처리는 제공하지 않는다. Instagram을 수집할 대체 경로는 현재 없다.
 
-### YouTube: 로그인 없는 공개 리서치
+### 제작 중 필요한 조사: 웹 검색
+
+- 두 제작 단계 모두 필요한 질문이 있을 때만 조사한다. 논문·공식 자료, 커뮤니티 실전 팁·공감 언어는 예시다. 모두 조사하거나 종류별로 구분해 저장하지 않는다.
+- 제작용 CLI 실행에만 `-c web_search="live"`를 전달한다. 전역 Codex 설정과 파일 쓰기 권한은 변경하지 않는다. 설정 계약은 [OpenAI 공식 문서](https://learn.chatgpt.com/docs/web-search)를 따른다.
+- 기존 research 항목에 질문·출처·발견 내용·판단을 저장한다. 출처와 판단 기준은 [리서치 기준](docs/research-guidelines.md)을 따른다.
+- 외부 검색은 이번 내용의 질문을 확인하는 용도다. 콘텐츠 소재·훅·포맷이나 외부 시각 레퍼런스를 새로 발굴하는 데 사용하지 않는다.
+
+### YouTube: 로그인 없는 일반 조회
 
 YouTube.js의 InnerTube를 사용한다. 자동 제작 에이전트의 도구에는 포함하지 않으며 일반 MCP에서 명시적으로 사용할 수 있다.
 

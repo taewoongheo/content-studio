@@ -12,8 +12,6 @@ const readTools = [
   "production_context",
   "production_query",
   "production_comparisons",
-  "production_search",
-  "production_capture_reference",
   "production_read_images",
   "production_save_draft",
   "list_projects",

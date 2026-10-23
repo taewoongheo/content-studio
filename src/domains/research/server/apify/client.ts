@@ -70,7 +70,7 @@ export class ApifyTikTokClient {
     private token = process.env.APIFY_API_TOKEN,
     private transport: typeof fetch = fetch,
   ) {}
-  async run(input: Record<string, unknown>, signal?: AbortSignal) {
+  private async run(input: Record<string, unknown>, signal?: AbortSignal) {
     if (!this.token) throw new Error("서버의 APIFY_API_TOKEN을 설정해 주세요.");
     const response = await this.transport(
       "https://api.apify.com/v2/acts/clockworks~tiktok-scraper/run-sync-get-dataset-items?timeout=240&format=json&clean=true",
@@ -113,15 +113,5 @@ export class ApifyTikTokClient {
       if (!item) throw new Error(`게시물을 조회하지 못했습니다: ${source.url}`);
       return { ...item, url: source.url };
     });
-  }
-  async search(query: string, limit: number, signal?: AbortSignal) {
-    return this.run(
-      {
-        searchQueries: [query],
-        searchSection: "/video",
-        resultsPerPage: limit,
-      },
-      signal,
-    );
   }
 }

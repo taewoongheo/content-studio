@@ -6,16 +6,12 @@ import { z } from "zod";
 import { registerTool } from "../protocol/tools";
 import { annotations, guarded, json } from "../protocol/result";
 import { productionStore } from "@/domains/content-production/server/execution/runner";
-import {
-  references,
-  captureReference,
-} from "@/domains/content-production/server/persistence/library";
+import { references } from "@/domains/content-production/server/persistence/library";
 import {
   analysisPatchSchema,
   productionPatchSchema,
   directionSchema,
 } from "@/domains/content-production/domain/contracts";
-import { ApifyTikTokClient } from "@/domains/research/server/apify/client";
 import { createTaskProject } from "@/domains/content-production/server/projects";
 
 export function registerProductionTools(server: McpServer, taskId?: string) {
@@ -39,39 +35,6 @@ export function registerProductionTools(server: McpServer, taskId?: string) {
               ? productionStore().logs(input.query, true)
               : references(productionStore().db, input.query),
         }),
-      ),
-  );
-  registerTool(
-    server,
-    "production_search",
-    {
-      description:
-        "Dynamically search public TikTok posts through Apify without own-account login. Verify topic, imagery and metrics yourself. Research defaults are in docs/research-guidelines.md.",
-      inputSchema: z.object({
-        query: z.string().min(1),
-        limit: z.number().int().min(1).max(30).default(10),
-      }),
-      annotations: annotations(true),
-    },
-    (input) =>
-      guarded(async () =>
-        json({
-          items: await new ApifyTikTokClient().search(input.query, input.limit),
-        }),
-      ),
-  );
-  registerTool(
-    server,
-    "production_capture_reference",
-    {
-      description:
-        "Fetch a public TikTok post and preserve all reduced slides. Does not register it in the user-selected library. Record the returned set_id in your draft/log sources.",
-      inputSchema: z.object({ url: z.string().url() }),
-      annotations: annotations(false),
-    },
-    (input) =>
-      guarded(async () =>
-        json(await captureReference(productionStore().db, input.url)),
       ),
   );
   registerTool(
