@@ -2,6 +2,7 @@
 
 import {
   CalendarDays,
+  Files,
   Plus,
   Settings,
 } from "lucide-react";
@@ -49,6 +50,15 @@ export function StudioSidebar({
           >
             <Plus aria-hidden="true" />
             <span>편집기 열기</span>
+          </SidebarMenuButton>
+
+          <SidebarMenuButton
+            className="h-11"
+            isActive={activeTab === "all"}
+            render={<TabsTrigger value="all" className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent" />}
+          >
+            <Files aria-hidden="true" />
+            <span>모든 콘텐츠</span>
           </SidebarMenuButton>
 
           <SidebarMenuButton

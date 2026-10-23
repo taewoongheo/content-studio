@@ -5,12 +5,15 @@ import { useState } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { StudioSidebar } from "./components/studio-sidebar";
+import { AllContentPage } from "./components/content/all-content-page";
 import { PublishedContentPage } from "./components/published/published-content-page";
 
 export function DashboardContent({
   onNew,
+  onOpen,
 }: {
   onNew: () => void;
+  onOpen: (id: string) => Promise<void>;
 }) {
   const accounts = useResearchAccounts();
   const [tab, setTab] = useState("published");
@@ -46,6 +49,9 @@ export function DashboardContent({
         >
           <TabsContent value="settings" className="data-[hidden]:hidden">
             <ResearchAccounts state={accounts} />
+          </TabsContent>
+          <TabsContent value="all" className="data-[hidden]:hidden">
+            <AllContentPage onOpen={onOpen} />
           </TabsContent>
           <TabsContent value="published" className="data-[hidden]:hidden">
             <PublishedContentPage />

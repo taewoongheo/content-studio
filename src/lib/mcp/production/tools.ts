@@ -24,7 +24,7 @@ export function registerProductionTools(server: McpServer, taskId?: string) {
     "production_query",
     {
       description:
-        "Query past content logs or user-selected references. Data is available in either stage; no minimum count. Read actual images as needed, and distinguish planned direction from actual content and observed performance.",
+        "Query published content logs (post_url registered) or user-selected references. Unpublished drafts are available through production_comparisons for duplication checks. Data is available in either stage; no minimum count. Read actual images as needed, and distinguish planned direction from actual content and observed performance.",
       inputSchema: z.object({
         kind: z.enum(["logs", "references"]),
         query: z.string().default(""),
@@ -36,7 +36,7 @@ export function registerProductionTools(server: McpServer, taskId?: string) {
         json({
           items:
             input.kind === "logs"
-              ? productionStore().logs(input.query)
+              ? productionStore().logs(input.query, true)
               : references(productionStore().db, input.query),
         }),
       ),

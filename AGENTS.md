@@ -340,3 +340,5 @@ pnpm test:research-accounts --live-youtube
 - `production_context`, `production_save_draft`, `production_comparisons`, `production_change_direction`, `production_create_project`, `production_import_image`는 실행 중인 작업 전용 MCP에서만 제공한다. 단계 완료는 서버 실행기가 필수 출력·저장·실제 이미지 검토를 검사해 처리한다.
 - 취소·제거는 실행 권한과 프로세스를 종료하고 세 draft를 모두 삭제한다. 중단은 저장 내용을 유지한다. 게시 콘텐츠 중복 범위는 최근 24시간이고 성과 갱신 범위는 한국 날짜 오늘~3일 전이다.
 - DB v15는 구형 템플릿 저장소와 프로젝트 게시 컬럼을 사용하지 않는다. 기존 DB를 자동 변환하지 않는다. 직접 변환은 사용자가 명시적으로 요청했을 때만 수행하고 프로젝트 문서·자산 보존과 외래키를 확인한다.
+
+- 소재 판단용 `production_query(kind="logs")`는 `post_url`이 등록된 로그만 반환한다. 미게시 작업은 중복 확인을 위한 `production_comparisons`로 읽는다. 사용자용 제작 기록과 모든 콘텐츠 목록은 미게시 항목도 표시한다. 프로젝트·이미지는 제작 중부터 저장하며 URL 등록 때 새 프로젝트로 변환하지 않는다.

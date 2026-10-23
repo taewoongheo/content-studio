@@ -277,11 +277,11 @@ export class ProductionStore {
       if (task.state === "running" || task.state === "pending")
         this.state(task.id, "stopped");
   }
-  logs(query = "") {
+  logs(query = "", publishedOnly = false) {
     return (
       this.db
         .prepare(
-          `SELECT l.*,p.name FROM content_creation_logs l LEFT JOIN content_projects p ON p.id=l.project_id WHERE (l.project_id IS NOT NULL OR EXISTS(SELECT 1 FROM content_drafts d WHERE d.log_id=l.id)) AND (COALESCE(l.topic,'') LIKE ? OR COALESCE(p.name,'') LIKE ?) ORDER BY l.created_at DESC`,
+          `SELECT l.*,p.name FROM content_creation_logs l LEFT JOIN content_projects p ON p.id=l.project_id WHERE (l.project_id IS NOT NULL OR EXISTS(SELECT 1 FROM content_drafts d WHERE d.log_id=l.id)) ${publishedOnly ? "AND l.post_url IS NOT NULL" : ""} AND (COALESCE(l.topic,'') LIKE ? OR COALESCE(p.name,'') LIKE ?) ORDER BY l.created_at DESC`,
         )
         .all(`%${query}%`, `%${query}%`) as Row[]
     ).map(decode);

@@ -134,3 +134,17 @@ test("빈 작업 제거는 빈 로그도 지우고 기존 프로젝트·이미�
     assert.deepEqual(db.pragma("foreign_key_check"),[]);
   } finally {db.close();}
 });
+
+test("소재 선정 로그 조회는 URL이 등록된 게시물만, 전체 기록과 중복 조회는 미게시도 포함한다", () => {
+  const db = openLocalDatabase(":memory:"), store = new ProductionStore(db);
+  try {
+    const ids = store.create(2);
+    const publishedLog = store.get(ids[0]).task.log_id;
+    db.prepare("UPDATE content_creation_logs SET topic='arms',post_url=?,actual_published_at=? WHERE id=?")
+      .run("https://www.tiktok.com/@a/photo/123",new Date().toISOString(),publishedLog);
+    assert.equal(store.logs().length,2);
+    assert.deepEqual(store.logs("",true).map(log=>log.id),[publishedLog]);
+    assert.equal(store.logs("legs",true).length,0);
+    assert.equal(store.comparisons().drafts.length,2);
+  } finally { db.close(); }
+});
