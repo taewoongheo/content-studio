@@ -2,6 +2,7 @@ import { MarkerType, type Edge } from "@xyflow/react";
 import type { WorkDetail, WorkItem } from "@/domains/content-production/domain/contracts";
 import type { StartNodeModel } from "./start-node";
 import type { StageNodeModel } from "./stage-node";
+import { getStepState } from "../../model/task-controls";
 export type WorkflowNode = StageNodeModel | StartNodeModel;
 const palette = ["#2563eb", "#0f766e", "#b45309", "#7c3aed", "#be185d", "#0369a1"];
 const colors = new Map<string, string>();
@@ -34,7 +35,7 @@ export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, Wo
     for (const stage of ["analysis", "production", "result"] as const) {
       if (stage === "production" && !activeProduction) continue;
       if (stage === "result" && (!completed || !task.project_id)) continue;
-      const state = stage === "analysis" ? activeProduction ? "completed" : task.state : stage === "result" ? "completed" : task.state;
+      const state = stage === "result" ? "completed" : getStepState(task, stage);
       const stepWrites = writes[`${task.id}:${stage === "result" ? "production" : stage}`] ?? 0;
       const facts = stage === "analysis" ? [text(analysis.content_type) || task.content_type, count(analysis.sources) ? `참고 자료 ${count(analysis.sources)}개` : null] : [count(content.slides) ? `${count(content.slides)}장` : null, text(analysis.content_type) || task.content_type];
       const id = `${task.id}:${stage}`;

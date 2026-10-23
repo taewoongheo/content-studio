@@ -10,10 +10,11 @@ import { deleteProject } from "@/domains/slideshow/projects/lifecycle/management
 
 export function deleteTaskProject(store: ProductionStore, taskId: string) {
   const detail = store.get(taskId);
-  if (detail.task.state !== "finished" || !detail.task.project_id)
+  const projectId = detail.task.project_id;
+  if (detail.task.state !== "finished" || !projectId)
     throw new Error("완성된 포스트만 삭제할 수 있습니다.");
   contentJobRegistry.transaction(() => store.db.transaction(() => {
-    deleteProject(contentJobRegistry, detail.task.project_id!, undefined, store.db);
+    deleteProject(contentJobRegistry, projectId, undefined, store.db);
     store.remove(taskId);
   })());
 }

@@ -3,9 +3,11 @@ import { useState } from "react";
 import { History, Settings, ChevronDown, Folder, ListFilter, Trash2 } from "lucide-react";
 import type { ProductionStep, WorkItem } from "@/domains/content-production/domain/contracts";
 import { StatusIcon } from "../workflow/status-icon";
-export function ProductionSidebar({ openDraftIds, tasks, model, busy, selectedId, selectedStep, onSelect, onSelectStep, onAction, onLibrary, onSettings }: {
+import { getStepState, productionSteps } from "../../model/task-controls";
+export function ProductionSidebar({ openDraftIds, tasks, model, busy, selectedId, selectedStep, onSelect, onSelectStep, onAction, onDelete, onLibrary, onSettings }: {
   openDraftIds: ReadonlySet<string>; tasks: WorkItem[]; model: string; busy: boolean; selectedId?: string; selectedStep?: ProductionStep | "project";
   onSelect: (task: WorkItem) => void; onSelectStep: (id: string, step: ProductionStep) => void; onAction: (action: Record<string, unknown>) => void; onLibrary: () => void; onSettings: () => void;
+  onDelete: (task: WorkItem) => void;
 }) {
   const [showFinished, setShowFinished] = useState(false);
   const visible = tasks.filter(t => showFinished || t.state !== "finished" || openDraftIds.has(t.id));
@@ -16,18 +18,14 @@ export function ProductionSidebar({ openDraftIds, tasks, model, busy, selectedId
       {visible.map(task => <article key={task.id} className="mx-2 mb-3 rounded-lg border border-border/60 p-2" aria-label={`프로젝트 ${task.topic ?? "소재 분석 중"}`}>
         <button aria-pressed={selectedId === task.id && selectedStep === "project"} className={`flex w-full items-center gap-2 rounded-md p-2 text-left text-xs font-medium hover:bg-muted ${selectedId === task.id && selectedStep === "project" ? "bg-muted" : ""}`} onClick={() => onSelect(task)}><Folder size={15} className="shrink-0" /><span className="min-w-0 flex-1 truncate">{task.topic ?? "소재 분석 중"}</span><StatusIcon state={task.state} size={14} /></button>
         <div className="ml-4 mt-1 space-y-1 border-l pl-2" aria-label="프로젝트 단계">
-          {(["analysis", "production"] as const).map(step => {
-            const state = step === "analysis" && task.current_step === "production" ? "completed" : step === "production" && task.current_step === "analysis" ? "pending" : task.state;
+          {productionSteps.map(({ id: step, label }) => {
+            const state = getStepState(task, step);
             const selected = selectedId === task.id && selectedStep === step;
-            return <button key={step} aria-pressed={selected} className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[11px] hover:bg-muted ${selected ? "bg-muted font-medium text-foreground" : "text-muted-foreground"}`} onClick={() => onSelectStep(task.id, step)}><StatusIcon state={state} size={14} />{step === "analysis" ? "분석 및 제작 방향" : "콘텐츠 제작"}</button>;
+            return <button key={step} aria-pressed={selected} className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-[11px] hover:bg-muted ${selected ? "bg-muted font-medium text-foreground" : "text-muted-foreground"}`} onClick={() => onSelectStep(task.id, step)}><StatusIcon state={state} size={14} />{label}</button>;
           })}
         </div>
         <div className="mt-1 flex justify-end px-1">
-          <button type="button" disabled={busy} aria-label="프로젝트 삭제" title="삭제" className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-destructive disabled:opacity-40" onClick={() => {
-            const finished = task.state === "finished" && !!task.project_id;
-            if (window.confirm(finished ? "포스트와 이미지, 제작 draft를 DB에서 삭제할까요? 되돌릴 수 없습니다." : "모든 단계 draft를 삭제할까요? 저장된 포스트는 유지됩니다."))
-              onAction({ action: finished ? "delete_post" : "remove", id: task.id });
-          }}><Trash2 size={16} /></button>
+          <button type="button" disabled={busy} aria-label="프로젝트 삭제" title="삭제" className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-destructive disabled:opacity-40" onClick={() => onDelete(task)}><Trash2 size={16} /></button>
         </div>
       </article>)}
     </div>

@@ -1,6 +1,7 @@
 import { ArrowUpRight, Folder } from "lucide-react";
 import type { ProductionStep, WorkItem } from "@/domains/content-production/domain/contracts";
 import { StatusIcon } from "../workflow/status-icon";
+import { getStepState, productionSteps } from "../../model/task-controls";
 
 export function ProjectDetails({ task, onSelectStep, onOpen, onClose }: {
   task: WorkItem;
@@ -15,10 +16,10 @@ export function ProjectDetails({ task, onSelectStep, onOpen, onClose }: {
     </header>
     <p className="mt-4 text-xs text-muted-foreground">시작 {new Date(task.created_at).toLocaleString("ko-KR")}</p>
     <div className="mt-6 space-y-3">
-      {(["analysis", "production"] as const).map((step, index) => {
-        const state = step === "analysis" && task.current_step === "production" ? "completed" : step === "production" && task.current_step === "analysis" ? "pending" : task.state;
+      {productionSteps.map(({ id: step, label }, index) => {
+        const state = getStepState(task, step);
         return <button key={step} className="flex w-full items-center gap-3 rounded-lg border p-4 text-left hover:bg-muted/50" onClick={() => onSelectStep(task.id, step)}>
-          <StatusIcon state={state} size={18} /><span className="flex-1"><span className="block text-xs text-muted-foreground">단계 {index + 1}</span><span className="mt-1 block text-sm font-medium">{step === "analysis" ? "분석 및 제작 방향" : "콘텐츠 제작"}</span></span><ArrowUpRight size={16} />
+          <StatusIcon state={state} size={18} /><span className="flex-1"><span className="block text-xs text-muted-foreground">단계 {index + 1}</span><span className="mt-1 block text-sm font-medium">{label}</span></span><ArrowUpRight size={16} />
         </button>;
       })}
     </div>

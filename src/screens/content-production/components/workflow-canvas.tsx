@@ -1,11 +1,10 @@
 "use client";
-import { useMemo, useState, useCallback, useRef, type ReactNode } from "react";
+import { useMemo, useRef, type ReactNode } from "react";
 import {
   Background,
   Controls,
   ReactFlow,
   type NodeMouseHandler,
-  type OnNodesChange,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { CenterInitialStart, HorizontalWheelPan, StartNodeControl } from "./workflow/viewport/viewport-controls";
@@ -13,6 +12,8 @@ import { StageNode } from "./workflow/stage-node";
 import { StartNode } from "./workflow/start-node";
 import { BranchEdge, BranchTrunk } from "./workflow/edges/branch-edges";
 import { buildWorkflowGraph, type WorkflowNode } from "./workflow/graph";
+import { useNodeMeasurements } from "../hooks/use-node-measurements";
+import { getPlaybackAction, type TaskActionHandler, type TaskControlAction } from "../model/task-controls";
 import type {
   WorkItem,
   WorkDetail,
@@ -49,46 +50,31 @@ export function WorkflowCanvas({
   onOpen: (id: string) => void;
   onStop: () => void;
   stopDisabled: boolean;
-  onTaskAction: (id: string, action: "stop" | "resume" | "delete_post", step?: ProductionStep) => void;
+  onTaskAction: TaskActionHandler;
   busy: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { nodes, edges } = useMemo(() => buildWorkflowGraph(tasks, details, writes, activity, syncing), [tasks, details, writes, activity, syncing]);
-  const [measurements, setMeasurements] = useState<Record<string, { width: number; height: number }>>({});
-  const onNodesChange = useCallback<OnNodesChange<WorkflowNode>>(changes => {
-    setMeasurements(previous => {
-      let next = previous;
-      for (const change of changes) {
-        if (change.type !== "dimensions" || !change.dimensions) continue;
-        const old = next[change.id], size = change.dimensions;
-        if (old?.width === size.width && old?.height === size.height) continue;
-        if (next === previous) next = { ...previous };
-        next[change.id] = size;
-      }
-      return next;
-    });
-  }, []);
+  const { measurements, onNodesChange } = useNodeMeasurements();
+  const tasksById = new Map(tasks.map(task => [task.id, task]));
   // Controlled nodes must retain ResizeObserver measurements when their data changes.
   const renderedNodes = nodes.map(node => {
     const measured = measurements[node.id];
     if (node.type === "start") return { ...node, measured, data: { content: startContent } };
-    const task = tasks.find(task => node.id.startsWith(`${task.id}:`));
+    const task = tasksById.get(node.id.split(":")[0]);
     const step = node.data.stage === "analysis" ? "analysis" : "production";
-    const current = task?.current_step === node.data.stage;
+    const action: TaskControlAction | null = task ? node.data.stage === "result" ? "delete_post" : getPlaybackAction(task, step) : null;
     return { ...node, measured, selected: node.id === selectedNode, data: { ...node.data, controls: task ? {
-      busy,
-      canStop: current && ["running", "pending"].includes(task.state),
-      canResume: current && ["stopped", "failed"].includes(task.state),
-      onStop: () => onTaskAction(task.id, "stop", step),
-      onResume: () => onTaskAction(task.id, "resume", step),
-      onDelete: () => onTaskAction(task.id, "delete_post"),
+      action,
+      disabled: busy,
+      onAction: () => { if (action) onTaskAction(task.id, action, action === "delete_post" ? undefined : step); },
     } : undefined } };
   });
   const click: NodeMouseHandler<WorkflowNode> = (_, node) => {
     if (node.id === "sync" || node.id === "start") return;
     const [id, step] = node.id.split(":");
     if (step === "result") {
-      const task = tasks.find((t) => t.id === id);
+      const task = tasksById.get(id);
       if (task?.project_id) onOpen(task.project_id);
     } else onSelect(id, step as ProductionStep);
   };
