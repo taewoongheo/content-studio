@@ -47,3 +47,9 @@ export function stagePrompt(taskId: string, step: ProductionStep) {
     instructions,
   ].join("\n\n");
 }
+
+export function stageImages(step: ProductionStep) {
+  if (step !== "production") return [];
+  return ["turnaround.png", "face-sunglasses.png", "example.png"].map(name =>
+    join(process.cwd(), "docs", "production-prompts", "character", name));
+}

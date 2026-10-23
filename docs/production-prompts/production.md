@@ -12,3 +12,19 @@ harness verifies real preview calls, revision and slide coverage. Save the actua
 deviation reasons in summary_json (JSON-encoded object), sources_json (JSON-encoded array),
 project_id, reviewed_slide_ids and reviewed_revision. Do not register a publication or claim the
 user uploaded it.
+
+
+## Character image references
+
+Before preparing character images, read [the character rules](character/guidelines.md).
+The three attached images are provided in this order:
+
+1. [Full-body turnaround](character/turnaround.png): body proportions, clothing, skin tone and rendering style.
+2. [Face and sunglasses](character/face-sunglasses.png): head shape and sunglasses structure. The turnaround controls skin tone and shading.
+3. [Finished exercise example](character/example.png): supporting example of character, equipment and muscle highlighting together. It does not override the two official character references or prescribe a pose for other exercises.
+
+These files are available under docs/production-prompts/character/ in the project.
+When an image-generation tool is available, pass the actual reference images to that tool as well;
+mentioning filenames in a text prompt is not a substitute for reference-image input.
+Provide an exercise-specific pose/equipment source when needed by the character rules.
+If generation is unavailable, record the missing capability honestly; do not claim an image was generated.

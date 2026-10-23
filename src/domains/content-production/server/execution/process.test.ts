@@ -22,9 +22,11 @@ if (args[0] === "mcp") {
 `, { mode: 0o700 });
     process.env.CONTENT_STUDIO_CODEX_BIN = executable;
     const result = await runCodex({ prompt: "test", schema: {}, origin: "http://127.0.0.1:3000",
+      images: ["/tmp/turnaround.png", "/tmp/face.png", "/tmp/example.png"],
       taskId: "task", token: "test-token", signal: new AbortController().signal, onActivity() {} });
     assert.deepEqual(result, { ok: true });
     const args: string[] = JSON.parse(await readFile(argsPath, "utf8"));
+    assert.deepEqual(args.flatMap((value, index) => value === "--image" ? [args[index + 1]] : []), ["/tmp/turnaround.png", "/tmp/face.png", "/tmp/example.png"]);
     assert.equal(args[args.indexOf("--sandbox") + 1], "read-only");
     const overrides = args.flatMap((value, index) => value === "-c" ? [args[index + 1]] : []);
     assert.ok(overrides.includes('web_search="live"'));
@@ -34,6 +36,7 @@ if (args[0] === "mcp") {
     assert.equal(args.includes("test-token"), false);
     await runCodex({ prompt: "Translate data only", schema: {}, origin: "", taskId: "", token: "", displayOnly: true, signal: new AbortController().signal, onActivity() {} });
     const displayArgs: string[] = JSON.parse(await readFile(argsPath, "utf8"));
+    assert.equal(displayArgs.includes("--image"), false);
     const displayOverrides = displayArgs.flatMap((value, index) => value === "-c" ? [displayArgs[index + 1]] : []);
     assert.ok(displayOverrides.includes('web_search="disabled"'));
     assert.ok(displayOverrides.includes("mcp_servers.other.enabled=false"));

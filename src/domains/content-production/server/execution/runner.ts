@@ -8,7 +8,7 @@ import { ProductionStore } from "../persistence/store";
 import { publishChange } from "../events";
 import { refreshMetrics } from "../publication/service";
 import { runCodex } from "./process";
-import { resultSchema, stagePrompt } from "./prompts";
+import { resultSchema, stageImages, stagePrompt } from "./prompts";
 import {
   productionResultSchema,
   type ProductionStep,
@@ -138,6 +138,7 @@ export async function execute(
       const result = await executor({
         model,
         prompt: stagePrompt(id, run.step),
+        images: stageImages(run.step),
         schema: resultSchema(run.step),
         origin,
         taskId: id,

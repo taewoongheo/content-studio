@@ -7,6 +7,7 @@ import { join } from "node:path";
 export async function runCodex(input: {
   model?: string;
   prompt: string;
+  images?: string[];
   schema: unknown;
   origin: string;
   taskId: string;
@@ -46,6 +47,7 @@ export async function runCodex(input: {
         [
           "exec",
           ...(input.model ? ["--model", input.model] : []),
+          ...(!input.displayOnly ? (input.images ?? []).flatMap(path => ["--image", path]) : []),
           "--json",
           "--ephemeral",
           "-c",
