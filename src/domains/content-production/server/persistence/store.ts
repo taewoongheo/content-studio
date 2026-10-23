@@ -49,12 +49,12 @@ export class ProductionStore {
   list(): WorkItem[] {
     return this.db
       .prepare(
-        `SELECT d.*,l.project_id,l.topic,l.content_type FROM content_drafts d JOIN content_creation_logs l ON l.id=d.log_id ORDER BY d.created_at,d.id`,
+        `SELECT d.*,l.topic,l.content_type FROM content_drafts d JOIN content_creation_logs l ON l.id=d.log_id ORDER BY d.created_at,d.id`,
       )
       .all() as WorkItem[];
   }
   hasOpenDrafts() {
-    return !!this.row("SELECT d.id FROM content_drafts d JOIN content_creation_logs l ON l.id=d.log_id WHERE l.completed_at IS NULL LIMIT 1");
+    return !!this.row("SELECT id FROM content_drafts LIMIT 1");
   }
   get(id: string): WorkDetail {
     const task = this.list().find((row) => row.id === id);
@@ -92,7 +92,7 @@ export class ProductionStore {
           .run(log, now, now);
         this.db
           .prepare(
-            "INSERT INTO content_drafts VALUES(?,?,'analysis','pending',?,?)",
+            "INSERT INTO content_drafts(id,log_id,current_step,state,created_at,updated_at) VALUES(?,?,'analysis','pending',?,?)",
           )
           .run(id, log, now, now);
         this.db
@@ -199,13 +199,14 @@ export class ProductionStore {
     const detail = this.assertActive(id, "production"),
       now = this.now();
     this.db.transaction(() => {
+      if (detail.task.project_id !== result.project_id)
+        throw new Error("이 작업의 프로젝트만 완료할 수 있습니다.");
       const sources = [...(detail.log.sources as unknown[]), ...result.sources];
       const summary = {
         ...result.summary,
         direction_changes: detail.production?.direction_changes ?? null,
       };
       this.update("content_creation_logs", "id", detail.task.log_id, {
-        project_id: result.project_id,
         content_summary_json: JSON.stringify(summary),
         sources_json: JSON.stringify(sources),
         updated_at: now,
@@ -268,7 +269,7 @@ export class ProductionStore {
     const detail = this.get(id);
     this.db.transaction(() => {
       this.db.prepare("DELETE FROM content_drafts WHERE id=?").run(id);
-      this.db.prepare("DELETE FROM content_creation_logs WHERE id=? AND project_id IS NULL AND analysis IS NULL AND topic IS NULL AND content_summary_json IS NULL AND post_url IS NULL").run(detail.task.log_id);
+      this.db.prepare("DELETE FROM content_creation_logs WHERE id=? AND project_id IS NULL AND post_url IS NULL").run(detail.task.log_id);
     })();
     publishChange({ task_id: id, kind: "removed" });
   }
@@ -281,7 +282,7 @@ export class ProductionStore {
     return (
       this.db
         .prepare(
-          `SELECT l.*,p.name FROM content_creation_logs l LEFT JOIN content_projects p ON p.id=l.project_id WHERE (l.project_id IS NOT NULL OR EXISTS(SELECT 1 FROM content_drafts d WHERE d.log_id=l.id)) ${publishedOnly ? "AND l.post_url IS NOT NULL" : ""} AND (COALESCE(l.topic,'') LIKE ? OR COALESCE(p.name,'') LIKE ?) ORDER BY l.created_at DESC`,
+          `SELECT l.*,COALESCE(l.project_id,d.project_id) AS project_id,p.name FROM content_creation_logs l LEFT JOIN content_drafts d ON d.log_id=l.id LEFT JOIN content_projects p ON p.id=COALESCE(l.project_id,d.project_id) WHERE (l.project_id IS NOT NULL OR EXISTS(SELECT 1 FROM content_drafts d WHERE d.log_id=l.id)) ${publishedOnly ? "AND l.post_url IS NOT NULL" : ""} AND (COALESCE(l.topic,'') LIKE ? OR COALESCE(p.name,'') LIKE ?) ORDER BY l.created_at DESC`,
         )
         .all(`%${query}%`, `%${query}%`) as Row[]
     ).map(decode);

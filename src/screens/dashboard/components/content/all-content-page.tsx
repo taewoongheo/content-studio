@@ -11,7 +11,7 @@ const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
 });
 
 export function AllContentPage({ onOpen }: { onOpen: (id: string) => Promise<void> }) {
-  const { projects, loading, error } = useSavedProjects();
+  const { projects, loading, error } = useSavedProjects(true, true);
   const [opening, setOpening] = useState<string | null>(null);
   const [openError, setOpenError] = useState("");
   const ordered = [...projects].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));

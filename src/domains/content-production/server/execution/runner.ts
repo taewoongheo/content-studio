@@ -1,3 +1,4 @@
+import { discardTask } from "../projects";
 import { OPEN_DRAFT_MESSAGE } from "../../domain/start-policy";
 import { readProductionSettings } from "../settings";
 import { randomUUID } from "node:crypto";
@@ -147,7 +148,7 @@ export async function execute(
         sources,
       });
       const detail = store.get(id);
-      if (detail.log.project_id !== output.project_id)
+      if (detail.task.project_id !== output.project_id)
         throw new Error("연결된 프로젝트와 결과가 다릅니다.");
       await loadContentProject(contentJobRegistry, output.project_id);
       const project = contentJobRegistry.get(output.project_id),
@@ -212,6 +213,6 @@ export function stopProduction(id: string, remove = false) {
     run.controller.abort(new Error("사용자가 중단했습니다."));
     runs.delete(id);
   }
-  if (remove) store.remove(id);
+  if (remove) discardTask(store, id);
   else store.state(id, "stopped");
 }

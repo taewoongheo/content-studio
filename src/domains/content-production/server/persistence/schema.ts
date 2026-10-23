@@ -17,6 +17,7 @@ CREATE INDEX IF NOT EXISTS content_logs_published_idx ON content_creation_logs(a
 CREATE INDEX IF NOT EXISTS content_logs_created_idx ON content_creation_logs(created_at);
 CREATE TABLE IF NOT EXISTS content_drafts (
  id TEXT PRIMARY KEY, log_id TEXT UNIQUE NOT NULL REFERENCES content_creation_logs(id),
+ project_id TEXT UNIQUE REFERENCES content_projects(id) ON DELETE SET NULL,
  current_step TEXT NOT NULL CHECK(current_step IN ('analysis','production')),
  state TEXT NOT NULL CHECK(state IN ('pending','running','stopped','failed','finished')),
  created_at TEXT NOT NULL, updated_at TEXT NOT NULL

@@ -5,7 +5,7 @@ import { mkdirSync } from "node:fs";
 import { dirname, isAbsolute } from "node:path";
 import { PROJECT_SCHEMA } from "@/domains/slideshow/server/persistence/projects/schema";
 
-export const SCHEMA_VERSION = 15;
+export const SCHEMA_VERSION = 16;
 
 export function defaultDatabasePath() {
   const override = process.env.CONTENT_STUDIO_DB_PATH;

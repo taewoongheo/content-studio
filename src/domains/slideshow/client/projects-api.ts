@@ -2,8 +2,8 @@ import { readJson } from "./http";
 import type { ContentJobSnapshot } from "@/domains/slideshow/domain/types";
 import type { SavedProjectSummary } from "@/domains/slideshow/domain/projects";
 
-export function listContentProjects() {
-  return fetch("/api/content-projects", { cache: "no-store" })
+export function listContentProjects(formalOnly = false) {
+  return fetch(formalOnly ? "/api/content-projects?formal=true" : "/api/content-projects", { cache: "no-store" })
     .then((response) => readJson<SavedProjectSummary[]>(response));
 }
 

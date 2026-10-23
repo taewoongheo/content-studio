@@ -37,7 +37,7 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
     const previousToken = process.env.APIFY_API_TOKEN;
     try {
       process.env.APIFY_API_TOKEN = "test-key";
-      await assert.rejects(startProduction(1, "http://127.0.0.1:3000"), /남은 제작/);
+      await assert.rejects(startProduction(1, "http://127.0.0.1:3000"), /남은 draft/);
       assert.equal(store.list().length, 1);
     } finally {
       if (previousToken === undefined) delete process.env.APIFY_API_TOKEN;

@@ -7,7 +7,7 @@ import type { SavedProjectSummary } from "@/domains/slideshow/domain/projects";
 import { listContentProjects } from "@/domains/slideshow/client/projects-api";
 
 /** Coalesce save notifications and reconnects so older requests cannot overwrite newer lists. */
-export function useSavedProjects(enabled = true) {
+export function useSavedProjects(enabled = true, formalOnly = false) {
   const [projects, setProjects] = useState<SavedProjectSummary[]>([]);
   const [videos, setVideos] = useState<VideoSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +26,7 @@ export function useSavedProjects(enabled = true) {
         while (active && requested) {
           requested = false;
           try {
-            const [items, videoItems] = await Promise.all([listContentProjects(), listVideoProjects()]);
+            const [items, videoItems] = await Promise.all([listContentProjects(formalOnly), listVideoProjects()]);
             if (active) { setProjects(items); setVideos(videoItems); setError(""); }
           } catch (cause) {
             if (active) setError(cause instanceof Error ? cause.message : "프로젝트를 불러오지 못했습니다.");
@@ -41,7 +41,7 @@ export function useSavedProjects(enabled = true) {
     const onFocus = () => { void refresh(); };
     window.addEventListener("focus", onFocus);
     return () => { active = false; events.close(); window.removeEventListener("focus", onFocus); };
-  }, [enabled]);
+  }, [enabled, formalOnly]);
 
   return { projects, videos, loading, error, setError };
 }

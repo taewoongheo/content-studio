@@ -168,7 +168,7 @@ export function LibraryPanel({
                       required
                     />
                     <button className="production-button whitespace-nowrap">
-                      URL 등록
+                      게시
                     </button>
                   </form>
                 )}

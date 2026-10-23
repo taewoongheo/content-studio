@@ -108,6 +108,8 @@ test("게시 전 draft는 완료 상태라도 새 제작을 막고 게시 연결
     store.state(id, "finished");
     assert.equal(store.hasOpenDrafts(), true);
     db.prepare("UPDATE content_creation_logs SET completed_at=? WHERE id=?").run("2026-10-23T00:00:00Z", store.get(id).task.log_id);
+    assert.equal(store.hasOpenDrafts(), true);
+    store.remove(id);
     assert.equal(store.hasOpenDrafts(), false);
     const [second] = store.create(1);
     assert.equal(store.hasOpenDrafts(), true);

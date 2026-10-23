@@ -22,7 +22,7 @@ export function ProductionWorkspace({ runtime, readWork, settings, onOpen }: {
 }) {
   const { data, error, busy, writes, activity, reload, act } = runtime;
   const { dispatch: safe, taskAction, removeTask, stopAll, controlsBusy, stopDisabled } = useProductionControls(runtime);
-  const openDraftIds = new Set(data ? getOpenDrafts(data.tasks, data.logs).map(task => task.id) : []);
+  const openDraftIds = new Set(data ? getOpenDrafts(data.tasks).map(task => task.id) : []);
   const blockedByDraft = openDraftIds.size > 0;
   const details = useNodeDetails(data?.tasks, readWork);
   const [count, setCount] = useState(1);
@@ -51,7 +51,7 @@ export function ProductionWorkspace({ runtime, readWork, settings, onOpen }: {
       <WorkflowCanvas startContent={startContent} details={details} selectedNode={selected ? `${selected.id}:${selected.step}` : undefined} tasks={data?.tasks ?? []} writes={writes} activity={activity} syncing={data?.sync.running ?? false} onSelect={select} onOpen={id => void onOpen(id)} onStop={() => void stopAll()} stopDisabled={stopDisabled} onTaskAction={taskAction} busy={controlsBusy} />
 
       {selected && current && <aside className="absolute inset-y-0 right-0 z-20 w-[420px] max-w-full overflow-y-auto border-l bg-background shadow-lg" aria-label="작업 상세">
-        {selected.step === "project" ? <ProjectDetails task={current} onSelectStep={select} onOpen={id => void onOpen(id)} onClose={() => setSelected(null)} /> : <StepDetails id={selected.id} step={selected.step} updated={current.updated_at} write={writes[`${selected.id}:${selected.step}`] ?? 0} readWork={readWork} onClose={() => setSelected(null)} />}
+        {selected.step === "project" ? <ProjectDetails key={current.id} onPublish={url => act({ action: "register", id: current.log_id, url })} task={current} onSelectStep={select} onOpen={id => void onOpen(id)} onClose={() => setSelected(null)} /> : <StepDetails id={selected.id} step={selected.step} updated={current.updated_at} write={writes[`${selected.id}:${selected.step}`] ?? 0} readWork={readWork} onClose={() => setSelected(null)} />}
       </aside>}
       {panel && <section className={`absolute inset-y-0 right-0 z-20 flex max-w-full flex-col border-l bg-background shadow-lg ${panel === "library" ? "w-[560px]" : "w-[480px]"}`} aria-label={panel === "library" ? "기록과 레퍼런스" : "연결 설정"}>
         <header className="flex shrink-0 items-center justify-between border-b px-6 py-4"><h2 className="flex items-center gap-2 text-sm font-semibold">{panel === "library" ? <><History size={16} />기록과 레퍼런스</> : <><Settings size={16} />연결 설정</>}</h2><button className="production-button" onClick={() => setPanel(null)} aria-label="캔버스로 돌아가기"><X size={14} />닫기</button></header>

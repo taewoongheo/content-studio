@@ -57,7 +57,7 @@ export async function POST(
         authorizeRun(taskId, request.headers.get("authorization"));
         if (writeTools.includes(name) && !name.startsWith("production_")) {
           const projectId = (input as { projectId?: string }).projectId;
-          if (projectId !== productionStore().get(taskId).log.project_id)
+          if (projectId !== productionStore().get(taskId).task.project_id)
             throw new Error("이 작업에 연결된 프로젝트만 수정할 수 있습니다.");
         }
       },

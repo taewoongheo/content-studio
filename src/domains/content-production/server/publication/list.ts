@@ -19,3 +19,10 @@ export function listPublishedPosts(db: Database.Database): PublishedPost[] {
       publishedOn: dateFormatter.format(new Date(log.actual_published_at)), postUrl: log.post_url }] : [];
   });
 }
+
+
+export function listFormalContent(db: Database.Database) {
+  const drafts = new Set((db.prepare("SELECT project_id FROM content_drafts WHERE project_id IS NOT NULL")
+    .all() as {project_id: string}[]).map(row => row.project_id));
+  return new ContentProjectStore(db).list().filter(project => !drafts.has(project.id));
+}

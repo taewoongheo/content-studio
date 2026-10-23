@@ -8,15 +8,20 @@ import { ProductionStore } from "./persistence/store";
 import { publishChange } from "./events";
 import { deleteProject } from "@/domains/slideshow/projects/lifecycle/management";
 
+export function discardTask(store: ProductionStore, taskId: string) {
+  const projectId = store.get(taskId).task.project_id;
+  contentJobRegistry.transaction(() => store.db.transaction(() => {
+    if (projectId) deleteProject(contentJobRegistry, projectId, undefined, store.db);
+    store.remove(taskId);
+  })());
+}
+
 export function deleteTaskProject(store: ProductionStore, taskId: string) {
   const detail = store.get(taskId);
   const projectId = detail.task.project_id;
   if (detail.task.state !== "finished" || !projectId)
     throw new Error("완성된 포스트만 삭제할 수 있습니다.");
-  contentJobRegistry.transaction(() => store.db.transaction(() => {
-    deleteProject(contentJobRegistry, projectId, undefined, store.db);
-    store.remove(taskId);
-  })());
+  discardTask(store, taskId);
 }
 export function createTaskProject(
   store: ProductionStore,
@@ -24,8 +29,8 @@ export function createTaskProject(
   slideCount = 6,
 ) {
   const detail = store.assertActive(taskId, "production");
-  if (detail.log.project_id)
-    return { projectId: String(detail.log.project_id) };
+  if (detail.task.project_id)
+    return { projectId: String(detail.task.project_id) };
   return contentJobRegistry.transaction(() =>
     store.db.transaction(() => {
       const topic = String(detail.log.topic),
@@ -41,9 +46,9 @@ export function createTaskProject(
       });
       store.db
         .prepare(
-          "UPDATE content_creation_logs SET project_id=?,updated_at=? WHERE id=?",
+          "UPDATE content_drafts SET project_id=?,updated_at=? WHERE id=?",
         )
-        .run(job.id, new Date().toISOString(), detail.task.log_id);
+        .run(job.id, new Date().toISOString(), taskId);
       contentJobRegistry.afterCommit(() =>
         publishChange({ task_id: taskId, step: "production", kind: "saved" }),
       );

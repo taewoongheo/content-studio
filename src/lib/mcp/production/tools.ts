@@ -137,7 +137,7 @@ export function registerProductionTools(server: McpServer, taskId?: string) {
       guarded(async () => {
         const store = productionStore(),
           detail = store.assertActive(taskId, "production"),
-          projectId = String(detail.log.project_id ?? "");
+          projectId = String(detail.task.project_id ?? "");
         if (!projectId) throw new Error("먼저 프로젝트를 생성해 주세요.");
         const data =
           "projectId" in input.source
