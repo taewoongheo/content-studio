@@ -180,7 +180,6 @@ url = "http://127.0.0.1:3000/mcp"
 ## 저장 데이터와 구현 경계
 
 - SQLite 기본 위치는 `/Users/taewoongheo/Projects/content-studio-workspace/content-studio.sqlite`로 고정한다. 실행 폴더·브랜치·포트에 따라 경로를 바꾸거나 새 DB를 만들지 않는다. 검증용 DB는 `CONTENT_STUDIO_DB_PATH`의 절대 경로로만 분리한다.
-- 리서치 로그인 상태·Python 환경·모델도 `/Users/taewoongheo/Projects/content-studio-workspace/.content-studio-research`를 공유한다. `CONTENT_STUDIO_RESEARCH_RUNTIME_DIR`을 설정한다면 절대 경로를 사용한다.
 - 프로젝트 문서와 사용 이미지 바이트·메타데이터를 프로젝트별로 저장한다. 사용 이미지는 `content_project_assets`에서 관리한다. 외부 파일 이동·삭제는 저장된 프로젝트에 영향을 주지 않는다.
 - 복제는 문서와 이미지 사본을 함께 복제하고, 프로젝트 삭제는 해당 프로젝트의 이미지 사본도 삭제한다. 공용 이미지·캐릭터 라이브러리를 전제로 구현하지 않는다.
 - 편집 중 문서·이미지·되돌리기 이력은 서버 메모리에 유지한다. API와 MCP가 같은 작업 레지스트리와 저장 로직을 사용한다.
@@ -190,7 +189,7 @@ url = "http://127.0.0.1:3000/mcp"
 
 - 구형 DB는 서버 시작 시 변환하지 않고 거부한다. 이 로컬 개발 전환에는 별도 마이그레이션 명령을 유지하지 않는다. DB 직접 변환은 사용자의 명시적 요청이 있을 때만 서버를 종료한 뒤 수행하고 자산·외래키·기존 게시글 보존을 확인한다. 일반 콘텐츠 편집은 API/MCP를 사용한다.
 
-- MCP 등록은 `src/lib/mcp/server.ts`, 프로젝트 도구는 `src/lib/mcp/tools/projects.ts`, 리서치 등록은 `src/lib/mcp/research/tools.ts`, 조회·검색·이미지는 `research/tools/gather`, 작업 상태·브라우저·종료는 `research/tools/control`에서 확인한다. UI → 명령 → 저장 경로를 추적해 실제 동작을 검증한다.
+- MCP 등록은 `src/lib/mcp/server.ts`, 프로젝트 도구는 `src/lib/mcp/tools/projects.ts`, 리서치 등록은 `src/lib/mcp/research/tools.ts`, 조회·검색·이미지는 `research/tools/gather`, 작업 상태·종료는 `research/tools/control`에서 확인한다. UI → 명령 → 저장 경로를 추적해 실제 동작을 검증한다.
 
 ## 영상 편집
 
@@ -237,76 +236,34 @@ url = "http://127.0.0.1:3000/mcp"
 
 ## 콘텐츠 리서치 작업 안내
 
-선별 정책은 `docs/research-guidelines.md`를 먼저 읽는다. 리서치 도구는 프로젝트 복제와 독립적이며 에이전트가 조사 목적에 맞춰 선택한다. 레퍼런스 없는 제작 요청에는 위의 리서치 우선 흐름을 적용한다. 사용 도구와 호출 순서를 일괄 고정하지 않으며 레퍼런스가 있는 작업까지 같은 탐색을 반복하지 않는다.
+선별 정책은 [리서치 기준](docs/research-guidelines.md)을 먼저 읽는다. 분석·제작 중 필요한 자료를 조회하고, 기존 자료로 충분하면 재사용한다.
 
-### 설치와 런타임
+### TikTok: Apify
 
-```sh
-pnpm setup:research
-pnpm setup:captcha
-```
+- `APIFY_API_TOKEN`은 서버 환경 변수로 설정한다. 운영 TikTok 계정의 로그인·쿠키를 사용하지 않는다.
+- 자동 제작과 일반 MCP에서 `production_search`로 키워드 검색, `production_capture_reference`로 개별 게시글과 전체 슬라이드 축소본 저장, `production_read_images`로 보존 이미지를 확인한다.
+- 과거 게시 로그와 선별 레퍼런스는 `production_query`로 조회한다. 자체 게시글은 기존 미리보기를 사용한다.
+- 게시 URL 등록과 최근 성과 갱신도 같은 Apify 클라이언트를 사용한다. 확인되지 않은 수치는 `null`로 유지한다.
+- TikTok·Instagram의 로그인, Safari 쿠키 가져오기, 로컬 브라우저 검색·수집, Python 워커와 CAPTCHA 처리는 제공하지 않는다. Instagram을 수집할 대체 경로는 현재 없다.
 
-- Python 도구 설치에는 시스템 Python 3와 pip/venv가 필요하다. `setup:research`는 앱 상위 워크스페이스의 `.content-studio-research/python`에 Instaloader 4.15.3과 browser-cookie3 0.20.1을 설치한다. Node가 Python 워커를 실행하므로 별도 Python 서버가 필요하지 않다.
-- YouTube.js와 Playwright는 npm 의존성이다. TikTok 수집은 설치된 Chromium을 사용한다. 오픈소스 저장소 전체를 앱에 복사하지 않고 어댑터로 연결한다.
-- CAPTCHA는 선택 설치다. `setup:captcha`는 captcha-bypass v1.1.1의 플랫폼별 실행 파일·모델을 다운로드하고 `scripts/research/captcha-release.json`의 SHA-256을 검증한다. 자산은 `.content-studio-research/captcha`에 둔다. 유료 CAPTCHA 서비스나 API 키를 사용하지 않는다.
-- 설치와 앱 실행에 동일한 `CONTENT_STUDIO_RESEARCH_RUNTIME_DIR`을 지정하면 런타임 위치를 변경할 수 있다. 실행 파일은 `CONTENT_STUDIO_RESEARCH_PYTHON`, `CONTENT_STUDIO_CAPTCHA_EXECUTABLE`의 절대 경로로 지정할 수 있다. CAPTCHA 모델은 실행 파일과 함께 설치한다. 설치용 Python 명령은 `CONTENT_STUDIO_PYTHON_BOOTSTRAP`으로 변경한다.
-- Python 환경과 모델을 Next 소스 그래프에 넣지 않는다. 동적 네이티브 실행은 `turbopackIgnore`로 빌드 추적에서 제외하며 로컬 설치를 전제로 한다. 빌드 산출물만 복사하는 배포는 지원 범위가 아니다. 실행 환경과 `workers/instagram/collector.py`를 포함한 앱 체크아웃이 필요하다.
+### YouTube: 로그인 없는 공개 리서치
 
-### 로그인 계정 연결
-
-- 대시보드 **설정 → 리서치 계정 연결 → 로그인**은 macOS Safari에서 해당 플랫폼 로그인 페이지를 연다. 사용자가 Safari 기본 프로필에서 로그인·인증하고 Safari를 완전히 종료한 뒤 대시보드의 **로그인 완료**를 누르면 쿠키를 가져와 저장한다. 로그인에는 Chromium을 실행하지 않으며 검색에만 Chromium을 사용한다. 비밀번호·쿠키·토큰을 채팅으로 요구하지 않는다.
-- macOS에서는 **Safari에서 가져오기**로 Safari 기본 프로필의 로그인 쿠키를 연결할 수 있다. Safari에서 해당 플랫폼에 로그인하고 완전히 종료한 뒤 사용한다. 가져오기는 명시적인 대시보드 동작에서만 실행하며 상태 폴링·MCP에서 Safari 파일을 자동으로 읽지 않는다.
-- Safari 가져오기는 `workers/accounts/safari.py`가 로컬 쿠키 파일을 읽고 선택한 플랫폼 도메인의 유효 쿠키만 private pipe로 전달한다. `accounts/import`에서 검증한 뒤 기존 세션 저장소에 저장하고 다음 Chromium 컨텍스트에서 복원한다. Safari를 검색 브라우저로 사용하거나 개인 Chrome 프로필을 변경하지 않는다. 기존 컨텍스트는 저장 전에 닫으며 진행 중인 검색·세션 변경과 동시에 가져오지 않는다. 로그인 대기 중의 가져오기는 로그인 완료와 같은 동작이다.
-- 파일 접근 거부·도구 미설치·로그인 쿠키 없음은 값이 제거된 오류로 표시한다. Safari 파일 접근이 거부되면 **시스템 설정 → 개인정보 보호 및 보안 → 전체 디스크 접근 권한**에서 서버 실행 앱(Codex 또는 터미널)의 권한을 확인하고 앱과 서버를 재시작한다. 이 권한은 다른 앱의 데이터에도 접근할 수 있는 넓은 권한이며 사용자가 직접 판단하고 변경한다. 별도 Safari 프로필·비공개 창·메모리에만 남은 쿠키는 지원하지 않으며 browser-cookie3가 제공하지 않는 SameSite는 Lax로 변환한다. 가져오기 성공은 유효 쿠키의 로컬 저장을 의미하며 플랫폼의 실제 인증 성공을 보장하지 않는다.
-- 저장하는 것은 쿠키와 웹 저장소 인증 상태다. 사용자 브라우저의 프로필을 가져오거나 비밀번호를 저장하지 않는다. 소스 밖 런타임의 `accounts/{platform}.json`에 원자적으로 저장하고 디렉터리는 0700, 파일은 0600으로 제한한다. 인증 파일을 Git·프로젝트 DB·API/MCP 응답에 넣지 않는다.
-- 연결 상태는 저장된 인증 쿠키를 기준으로 한다. 실제 검색 가능성까지 보증하지 않는다. 쿠키의 명시적 만료 또는 플랫폼의 명시적 로그인 요구 시 `login_required`로 표시한다. 일반 403·빈 검색 결과·요청 제한만으로 세션 만료를 단정하지 않는다.
-- 앱의 로그인 대기 상태는 최대 10분 유지하며 취소·저장·연결 해제·시간 초과 때 해제한다. 사용자의 Safari 창을 자동으로 닫거나 Safari에서 로그아웃하지 않는다. 연결 해제는 해당 플랫폼의 진행 작업을 취소하고 앱에 저장한 쿠키와 전용 Chromium 컨텍스트를 제거한다.
-- TikTok·Instagram 내부 검색은 연결된 계정이 필요하다. 기존 URL 수집은 연결되어 있으면 같은 쿠키를 사용하고, 연결이 없으면 기존 익명 수집을 시도할 수 있다. Instagram Python 수집에 전달하는 쿠키는 해당 플랫폼 도메인으로 제한한다.
-- 계정 만료는 대시보드 설정과 사이드바, `get_research_accounts`, `get_collection_job.account`에 함께 반영된다. 재로그인 뒤 실패 작업을 재시도하거나 취소된 작업을 새로 시작한다.
-
-### 수집 도구와 결과 읽기
+YouTube.js의 InnerTube를 사용한다. 자동 제작 에이전트의 도구에는 포함하지 않으며 일반 MCP에서 명시적으로 사용할 수 있다.
 
 | 도구 | 입력과 동작 |
 | --- | --- |
-| `search_social_candidates` | `platform`, `query`, `type: accounts/posts`, `limit`으로 플랫폼 내부 검색. 한 결과 페이지, 기본 10개·최대 30개. 외부 웹 검색으로 대체하지 않음 |
-| `get_research_accounts` | 비밀 정보 없는 TikTok·Instagram 연결 상태 조회. 로그인 창을 열거나 인증을 갱신하지 않음 |
-| `list_account_posts` | `accountUrl`, `limit`으로 계정 게시물 수집. 기본 10개, 최대 30개. YouTube는 커뮤니티 게시물 |
-| `read_social_post` | 정규 게시물 `url`의 본문·미디어·공개 반응 수 수집. YouTube는 출처 `channelUrl`도 필요 |
-| `get_collection_job` | `jobId`의 진행 상태·결과·실패 원인 조회 |
-| `read_post_images` | 완료 작업의 `jobId`, `postId`, 0부터 시작하는 `imageIndexes`로 이미지 확인. 호출당 최대 3장 |
-| `open_collection_browser` | 멈춘 TikTok 작업 또는 Instagram 검색의 기존 브라우저를 앞으로 가져오고 스크린샷 반환 |
-| `solve_collection_captcha` | CAPTCHA가 확인된 TikTok 작업의 슬라이더·회전 해결 시도. 필요하면 컨트롤 선택자 지정 |
-| `resume_collection` | 실패 작업을 원래 세션에서 재시도. 작업당 총 3회 제한 |
-| `close_collection_session` | `sessionId`의 작업 취소·전용 브라우저 종료·결과와 커서 제거 |
+| `search_social_candidates` | `platform: youtube`, 검색어, `type: accounts/posts`, 최대 30개. 채널 또는 영상 검색 |
+| `list_account_posts` | 공개 채널의 커뮤니티 게시물. 같은 세션과 커서로 페이지네이션 |
+| `read_social_post` | 개별 커뮤니티 게시물. 원본 채널 `channelUrl` 필요 |
+| `get_collection_job` | 작업 상태·결과·실패 원인과 조건 충족 여부 조회 |
+| `read_post_images` | 완료 작업의 게시물 이미지 확인. 호출당 최대 3장 |
+| `resume_collection` | 실패 작업 재시도. 작업당 총 3회 제한 |
+| `close_collection_session` | 해당 작업 취소, 결과·커서 제거 |
 
-- 수집 요청은 `jobId`와 `sessionId`를 먼저 반환한다. `get_collection_job`의 `running`, `complete`, `blocked`를 확인한다. 실행 중인 작업은 이후 다시 조회한다. 검색도 같은 작업 조회·종료 도구를 사용한다. 계정 검색은 `accounts`, 게시물 검색은 `posts`를 반환한다.
-- URL은 정규 HTTPS Instagram/TikTok/YouTube 계정·게시물 URL을 사용한다. 단축 URL·다른 호스트·사용자 정보·별도 포트는 지원하지 않는다. 계정 페이지네이션은 같은 `accountUrl`·`sessionId`와 `nextCursor`를 사용한다.
-- 레퍼런스의 선별 조건을 `criteria`로 명시한다. 지원 필드는 `format`, `minViews`, `minLikes`다. 기본 정책을 코드가 자동 주입하지는 않으므로 요청을 만들 때 기준 문서와 사용자 조건을 반영한다.
-- `criteriaEvaluation`은 조건이 모두 확인되어 충족되면 `passed`, 확인된 값이 조건에 맞지 않으면 `failed`, 실패 조건은 없지만 필요한 수치가 없으면 `unverified`다. 주제 관련성은 에이전트가 본문·이미지를 확인한다.
-- `metrics`는 좋아요·조회수·저장·댓글·공유 수를 반환하고 없는 값은 `null`이다. YouTube의 축약 수치는 `metricsAsDisplayed`도 확인한다. 댓글 본문·답글을 수집하지 않는다.
-- `media`는 순서가 있는 URL 배열이다. `read_post_images`는 이미지 호스트와 크기를 검증해 MCP 이미지로 반환한다. OCR·사실 검증·프로젝트 자산 등록을 자동으로 수행하지 않는다. URL 만료 시 다시 수집한다.
-
-```json
-{
-  "url": "https://www.tiktok.com/@account/photo/1234567890123456789",
-  "criteria": { "format": "slideshow", "minViews": 100000 }
-}
-```
-
-### 플랫폼 지원 범위와 실패 처리
-
-| 플랫폼 | 수집 방식 | 현재 지원 범위 |
-| --- | --- | --- |
-| Instagram | 검색은 로그인 Chromium의 내부 검색 응답, URL 수집은 Instaloader HTTP | 계정·게시물 검색은 웹 SERP 지원 범위에 한정. 플랫폼이 지원 응답을 제공하지 않으면 `unsupported`. 저장 쿠키를 URL 수집에도 사용. 페이지네이션 미지원 |
-| TikTok | 검색은 로그인 Chromium의 내부 검색 응답, URL 수집은 공식 플레이어·공개 프로필·creator embed | 계정·게시물 키워드 검색. creator embed 계정 수집은 제한된 최근 표본. 페이지네이션 미지원 |
-| YouTube | YouTube.js의 InnerTube 검색·커뮤니티 피드 | 검색은 채널·영상이며 커뮤니티 게시물 직접 검색은 아님. 채널을 찾은 뒤 커뮤니티 목록 조회. 계정 피드 페이지네이션 지원. 개별 커뮤니티 게시물은 출처 채널 필요 |
-
-- 공개 페이지와 비공식 인터페이스 변경에 영향을 받는다. 사용자가 연결한 로그인 세션만 사용하며 프록시는 자동으로 사용하지 않는다. 검색은 전용 Chromium에서 실행한다. Safari는 명시적인 쿠키 가져오기 출처로만 사용하며 사용자 Chrome 프로필은 사용하지 않는다.
-- `block.reason`은 `captcha_required`, `login_required`, `rate_limited`, `access_denied`, `empty_response`, `unsupported`, `setup_required`, `timeout`, `not_found`, `source_error` 등을 구분한다. 401·403·빈 응답만으로 CAPTCHA라고 판단하지 않는다.
-- TikTok의 전용 브라우저는 사용자의 기존 프로필과 별개다. 필요하면 `open_collection_browser`로 기존 창을 computer use에 넘긴다. 새 브라우저를 열면 원래 수집 세션에 반영되지 않는다.
-- 로컬 CAPTCHA 도구는 확인된 도전만 처리한다. 컨트롤·원본 이미지가 인식되지 않거나 모델이 없으면 `unsupported_challenge`·`solver_unavailable` 등을 반환한다. `challenge_cleared`는 화면에서 도전이 사라진 상태이며 `resume_collection`의 수집 성공으로 복구를 확인한다. 실제 TikTok CAPTCHA 해결 성공률은 아직 검증하지 않았다.
-- Instagram 검색은 전용 브라우저를 사용한다. Instagram Python HTTP 수집과 YouTube InnerTube 세션은 브라우저로 넘길 수 없다. 별도 브라우저에서 CAPTCHA를 처리하면 이 세션도 복구된다고 주장하지 않는다.
-- 결과·커서는 서버 메모리에만 있다. 서버 재시작·명시적 종료·30분 비활성 후 제거된다. 최대 64개 작업을 유지한다. 브라우저는 Chromium 한 프로세스에 최대 3개 컨텍스트를 사용하며 플랫폼별 동시 작업은 하나로 제한한다. 작업 시간은 최대 60초, 성공 후 브라우저 유휴 시간은 60초, 확인된 CAPTCHA의 유휴 시간은 5분이다. 결과 조회는 브라우저 수명을 연장하지 않으며 마지막 컨텍스트가 닫히면 프로세스도 종료한다. 로그인 상태 파일은 결과 수명과 별개로 유지한다. 조사 종료 후 세션을 정리한다. 이 종료는 Content Studio 프로젝트 탭이나 사용자 브라우저를 닫지 않는다.
+- 검색은 채널·영상을 반환하며 커뮤니티 게시물 직접 검색은 아니다. 채널을 찾은 뒤 커뮤니티 목록을 조회한다.
+- `criteria`로 형식·최소 조회수·좋아요 조건을 전달할 수 있다. 누락된 수치는 조건 충족으로 간주하지 않는다. 축약 수치는 원본 표시도 확인한다.
+- 댓글 본문·답글은 수집하지 않는다. 결과·커서는 서버 메모리에만 유지하며 서버 재시작·명시적 종료·30분 비활성 후 제거한다.
+- 최대 64개 작업, 요청당 최대 60초다. 사용을 마치면 세션을 종료한다. 브라우저·쿠키 저장소나 별도 설치는 필요 없다.
 
 ## 변경 검증
 
@@ -317,18 +274,11 @@ pnpm lint
 pnpm build
 pnpm test:mcp
 pnpm test:mcp --production
-pnpm test:research
-pnpm test:search
-pnpm test:research-accounts --live-youtube
 ```
 
 - 변경 범위에 필요한 검증을 선택한다. 문서만 바꾸면 링크·지침 일관성을 확인하며 앱 전체 테스트를 불필요하게 반복하지 않는다.
 - `test:mcp`는 임시 DB·별도 포트의 실제 HTTP 클라이언트와 브라우저로 편집·복제·이미지·미리보기·되돌리기·자동 저장·탭 전환·stale-tab 거부·실패 복구·서버 재시작 후 복원을 검증한다. `--production`은 빌드 완료 후 실행한다. 기존 DB와 Codex 설정은 변경하지 않는다.
-- `test:research`는 런타임 설치와 프로덕션 빌드 후 실행한다. 실제 HTTP MCP로 플랫폼별 개별 게시물과 마지막 슬라이드 이미지, YouTube 계정 페이지네이션, TikTok 브라우저 인계, 로컬 엔진의 합성 슬라이더 해결을 검증한다. 익명 Instagram/TikTok 계정 목록의 접근 결과도 출력한다.
-- 실제 플랫폼 접근 검증은 네트워크·게시물 상태·플랫폼 차단에 영향을 받는다. 합성 CAPTCHA 테스트를 실제 플랫폼 CAPTCHA 해결의 증거로 보고하지 않는다. 정적 검사, 실제 MCP 동작, 화면 확인 결과를 구분해 보고한다.
-
-- `test:search`는 합성 플랫폼 응답을 실제 Chromium에 제공해 로그인·쿠키 복원·검색 응답·인증 거절·유휴 프로세스 종료를 검증한다. 실제 TikTok·Instagram 로그인 검색 성공의 증거는 아니다.
-- `test:research-accounts`는 빌드 후 임시 DB·인증 폴더로 실제 대시보드와 HTTP MCP의 만료 상태·연결 해제·Origin 보호를 검증한다. `--live-youtube`는 실제 내부 채널 검색도 검증한다. 사용자 인증 폴더를 테스트에 사용하지 않는다.
+- 리서치 검증은 Apify 클라이언트의 요청·응답 처리, YouTube 작업의 재시도·취소와 MCP 계약을 확인한다. 합성 응답을 사용한 검증을 실제 플랫폼 접근 성공으로 보고하지 않는다.
 
 ## 콘텐츠 제작 실행
 

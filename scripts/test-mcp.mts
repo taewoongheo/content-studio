@@ -33,7 +33,7 @@ function startApp() {
   const child = spawn("pnpm", [production ? "start" : "dev", "--port", String(port)], {
     env: { ...process.env, CONTENT_STUDIO_DIST_DIR: distDir,
       ...(isolatedTsconfig ? { CONTENT_STUDIO_TSCONFIG_PATH: isolatedTsconfig } : {}),
-      CONTENT_STUDIO_DB_PATH: join(directory, "test.sqlite"), CONTENT_STUDIO_RESEARCH_RUNTIME_DIR: join(directory, "research") },
+      CONTENT_STUDIO_DB_PATH: join(directory, "test.sqlite") },
     stdio: ["ignore", "pipe", "pipe"], detached: true,
   });
   child.stdout.on("data", (chunk) => { serverLog += chunk; });
@@ -86,8 +86,8 @@ try {
     "list_projects", "set_content_metadata", "open_project", "clone_project", "read_project",
     "edit_project", "undo_project", "preview_slide", "preview_slides", "export_slideshow", "rename_project", "get_render_job", "cancel_render_job",
     "list_video_projects", "create_video_project", "open_video_project", "read_video_project", "edit_video_project", "undo_video_project", "redo_video_project", "rename_video_project", "clone_video_project", "preview_video", "export_video", "start_video_export", "close_video_project", "delete_video_project",
-    "search_social_candidates", "get_research_accounts", "list_account_posts", "read_social_post", "read_post_images", "get_collection_job",
-    "solve_collection_captcha", "open_collection_browser", "resume_collection", "close_collection_session",
+    "search_social_candidates", "list_account_posts", "read_social_post", "read_post_images", "get_collection_job",
+    "resume_collection", "close_collection_session",
   ].sort(), "MCP exposes supported slideshow/research/video tools; slideshow deletion and close remain UI-only");
   assert.equal(tools.includes("add_image"), false);
   console.log("connected", tools);

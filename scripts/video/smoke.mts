@@ -18,7 +18,7 @@ const origin = `http://127.0.0.1:${port}`, distDir = `.next-video-smoke-${proces
 await writeFile(config, await readFile("tsconfig.json"));
 let log = "";
 function start() {
-  const child = spawn("pnpm", ["dev", "--port", String(port)], { detached: true, env: { ...process.env, CONTENT_STUDIO_DB_PATH: join(directory, "test.sqlite"), CONTENT_STUDIO_RESEARCH_RUNTIME_DIR: join(directory, "research"), CONTENT_STUDIO_DIST_DIR: distDir, CONTENT_STUDIO_TSCONFIG_PATH: config }, stdio: ["ignore", "pipe", "pipe"] });
+  const child = spawn("pnpm", ["dev", "--port", String(port)], { detached: true, env: { ...process.env, CONTENT_STUDIO_DB_PATH: join(directory, "test.sqlite"), CONTENT_STUDIO_DIST_DIR: distDir, CONTENT_STUDIO_TSCONFIG_PATH: config }, stdio: ["ignore", "pipe", "pipe"] });
   child.stdout.on("data", b => { log = (log + b).slice(-15000); }); child.stderr.on("data", b => { log = (log + b).slice(-15000); }); return child;
 }
 let app = start();

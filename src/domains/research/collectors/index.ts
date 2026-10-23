@@ -1,12 +1,10 @@
 import type { Collector } from "@/domains/research/collection/types";
-import { collectInstagram } from "@/domains/research/collectors/platforms/instagram";
-import { collectTikTok } from "@/domains/research/collectors/platforms/tiktok";
-import { collectYouTube } from "@/domains/research/collectors/platforms/youtube";
-
-import { searchSocial } from "@/domains/research/search/service";
+import { CollectionBlocked } from "@/domains/research/collection/types";
+import { collectYouTube } from "./platforms/youtube";
+import { searchYouTube } from "@/domains/research/search/platforms/youtube";
 
 export const collectSocial: Collector = (request, context) => {
-  if (request.kind === "search") return searchSocial(request.search, context);
-  const collectors = { instagram: collectInstagram, tiktok: collectTikTok, youtube: collectYouTube };
-  return collectors[request.source.platform](request, context);
+  if (request.source.platform !== "youtube")
+    throw new CollectionBlocked("unsupported", "This collector supports YouTube only.");
+  return request.kind === "search" ? searchYouTube(request.search, context) : collectYouTube(request, context);
 };

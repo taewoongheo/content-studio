@@ -9,13 +9,13 @@ import { socialSource } from "@/domains/research/domain/source";
 
 export function registerCollectionTools(server: McpServer, registry: CollectionRegistry) {
   registerTool(server, "list_account_posts", {
-    description: "Start a bounded account-post collection using the connected account when available. YouTube collects community posts. Declare your research purpose and follow AGENTS.md and docs/research-guidelines.md, with explicit user instructions taking precedence. Research follows the established topic; templates guide visual expression and do not select content topics. Returns jobId/sessionId; use get_collection_job for results. Instagram/TikTok anonymous feeds may be blocked or unavailable. No comments are fetched. Reuse sessionId for cursor pagination. Never assume missing metrics satisfy criteria.",
+    description: "Collect public YouTube community posts without login. For TikTok use production_capture_reference (Apify). Follow docs/research-guidelines.md. Returns jobId/sessionId; read get_collection_job. Reuse sessionId and nextCursor for pagination. Missing metrics are null; no comment text is collected.",
     inputSchema: z.strictObject({ accountUrl: z.url(), limit: z.number().int().min(1).max(30).default(10),
       criteria: criteriaSchema.optional(), cursor: z.string().max(200).optional(), sessionId: z.uuid().optional() }), annotations,
   }, input => guarded(() => json(registry.start({ source: socialSource(input.accountUrl, "account"),
     kind: "account", limit: input.limit, criteria: input.criteria, cursor: input.cursor }, input.sessionId))));
   registerTool(server, "read_social_post", {
-    description: "Start collection of one public canonical post URL: text, ordered media URLs and available like/view/save/comment/share counts. Does not read comment text. YouTube requires the source channelUrl. Returns jobId/sessionId; get_collection_job returns the result. Missing metrics are null; criteriaEvaluation distinguishes failed/unverified/passed. Do not treat popularity as factual evidence.",
+    description: "Collect one public YouTube community post without login: text, ordered media URLs and available like/view/save/comment/share counts. Does not read comment text. Requires the source channelUrl. For TikTok use production_capture_reference (Apify). Returns jobId/sessionId; get_collection_job returns the result. Missing metrics are null; criteriaEvaluation distinguishes failed/unverified/passed. Do not treat popularity as factual evidence.",
     inputSchema: z.strictObject({ url: z.url(), channelUrl: z.url().optional(), criteria: criteriaSchema.optional(), sessionId: z.uuid().optional() }), annotations,
   }, input => guarded(() => {
     const source = socialSource(input.url, "post");

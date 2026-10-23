@@ -1,7 +1,6 @@
-import { researchAccounts } from "@/domains/research/accounts/service";
 import { collectSocial } from "@/domains/research/collectors/index";
 import { clearYouTubeSession } from "@/domains/research/collectors/platforms/youtube";
-import { CollectionRegistry } from "@/domains/research/collection/registry";
+import { CollectionRegistry } from "./registry";
 
-const services = globalThis as typeof globalThis & { contentStudioResearchRegistry?: CollectionRegistry };
-export const researchRegistry = services.contentStudioResearchRegistry ??= new CollectionRegistry(collectSocial, clearYouTubeSession, researchAccounts);
+const services = globalThis as typeof globalThis & { contentStudioYouTubeRegistry?: CollectionRegistry };
+export const researchRegistry = services.contentStudioYouTubeRegistry ??= new CollectionRegistry(collectSocial, clearYouTubeSession);

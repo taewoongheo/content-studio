@@ -1,12 +1,12 @@
 "use client";
 import { useState } from "react";
-import { History, Settings, ChevronDown, Folder, ListFilter, Trash2 } from "lucide-react";
+import { History, ChevronDown, Folder, ListFilter, Trash2 } from "lucide-react";
 import type { ProductionStep, WorkItem } from "@/domains/content-production/domain/contracts";
 import { StatusIcon } from "../workflow/status-icon";
 import { getStepState, productionSteps } from "../../model/task-controls";
-export function ProductionSidebar({ openDraftIds, tasks, model, busy, selectedId, selectedStep, onSelect, onSelectStep, onAction, onDelete, onLibrary, onSettings }: {
+export function ProductionSidebar({ openDraftIds, tasks, model, busy, selectedId, selectedStep, onSelect, onSelectStep, onAction, onDelete, onLibrary }: {
   openDraftIds: ReadonlySet<string>; tasks: WorkItem[]; model: string; busy: boolean; selectedId?: string; selectedStep?: ProductionStep | "project";
-  onSelect: (task: WorkItem) => void; onSelectStep: (id: string, step: ProductionStep) => void; onAction: (action: Record<string, unknown>) => void; onLibrary: () => void; onSettings: () => void;
+  onSelect: (task: WorkItem) => void; onSelectStep: (id: string, step: ProductionStep) => void; onAction: (action: Record<string, unknown>) => void; onLibrary: () => void;
   onDelete: (task: WorkItem) => void;
 }) {
   const [showFinished, setShowFinished] = useState(false);
@@ -31,7 +31,6 @@ export function ProductionSidebar({ openDraftIds, tasks, model, busy, selectedId
     </div>
     <footer className="shrink-0 space-y-3 border-t p-3">
       <button className="flex w-full items-center gap-2 rounded-md p-2 text-xs hover:bg-muted" onClick={onLibrary}><History size={15} />제작 기록·레퍼런스</button>
-      <button className="flex w-full items-center gap-2 rounded-md p-2 text-xs hover:bg-muted" onClick={onSettings}><Settings size={15} />연결 설정</button>
       <details className="rounded-lg border p-3"><summary className="flex cursor-pointer items-center justify-between gap-2 text-xs"><span className="shrink-0">제작 모델</span><span className="min-w-0 truncate text-muted-foreground" title={model}>{model}</span><ChevronDown size={13} className="shrink-0" /></summary>
         <form key={model} className="mt-3 space-y-2" onSubmit={e => { e.preventDefault(); onAction({ action: "settings", settings: { model: new FormData(e.currentTarget).get("model") } }); }}>
           <label htmlFor="production-model" className="sr-only">제작용 Codex 모델</label><input id="production-model" name="model" className="production-field" defaultValue={model} required /><button className="production-button w-full" disabled={busy}>모델 저장</button><p className="text-[10px] leading-4 text-muted-foreground">새 시작·재개부터 적용</p>

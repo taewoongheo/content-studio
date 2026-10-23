@@ -1,7 +1,4 @@
-import type { AccountManager } from "@/domains/research/accounts/manager";
-import type { AccountPlatform } from "@/domains/research/accounts/types";
 import { randomUUID } from "node:crypto";
-import { ResearchBrowsers } from "@/domains/research/browser/sessions";
 import { evaluateCriteria } from "@/domains/research/domain/schema";
 import { CollectionBlocked, type Collector, type CollectionRequest, type CollectionResult } from "@/domains/research/collection/types";
 
@@ -15,10 +12,9 @@ export class CollectionRegistry {
   private jobs = new Map<string, Job>();
   private sessions = new Map<string, Session>();
   private expirationTimer?: NodeJS.Timeout;
-  readonly browsers: ResearchBrowsers;
-  constructor(private collect: Collector, private onClose: (sessionId: string) => void = () => {},
-    private accounts?: AccountManager) { this.browsers = accounts?.browsers ?? new ResearchBrowsers(); }
+  constructor(private collect: Collector, private onClose: (sessionId: string) => void = () => {}) {}
   start(request: CollectionRequest, sessionId?: string) {
+    if (request.source.platform !== "youtube") throw new Error("Use Apify production tools for TikTok research. This collector supports YouTube only.");
     this.expire();
     if (this.jobs.size >= 64) throw new Error("Close collection sessions before starting more jobs.");
     const id = sessionId ?? randomUUID();
@@ -37,48 +33,26 @@ export class CollectionRegistry {
     return this.snapshot(job.id);
   }
   private async run(job: Job) {
-    const platform = job.request.source.platform;
-    const authenticatedPlatform = platform === "youtube" ? undefined : platform as AccountPlatform;
-    const authVersion = authenticatedPlatform ? this.accounts?.store.version(authenticatedPlatform) : undefined;
-    let release: (() => void) | undefined;
     let timer: NodeJS.Timeout | undefined;
-    this.browsers.hold(job.sessionId);
     try {
-      if (authenticatedPlatform && this.accounts) {
-        if (job.request.kind === "search") this.accounts.require(authenticatedPlatform);
-        release = this.accounts.acquire(authenticatedPlatform, job.id, () => {
-          job.controller.abort(); job.status = "cancelled";
-          void this.browsers.close(job.sessionId).catch(() => undefined);
-          job.block = { reason: "login_required", message: "The account was disconnected in Dashboard → Settings." };
-        });
-      }
       const timeout = new Promise<never>((_, reject) => {
         timer = setTimeout(() => {
           reject(new CollectionBlocked("timeout", "The research operation exceeded 60 seconds."));
-          job.controller.abort(); void this.browsers.close(job.sessionId).catch(() => undefined);
+          job.controller.abort();
         }, 60_000); timer.unref();
       });
       const result = await Promise.race([timeout, this.collect(job.request, {
         sessionId: job.sessionId, signal: job.controller.signal,
-        authState: authenticatedPlatform ? this.accounts?.store.load(authenticatedPlatform) : undefined,
-        persistAuthState: state => { if (authenticatedPlatform && this.accounts) this.accounts.store.save(authenticatedPlatform, state, authVersion); },
-        getPage: () => this.browsers.page(job.sessionId, authenticatedPlatform),
       })]);
       if (job.status === "cancelled") return;
       job.result = result; job.status = "complete";
-      await this.browsers.save(job.sessionId).catch(() => undefined);
     } catch (error) {
       if (job.status === "cancelled") return;
       job.status = "blocked";
       job.block = error instanceof CollectionBlocked ? { reason: error.reason, message: error.message } :
-        { reason: "source_error", message: "The source did not return usable data. No CAPTCHA was confirmed." };
-      if (job.block.reason === "login_required" && authenticatedPlatform && this.accounts?.store.status(authenticatedPlatform).status === "connected")
-        await this.accounts.rejected(authenticatedPlatform).catch(() => undefined);
+        { reason: "source_error", message: "The source did not return usable data." };
     } finally {
-      clearTimeout(timer); release?.();
-      this.browsers.release(job.sessionId, job.block?.reason === "captcha_required");
-      if (job.status !== "complete" && job.block?.reason !== "captcha_required")
-        await this.browsers.close(job.sessionId).catch(() => undefined);
+      clearTimeout(timer);
     }
   }
   snapshot(id: string) {
@@ -90,7 +64,6 @@ export class CollectionRegistry {
     return { jobId: job.id, sessionId: job.sessionId, status: job.status, attempt: job.attempt,
       sourceUrl: job.request.source.url, kind: job.request.kind,
       ...(job.request.search ? { search: job.request.search } : {}),
-      ...(job.request.source.platform !== "youtube" && this.accounts ? { account: this.accounts.status(job.request.source.platform) } : {}),
       criteria: job.request.criteria ?? {},
       ...(job.block ? { block: job.block } : {}),
       ...(job.result ? { ...job.result, posts: job.result.posts.map(post => ({ ...post,
@@ -108,18 +81,6 @@ export class CollectionRegistry {
     job.controller = new AbortController(); void this.run(job);
     return this.snapshot(id);
   }
-  async openBrowser(id: string) {
-    this.snapshot(id);
-    const job = this.jobs.get(id)!;
-    if (job.status === "running") throw new Error("Wait until the collection stops before taking browser control.");
-    if (job.request.source.platform === "youtube" || (job.request.source.platform === "instagram" && job.request.kind !== "search"))
-      throw new Error("Browser handoff supports TikTok and Instagram search. Instagram collection uses Python HTTP and YouTube uses InnerTube.");
-    const page = this.browsers.peek(job.sessionId);
-    if (!page || page.isClosed()) throw new Error("The collection browser is closed; the original session cannot be handed off.");
-    await page.bringToFront();
-    return { sessionId: job.sessionId, jobId: id, page, url: page.url(),
-      browserName: "Google Chrome for Testing", instruction: "Operate this existing visible Chromium window with computer use. Do not open a fresh browser. Then call resume_collection; successful collection confirms recovery." };
-  }
   getPost(jobId: string, postId: string) {
     const snapshot = this.snapshot(jobId);
     const job = this.jobs.get(jobId)!;
@@ -136,10 +97,8 @@ export class CollectionRegistry {
       job.controller.abort(); job.status = "cancelled"; this.jobs.delete(id);
     }
     this.onClose(sessionId);
-    try { await this.browsers.close(sessionId); } finally {
-      this.sessions.delete(sessionId);
-      if (!this.sessions.size) { clearInterval(this.expirationTimer); this.expirationTimer = undefined; }
-    }
+    this.sessions.delete(sessionId);
+    if (!this.sessions.size) { clearInterval(this.expirationTimer); this.expirationTimer = undefined; }
     return { sessionId, closed: true };
   }
   private expire() {

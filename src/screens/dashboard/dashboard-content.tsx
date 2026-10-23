@@ -1,6 +1,4 @@
 "use client";
-import { ResearchAccounts } from "./components/settings/research-accounts";
-import { useResearchAccounts } from "./components/settings/use-research-accounts";
 import { useState } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -15,7 +13,6 @@ export function DashboardContent({
   onNew: () => void;
   onOpen: (id: string) => Promise<void>;
 }) {
-  const accounts = useResearchAccounts();
   const [tab, setTab] = useState("published");
   return (
     <Tabs
@@ -36,9 +33,6 @@ export function DashboardContent({
         </a>
         <StudioSidebar
           activeTab={tab}
-          needsLogin={accounts.accounts.some(
-            (account) => account.status === "login_required",
-          )}
           onOpenEditor={onNew}
           opening={false}
         />
@@ -47,9 +41,6 @@ export function DashboardContent({
           tabIndex={-1}
           className="mx-auto w-full min-w-0 max-w-[1280px] flex-1 px-12 pt-12 pb-16 outline-none max-xl:p-8 max-md:px-5 max-md:pt-6"
         >
-          <TabsContent value="settings" className="data-[hidden]:hidden">
-            <ResearchAccounts state={accounts} />
-          </TabsContent>
           <TabsContent value="all" className="data-[hidden]:hidden">
             <AllContentPage onOpen={onOpen} />
           </TabsContent>

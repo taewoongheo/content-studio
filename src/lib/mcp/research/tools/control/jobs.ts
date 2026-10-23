@@ -7,7 +7,7 @@ import { researchAnnotations as annotations, jobSchema } from "../../shared";
 
 export function registerJobsTools(server: McpServer, registry: CollectionRegistry) {
   registerTool(server, "get_collection_job", {
-    description: "Read an in-memory collection job and results across MCP requests. A running job needs another check later. Block reasons distinguish visible captcha_required, login_required, rate_limited, access_denied, empty_response, unsupported and setup_required. HTTP 401/403 alone never means CAPTCHA. Results expire after 30 minutes of inactivity or session close/server restart.",
+    description: "Read an in-memory collection job and results across MCP requests. A running job needs another check later. Block reasons distinguish rate_limited, access_denied, empty_response, unsupported, timeout and source_error. Results expire after 30 minutes of inactivity or session close/server restart.",
     inputSchema: jobSchema, annotations: { ...annotations, readOnlyHint: true },
   }, ({ jobId }) => guarded(() => json(registry.snapshot(jobId))));
 

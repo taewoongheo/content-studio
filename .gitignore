@@ -45,9 +45,5 @@ next-env.d.ts
 # optional project-local SQLite path
 /data/
 
-# Python collector bytecode
-__pycache__/
-*.pyc
-
 # Generated production intermediates are not application source or project storage.
 /output/
