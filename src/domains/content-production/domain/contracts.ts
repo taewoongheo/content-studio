@@ -119,6 +119,6 @@ export interface WorkDetail {
 export interface ChangeEvent {
   task_id?: string;
   step?: ProductionStep;
-  kind: "saved" | "state" | "removed" | "sync" | "library";
+  kind: "saved" | "state" | "removed" | "sync" | "library" | "reset";
   detail?: string;
 }

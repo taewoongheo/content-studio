@@ -8,6 +8,7 @@ import {
   productionStore,
   startProduction,
   stopProduction,
+  resetProduction,
   execute,
   syncState,
 } from "@/domains/content-production/server/execution/runner";
@@ -28,6 +29,7 @@ import { translateDisplay } from "@/domains/content-production/server/display/tr
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const requestSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("reset") }),
   z.object({ action: z.literal("settings"), settings: z.unknown() }),
   z.object({ action: z.literal("translate_display"), id: z.string().min(1), step: stepSchema }),
   z.object({ action: z.literal("start"), count: z.number().int().positive() }),
@@ -112,6 +114,9 @@ export async function POST(request: Request) {
         const source = displayContent(context ?? {});
         return Response.json({ source, translated: await translateDisplay(source) }, { headers: { "Cache-Control": "no-store" } });
       }
+      case "reset":
+        resetProduction();
+        break;
       case "settings":
         return Response.json(saveProductionSettings(input.settings));
       case "start":

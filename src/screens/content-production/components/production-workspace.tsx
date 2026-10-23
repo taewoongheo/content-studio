@@ -22,7 +22,7 @@ export function ProductionWorkspace({ runtime, readWork, onOpen }: {
   onOpen: (id: string) => Promise<void>;
 }) {
   const { data, error, busy, writes, activity, reload, act } = runtime;
-  const { dispatch: safe, taskAction, removeTask, stopAll, controlsBusy, stopDisabled } = useProductionControls(runtime);
+  const { dispatch: safe, taskAction, removeTask, stopAll, resetAll, resetDisabled, controlsBusy, stopDisabled } = useProductionControls(runtime);
   const openDraftIds = new Set(data ? getOpenDrafts(data.tasks).map(task => task.id) : []);
   const blockedByDraft = openDraftIds.size > 0;
   const details = useNodeDetails(data?.tasks, readWork);
@@ -51,7 +51,9 @@ export function ProductionWorkspace({ runtime, readWork, onOpen }: {
       onSelect={task => { setPanel(null); setSelected({ id: task.id, step: "project" }); }} onSelectStep={select} onAction={safe} onDelete={removeTask}
       onLibrary={() => { setPanel("library"); setSelected(null); }} />
     <main className="relative min-h-0 min-w-0 flex-1" aria-label="제작 작업 공간">
-      <WorkflowCanvas startContent={startContent} details={display.details} selectedNode={panel === "performance" ? "sync" : selected ? `${selected.id}:${selected.step}` : undefined} tasks={displayTasks ?? []} writes={writes} activity={activity} syncing={data?.sync.running ?? false} syncReport={data?.sync.report ?? null} planningCount={data?.planningLogs.length ?? 0} onSelect={select} onSelectSync={() => { setSelected(null); setPanel("performance"); }} onOpen={id => void onOpen(id)} onStop={() => void stopAll()} stopDisabled={stopDisabled} onTaskAction={taskAction} busy={controlsBusy} />
+      <WorkflowCanvas key={runtime.resetVersion} onReset={() => void (async () => {
+        if (await resetAll()) { setSelected(null); setPanel(null); setCount(1); }
+      })()} resetDisabled={resetDisabled} startContent={startContent} details={display.details} selectedNode={panel === "performance" ? "sync" : selected ? `${selected.id}:${selected.step}` : undefined} tasks={displayTasks ?? []} writes={writes} activity={activity} syncing={data?.sync.running ?? false} syncReport={data?.sync.report ?? null} planningCount={data?.planningLogs.length ?? 0} onSelect={select} onSelectSync={() => { setSelected(null); setPanel("performance"); }} onOpen={id => void onOpen(id)} onStop={() => void stopAll()} stopDisabled={stopDisabled} onTaskAction={taskAction} busy={controlsBusy} />
       {display.error && <p role="alert" className="absolute bottom-4 left-16 right-16 z-10 rounded border bg-background p-3 text-xs text-destructive">{display.error}</p>}
 
       {selected && current && <aside className="absolute inset-y-0 right-0 z-20 w-[420px] max-w-full overflow-y-auto border-l bg-background shadow-lg" aria-label="작업 상세">

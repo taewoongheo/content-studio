@@ -10,6 +10,7 @@ export function useProduction() {
   const [data, setData] = useState<ProductionSnapshot | null>(null),
     [error, setError] = useState<string | null>(null),
     [busy, setBusy] = useState(false);
+  const [resetVersion, setResetVersion] = useState(0);
   const [writes, setWrites] = useState<Record<string, number>>({}),
     [activity, setActivity] = useState<Record<string, string>>({});
   const mounted = useRef(true),
@@ -42,6 +43,12 @@ export function useProduction() {
     events.onopen = () => void reload();
     events.onmessage = (message) => {
       const event = JSON.parse(message.data) as ChangeEvent;
+      if (event.kind === "reset") {
+        setWrites({});
+        setActivity({});
+        setError(null);
+        setResetVersion(value => value + 1);
+      }
       if (event.kind === "saved" && event.task_id && event.step) {
         const key = `${event.task_id}:${event.step}`;
         setWrites((previous) => ({
@@ -84,5 +91,5 @@ export function useProduction() {
     },
     [reload],
   );
-  return { data, error, busy, writes, activity, reload, act };
+  return { data, error, busy, writes, activity, reload, act, resetVersion };
 }

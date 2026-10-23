@@ -40,6 +40,8 @@ export function WorkflowCanvas({
   onSelectSync,
   onOpen,
   onStop,
+  onReset,
+  resetDisabled,
   stopDisabled,
   onTaskAction,
   busy,
@@ -56,6 +58,8 @@ export function WorkflowCanvas({
   onSelect: (id: string, step: ProductionStep) => void;
   onSelectSync: () => void;
   onOpen: (id: string) => void;
+  onReset: () => void;
+  resetDisabled: boolean;
   onStop: () => void;
   stopDisabled: boolean;
   onTaskAction: TaskActionHandler;
@@ -108,7 +112,7 @@ export function WorkflowCanvas({
         <HorizontalWheelPan containerRef={containerRef} />
         <Background gap={24} size={1} />
         <Controls showInteractive={false} />
-        <StartNodeControl onStop={onStop} stopDisabled={stopDisabled} />
+        <StartNodeControl onReset={onReset} resetDisabled={resetDisabled} onStop={onStop} stopDisabled={stopDisabled} />
       </ReactFlow>
 
     </div>

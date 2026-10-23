@@ -300,6 +300,7 @@ pnpm test:mcp --production
 - 제작용 모델 기본값은 `gpt-5.6-sol`이며 콘텐츠 제작 화면 하단에서 변경한다. 설정은 작업공간의 `.content-studio-production/settings.json`에 저장하며 전역 Codex 설정은 변경하지 않는다. 검증에서는 `CONTENT_STUDIO_PRODUCTION_RUNTIME_DIR` 절대 경로로 설정 파일을 분리한다.
 - `CONTENT_STUDIO_CODEX_BIN`은 실행할 CLI 경로를 지정한다. 일반 실행은 `codex`를 사용한다. 자동 검사에서만 격리된 실행 fixture를 사용할 수 있고 실제 모델 제작 성공과 구분한다.
 - `production_context`, `production_save_draft`, `production_comparisons`, `production_change_direction`, `production_create_project`, `production_import_image`는 실행 중인 작업 전용 MCP에서만 제공한다. 단계 완료는 서버 실행기가 필수 출력·저장·실제 이미지 검토를 검사해 처리한다.
+- 캔버스 하단 초기화는 확인 후 모든 제작 작업을 중단하고 draft·연결된 미게시 프로젝트와 이미지를 삭제한다. 게시 콘텐츠·일반 저장 프로젝트·선별 레퍼런스는 보존한다. 성과 갱신 중에는 초기화를 막는다.
 - 취소·제거는 실행 권한과 프로세스를 종료하고 작업 전체 및 모든 단계 draft를 삭제한다. 중단은 저장 내용을 유지한다. 게시 콘텐츠 중복 범위는 최근 24시간이고 성과 갱신 범위는 한국 날짜 오늘~3일 전이다.
 - DB v17는 구형 템플릿 저장소와 프로젝트 게시 컬럼을 사용하지 않는다. 기존 DB를 자동 변환하지 않는다. 직접 변환은 사용자가 명시적으로 요청했을 때만 수행하고 프로젝트 문서·자산 보존과 외래키를 확인한다.
 

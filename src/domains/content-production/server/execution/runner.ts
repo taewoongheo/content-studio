@@ -259,3 +259,18 @@ export function stopProduction(id: string, remove = false) {
   if (remove) discardTask(store, id);
   else store.state(id, "stopped");
 }
+
+export function resetProduction() {
+  if (shared.productionSync)
+    throw new Error("성과 갱신 중에는 초기화할 수 없습니다. 갱신이 끝난 뒤 다시 시도해 주세요.");
+  const store = productionStore();
+  const tasks = store.list();
+  for (const task of tasks)
+    if (runs.has(task.id) || task.state === "running" || task.state === "pending")
+      stopProduction(task.id);
+  contentJobRegistry.transaction(() => store.db.transaction(() => {
+    for (const task of tasks) discardTask(store, task.id);
+  })());
+  shared.productionRefresh = undefined;
+  publishChange({ kind: "reset" });
+}

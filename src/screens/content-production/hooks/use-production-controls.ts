@@ -29,5 +29,13 @@ export function useProductionControls({ data, act, busy }: Pick<ReturnType<typeo
       setStopping(false);
     }
   };
-  return { dispatch, taskAction, removeTask, stopAll, controlsBusy: busy || stopping, stopDisabled: stopping || busy || !activeTasks.length };
+  const resetAll = async () => {
+    if (busy || stopping || data?.sync.running) return false;
+    if (!window.confirm("현재 제작 작업과 모든 draft·미게시 결과물을 삭제하고 캔버스를 초기화할까요? 게시된 콘텐츠와 선별 레퍼런스는 유지됩니다.")) return false;
+    try {
+      await act({ action: "reset" });
+      return true;
+    } catch { return false; }
+  };
+  return { resetAll, resetDisabled: busy || stopping || !data || data.sync.running, dispatch, taskAction, removeTask, stopAll, controlsBusy: busy || stopping, stopDisabled: stopping || busy || !activeTasks.length };
 }

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, type RefObject } from "react";
 import { Panel, useReactFlow, useStore } from "@xyflow/react";
-import { LocateFixed, Square } from "lucide-react";
+import { LocateFixed, Square, RotateCcw } from "lucide-react";
 
 export function CenterInitialStart() {
   const centered = useRef(false);
@@ -15,7 +15,7 @@ export function CenterInitialStart() {
   return null;
 }
 
-export function StartNodeControl({ onStop, stopDisabled }: { onStop: () => void; stopDisabled: boolean }) {
+export function StartNodeControl({ onStop, stopDisabled, onReset, resetDisabled }: { onStop: () => void; stopDisabled: boolean; onReset: () => void; resetDisabled: boolean }) {
   const { getNode, setCenter, fitView } = useReactFlow();
   const duration = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 250;
   return <Panel position="bottom-center" className="flex gap-2">
@@ -25,6 +25,7 @@ export function StartNodeControl({ onStop, stopDisabled }: { onStop: () => void;
     }}><LocateFixed size={15} />시작 노드</button>
     <button type="button" className="production-button shadow-sm" aria-label="전체 흐름 보기" onClick={() => void fitView({ padding: 0.15, maxZoom: 1, duration: duration() })}>전체 보기</button>
     <button type="button" className="production-button shadow-sm !text-destructive" disabled={stopDisabled} onClick={onStop}><Square size={14} />전체 중단</button>
+    <button type="button" className="production-button shadow-sm !text-destructive" disabled={resetDisabled} onClick={onReset}><RotateCcw size={15} />초기화</button>
   </Panel>;
 }
 
