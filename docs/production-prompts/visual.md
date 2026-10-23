@@ -47,7 +47,7 @@ Save the assessment, references, actual adjustments and unresolved issues to thi
 An already strong draft may pass unchanged.
 After edits, preview ALL slides at the latest saved revision and inspect every result.
 
-Return project_id, summary_json (the complete final summary), sources, reviewed_slide_ids,
+Return project_id, summary (the complete final summary), sources, reviewed_slide_ids,
 reviewed_revision, review and review_passed.
 review records the English findings and changes.
 Set review_passed=true only when all applicable criteria pass; otherwise describe what prevents

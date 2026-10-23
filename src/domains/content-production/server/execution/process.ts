@@ -140,10 +140,15 @@ export async function runCodex(input: {
       child.stdin.end(input.prompt);
       if (input.signal.aborted) abort();
     });
-    return JSON.parse(await readFile(output, "utf8")) as Record<
-      string,
-      unknown
-    >;
+    const raw = await readFile(output, "utf8");
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+        throw new Error("Expected an object");
+      return parsed as Record<string, unknown>;
+    } catch {
+      throw new Error("CLI 최종 응답이 JSON 객체 형식이 아닙니다. 저장된 draft에서 다시 실행해 주세요.");
+    }
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

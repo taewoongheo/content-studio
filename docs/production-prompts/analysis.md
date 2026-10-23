@@ -1,38 +1,53 @@
 # Analysis and direction
 
-Read the published comparison pool and user-selected references. Investigate relevant questions
-and decide one topic, useful answer and presentation direction.
-Explain the evidence, expected response, goal connection and difference from recent content.
+## Read and compare
 
-View actual source images when choosing the visual direction.
-Plan enough slides to satisfy the visual rules in docs/content-guidelines.md; do not prescribe
-dense text-only pages or copy an older post's conflicting layout.
+Read the published comparison pool and user-selected references.
+Use the actual copy and source slide images when interpreting examples, not metrics alone.
+Analyze both high- and low-performance posts as described below.
 
-## Learn from lower-performing posts
+## Explain what readers gained or had to do
 
-Analyze the low_performance group as well as the stronger examples before choosing the direction.
-Read the actual copy and view source slide images for examples used in your reasoning.
-Compare relevant posts across groups; do not infer a visual or writing problem from metrics alone.
+For the examples that influence your decision, identify the log, relevant slide/copy and metrics.
+Connect the observation to the reader's experience:
 
-Look for plausible reasons the weaker posts attracted less response: for example, a hook that
-does not reveal the value, explanation without an immediately usable answer, too much reading
-before the payoff, weak visual emphasis, or a less compelling topic for this audience.
-These are examples to investigate, not predetermined answers or a required checklist.
+1. What situation or desired outcome does the hook address, and what answer does it promise?
+2. What answer does the post actually deliver? Is it a finished plan, a usable choice, a demonstration,
+   or advice the reader must turn into their own plan?
+3. What must the reader still interpret, assemble, compare or decide before using it?
+   Explain how the topic, promised payoff, copy and visual presentation affect that effort.
+4. Why might that experience have encouraged or weakened saving, liking, commenting or continuing?
+   Compare specific stronger and weaker examples and state a concrete working estimate.
+5. Which lesson will you apply to this draft, and why does it help the upper-level goal?
 
-In the existing analysis field, connect:
-- Observed features and performance of specific posts (identify the logs).
-- Your concrete estimate of why those features may have weakened response, using stronger
-  examples for comparison and counterexamples when relevant.
-- What to retain, avoid or change in this draft and why it helps the upper-level goal.
+Do not stop at "large images," "too much text" or "explanation-heavy."
+Explain what becomes easier or harder for the intended reader and where it happens in the post.
+Also evaluate the appeal of the topic and answer itself, not only its packaging.
+A ready-to-use answer and general advice may differ in value even if both have clean layouts.
 
-Make a useful, evidence-linked estimate rather than stopping at "the cause is uncertain."
-Keep observed facts distinct from inferred causes. Consider view counts, available metric
-components and audience/topic differences when they materially affect the comparison.
-Do not call a low-rate post "no response," assume all explanatory content is bad, ban an entire
-topic/format from one result, or turn this analysis into a permanent global rule.
-Revisit the interpretation when later posts provide different evidence.
+Separate observations from inferred causes. Consider material differences in views, audience and
+topic, and counterexamples where relevant. Do not replace an estimate with generic uncertainty,
+call lower engagement "no response," or turn one result into a permanent rule.
 
-Save analysis, direction, research and sources to the analysis draft.
-Do not create or edit a project in this stage.
-Return analysis and every direction field as strings, plus the structured sources array.
+## Explore topics and select an answer
+
+Use internet and community searches under docs/research-guidelines.md to find situations,
+questions, desired outcomes and the language people use. Save the source and what you learned.
+
+Compare materially different topic/answer candidates using both those findings and the past-post
+analysis. Explain why the selected answer is more useful or compelling for this audience.
+Do not automatically reuse a weak post's topic simply because its presentation can be improved.
+Successful topics can be developed for a new situation; do not restrict all candidates to one
+recurring training decision.
+
+Choose one topic, complete answer and presentation direction. Explain the expected response,
+goal connection and difference from recent content. View actual references for the visual direction.
+Plan enough slides to satisfy docs/content-guidelines.md without dense text-only pages.
+
+## Save and finish
+
+Record the post comparisons, reader-experience estimates and candidate selection in the existing
+analysis field. Save the confirmed direction, research and sources to the analysis draft.
+Do not create or edit a project here.
+Return analysis and every direction field as strings, plus structured sources.
 The harness validates and saves the result before first-draft production starts.

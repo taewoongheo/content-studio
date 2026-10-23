@@ -30,7 +30,7 @@ Explain why the chosen wording is better, or why keeping it is justified.
 Do not invent changes to demonstrate activity.
 
 Preview ALL slides at the latest saved revision and inspect the results.
-Return project_id, summary_json (the complete updated summary, retaining body/CTA information),
+Return project_id, summary (the complete updated summary, retaining body/CTA information),
 sources, reviewed_slide_ids, reviewed_revision, review and review_passed.
 review is the English assessment and change explanation.
 Set review_passed=true only when the hook criteria pass; otherwise explain the blocker.

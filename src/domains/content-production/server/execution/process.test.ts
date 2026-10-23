@@ -49,3 +49,26 @@ if (args[0] === "mcp") {
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("잘못된 CLI 최종 응답은 출처를 구분할 수 있는 오류로 표시한다", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "production-cli-output-test-"));
+  const executable = join(directory, "codex.cjs");
+  const previous = process.env.CONTENT_STUDIO_CODEX_BIN;
+  try {
+    await writeFile(executable, `#!/usr/bin/env node
+const fs = require("node:fs");
+const args = process.argv.slice(2);
+if (args[0] === "mcp") console.log("[]");
+else fs.writeFileSync(args[args.indexOf("--output-last-message")+1], "First draft is complete.");
+`, { mode: 0o700 });
+    process.env.CONTENT_STUDIO_CODEX_BIN = executable;
+    await assert.rejects(runCodex({
+      prompt: "Test malformed output", schema: {}, origin: "", taskId: "", token: "",
+      displayOnly: true, signal: new AbortController().signal, onActivity() {},
+    }), /CLI 최종 응답이 JSON 객체 형식이 아닙니다/);
+  } finally {
+    if (previous === undefined) delete process.env.CONTENT_STUDIO_CODEX_BIN;
+    else process.env.CONTENT_STUDIO_CODEX_BIN = previous;
+    await rm(directory, { recursive: true, force: true });
+  }
+});

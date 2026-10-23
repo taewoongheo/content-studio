@@ -173,7 +173,7 @@ export async function execute(
         store.completeAnalysis(id, { ...fields, sources });
         continue;
       }
-      const { summary_json, review: reviewText, review_passed, ...rest } = fields;
+      const { review: reviewText, review_passed, ...rest } = fields;
       if (run.step === "hook" || run.step === "visual") {
         store.save(id, run.step, { review: reviewText, sources });
         if (review_passed !== true || typeof reviewText !== "string" || !reviewText.trim())
@@ -183,7 +183,6 @@ export async function execute(
       }
       const output = productionResultSchema.parse({
         ...rest,
-        summary: JSON.parse(String(summary_json)),
         sources,
       });
       const detail = store.get(id);

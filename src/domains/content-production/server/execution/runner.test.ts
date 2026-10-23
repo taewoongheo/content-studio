@@ -58,7 +58,7 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       if (step === "hook" || step === "visual") {
         recordSourceReview(id);
         recordReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => s.id));
-        return { project_id: projectId, summary_json: '{"hook":"test"}', sources: [],
+        return { project_id: projectId, summary: { hook: "test" }, sources: [],
           review: "The current content meets the review criteria.", review_passed: true,
           reviewed_slide_ids: job.editor.document.slides.map(s => s.id), reviewed_revision: job.editor.revision };
       }
@@ -94,7 +94,7 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       );
       return {
         project_id: projectId,
-        summary_json: '{"hook":"test"}',
+        summary: { hook: "test" },
         sources: [],
         reviewed_slide_ids: job.editor.document.slides.map((s) => s.id),
         reviewed_revision: final.editor.revision,
@@ -113,7 +113,7 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
     await execute(id, "http://127.0.0.1:3000", async () => {
       const job = contentJobRegistry.get(projectId);
       recordReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => s.id));
-      return { project_id: projectId, summary_json: '{"hook":"test"}', sources: [],
+      return { project_id: projectId, summary: { hook: "test" }, sources: [],
         review: "The layout appears readable.", review_passed: true,
         reviewed_slide_ids: job.editor.document.slides.map(s => s.id), reviewed_revision: job.editor.revision };
     });

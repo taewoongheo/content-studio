@@ -42,7 +42,7 @@ Save current content, research, sources, changes and completed/remaining actions
 Preview ALL slides at the latest saved revision, inspect the actual images and fix draft issues.
 The harness verifies saved revision and full-slide preview coverage.
 
-Return project_id, summary_json (the complete content summary and deviation reasons),
+Return project_id, summary (the complete content summary and deviation reasons),
 sources, reviewed_slide_ids and reviewed_revision.
 This completes the first draft, not the whole task. Hook and visual review follow separately.
 Do not register publication or claim the user uploaded the post.

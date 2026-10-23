@@ -29,6 +29,34 @@ const sourcesField = {
     additionalProperties: false,
   },
 };
+const summaryField = {
+  type: "object",
+  properties: {
+    title: stringField,
+    topic: stringField,
+    message: stringField,
+    hook: stringField,
+    caption: stringField,
+    hashtags: { type: "array", items: stringField },
+    slides: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          slide_id: stringField,
+          role: { type: "string", enum: ["hook", "body", "cta"] },
+          copy: { type: "array", items: stringField },
+          visual: stringField,
+        },
+        required: ["slide_id", "role", "copy", "visual"],
+        additionalProperties: false,
+      },
+    },
+    changes: { type: "array", items: stringField },
+  },
+  required: ["title", "topic", "message", "hook", "caption", "hashtags", "slides", "changes"],
+  additionalProperties: false,
+};
 export function resultSchema(step: ProductionStep) {
   const properties =
     step === "analysis"
@@ -39,7 +67,7 @@ export function resultSchema(step: ProductionStep) {
       : {
           ...(step === "hook" || step === "visual" ? { review: stringField, review_passed: { type: "boolean" } } : {}),
           project_id: stringField,
-          summary_json: stringField,
+          summary: summaryField,
           sources: sourcesField,
           reviewed_slide_ids: { type: "array", items: stringField },
           reviewed_revision: { type: "integer" },

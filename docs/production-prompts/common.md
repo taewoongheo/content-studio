@@ -33,16 +33,17 @@ Consider all available groups. Compare lower-performing examples with stronger o
 differences worth investigating; a low rate does not by itself establish poor content or its cause. Engagement does not establish causation or app installs.
 Query again when useful; keyword queries apply the same selection within matching posts.
 
-Use owned published posts and user-selected references for topics, hooks and presentation.
+Select topics using published-post analysis plus internet and community exploration.
+Use owned published posts and user-selected references for hook and visual presentation.
 Read saved source documents through production_read_project and actual images through
 production_preview_project or production_read_images. Do not open source editors.
 Editor tools are only for the project being produced.
-Do not search TikTok, Instagram or other social feeds for new ideas, formats or reference slides.
+Do not use TikTok/Instagram internal search or feed browsing to collect new posts or visual references.
 
 ## Research and recording
 
-Use docs/research-guidelines.md to investigate questions needed for this content.
-Research is optional, not a checklist. Do not fabricate evidence, metrics, images or feedback.
+During analysis, explore topic candidates through internet and community searches using
+docs/research-guidelines.md. In later stages, investigate only questions needed for the current work. Do not fabricate evidence, metrics, images or feedback.
 If a necessary claim remains unsupported, narrow or omit it; review stages report a blocker
 when the correction exceeds their allowed scope.
 
@@ -72,3 +73,10 @@ Each entry includes kind, id, url, part, used_for and visual_set_id.
 part states what you referenced; used_for explains how you used it.
 Use null for unused id, url or visual_set_id fields, and provide an id or URL for every source.
 Reuse accurate source context from the draft rather than inventing missing descriptions.
+
+
+For production, hook and visual stages, return summary as an object matching the output schema,
+not prose or a JSON-encoded string. Include the current title, topic, message, hook, caption,
+hashtags, slides and changes. Each slide contains slide_id, role, copy (an array of strings) and
+visual (a description of the actual visual). Use an empty string for caption and an empty array for hashtags if none was written;
+do not invent missing published metadata. Save draft progress before the final response.
