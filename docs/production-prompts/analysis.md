@@ -5,6 +5,14 @@
 Read the published comparison pool, relevant external examples through production_external_references.
 Use the actual copy and source slide images when interpreting examples, not metrics alone.
 Analyze both high- and low-performance posts as described below.
+Group multiple posts by broad content type across exercise topics: choice/comparison, explanation,
+ranking, ready-to-use routine, or another useful broad category. These are examples, not a fixed list.
+Do not narrow the main groups to combinations such as back-exercise explanation.
+Follow the grouped-comparison criteria in docs/research-guidelines.md and distinguish:
+- Content-type/value patterns: what kind of answer readers respond to.
+- Presentation patterns: how hook wording, images, text density and layout deliver that answer.
+Compare stronger and weaker cases within a type and different types with similar presentation.
+Keep content_type broad; store the specific exercise subject in topic.
 
 ## Explain what readers gained or had to do
 
@@ -23,6 +31,7 @@ Connect the observation to the reader's experience:
 Do not stop at "large images," "too much text" or "explanation-heavy."
 Explain what becomes easier or harder for the intended reader and where it happens in the post.
 Also evaluate the appeal of the topic and answer itself, not only its packaging.
+Do not treat an explanation-led content type and dense explanatory text as the same weakness.
 A ready-to-use answer and general advice may differ in value even if both have clean layouts.
 
 Separate observations from inferred causes. Consider material differences in views, audience and
@@ -46,8 +55,9 @@ Plan enough slides to satisfy docs/content-guidelines.md without dense text-only
 
 ## Save and finish
 
-Record the post comparisons, reader-experience estimates and candidate selection in the existing
-analysis field. Save the confirmed direction, research and sources to the analysis draft.
+In the existing analysis field, separately record content-type/value patterns and presentation
+patterns, citing supporting posts and counterexamples. Then connect both assessments to the
+candidate selection and reader-experience estimates. Save the confirmed direction, research and sources to the analysis draft.
 Do not create or edit a project here.
 Return analysis and every direction field as strings, plus structured sources.
 The harness validates and saves the result before first-draft production starts.
