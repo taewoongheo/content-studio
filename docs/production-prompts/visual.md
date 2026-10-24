@@ -29,6 +29,28 @@ Use the guide's actual thresholds; do not substitute older posts' styling.
 Judge the exported slide boundary. An intentional crop is allowed only when the necessary pose,
 movement cues and equipment relationship remain clear.
 
+## Typography inspection
+
+Apply the guide's fixed badge specification exactly. Inspect its saved text and frame properties,
+not only its apparent size: the badge is an explicit exception to the general text-size minimum.
+Do not enlarge the badge to meet that minimum or copy an older post's badge dimensions.
+
+For the remaining text, check both the saved font sizes and the rendered slide:
+- The main answer, heading and necessary explanation have visibly distinct importance. A small
+  size difference or a color change alone does not establish hierarchy.
+- Supporting labels do not compete with the actionable answer or key numbers through equal size
+  and weight. Repeated titles or abstract labels are not additional reader value.
+- A heading, its answer/numbers and their explanation form a clear group. Within-group gaps are
+  smaller than between-group gaps; the same relationships use consistent spacing and alignment.
+- Judge gaps between visible glyphs, not empty text frames. Avoid isolated text islands scattered
+  across the page and large gaps that detach an explanation from the item it explains.
+- The reading path is clear at phone viewing size. Line breaks follow meaningful phrases and do
+  not create unnecessary short lines through overly narrow text frames.
+
+Correct sizes, weights, frame widths, positions and spacing within the allowed editing scope.
+If redundant copy must be removed, report that copy as a blocker rather than shrinking, hiding or
+moving it off-slide. This stage cannot delete or rewrite approved text.
+
 ## Correct within scope
 
 Use update_visual, reorder_layers, set_slide_background, set_text_colors and set_text_weights
