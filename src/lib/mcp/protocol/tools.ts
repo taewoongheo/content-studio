@@ -16,6 +16,7 @@ type Tool = {
 export type ToolPolicy = {
   allowed: Set<string>;
   before: (name: string, input: unknown) => void;
+  observe?: (event: { callId: string; name: string; input: unknown; result?: CallToolResult }) => void;
   after?: (name: string, input: unknown, result: CallToolResult) => void;
 };
 const policies = new WeakMap<McpServer, ToolPolicy>();
@@ -60,8 +61,10 @@ export function registerTool<S extends z.ZodType>(
           )
         : invoke(input as z.output<S>),
   });
-  server.server.setRequestHandler(CallToolRequestSchema, (request) =>
-    guarded(async () => {
+  server.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const callId = crypto.randomUUID();
+    policy?.observe?.({ callId, name: request.params.name, input: request.params.arguments });
+    const result = await guarded(async () => {
       const tool = tools.get(request.params.name);
       if (!tool)
         throw new OperationError(
@@ -75,6 +78,8 @@ export function registerTool<S extends z.ZodType>(
           "이 도구는 MCP task 요청을 지원하지 않습니다.",
         );
       return tool.call(await tool.parse(request.params.arguments ?? {}));
-    }),
-  );
+    });
+    policy?.observe?.({ callId, name: request.params.name, input: request.params.arguments, result });
+    return result;
+  });
 }

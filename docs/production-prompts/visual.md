@@ -10,9 +10,14 @@ Keep approved wording, claims, topic and image identity unchanged.
 ## Inspect actual slides
 
 Read the visual rules in docs/content-guidelines.md and use them as the pass criteria.
-Query relevant owned posts. When an external comparison helps the current layout problem, use
-production_external_references for up to three suitable examples. View actual source images using
-production_preview_project or production_read_images, and ALL current slides with preview_slides.
+Call production_visual_references with short subject-specific keywords and synonyms from the approved topic.
+Use precise subject phrases (for example add weight / double progression), not generic words like weight or reps alone.
+It searches stored own-post titles, topics and messages and returns at most five matching posts,
+ordered by actual publication time. This is text matching, not automatic semantic or image search.
+If no posts match, refine the keywords. The first nonempty selection is fixed for this execution.
+Use those internal posts only; external reference tools are unavailable in this stage.
+Read the actual selected source slide images with production_preview_project,
+and ALL current slides with preview_slides. Source metadata alone does not count as image inspection.
 Choose references for the answer and layout being delivered, not only for topic similarity.
 Record which visual features you reuse and where. Older posts never override the current rules.
 

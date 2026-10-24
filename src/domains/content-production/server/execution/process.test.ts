@@ -9,6 +9,7 @@ test("제작 CLI는 실행별 웹 검색과 작업 전용 MCP를 사용하고 �
   const directory = await mkdtemp(join(tmpdir(), "production-cli-test-"));
   const executable = join(directory, "codex.cjs"), argsPath = join(directory, "args.json");
   const previous = process.env.CONTENT_STUDIO_CODEX_BIN;
+  const toolEvents: Array<{callId:string;name:string;result?:{isError?:boolean}}> = [];
   try {
     await writeFile(executable, `#!/usr/bin/env node
 const fs = require("node:fs");
@@ -16,6 +17,8 @@ const args = process.argv.slice(2);
 if (args[0] === "mcp") {
   console.log(JSON.stringify([{name:"other",enabled:true,transport:{url:"http://127.0.0.1:9999/mcp"}}]));
 } else {
+  console.log(JSON.stringify({type:"item.started",item:{type:"mcp_tool_call",id:"tool-1",tool:"production_preview_project",arguments:{projectId:"source"}}}));
+  console.log(JSON.stringify({type:"item.completed",item:{type:"mcp_tool_call",id:"tool-1",tool:"production_preview_project",arguments:{projectId:"source"},error:{message:"Connection refused"},result:null}}));
   fs.writeFileSync(${JSON.stringify(argsPath)},JSON.stringify(args));
   fs.writeFileSync(args[args.indexOf("--output-last-message")+1],JSON.stringify({ok:true}));
 }
@@ -23,8 +26,11 @@ if (args[0] === "mcp") {
     process.env.CONTENT_STUDIO_CODEX_BIN = executable;
     const result = await runCodex({ prompt: "test", schema: {}, origin: "http://127.0.0.1:3000",
       images: ["/tmp/turnaround.png", "/tmp/face.png", "/tmp/example.png"],
-      taskId: "task", token: "test-token", signal: new AbortController().signal, onActivity() {} });
+      taskId: "task", token: "test-token", signal: new AbortController().signal, onActivity() {}, onToolActivity(event) { toolEvents.push(event); } });
     assert.deepEqual(result, { ok: true });
+    assert.equal(toolEvents.length,2);
+    assert.equal(toolEvents[0].result,undefined);
+    assert.equal(toolEvents[1].result?.isError,true);
     const args: string[] = JSON.parse(await readFile(argsPath, "utf8"));
     assert.deepEqual(args.flatMap((value, index) => value === "--image" ? [args[index + 1]] : []), ["/tmp/turnaround.png", "/tmp/face.png", "/tmp/example.png"]);
     assert.equal(args[args.indexOf("--sandbox") + 1], "read-only");
@@ -43,6 +49,9 @@ if (args[0] === "mcp") {
     assert.ok(displayOverrides.includes("features.shell_tool=false"));
     assert.ok(displayOverrides.includes("features.unified_exec=false"));
     assert.equal(displayOverrides.some(value => value.includes("/api/content-production/agent/") || value === "mcp_servers.production.enabled=true"), false);
+    await assert.rejects(runCodex({ prompt:"schema mismatch",schema:{type:"object",properties:{title:{type:"string"}},required:["title"]},
+      origin:"",taskId:"",token:"",displayOnly:true,signal:new AbortController().signal,onActivity() {} }),
+      (error: unknown) => !!error && typeof error === "object" && "code" in error && error.code === "OUTPUT_SCHEMA_INVALID");
   } finally {
     if (previous === undefined) delete process.env.CONTENT_STUDIO_CODEX_BIN;
     else process.env.CONTENT_STUDIO_CODEX_BIN = previous;

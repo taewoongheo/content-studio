@@ -19,7 +19,11 @@ test("task MCP exposes bounded external selection and English description persis
     (id,url,account,caption,observed_at,images_json,created_at)
     VALUES(?,?,'example','Arm workout','now','[]','now')`)
     .run(String(n), `https://www.tiktok.com/@example/photo/${n}`);
-  const server = createStudioMcpServer("http://127.0.0.1:3000", undefined, id);
+  const observations: Array<{name:string;result?:CallToolResult}> = [];
+  const server = createStudioMcpServer("http://127.0.0.1:3000", {
+    allowed: new Set(["production_external_references","production_describe_reference","production_save_draft","production_context"]),
+    before() {}, observe(event) { observations.push(event); },
+  }, id);
   const client = new Client({ name: "external-tools-test", version: "1" });
   const [a, b] = InMemoryTransport.createLinkedPair();
   const call = async (name: string, args = {}) => await client.callTool({ name, arguments: args }) as CallToolResult;
@@ -44,6 +48,8 @@ test("task MCP exposes bounded external selection and English description persis
       id: unselected, title: "Unknown", topic: "Arms", content_type: "routine", notes: "Not inspected.",
     })).isError, true);
     await call("production_save_draft", { patch: { research: [] } });
+    assert.ok(observations.some(event=>event.name === "production_external_references" && event.result?.isError &&
+      (event.result.structuredContent?.error as {code:string}).code === "INVALID_INPUT"), "schema rejection must be observed too");
     const context = (await call("production_context")).structuredContent!;
     assert.equal((context.external as { analysis: { posts: unknown[] } }).analysis.posts.length, 3);
   } finally {

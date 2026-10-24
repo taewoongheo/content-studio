@@ -1,3 +1,4 @@
+import { OperationError } from "@/lib/errors/operation";
 import { referenceImagesAllowed } from "@/domains/content-production/server/references/selection";
 import { assertReviewWrite } from "@/domains/content-production/server/execution/review/write-policy";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
@@ -9,6 +10,8 @@ import {
   authorizeRun,
   productionStore,
   recordReview,
+  recordToolCall,
+  visualReferenceProjects,
   recordExternalComparison,
   recordSourceReview,
 } from "@/domains/content-production/server/execution/runner";
@@ -18,6 +21,7 @@ const readTools = [
   "production_context",
   "production_query",
   "production_external_references",
+  "production_visual_references",
   "production_describe_reference",
   "production_comparisons",
   "production_read_images",
@@ -47,6 +51,7 @@ export async function POST(
     return new Response("Expired run", { status: 403 });
   }
   const run = authorizeRun(taskId, request.headers.get("authorization"));
+  const step = run.step;
   const origin = new URL(
     `${new URL(request.url).protocol}//${request.headers.get("host")}`,
   ).origin;
@@ -54,15 +59,25 @@ export async function POST(
     origin,
     {
       allowed: new Set([
-        ...readTools,
-        ...(run.step === "production" ? [...editorReadTools, ...writeTools] :
-          run.step === "hook" || run.step === "visual" ? [...editorReadTools, "edit_project"] : []),
+        ...readTools.filter(name => (name !== "production_visual_references" || step === "visual") && (step !== "visual" || !["production_external_references", "production_describe_reference", "production_read_images"].includes(name))),
+        ...(step === "production" ? [...editorReadTools, ...writeTools] :
+          step === "hook" || step === "visual" ? [...editorReadTools, "edit_project"] : []),
       ]),
+      observe(event) { if (run.step === step) recordToolCall(taskId, event); },
       before(name, input) {
-        authorizeRun(taskId, request.headers.get("authorization"));
+        const active = authorizeRun(taskId, request.headers.get("authorization"));
+        if (active.step !== step) throw new OperationError("RUN_STAGE_CHANGED", "실행 단계가 변경되었습니다.");
+        if (step === "visual" && ["production_preview_project", "production_read_project"].includes(name)) {
+          const selected = visualReferenceProjects(taskId);
+          const projectId = (input as { projectId: string }).projectId;
+          if (!selected?.includes(projectId))
+            throw new OperationError("VISUAL_SOURCE_NOT_SELECTED", "관련 내부 게시글을 먼저 조회하고 선택 결과의 프로젝트를 사용해 주세요.");
+        }
+        if (step === "visual" && name === "production_query")
+          throw new OperationError("VISUAL_QUERY_REQUIRED", "시각 검증에서는 production_visual_references로 관련 내부 게시글 최대 5개를 조회해 주세요.");
         if (name === "production_read_images") {
           const setId = (input as {set_id:string}).set_id;
-          if (!referenceImagesAllowed(productionStore().db,taskId,run.step,setId))
+          if (!referenceImagesAllowed(productionStore().db,taskId,step,setId))
             throw new Error("먼저 이번 단계의 외부 레퍼런스로 조회해 주세요. 단계별 한도는 3개입니다.");
         }
         if ((writeTools.includes(name) || editorReadTools.includes(name)) && !name.startsWith("production_")) {
@@ -71,13 +86,14 @@ export async function POST(
             throw new Error("이 작업에 연결된 프로젝트만 수정할 수 있습니다.");
           if (writeTools.includes(name)) assertEnglish(input, name);
           if (name === "edit_project" && projectId)
-            assertReviewWrite(run.step, input, contentJobRegistry.get(projectId).editor.document);
+            assertReviewWrite(step, input, contentJobRegistry.get(projectId).editor.document);
         }
       },
       after(name, input, result) {
+        if (run.step !== step) return;
         if (!result.isError && name === "production_external_references") recordExternalComparison(taskId);
         if (!result.isError && result.content?.some(item => item.type === "image") && (name === "production_preview_project" || name === "production_read_images"))
-          recordSourceReview(taskId);
+          recordSourceReview(taskId, name === "production_preview_project" ? (input as {projectId:string}).projectId : undefined);
         if (
           result.isError ||
           !(name === "preview_slide" || name === "preview_slides")

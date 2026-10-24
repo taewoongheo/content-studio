@@ -1,3 +1,4 @@
+import type { ProductionFailure } from "../../domain/diagnostics";
 import { EXTERNAL_CONTEXT, readExternalContext } from "../../domain/references/context";
 import { z } from "zod";
 import type Database from "better-sqlite3";
@@ -125,7 +126,7 @@ export class ProductionStore {
       throw new Error("현재 실행 단계에서만 저장할 수 있습니다.");
     return detail;
   }
-  state(id: string, state: string, error?: string) {
+  state(id: string, state: string, error?: string | ProductionFailure) {
     const detail = this.get(id),
       now = this.now();
     this.db.transaction(() => {
@@ -136,7 +137,7 @@ export class ProductionStore {
         id,
         {
           state: state === "finished" ? "completed" : state,
-          error_json: error ? JSON.stringify({ message: error }) : null,
+          error_json: error ? JSON.stringify(typeof error === "string" ? { message: error } : error) : null,
           updated_at: now,
         },
       );

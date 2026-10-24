@@ -27,6 +27,7 @@ export function queryStageReferences(db: Database.Database, id: string, step: Pr
   return work;
   async function run() {
     assertActive(db,id,step);
+    if (step === "visual") throw new Error("시각 검증은 외부 레퍼런스를 사용하지 않습니다. 내부 게시글을 조회해 주세요.");
     assertEnglish({query:input.query,content_type:input.content_type},"reference_query");
     if (step === "production") {
       if (input.collect) throw new Error("초안 제작은 분석 단계의 외부 자료를 재사용합니다.");

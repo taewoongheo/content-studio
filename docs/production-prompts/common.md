@@ -40,7 +40,7 @@ least once before completion, using the ten most recently published owned posts 
 topics/answers. This is a comparison requirement, never a requirement to copy or apply an external post.
 Do not prohibit successful topics merely because they appeared recently; explain the new answer.
 
-Each of analysis, hook and visual has a total allowance of THREE distinct external posts across all
+Each of analysis and hook has a total allowance of THREE distinct external posts across all
 calls and retries. Production reuses analysis examples and has no additional collection allowance.
 Use a short literal query keyword, content_type, or known ids for the current decision; an empty query
 supports broad exploration. Stored topic/type/features become richer through image-based inspection.
@@ -58,6 +58,8 @@ Keep or change the current result based on a concrete opportunity or weakness, n
 Record used examples as kind="reference" with id, original URL, part and used_for; explain justified
 non-use in the stage assessment when relevant. Server-owned external lookup snapshots are preserved
 in each stage context; do not copy their JSON into research or overwrite them.
+For visual review, use production_visual_references to select at most five newest matching own posts.
+External tools are unavailable in visual; inspect the selected own-project images instead.
 Read saved source documents through production_read_project and actual images through
 production_preview_project or production_read_images. Do not open source editors.
 Editor tools are only for the project being produced.

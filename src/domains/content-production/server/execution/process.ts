@@ -1,3 +1,6 @@
+import Ajv from "ajv";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { OperationError } from "@/lib/errors/operation";
 import { spawn, execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -15,6 +18,7 @@ export async function runCodex(input: {
   signal: AbortSignal;
   onActivity: (message: string) => void;
   displayOnly?: boolean;
+  onToolActivity?: (event: {callId:string;name:string;input:unknown;result?:CallToolResult}) => void;
 }) {
   const directory = await mkdtemp(join(tmpdir(), "content-production-")),
     schema = join(directory, "output-schema.json"),
@@ -25,7 +29,7 @@ export async function runCodex(input: {
       executable,
       ["mcp", "list", "--json"],
       { maxBuffer: 2 * 1024 * 1024, signal: input.signal },
-    );
+    ).catch(() => { throw new OperationError("CLI_SETUP_FAILED", "CLI 실행 전 MCP 설정 조회에 실패했습니다. Codex 실행 경로와 설정을 확인해 주세요."); });
     const servers = JSON.parse(listed.stdout) as Array<{
       name: string;
       enabled: boolean;
@@ -104,6 +108,18 @@ export async function runCodex(input: {
         for (const line of lines) {
           try {
             const event = JSON.parse(line);
+            if (event.item?.type === "mcp_tool_call" && ["item.started", "item.completed"].includes(event.type)) {
+              const item = event.item;
+              input.onToolActivity?.({ callId: `cli:${item.id}`, name: item.tool, input: item.arguments,
+                ...(event.type === "item.completed" ? { result: item.result ? {
+                  ...item.result,
+                  content: Array.isArray(item.result.content) ? item.result.content : [],
+                  structuredContent: item.result.structuredContent ?? item.result.structured_content,
+                  isError: item.status === "failed" || item.result.isError === true || item.result.is_error === true,
+                } : {
+                  isError: true, content: [], structuredContent: { error: { code: "MCP_CALL_NO_RESPONSE", message: item.error?.message ?? "MCP call finished without a response." } },
+                } } : {}) });
+            }
             if (event.type === "error" || event.type === "turn.failed")
               protocolError = JSON.stringify(event).slice(-4000);
             if (
@@ -131,7 +147,7 @@ export async function runCodex(input: {
         else if (code === 0) resolve();
         else
           reject(
-            new Error(
+            new OperationError("CLI_PROCESS_FAILED",
               `Codex 실행 실패 (${code}): ${input.token ? (protocolError || errorTail).replaceAll(input.token, "[redacted]") : protocolError || errorTail}`,
             ),
           );
@@ -140,15 +156,20 @@ export async function runCodex(input: {
       child.stdin.end(input.prompt);
       if (input.signal.aborted) abort();
     });
-    const raw = await readFile(output, "utf8");
+    const raw = await readFile(output, "utf8").catch(() => {
+      throw new OperationError("CLI_OUTPUT_MISSING", "CLI가 최종 응답 파일을 생성하지 않았습니다.");
+    });
+    let parsed: unknown;
     try {
-      const parsed: unknown = JSON.parse(raw);
+      parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
         throw new Error("Expected an object");
-      return parsed as Record<string, unknown>;
     } catch {
-      throw new Error("CLI 최종 응답이 JSON 객체 형식이 아닙니다. 저장된 draft에서 다시 실행해 주세요.");
+      throw new OperationError("CLI_OUTPUT_INVALID_JSON", "CLI 최종 응답이 JSON 객체 형식이 아닙니다. 저장된 draft에서 다시 실행해 주세요.");
     }
+    const validate = new Ajv({ strict: false, allErrors: true }).compile(input.schema as object);
+    if (!validate(parsed)) throw new OperationError("OUTPUT_SCHEMA_INVALID", "CLI 최종 응답이 출력 스키마와 맞지 않습니다.", { issues: validate.errors });
+    return parsed as Record<string, unknown>;
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

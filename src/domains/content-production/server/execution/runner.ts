@@ -1,3 +1,8 @@
+import type { ToolAttempt } from "../../domain/diagnostics";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { OperationError } from "@/lib/errors/operation";
+import { productionFailure, requiredToolFailure } from "./diagnostics/failure";
+import { beginToolCall, finishToolCall } from "./diagnostics/tools";
 import { z } from "zod";
 import type { PerformanceRefresh } from "../../domain/performance";
 import { discardTask } from "../projects";
@@ -24,7 +29,10 @@ type Run = {
   token: string;
   step: ProductionStep;
   sourceImages: boolean;
+  sourceProjects: Set<string>;
   externalCompared: boolean;
+  toolCalls: ToolAttempt[];
+  visualProjects: string[] | null;
   reviews: Map<string, { revision: number; slides: Set<string> }>;
 };
 const shared = globalThis as typeof globalThis & {
@@ -68,13 +76,28 @@ export function recordReview(
   slides.forEach((s) => reviewed.add(s));
   run.reviews.set(projectId, { revision, slides: reviewed });
 }
-export function recordSourceReview(id: string) {
+export function recordSourceReview(id: string, projectId?: string) {
   const run = runs.get(id);
-  if (run) run.sourceImages = true;
+  if (run) { run.sourceImages = true; if (projectId) run.sourceProjects.add(projectId); }
 }
 export function recordExternalComparison(id: string) {
   const run = runs.get(id);
   if (run) run.externalCompared = true;
+}
+export function recordToolCall(id: string, event: {callId: string; name: string; input: unknown; result?: CallToolResult}) {
+  const run = runs.get(id);
+  if (!run) return;
+  if (!event.result) run.toolCalls.push(beginToolCall(event.callId, event.name, event.input));
+  else {
+    const attempt = run.toolCalls.find(call => call.call_id === event.callId);
+    if (attempt) { finishToolCall(attempt, event.result); if (attempt.message) attempt.message = attempt.message.replaceAll(run.token, "[redacted]"); }
+  }
+}
+export function visualReferenceProjects(id: string, selected?: string[]) {
+  const run = runs.get(id);
+  if (!run || run.step !== "visual") throw new Error("시각 검증 단계에서만 사용할 수 있습니다.");
+  if (selected && !run.visualProjects?.length) run.visualProjects = selected;
+  return run.visualProjects;
 }
 export function syncState() {
   return { running: !!shared.productionSync, report: shared.productionRefresh ?? null };
@@ -144,9 +167,13 @@ export async function execute(
     step: detail.task.current_step,
     reviews: new Map(),
     sourceImages: false,
+    sourceProjects: new Set(),
     externalCompared: false,
+    toolCalls: [],
+    visualProjects: null,
   };
   runs.set(id, run);
+  let phase = "cli";
   try {
     while (true) {
       run.controller.signal.throwIfAborted();
@@ -154,7 +181,11 @@ export async function execute(
       store.state(id, "running");
       run.reviews.clear();
       run.sourceImages = false;
+      run.sourceProjects.clear();
       run.externalCompared = false;
+      run.toolCalls = [];
+      run.visualProjects = null;
+      phase = "cli";
       const result = await executor({
         model,
         prompt: stagePrompt(id, run.step),
@@ -164,6 +195,7 @@ export async function execute(
         taskId: id,
         token: run.token,
         signal: run.controller.signal,
+        onToolActivity: event => recordToolCall(id, event),
         onActivity: (message) =>
           publishChange({
             task_id: id,
@@ -173,6 +205,7 @@ export async function execute(
           }),
       });
       run.controller.signal.throwIfAborted();
+      phase = "output";
       const { sources: rawSources, ...fields } = result;
       const sources = z.array(sourceSchema).parse(
         z.array(z.record(z.string(), z.unknown())).parse(rawSources).map(source =>
@@ -180,25 +213,41 @@ export async function execute(
             !(["id", "url", "visual_set_id"].includes(key) && value === null)))),
       );
       if (run.step === "analysis") {
-        if (!run.externalCompared) throw new Error("소재 확정 전에 외부 레퍼런스 선택지를 조회해 비교해 주세요.");
+        phase = "validation";
+        if (!run.externalCompared) throw requiredToolFailure(run.toolCalls, ["production_external_references"], "외부 레퍼런스 조회가 확인되지 않았습니다.");
+        phase = "save";
         store.completeAnalysis(id, { ...fields, sources });
         continue;
       }
       const { review: reviewText, review_passed, ...rest } = fields;
       if (run.step === "hook" || run.step === "visual") {
+        z.object({review:z.string(),review_passed:z.boolean()}).parse(fields);
+        phase = "save";
         store.save(id, run.step, { review: reviewText, sources });
+        phase = "validation";
         if (review_passed !== true || typeof reviewText !== "string" || !reviewText.trim())
-          throw new Error("검토를 통과하지 못했습니다. 검토 결과를 확인해 주세요.");
+          throw new OperationError("REVIEW_REJECTED", "검토를 통과하지 못했습니다. 검토 결과를 확인해 주세요.");
+        const selectedVisual = run.step === "visual" ? visualReferenceProjects(id) : null;
+        if (run.step === "visual" && !selectedVisual?.length)
+          throw new OperationError(selectedVisual === null ? "VISUAL_REFERENCES_NOT_QUERIED" : "VISUAL_REFERENCES_NO_MATCH",
+            selectedVisual === null ? "관련 내부 게시글을 조회하지 않았습니다." : "검색어에 맞는 내부 게시글이 없습니다. 검색어를 조정해 주세요.");
+        if (run.step === "visual") {
+          const missing = selectedVisual!.filter(projectId => !run.sourceProjects.has(projectId));
+          if (missing.length) throw requiredToolFailure(run.toolCalls.filter(call => missing.includes(String(call.input.projectId))),
+            ["production_preview_project"], `선택한 내부 게시글 이미지 확인이 누락됐습니다: ${missing.join(", ")}.`);
+        }
         if (!run.sourceImages)
-          throw new Error("이번 검토 단계에서 참고 게시글의 실제 이미지를 확인해 주세요.");
+          throw requiredToolFailure(run.toolCalls, ["production_preview_project", "production_read_images"], "참고 게시글의 실제 이미지 확인이 필요합니다.");
       }
+      phase = "output";
       const output = productionResultSchema.parse({
         ...rest,
         sources,
       });
+      phase = "validation";
       const detail = store.get(id);
       if (detail.task.project_id !== output.project_id)
-        throw new Error("연결된 프로젝트와 결과가 다릅니다.");
+        throw new OperationError("PROJECT_RESULT_MISMATCH", "연결된 프로젝트와 결과가 다릅니다.");
       await loadContentProject(contentJobRegistry, output.project_id);
       const project = contentJobRegistry.get(output.project_id),
         review = run.reviews.get(output.project_id);
@@ -227,20 +276,22 @@ export async function execute(
             }),
         )
       )
-        throw new Error("내용이 비어 있는 슬라이드가 있습니다.");
+        throw new OperationError("EMPTY_SLIDE", "내용이 비어 있는 슬라이드가 있습니다.");
+      if (!review) throw requiredToolFailure(run.toolCalls, ["preview_slide", "preview_slides"], "현재 슬라이드의 실제 이미지 검토가 필요합니다.");
       if (
         project.savedRevision !== project.editor.revision ||
         project.editor.revision !== output.reviewed_revision ||
         review?.revision !== output.reviewed_revision
       )
-        throw new Error("최신 저장본의 이미지 검토가 필요합니다.");
+        throw new OperationError("REVIEW_REVISION_MISMATCH", "최신 저장본의 이미지 검토가 필요합니다.", {saved_revision: project.savedRevision, current_revision: project.editor.revision, reported_revision: output.reviewed_revision, observed_revision: review?.revision ?? null});
       if (
         !project.editor.document.slides.every(
           (s) =>
             review.slides.has(s.id) && output.reviewed_slide_ids.includes(s.id),
         )
       )
-        throw new Error("모든 슬라이드를 이미지로 검토해 주세요.");
+        throw new OperationError("REVIEW_SLIDES_INCOMPLETE", "모든 슬라이드를 이미지로 검토해 주세요.");
+      phase = "save";
       store.completeProduction(id, { ...output, review: typeof reviewText === "string" ? reviewText : undefined });
       if (run.step === "visual") break;
     }
@@ -250,7 +301,7 @@ export async function execute(
         store.state(
           id,
           "failed",
-          error instanceof Error ? error.message : "실행 실패",
+          productionFailure(error, run.step, phase, run.toolCalls),
         );
       } catch {}
     }

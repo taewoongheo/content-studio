@@ -26,13 +26,15 @@ test("three distinct examples per stage survive repeat calls, research saves and
   store.completeAnalysis(id,direction);store.state(id,"running");
   assert.deepEqual((await queryStageReferences(db,id,"production",input)).posts.map(p=>p.id),first.posts.map(p=>p.id));
   await assert.rejects(()=>queryStageReferences(db,id,"production",{...input,collect:true}),/재사용/);
-  for(const step of ["hook","visual"] as const){
+  for(const step of ["hook"] as const){
    db.prepare(`INSERT INTO content_${step}_drafts(draft_id,created_at,updated_at) VALUES(?,'now','now')`).run(id);
    db.prepare("UPDATE content_drafts SET current_step=? WHERE id=?").run(step,id);
    const selected=await queryStageReferences(db,id,step,input);assert.equal(selected.posts.length,3);
   }
-  const all=["analysis","hook","visual"].flatMap(step=>store.get(id).external?.[step as "analysis"]?.posts??[]);
-  assert.equal(all.length,9);assert.equal(new Set(all.map(p=>p.id)).size,9);
+  const all=["analysis","hook"].flatMap(step=>store.get(id).external?.[step as "analysis"]?.posts??[]);
+  assert.equal(all.length,6);assert.equal(new Set(all.map(p=>p.id)).size,6);
+  db.prepare("UPDATE content_drafts SET current_step='visual' WHERE id=?").run(id);
+  await assert.rejects(()=>queryStageReferences(db,id,"visual",input),/외부 레퍼런스를 사용하지/);
  }finally{db.close();}
 });
 test("one collection allowance per stage, designated accounts only, no collection when stored candidates suffice",async()=>{

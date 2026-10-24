@@ -1,3 +1,4 @@
+import { registerVisualReferenceTool } from "./visual-references";
 import { registerSourceTools } from "./sources";
 import { importSlideshowImage } from "@/domains/slideshow/server/import-image";
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
@@ -73,6 +74,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
   );
   if (!taskId) return;
   registerExternalReferenceTools(server, taskId);
+  registerVisualReferenceTool(server, taskId);
   registerTool(
     server,
     "production_import_image",

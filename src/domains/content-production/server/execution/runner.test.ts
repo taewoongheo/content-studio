@@ -13,6 +13,7 @@ import {
   recordReview,
   recordSourceReview,
   recordExternalComparison,
+  visualReferenceProjects,
 } from "./runner";
 import { createTaskProject, deleteTaskProject } from "../projects";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
@@ -58,7 +59,8 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       const { projectId } = step === "production" ? createTaskProject(store, id, 1) : { projectId: store.get(id).task.project_id! };
       const job = contentJobRegistry.get(projectId);
       if (step === "hook" || step === "visual") {
-        recordSourceReview(id);
+        if (step === "visual") visualReferenceProjects(id, ["owned-source"]);
+        recordSourceReview(id, step === "visual" ? "owned-source" : undefined);
         recordReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => s.id));
         return { project_id: projectId, summary: { hook: "test" }, sources: [],
           review: "The current content meets the review criteria.", review_passed: true,
@@ -114,13 +116,14 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
     store.db.prepare("UPDATE content_drafts SET current_step='visual',state='stopped' WHERE id=?").run(id);
     await execute(id, "http://127.0.0.1:3000", async () => {
       const job = contentJobRegistry.get(projectId);
+      visualReferenceProjects(id, ["owned-source"]);
       recordReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => s.id));
       return { project_id: projectId, summary: { hook: "test" }, sources: [],
         review: "The layout appears readable.", review_passed: true,
         reviewed_slide_ids: job.editor.document.slides.map(s => s.id), reviewed_revision: job.editor.revision };
     });
     assert.equal(store.get(id).task.state, "failed");
-    assert.match(String((store.get(id).visual?.error as {message:string}).message), /실제 이미지/);
+    assert.equal((store.get(id).visual?.error as {code:string}).code, "REQUIRED_TOOL_NOT_CALLED");
     store.state(id, "finished");
     store.db.prepare("INSERT INTO content_project_assets(project_id,asset_id,name,mime_type,byte_size,data) VALUES(?,?,?,?,?,?)")
       .run(projectId, "delete-test", "image", "image/png", 1, Buffer.from([1]));
