@@ -35,9 +35,12 @@ Apply the guide's fixed badge specification exactly. Inspect its saved text and 
 not only its apparent size: the badge is an explicit exception to the general text-size minimum.
 Do not enlarge the badge to meet that minimum or copy an older post's badge dimensions.
 
-For the remaining text, check both the saved font sizes and the rendered slide:
-- The main answer, heading and necessary explanation have visibly distinct importance. A small
-  size difference or a color change alone does not establish hierarchy.
+For the remaining text, inspect saved typography properties and the rendered slide:
+- Assign each text block a role and priority. Supporting label, heading and explanation are examples,
+  not a mandatory three-level system or a requirement to include all three on every page.
+- Combine font size, weight/bold emphasis, line breaks, line height, alignment and surrounding space
+  so different priorities are unmistakable. Size alone is not sufficient. The reader should immediately
+  recognize the main message and which text supports it; equivalent roles should look consistent.
 - Supporting labels do not compete with the actionable answer or key numbers through equal size
   and weight. Repeated titles or abstract labels are not additional reader value.
 - A heading, its answer/numbers and their explanation form a clear group. Within-group gaps are
