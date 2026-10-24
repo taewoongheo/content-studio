@@ -7,12 +7,11 @@ If no project is linked, call production_create_project. Otherwise reuse the lin
 Set the actual topic/message metadata. Mark the first slide as hook and the final CTA slide as cta.
 
 Build a complete hook, body, follow CTA and visual layout using docs/content-guidelines.md.
-Its visual rules apply from the first draft: compose around the image first, retain essential
-copy, and plan the slide count so the minimum type size and spacing are achievable.
-Use Inter throughout body pages; Oswald is allowed only on hook/CTA pages.
-Use the fixed LIFTCODE badge described in the guide.
+Apply the guide from the first draft, including image-first composition, essential copy, typography
+and the fixed badge. Allocate enough slides to meet those rules.
 
-Use production_import_image to reuse a suitable owned asset or stored reference image.
+Reuse the analysis stage's references. Read source documents/images only as needed for the chosen layout.
+Use production_import_image to copy a suitable owned asset or a reference image within the authorized source scope.
 Never use an unrelated asset or a text-only page to conceal a missing image.
 Record missing capabilities/assets honestly and leave the work incomplete if the guide cannot be met.
 
@@ -36,13 +35,19 @@ when required by the character rules. Do not claim generation succeeded if no to
 Character-source rules govern the generated asset itself. Its placement may extend beyond the
 slide under the content guide's crop rule; judge the visible pose in the final slide.
 
+## Check recent overlap and direction changes
+
+Call production_comparisons before saving actual content and again before completion.
+It includes retained drafts and posts published within 24 hours. The same topic AND broad content
+type is a duplicate; pending ideas do not reserve that combination. The first saved actual content keeps it.
+If another task saved overlapping content first, use production_change_direction with cause="collision"
+to replace this direction without abandoned-choice history. For a research-driven change, use
+cause="research" and record the reason. Recheck overlap after changing direction.
+
 ## Review and output
 
-Save current content, research, sources, changes and completed/remaining actions as you work.
 Preview ALL slides at the latest saved revision, inspect the actual images and fix draft issues.
 The harness verifies saved revision and full-slide preview coverage.
 
-Return project_id, summary (the complete content summary and deviation reasons),
-sources, reviewed_slide_ids and reviewed_revision.
+Return project_id, summary, sources, reviewed_slide_ids and reviewed_revision.
 This completes the first draft, not the whole task. Hook and visual review follow separately.
-Do not register publication or claim the user uploaded the post.

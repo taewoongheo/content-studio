@@ -3,7 +3,7 @@
 ## Scope
 
 This is the final fixed stage after hook review.
-Read production_context and the latest linked project.
+Read the latest linked project after production_context.
 Use the hook draft or log's latest summary; do not restore the original production hook.
 Keep approved wording, claims, topic and image identity unchanged.
 
@@ -16,24 +16,18 @@ It searches stored own-post titles, topics and messages and returns at most five
 ordered by actual publication time. This is text matching, not automatic semantic or image search.
 If no posts match, refine the keywords. The first nonempty selection is fixed for this execution.
 Use those internal posts only; external reference tools are unavailable in this stage.
-Read the actual selected source slide images with production_preview_project,
-and ALL current slides with preview_slides. Source metadata alone does not count as image inspection.
-Choose references for the answer and layout being delivered, not only for topic similarity.
+Read actual images from EVERY selected source project with production_preview_project in THIS execution;
+checks from earlier stages or earlier runs do not count.
+Inspect ALL current slides with preview_slides.
+Within the fixed selection, assess which visual features suit the current answer and layout.
+Inspection of every selected project is required, but copying any feature is optional.
 Record which visual features you reuse and where. Older posts never override the current rules.
 
-Check every slide against the guide:
-- One to three meaningful images, with image-first composition.
-- Essential action/pose remains clear inside the final slide boundary.
-  Intentional image overflow is allowed; do not shrink an image just to contain its entire frame.
-- Text meets the minimum size, headings are clearly larger, and body pages use Inter only.
-  Oswald is allowed only on hook/CTA pages.
-- Only essential copy remains, grouped with consistent hierarchy, spacing and alignment.
-- The fixed black LIFTCODE badge is visible at the bottom left on every slide.
-- Text is legible and unclipped; image proportions, contrast and page-to-page consistency hold.
-
-Judge the exported slide area, not the editor's off-slide workspace.
-Do not flag an intentional crop as a defect when the key pose remains clear.
-Do flag cropping that removes necessary movement cues or equipment relationships.
+Check every slide against the guide's visual rules: meaningful images, image-first composition,
+readable text and hierarchy, approved fonts, the fixed badge, spacing, contrast and consistency.
+Use the guide's actual thresholds; do not substitute older posts' styling.
+Judge the exported slide boundary. An intentional crop is allowed only when the necessary pose,
+movement cues and equipment relationship remain clear.
 
 ## Correct within scope
 

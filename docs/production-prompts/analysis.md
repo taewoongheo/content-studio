@@ -2,13 +2,20 @@
 
 ## Read and compare
 
-Read the published comparison pool, relevant external examples through production_external_references.
-Use the actual copy and source slide images when interpreting examples, not metrics alone.
-Analyze both high- and low-performance posts as described below.
+Call production_query(kind="logs") without a keyword to read the comparison pool: up to ten
+highest-rate posts, ten lowest excluding the first group, then ten newest excluding both groups.
+The rate is (likes + comments + saves) / views. Missing metrics or zero views exclude rate ranking,
+not recency. Consider all available groups, not just the strongest individual example.
+Keyword queries return the same selection within matching topic/title text; use them when a relevant
+group needs more examples. The "recent" group is the newest REMAINING posts, not the absolute latest ten.
+For novelty checks, sort the combined pool by actual_published_at and inspect its newest ten.
+Compare external alternatives with production_external_references at least once before completion.
+Inspect actual copy and source images for the examples used to explain reader experience or visual features.
 Group multiple posts by broad content type across exercise topics: choice/comparison, explanation,
 ranking, ready-to-use routine, or another useful broad category. These are examples, not a fixed list.
 Do not narrow the main groups to combinations such as back-exercise explanation.
 Follow the grouped-comparison criteria in docs/research-guidelines.md and distinguish:
+
 - Content-type/value patterns: what kind of answer readers respond to.
 - Presentation patterns: how hook wording, images, text density and layout deliver that answer.
 Compare stronger and weaker cases within a type and different types with similar presentation.
@@ -34,13 +41,12 @@ Also evaluate the appeal of the topic and answer itself, not only its packaging.
 Do not treat an explanation-led content type and dense explanatory text as the same weakness.
 A ready-to-use answer and general advice may differ in value even if both have clean layouts.
 
-Separate observations from inferred causes. Consider material differences in views, audience and
-topic, and counterexamples where relevant. Do not replace an estimate with generic uncertainty,
-call lower engagement "no response," or turn one result into a permanent rule.
+Consider differences in views, audience and topic, and relevant counterexamples.
+Lower engagement is not the same as no response.
 
 ## Explore topics and select an answer
 
-Compare external alternatives through production_external_references at least once. Use internet and community searches under docs/research-guidelines.md to find situations,
+Use internet and community searches under the research guide to find situations,
 questions, desired outcomes and the language people use. Save the source and what you learned.
 
 Compare materially different topic/answer candidates using both those findings and the past-post
@@ -53,11 +59,20 @@ Choose one topic, complete answer and presentation direction. Explain the expect
 goal connection and difference from recent content. View actual references for the visual direction.
 Plan enough slides to satisfy docs/content-guidelines.md without dense text-only pages.
 
+## Check recent overlap
+
+Call production_comparisons before choosing the direction and again before finalizing it.
+It includes retained drafts and posts published within 24 hours. Reusing an older successful topic
+is allowed when the new post provides a distinct answer or situation.
+For recent overlap, the same topic AND broad content type is a duplicate. Pending ideas do not reserve
+that combination; the first saved actual content keeps it. Adjust this analysis draft if needed.
+production_change_direction is unavailable here; it is a first-draft production tool.
+
 ## Save and finish
 
 In the existing analysis field, separately record content-type/value patterns and presentation
 patterns, citing supporting posts and counterexamples. Then connect both assessments to the
-candidate selection and reader-experience estimates. Save the confirmed direction, research and sources to the analysis draft.
+candidate selection and reader-experience estimates. Save the direction, research and sources to this draft.
 Do not create or edit a project here.
 Return analysis and every direction field as strings, plus structured sources.
 The harness validates and saves the result before first-draft production starts.
