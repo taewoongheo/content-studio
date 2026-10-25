@@ -1,3 +1,4 @@
+import { stagePolicy } from "../execution/policy/stages";
 import { assertEnglish } from "@/lib/text/english";
 import type Database from "better-sqlite3";
 import { REFERENCE_LIMIT, type ExternalContext } from "../../domain/references/context";
@@ -28,7 +29,7 @@ export function queryStageReferences(db: Database.Database, id: string, step: Pr
   async function run() {
     assertActive(db,id,step);
     if (step === "visual") throw new Error("시각 검증은 외부 레퍼런스를 사용하지 않습니다. 내부 게시글을 조회해 주세요.");
-    if (input.collect && step !== "analysis") throw new Error("새 외부 레퍼런스 수집은 분석 및 제작 방향 단계에서만 가능합니다. 기존 자료를 조회해 주세요.");
+    if (input.collect && !stagePolicy(step).externalCollection) throw new Error("새 외부 레퍼런스 수집은 분석 및 제작 방향 단계에서만 가능합니다. 기존 자료를 조회해 주세요.");
     assertEnglish({query:input.query,content_type:input.content_type},"reference_query");
     let context = getReferenceContext(db,id,step) ?? empty("");
     if (!context.queries.includes(input.query)) context.queries.push(input.query);

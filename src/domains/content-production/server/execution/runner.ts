@@ -14,6 +14,7 @@ import { ProductionStore } from "../persistence/store";
 import { publishChange } from "../events";
 import { refreshMetrics } from "../publication/service";
 import { runCodex } from "./process";
+import { stagePolicy } from "./policy/stages";
 import { resultSchema, stageImages, stagePrompt } from "./prompts";
 import {
   productionResultSchema,
@@ -28,6 +29,7 @@ type Run = {
   controller: AbortController;
   token: string;
   step: ProductionStep;
+  analysisRead: Set<string>;
   sourceImages: boolean;
   sourceProjects: Set<string>;
   externalCompared: boolean;
@@ -80,6 +82,13 @@ export function recordSourceReview(id: string, projectId?: string) {
   const run = runs.get(id);
   if (run) { run.sourceImages = true; if (projectId) run.sourceProjects.add(projectId); }
 }
+export function recordAnalysisRead(id: string, ids: string[]) {
+  const run = runs.get(id);
+  if (run?.step === "analysis") {
+    run.analysisRead ??= new Set();
+    ids.forEach(id => run.analysisRead.add(id));
+  }
+}
 export function recordExternalComparison(id: string) {
   const run = runs.get(id);
   if (run) run.externalCompared = true;
@@ -123,9 +132,10 @@ export async function startProduction(
       report.records = records;
       publishChange({ kind: "sync", detail: "snapshot" });
     });
+    const inputs = store.planningLogs();
+    const ids = store.create(count, inputs);
     report.state = "completed";
     report.completed_at = new Date().toISOString();
-    const ids = store.create(count);
     ids.forEach((id) => {
       void services.execute(id, origin).catch((error) => {
         try {
@@ -166,6 +176,7 @@ export async function execute(
     token: randomUUID(),
     step: detail.task.current_step,
     reviews: new Map(),
+    analysisRead: new Set(),
     sourceImages: false,
     sourceProjects: new Set(),
     externalCompared: false,
@@ -180,15 +191,19 @@ export async function execute(
       run.step = store.get(id).task.current_step;
       store.state(id, "running");
       run.reviews.clear();
+      run.analysisRead.clear();
       run.sourceImages = false;
       run.sourceProjects.clear();
       run.externalCompared = false;
       run.toolCalls = [];
       run.visualProjects = null;
       phase = "cli";
+      const inputs = run.step === "analysis" ? store.analysisInputs(id, true) : [];
+      const capabilities = stagePolicy(run.step);
       const result = await executor({
+        capabilities,
         model,
-        prompt: stagePrompt(id, run.step),
+        prompt: stagePrompt(id, run.step, inputs),
         images: stageImages(run.step),
         schema: resultSchema(run.step),
         origin,
@@ -214,6 +229,8 @@ export async function execute(
       );
       if (run.step === "analysis") {
         phase = "validation";
+        const missingInputs = inputs.filter(row => !run.analysisRead.has(String(row.id))).map(row => row.id);
+        if (missingInputs.length) throw new OperationError("ANALYSIS_INPUTS_NOT_READ", "분석용 게시글 조회가 누락됐습니다.", {ids:missingInputs});
         if (!run.externalCompared) throw requiredToolFailure(run.toolCalls, ["production_external_references"], "외부 레퍼런스 조회가 확인되지 않았습니다.");
         phase = "save";
         store.completeAnalysis(id, { ...fields, sources });

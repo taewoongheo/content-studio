@@ -1,53 +1,43 @@
 # First draft production
 
-## Build the draft
+## Implement the direction
 
-Read the confirmed analysis/direction and saved production draft.
-If no project is linked, call production_create_project. Otherwise reuse the linked project.
-Set the actual topic/message metadata. Mark the first slide as hook and the final CTA slide as cta.
+Read the confirmed analysis/direction and any saved production draft. Reuse a linked project;
+otherwise call production_create_project. Keep the confirmed topic, answer and format.
+Build a complete hook, body, short follow CTA and visual layout under the content guide from the
+first draft. Set slide roles and verify topic/message/content_type under the metadata guide.
 
-Build a complete hook, body, follow CTA and visual layout using docs/content-guidelines.md.
-Apply the guide from the first draft, including image-first composition, essential copy, typography
-and the fixed badge. Allocate enough slides to meet those rules.
+Reuse analysis references first. Query other stored references only when needed. Source documents
+and images support the chosen content; do not collect new posts. Use production_import_image for
+a suitable authorized source asset. Never conceal a missing image with unrelated assets or text-only pages.
 
-Reuse the analysis stage's references. Read source documents/images only as needed for the chosen layout.
-Use production_import_image to copy a suitable owned asset or a reference image within the authorized source scope.
-Never use an unrelated asset or a text-only page to conceal a missing image.
-Record missing capabilities/assets honestly and leave the work incomplete if the guide cannot be met.
+Facts, practical wording and realistic situations may be checked through web/community sources
+within the approved direction. Apply the research guide; a discussion does not establish TikTok
+demand. If the premise fails, record the blocker rather than choose a replacement topic.
 
-## Character images
+## Character artwork
 
-Read [the character rules](character/guidelines.md) before preparing character artwork.
-The attached images are provided in this order:
+Read docs/production-prompts/character/guidelines.md before preparing artwork.
+Actual reference images are attached in this order:
+1. turnaround.png: full-body proportions, clothing, skin tone and style.
+2. face-sunglasses.png: head shape and sunglasses; the turnaround controls skin/shading.
+3. example.png: supporting character/equipment/muscle-highlight example, not a prescribed pose.
 
-1. [Full-body turnaround](character/turnaround.png): proportions, clothing, skin tone and style.
-2. [Face and sunglasses](character/face-sunglasses.png): head shape and sunglasses.
-   The turnaround controls skin tone and shading.
-3. [Finished example](character/example.png): supporting example of the character, equipment and
-   highlighted muscles together. It does not override the two official references or specify
-   the pose for other exercises.
+These files are under docs/production-prompts/character/. When a generation tool is available,
+pass the actual images to it; filenames alone are not image inputs. Add an exercise-specific
+pose/equipment source when required by the character guide. Do not claim generation without a tool.
+Asset rules govern the image; the content guide governs its placement and permitted cropping.
 
-These files are under docs/production-prompts/character/.
-When a generation tool is available, pass the actual references to it as image inputs as well.
-Text filenames alone do not transmit images. Supply an exercise-specific pose/equipment source
-when required by the character rules. Do not claim generation succeeded if no tool was available.
+## Resolve recent overlap
 
-Character-source rules govern the generated asset itself. Its placement may extend beyond the
-slide under the content guide's crop rule; judge the visible pose in the final slide.
+Call production_comparisons before saving actual content and before completion. Use the research
+guide's 24-hour topic-and-format rule. If another task saved overlapping content first, call
+production_change_direction(cause="collision"), then recheck. Do not preserve abandoned-choice history.
+This collision repair is the only permitted replacement of the confirmed direction.
 
-## Check recent overlap and direction changes
+## Save and verify
 
-Call production_comparisons before saving actual content and again before completion.
-It includes retained drafts and posts published within 24 hours. The same topic AND broad content
-type is a duplicate; pending ideas do not reserve that combination. The first saved actual content keeps it.
-If another task saved overlapping content first, use production_change_direction with cause="collision"
-to replace this direction without abandoned-choice history. For a research-driven change, use
-cause="research" and record the reason. Recheck overlap after changing direction.
-
-## Review and output
-
-Preview ALL slides at the latest saved revision, inspect the actual images and fix draft issues.
-The harness verifies saved revision and full-slide preview coverage.
-
-Return project_id, summary, sources, reviewed_slide_ids and reviewed_revision.
-This completes the first draft, not the whole task. Hook and visual review follow separately.
+Save work and the complete current summary. Preview ALL slides at the latest saved revision,
+inspect the actual images and fix issues within this stage. The harness checks revision and
+full-slide preview coverage. Return the required production result.
+This completes the first draft; hook and visual review follow.

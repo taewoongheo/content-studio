@@ -20,6 +20,7 @@ import { readContentMetadata, contentMetadataFields } from "@/domains/content-me
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 import { publishChange } from "../events";
 import { assertEnglish } from "@/lib/text/english";
+import { ANALYSIS_INPUTS, analysisInputRecord, readAnalysisInputs } from "./planning/input";
 import { readPlanningLogs } from "./planning/logs";
 
 const directionKeys = Object.keys(directionSchema.shape) as Array<
@@ -81,7 +82,7 @@ export class ProductionStore {
     )!;
     const stage = (row: Row) => {
       const decoded = decode(row), research = decoded.research as Array<z.infer<typeof researchSchema>>;
-      return { data: { ...decoded, research: research.filter(item => item.question !== EXTERNAL_CONTEXT) }, external: readExternalContext(research) };
+      return { data: { ...decoded, research: research.filter(item => ![EXTERNAL_CONTEXT, ANALYSIS_INPUTS].includes(item.question)) }, external: readExternalContext(research) };
     };
     const decoded = stage(analysis);
     const reviews = (["hook", "visual"] as const).map(step => {
@@ -89,12 +90,13 @@ export class ProductionStore {
       return { step, value: row ? stage(row) : null };
     });
     return {
+      analysis_inputs: (readAnalysisInputs(JSON.parse(String(analysis.research_json))) ?? []).map(({id,project_id,selection_group}) => ({id,project_id,selection_group})),
       task, analysis: decoded.data, production: production ? stage(production).data : null, log: decode(log),
       ...Object.fromEntries(reviews.map(({step,value}) => [step,value?.data ?? null])),
       external: { analysis: decoded.external, production: production ? stage(production).external : null, ...Object.fromEntries(reviews.map(({step,value}) => [step,value?.external ?? null])) },
     };
   }
-  create(count: number) {
+  create(count: number, inputs = this.planningLogs()) {
     const ids: string[] = [];
     this.db.transaction(() => {
       for (let i = 0; i < count; i++) {
@@ -115,7 +117,7 @@ export class ProductionStore {
           .prepare(
             "INSERT INTO content_analysis_drafts(draft_id,created_at,updated_at,research_json) VALUES(?,?,?,?)",
           )
-          .run(id, now, now, "[]");
+          .run(id, now, now, JSON.stringify([analysisInputRecord(inputs)]));
         ids.push(id);
       }
     })();
@@ -157,13 +159,13 @@ export class ProductionStore {
     ).parse(raw);
     // Collection snapshots are server-owned evidence, not agent-authored prose.
     if (patch.research) {
-      patch.research = patch.research.filter(item => item.question !== EXTERNAL_CONTEXT);
+      patch.research = patch.research.filter(item => ![EXTERNAL_CONTEXT, ANALYSIS_INPUTS].includes(item.question));
     }
     assertEnglish(patch, `${step}_draft`);
     if (patch.research) {
       const row = this.row(`SELECT research_json FROM content_${step}_drafts WHERE draft_id=?`, id)!;
       const existing = JSON.parse(String(row.research_json)) as Array<z.infer<typeof researchSchema>>;
-      patch.research = [...existing.filter(item => item.question === EXTERNAL_CONTEXT), ...patch.research];
+      patch.research = [...existing.filter(item => [EXTERNAL_CONTEXT, ANALYSIS_INPUTS].includes(item.question)), ...patch.research];
     }
     const values: Row = { updated_at: this.now() };
     for (const [key, value] of Object.entries(patch))
@@ -343,6 +345,29 @@ export class ProductionStore {
           l.actual_published_at >= since,
       ),
     };
+  }
+  analysisInputs(id: string, initialize = false): Row[] {
+    const row = this.row("SELECT research_json FROM content_analysis_drafts WHERE draft_id=?", id);
+    if (!row) throw new Error("분석 draft를 찾을 수 없습니다.");
+    const research = JSON.parse(String(row.research_json)) as Row[];
+    const existing = readAnalysisInputs(research);
+    if (existing) return existing;
+    if (!initialize) return [];
+    // Older retained drafts receive a comparison set once, on their first resume.
+    const record = analysisInputRecord(this.planningLogs());
+    this.db.prepare("UPDATE content_analysis_drafts SET research_json=? WHERE draft_id=?")
+      .run(JSON.stringify([...research, record]), id);
+    return readAnalysisInputs([record])!;
+  }
+  analysisLogs(id: string, ids: string[]): Row[] {
+    const assigned = this.analysisInputs(id);
+    if (!ids.length || ids.some(id => !assigned.some(row => row.id === id)))
+      throw new Error("전달된 분석 게시글 ID만 조회할 수 있습니다.");
+    return [...new Set(ids)].map(logId => {
+      const row = this.row("SELECT l.*,p.name FROM content_creation_logs l JOIN content_projects p ON p.id=l.project_id WHERE l.id=?", logId);
+      if (!row) throw new Error(`분석 게시글을 찾을 수 없습니다: ${logId}`);
+      return {...decode(row), ...assigned.find(row => row.id === logId)};
+    });
   }
   planningLogs(query = "") {
     return readPlanningLogs(this.db, query).map(decode);

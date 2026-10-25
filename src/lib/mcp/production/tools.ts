@@ -24,15 +24,21 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     "production_query",
     {
       description:
-        "Query published content logs: up to 10 best posts by (likes+comments+saves)/views, 10 lowest excluding the best, then 10 newest remaining, up to 30 unique. query filters eligible topic/name before selection. selection_group identifies performance/low_performance/recent. Missing metrics exclude rate rankings, not recency. Use production_external_references for the shared external library. Unpublished drafts are available through production_comparisons.",
+        "During analysis, retrieve assigned own-post IDs with ids; selection and metrics come from the material node snapshot. Query keywords do not replace that set. In other stages, query published content logs: up to 10 best posts by (likes+comments+saves)/views, 10 lowest excluding the best, then 10 newest remaining, up to 30 unique. query filters eligible topic/name before selection. selection_group identifies performance/low_performance/recent. Missing metrics exclude rate rankings, not recency. Use production_external_references for the shared external library. Unpublished drafts are available through production_comparisons.",
       inputSchema: z.object({
         kind: z.literal("logs"),
         query: z.string().default(""),
+        ids: z.array(z.string().min(1)).min(1).max(30).optional(),
       }),
       annotations: annotations(true),
     },
     (input) => guarded(() => {
-      return json({items:productionStore().planningLogs(input.query)});
+      const store = productionStore();
+      if (taskId && store.get(taskId).task.current_step === "analysis") {
+        if (!input.ids) throw new Error("분석 단계에서는 전달받은 게시글 ID 목록으로 조회해 주세요.");
+        return json({items:store.analysisLogs(taskId,input.ids)});
+      }
+      return json({items:store.planningLogs(input.query).filter(row => !input.ids || input.ids.includes(String(row.id)))});
     }),
   );
   registerTool(
@@ -171,10 +177,10 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     "production_change_direction",
     {
       description:
-        "During production, collision overwrites analysis/log direction and clears abandoned content, no old-choice history. Research changes preserve initial output and record reason plus new direction.",
+        "During production only, resolve a recent collision by replacing the conflicting direction, without abandoned-choice history. Research does not authorize a replacement topic; record a blocker if the confirmed premise fails.",
       inputSchema: z.object({
         direction: directionSchema,
-        cause: z.enum(["collision", "research"]),
+        cause: z.literal("collision"),
         reason: z.string().optional(),
       }),
       annotations: annotations(false),

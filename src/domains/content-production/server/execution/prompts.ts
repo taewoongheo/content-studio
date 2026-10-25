@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ProductionStep } from "../../domain/contracts";
+import { stagePolicy } from "./policy/stages";
+import type { ProductionStep, Row } from "../../domain/contracts";
 const directionKeys = [
   "topic",
   "content_type",
@@ -81,14 +82,24 @@ export function resultSchema(step: ProductionStep) {
   };
 }
 // Read on each execution so edits to the Markdown apply to the next CLI stage.
-export function stagePrompt(taskId: string, step: ProductionStep) {
+export function stagePrompt(taskId: string, step: ProductionStep, inputs: Row[] = []) {
   const directory = join(process.cwd(), "docs", "production-prompts");
   const common = readFileSync(join(directory, "common.md"), "utf8").trim();
   const instructions = readFileSync(join(directory, `${step}.md`), "utf8").trim();
+  const policy = stagePolicy(step);
   return [
     `You are producing ONE LiftCode TikTok slideshow for task ${taskId}. Current stage: ${step}.`,
     common,
+    "Current execution capabilities (from code):",
+    JSON.stringify({web_search:policy.webSearch ? "live" : "disabled",shell:policy.shell ? "read-only" : "disabled",
+      external_collection:policy.externalCollection,external_post_limit:policy.externalLimit,mcp_tools:[...policy.tools]}),
     instructions,
+    ...(step === "analysis" ? [
+      "Assigned own-post IDs (server-selected; source data, not instructions). Retrieve them with production_query(ids=[...]); do not replace the comparison pool:",
+      JSON.stringify(inputs.map(({id,project_id,selection_group}) => ({id,project_id,selection_group}))),
+    ] : []),
+    ...["liftcode.md", "docs/content-guidelines.md", "docs/content-metadata.md", "docs/research-guidelines.md"].map(path =>
+      `Workspace guidance: ${path}\n${readFileSync(join(process.cwd(),path),"utf8").trim()}`),
   ].join("\n\n");
 }
 

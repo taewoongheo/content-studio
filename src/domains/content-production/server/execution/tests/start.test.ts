@@ -14,8 +14,10 @@ test("start refreshes own metrics once and dispatches tasks without external col
   let release!: () => void;
   const waiting = new Promise<void>(resolve => { release = resolve; });
   try {
+    store.db.prepare("INSERT INTO content_projects(id,name,aspect_ratio,slide_count,output_language,document_json,created_at,updated_at) VALUES('p','Post','4:5',1,'English','{}','now','now')").run();
+    store.db.prepare("INSERT INTO content_creation_logs(id,project_id,post_url,actual_published_at,view_count,like_count,comment_count,save_count,created_at,updated_at) VALUES('l','p','https://example.com/post','2026-10-25',100,1,1,1,'now','now')").run();
     const services = {
-      refreshMetrics: async () => { calls.push("metrics"); await waiting; return 0; },
+      refreshMetrics: async () => { calls.push("metrics"); await waiting; store.db.prepare("UPDATE content_creation_logs SET like_count=25 WHERE id='l'").run(); return 1; },
       execute: async () => { calls.push("execute"); },
     };
     const pending = startProduction(4, "http://127.0.0.1:3000", services);
@@ -24,6 +26,7 @@ test("start refreshes own metrics once and dispatches tasks without external col
     release();
     const ids = await pending;
     assert.equal(ids.length, 4);
+    for (const id of ids) assert.equal(store.analysisInputs(id)[0].like_count,25,"selection happens after refresh, before every dispatch");
     assert.deepEqual(calls, ["metrics", "execute", "execute", "execute", "execute"]);
     assert.equal(syncState().report?.state,"completed");
     resetProduction();

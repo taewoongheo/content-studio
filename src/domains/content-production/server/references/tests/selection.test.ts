@@ -12,17 +12,17 @@ function seed(db:ReturnType<typeof openLocalDatabase>,count=12) {
 }
 const direction={analysis:"A practical plan.",topic:"arms",content_type:"routine",message:"train",answer:"3 sets",presentation:"cards",reason:"useful",expected_response:"save",goal_connection:"install",difference_from_recent:"new",sources:[]};
 
-test("three distinct examples per stage survive repeat calls, research saves and resumes; production reuses analysis",async()=>{
+test("five distinct examples per stage survive repeat calls, research saves and resumes; production reuses analysis",async()=>{
  const db=openLocalDatabase(":memory:"),store=new ProductionStore(db);seed(db);
  try{
   const [id]=store.create(1);store.state(id,"running");
   const [first,second]=await Promise.all([queryStageReferences(db,id,"analysis",input),queryStageReferences(db,id,"analysis",{...input,query:"Arm"})]);
-  assert.equal(first.posts.length,3);assert.deepEqual(first.posts.map(p=>p.id),second.posts.map(p=>p.id));
-  store.save(id,"analysis",{research:[]});assert.equal(getReferenceContext(db,id,"analysis")?.posts.length,3);
+  assert.equal(first.posts.length,5);assert.deepEqual(first.posts.map(p=>p.id),second.posts.map(p=>p.id));
+  store.save(id,"analysis",{research:[]});assert.equal(getReferenceContext(db,id,"analysis")?.posts.length,5);
   assert.equal(store.get(id).analysis.research instanceof Array,true);
   assert.equal((store.get(id).analysis.research as unknown[]).length,0);
   store.state(id,"stopped");store.state(id,"running");
-  assert.equal((await queryStageReferences(db,id,"analysis",input)).posts.length,3);
+  assert.equal((await queryStageReferences(db,id,"analysis",input)).posts.length,5);
   store.completeAnalysis(id,direction);store.state(id,"running");
   assert.deepEqual((await queryStageReferences(db,id,"production",{...input,ids:first.posts.map(p=>String(p.id))})).posts.map(p=>p.id),first.posts.map(p=>p.id));
   await assert.rejects(()=>queryStageReferences(db,id,"production",{...input,collect:true}),/분석 및 제작 방향/);
@@ -32,10 +32,10 @@ test("three distinct examples per stage survive repeat calls, research saves and
    let hookCollections=0;
    await assert.rejects(()=>queryStageReferences(db,id,step,{...input,collect:true},async()=>{hookCollections++;return 0;}),/분석 및 제작 방향/);
    assert.equal(hookCollections,0,"hook must reject before calling the collector");
-   const selected=await queryStageReferences(db,id,step,input);assert.equal(selected.posts.length,3);
+   const selected=await queryStageReferences(db,id,step,input);assert.equal(selected.posts.length,5);
   }
   const all=["analysis","hook"].flatMap(step=>store.get(id).external?.[step as "analysis"]?.posts??[]);
-  assert.equal(all.length,6);assert.equal(new Set(all.map(p=>p.id)).size,6);
+  assert.equal(all.length,10);assert.equal(new Set(all.map(p=>p.id)).size,10);
   db.prepare("UPDATE content_drafts SET current_step='visual' WHERE id=?").run(id);
   await assert.rejects(()=>queryStageReferences(db,id,"visual",input),/외부 레퍼런스를 사용하지/);
  }finally{db.close();}
@@ -46,7 +46,7 @@ test("one collection allowance per stage, designated accounts only, no collectio
   const [id]=store.create(1);store.state(id,"running");let calls=0;
   const collect=async(_db:typeof db,username:string)=>{calls++;assert.equal(username,"example");seed(db,6);return 6;};
   const result=await queryStageReferences(db,id,"analysis",{...input,collect:true},collect);
-  assert.equal(result.posts.length,3);assert.equal(calls,1);
+  assert.equal(result.posts.length,5);assert.equal(calls,1);
   await queryStageReferences(db,id,"analysis",{...input,collect:true},collect);assert.equal(calls,1);
   const [other]=store.create(1);store.state(other,"running");
   await queryStageReferences(db,other,"analysis",{...input,collect:true},collect);assert.equal(calls,1);

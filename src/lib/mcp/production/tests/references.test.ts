@@ -35,10 +35,10 @@ test("task MCP exposes bounded external selection and English description persis
     const first = await call("production_external_references");
     assert.ok(!first.isError);
     const posts = first.structuredContent!.posts as Array<{ id: string }>;
-    assert.equal(posts.length, 3);
+    assert.equal(posts.length, 5);
     const repeated = await call("production_external_references", { query: "Arm" });
     assert.deepEqual(repeated.structuredContent!.posts, posts);
-    assert.equal((await call("production_external_references", { ids: ["0", "1", "2", "3"] })).isError, true);
+    assert.equal((await call("production_external_references", { ids: ["0", "1", "2", "3", "4", "5"] })).isError, true);
     assert.equal((await call("production_describe_reference", {
       id: posts[0].id, title: "Arm plan", topic: "Arms", content_type: "routine", message: "Large movement images and short prescriptions.",
     })).isError, undefined);
@@ -51,7 +51,7 @@ test("task MCP exposes bounded external selection and English description persis
     assert.ok(observations.some(event=>event.name === "production_external_references" && event.result?.isError &&
       (event.result.structuredContent?.error as {code:string}).code === "INVALID_INPUT"), "schema rejection must be observed too");
     const context = (await call("production_context")).structuredContent!;
-    assert.equal((context.external as { analysis: { posts: unknown[] } }).analysis.posts.length, 3);
+    assert.equal((context.external as { analysis: { posts: unknown[] } }).analysis.posts.length, 5);
   } finally {
     await client.close(); await server.close(); store.db.close();
     await rm(directory, { recursive: true, force: true });

@@ -1,3 +1,5 @@
+import { stagePolicy, editorReadTools, editorWriteTools as writeTools } from "@/domains/content-production/server/execution/policy/stages";
+import { REFERENCE_LIMIT } from "@/domains/content-production/domain/references/context";
 import { OperationError } from "@/lib/errors/operation";
 import { referenceImagesAllowed } from "@/domains/content-production/server/references/selection";
 import { assertReviewWrite } from "@/domains/content-production/server/execution/review/write-policy";
@@ -11,34 +13,13 @@ import {
   productionStore,
   recordReview,
   recordToolCall,
+  recordAnalysisRead,
   visualReferenceProjects,
   recordExternalComparison,
   recordSourceReview,
 } from "@/domains/content-production/server/execution/runner";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-const readTools = [
-  "production_context",
-  "production_query",
-  "production_external_references",
-  "production_visual_references",
-  "production_describe_reference",
-  "production_comparisons",
-  "production_read_images",
-  "production_save_draft",
-  "production_read_project",
-  "production_preview_project",
-];
-const editorReadTools = ["open_project", "read_project", "preview_slide", "preview_slides"];
-const writeTools = [
-  "production_create_project",
-  "production_import_image",
-  "production_change_direction",
-  "edit_project",
-  "undo_project",
-  "rename_project",
-  "set_content_metadata",
-];
 export async function POST(
   request: Request,
   context: { params: Promise<{ taskId: string }> },
@@ -58,15 +39,16 @@ export async function POST(
   const server = createStudioMcpServer(
     origin,
     {
-      allowed: new Set([
-        ...readTools.filter(name => (name !== "production_visual_references" || step === "visual") && (step !== "visual" || !["production_external_references", "production_describe_reference", "production_read_images"].includes(name))),
-        ...(step === "production" ? [...editorReadTools, ...writeTools] :
-          step === "hook" || step === "visual" ? [...editorReadTools, "edit_project"] : []),
-      ]),
+      allowed: stagePolicy(step).tools,
       observe(event) { if (run.step === step) recordToolCall(taskId, event); },
       before(name, input) {
         const active = authorizeRun(taskId, request.headers.get("authorization"));
         if (active.step !== step) throw new OperationError("RUN_STAGE_CHANGED", "실행 단계가 변경되었습니다.");
+        if (step === "analysis" && ["production_preview_project", "production_read_project"].includes(name)) {
+          const projectId = (input as {projectId:string}).projectId;
+          if (!productionStore().analysisInputs(taskId).some(row => row.project_id === projectId))
+            throw new OperationError("ANALYSIS_SOURCE_NOT_ASSIGNED", "분석 자료 노드가 전달한 내부 게시글만 확인할 수 있습니다.");
+        }
         if (step === "visual" && ["production_preview_project", "production_read_project"].includes(name)) {
           const selected = visualReferenceProjects(taskId);
           const projectId = (input as { projectId: string }).projectId;
@@ -78,7 +60,7 @@ export async function POST(
         if (name === "production_read_images") {
           const setId = (input as {set_id:string}).set_id;
           if (!referenceImagesAllowed(productionStore().db,taskId,step,setId))
-            throw new Error("먼저 이번 단계의 외부 레퍼런스로 조회해 주세요. 단계별 한도는 3개입니다.");
+            throw new Error(`먼저 이번 단계의 외부 레퍼런스로 조회해 주세요. 단계별 한도는 ${REFERENCE_LIMIT}개입니다.`);
         }
         if ((writeTools.includes(name) || editorReadTools.includes(name)) && !name.startsWith("production_")) {
           const projectId = (input as { projectId?: string }).projectId;
@@ -91,6 +73,8 @@ export async function POST(
       },
       after(name, input, result) {
         if (run.step !== step) return;
+        if (!result.isError && name === "production_query" && Array.isArray(result.structuredContent?.items))
+          recordAnalysisRead(taskId, (result.structuredContent.items as Array<{id:string}>).map(row => row.id));
         if (!result.isError && name === "production_external_references") recordExternalComparison(taskId);
         if (!result.isError && result.content?.some(item => item.type === "image") && (name === "production_preview_project" || name === "production_read_images"))
           recordSourceReview(taskId, name === "production_preview_project" ? (input as {projectId:string}).projectId : undefined);

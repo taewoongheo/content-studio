@@ -1,82 +1,58 @@
 # Analysis and direction
 
-## Read and compare
+## Retrieve the assigned comparisons
 
-Call production_query(kind="logs") without a keyword to read the comparison pool: up to ten
-highest-rate posts, ten lowest excluding the first group, then ten newest excluding both groups.
-The rate is (likes + comments + saves) / views. Missing metrics or zero views exclude rate ranking,
-not recency. Consider all available groups, not just the strongest individual example.
-Keyword queries return the same selection within matching topic/title text; use them when a relevant
-group needs more examples. The "recent" group is the newest REMAINING posts, not the absolute latest ten.
-For novelty checks, sort the combined pool by actual_published_at and inspect its newest ten.
-Compare external alternatives with production_external_references at least once before completion.
-Inspect actual copy and source images for the examples used to explain reader experience or visual features.
-Group multiple posts by broad presentation format across exercise subjects. Choice/comparison,
-explanation, ranking and ready-to-use routine are examples, never an exhaustive list.
-Use docs/content-metadata.md to distinguish topic, message and content_type; classify similar
-information/visual structures together without requiring the same exercise subject.
-Do not narrow the main groups to combinations such as back-exercise explanation.
-Follow the grouped-comparison criteria in docs/research-guidelines.md and distinguish:
+The material node already selected up to ten highest-rate own posts, ten lowest excluding those,
+and ten newest excluding both groups. The rate is (likes + comments + saves) / views.
+Their assigned IDs and selection groups are in this prompt. Retrieve EVERY ID with
+production_query(ids=[...]), preferably in small batches. Keyword search cannot replace this pool.
+Completion is blocked if any assigned ID was not successfully retrieved in this execution.
+For recent-history awareness, sort this combined pool by actual_published_at; the "recent" group
+itself means newest REMAINING posts, not the absolute latest ten.
 
-- Format/value patterns: how broadly similar structures and the answers themselves relate to response.
-- Presentation patterns: how hook wording, images, text density and layout deliver that answer.
-Compare stronger and weaker cases within a type and different types with similar presentation.
-Keep content_type broad; store the specific exercise subject in topic.
+Compare external alternatives with production_external_references at least once. Follow the
+research guide for stored-pool lookup and any permitted collection. There is no requirement to
+fill the reference allowance or adopt an external example.
 
-## Assess content value and delivery
+## Analyze and select
 
-For the examples that influence your decision, identify the log, relevant slide/copy and metrics.
-Connect the observation to the reader's experience:
+Use only the assigned own posts and external content references to discover candidates.
+Community questions, non-overlap and app-feature fit do not establish TikTok interest.
+Factual verification belongs to first-draft production; this stage has no general web search or shell.
 
-1. What situation or desired outcome does the hook address, and what answer does it promise?
-2. What answer does the post actually deliver? Is it a finished plan, a usable choice, a demonstration,
-   or advice the reader must turn into their own plan?
-3. What value does the reader gain: a usable plan, understanding, comparison, discovery, motivation,
-   or another benefit? Explain how the actual content and presentation deliver that value.
-   Do not automatically penalize complexity, further thought or interpretation, or prefer simple topics.
-4. Why might that experience have encouraged or weakened saving, liking, commenting or continuing?
-   Compare specific stronger and weaker examples and state a concrete working estimate.
-5. Which lesson will you apply to this draft, and why does it help the upper-level goal?
+Apply the research guide's grouped comparisons across exercise subjects. Keep these findings distinct:
+- Format/value: which answers and broad information structures attracted a response.
+- Delivery: how actual hook wording, copy and visual treatment conveyed that value.
 
-Do not stop at "large images," "too much text" or "explanation-heavy."
-Explain how the intended value becomes clear or is weakened, identifying where it happens in the post.
-Also evaluate the appeal of the topic and answer itself, not only its packaging.
-Do not treat an explanation-led content type and dense explanatory text as the same weakness.
-A ready-to-use answer and general advice may differ in value even if both have clean layouts.
+For influential cases, identify the post, relevant slide/copy and metrics. Explain what the hook
+promises, what the post delivers and why that experience may have encouraged or weakened response.
+Compare stronger and weaker cases and relevant counterexamples. Do not assume simple topics are
+better or interpretation is a weakness; assess the value the viewer receives.
 
-Consider differences in views, audience and topic, and relevant counterexamples.
-Lower engagement is not the same as no response.
+Compare materially different topic/message/format candidates, including developments of successful
+past content. For each ask: what would someone already viewing fitness content want to discover,
+compare, obtain or confirm, and which actual post observations support that interest?
+Choose one and explain why its answer and format give viewers a reason to stop and read.
+An unfamiliar topic is not automatically valuable, and a weak post's topic is not automatically
+worth repeating with cleaner presentation.
 
-## Explore topics and select an answer
+## Check overlap
 
-Use internet and community searches under the research guide to find situations,
-questions, desired outcomes and the language people use. Save the source and what you learned.
+Call production_comparisons before selecting direction and again before finalizing.
+Only retained drafts and posts published within 24 hours participate in duplicate prevention.
+The same topic AND similar format is a duplicate; a different topic OR format is a new candidate,
+not proof of appeal. Older successful combinations may be reused.
+Pending ideas do not reserve a combination; the first saved actual content keeps it.
+Adjust this analysis draft if necessary. production_change_direction is unavailable in analysis.
 
-Compare materially different topic/answer candidates using both those findings and the past-post
-analysis. Explain why the selected answer is more useful or compelling for this audience.
-Do not automatically reuse a weak post's topic simply because its presentation can be improved.
-Successful topics can be developed for a new situation; do not restrict all candidates to one
-recurring training decision.
+## Save the direction
 
-Choose one topic, concrete message, free-text format, complete answer and presentation direction,
-following docs/content-metadata.md. Explain the expected response,
-goal connection and difference from recent content. View actual references for the visual direction.
-Plan enough slides to satisfy docs/content-guidelines.md without dense text-only pages.
-
-## Check recent overlap
-
-Call production_comparisons before choosing the direction and again before finalizing it.
-It includes retained drafts and posts published within 24 hours. Reusing an older successful topic
-is allowed when the new post provides a distinct answer or situation.
-For recent overlap, the same topic AND broad content type is a duplicate. Pending ideas do not reserve
-that combination; the first saved actual content keeps it. Adjust this analysis draft if needed.
-production_change_direction is unavailable here; it is a first-draft production tool.
-
-## Save and finish
-
-In the existing analysis field, separately record content-type/value patterns and presentation
-patterns, citing supporting posts and counterexamples. Then connect both assessments to the
-candidate selection and reader-experience estimates. Save the direction, research and sources to this draft.
-Do not create or edit a project here.
-Return analysis and every direction field as strings, plus structured sources.
-The harness validates and saves the result before first-draft production starts.
+Record format/value findings, delivery findings and candidate comparison in analysis, with the
+supporting cases and estimates. Use the metadata guide for topic, message and format.
+In the additional direction fields,
+answer is the substantive planned content beyond the concise message; presentation is the planned
+page flow and use of images to implement the format. Do not repeat the same sentence across these
+fields. Explain expected response, goal connection and difference from
+recent content. Plan enough slides to meet the content guide and inspect actual references before
+claiming a visual direction. Save sources and research findings; do not create or edit a project.
+Return analysis, the direction fields and structured sources required by the schema.

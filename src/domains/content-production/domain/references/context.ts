@@ -1,7 +1,7 @@
 import { z } from "zod";
 export const referenceStepSchema = z.enum(["analysis", "production", "hook", "visual"]);
 export type ReferenceStep = z.infer<typeof referenceStepSchema>;
-export const REFERENCE_LIMIT = 3;
+export const REFERENCE_LIMIT = 5;
 export const EXTERNAL_CONTEXT = "External reference comparison";
 export const externalContextSchema = z.object({
   checked_at: z.string(), queries: z.array(z.string()), collection_attempted: z.boolean(),

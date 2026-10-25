@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { stagePolicy } from "./policy/stages";
 import { runCodex } from "./process";
 
 test("제작 CLI는 실행별 웹 검색과 작업 전용 MCP를 사용하고 읽기 전용 권한을 유지한다", async () => {
@@ -24,7 +25,7 @@ if (args[0] === "mcp") {
 }
 `, { mode: 0o700 });
     process.env.CONTENT_STUDIO_CODEX_BIN = executable;
-    const result = await runCodex({ prompt: "test", schema: {}, origin: "http://127.0.0.1:3000",
+    const result = await runCodex({ capabilities: stagePolicy("production"), prompt: "test", schema: {}, origin: "http://127.0.0.1:3000",
       images: ["/tmp/turnaround.png", "/tmp/face.png", "/tmp/example.png"],
       taskId: "task", token: "test-token", signal: new AbortController().signal, onActivity() {}, onToolActivity(event) { toolEvents.push(event); } });
     assert.deepEqual(result, { ok: true });
@@ -40,6 +41,15 @@ if (args[0] === "mcp") {
     assert.ok(overrides.includes("mcp_servers.production.enabled=true"));
     assert.ok(overrides.includes('mcp_servers.production.url="http://127.0.0.1:3000/api/content-production/agent/task"'));
     assert.equal(args.includes("test-token"), false);
+    for (const step of ["analysis","visual","hook"] as const) {
+      await runCodex({capabilities:stagePolicy(step),prompt:"Check stage capabilities",schema:{},origin:"http://127.0.0.1:3000",
+        taskId:"task",token:"test-token",signal:new AbortController().signal,onActivity() {}});
+      const stageArgs:string[] = JSON.parse(await readFile(argsPath,"utf8"));
+      const values=stageArgs.flatMap((value,index)=>value==="-c"?[stageArgs[index+1]]:[]);
+      assert.ok(values.includes(step === "hook" ? 'web_search="live"' : 'web_search="disabled"'));
+      assert.equal(values.includes("features.shell_tool=false"),step !== "hook");
+      assert.equal(values.includes("features.unified_exec=false"),step !== "hook");
+    }
     await runCodex({ prompt: "Translate data only", schema: {}, origin: "", taskId: "", token: "", displayOnly: true, signal: new AbortController().signal, onActivity() {} });
     const displayArgs: string[] = JSON.parse(await readFile(argsPath, "utf8"));
     assert.equal(displayArgs.includes("--image"), false);

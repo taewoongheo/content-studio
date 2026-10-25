@@ -85,6 +85,7 @@ export interface WorkItem extends Row {
   content_type: string | null;
 }
 export interface WorkDetail {
+  analysis_inputs?: Row[];
   external?: Partial<Record<ReferenceStep, ExternalContext | null>>;
   task: WorkItem;
   analysis: Row;

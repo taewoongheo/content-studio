@@ -2,36 +2,29 @@
 
 ## Scope
 
-From production_context, read the completed production draft. Read the latest linked project.
-Keep the topic, claims, exercise selection, prescriptions, body and CTA unchanged.
-If a candidate hook requires a different body or a stronger promise, reject that candidate.
+Read the completed production draft and latest linked project. Keep topic, message, format,
+claims, exercise selection, prescriptions, body and CTA unchanged. Reject any hook that requires
+a different body or promises more than it delivers.
 
-## Assess and revise
+## Compare and revise
 
-Read the hook and body. Query relevant own posts with production_query(kind="logs", query=...);
-this keyword search uses saved topic/title text. If useful, query existing external examples within the
-shared allowance. Do not collect new external posts or explore a new topic during hook review. Inspect at least one actual source hook image in THIS execution through
-production_preview_project or production_read_images. Earlier stages' image checks do not count.
-Compare the promised answer and wording against what the current body actually delivers.
+Query relevant own posts with production_query(kind="logs", query=...). This searches saved
+topic/title text. Stored external examples and community wording may help the comparison, within
+the research guide; do not explore a new topic.
+Inspect at least one actual source hook image in THIS execution through production_preview_project
+or production_read_images. Previous stages' image checks do not satisfy this requirement.
 
-Choose wording that makes the useful answer immediately clear, gives the intended reader
-a specific reason to continue, and accurately describes what the body delivers.
-Use natural US English. Compare a few candidates and keep the current hook if it is stronger.
+Compare a few natural US English candidates against the actual body. Make the value apparent and
+give the intended viewer a specific reason to continue. Keep the current hook if it is stronger.
 
-Fit the hook under docs/content-guidelines.md and preserve the fixed LIFTCODE badge.
+Only set_slot_value, set_text_colors, set_text_weights and local update_visual on hook-role text
+placements are allowed. Preserve the badge, body, CTA, images, slide roles and shared styles.
+Undo, project creation and unrelated research are outside this stage.
 
-Only use set_slot_value, set_text_colors, set_text_weights and local update_visual on hook-role text placements.
-Do not alter the badge, body, CTA, images, slide roles or shared styles.
-Undo and project creation are unavailable. Research only questions needed for this review.
+## Save and verify
 
-## Record and finish
-
-Save the chosen hook, assessment, relevant candidates, actual changes and references to this draft.
-Explain why the chosen wording is better, or why keeping it is justified.
-Do not invent changes to demonstrate activity.
-
-Preview ALL slides at the latest saved revision and inspect the results.
-Return project_id, summary (the complete updated summary, retaining body/CTA information),
-sources, reviewed_slide_ids, reviewed_revision, review and review_passed.
-review is the English assessment and change explanation.
-Set review_passed=true only when the hook criteria pass; otherwise explain the blocker.
+Save the assessment, relevant candidates, chosen wording and source observations. Explain the
+change or why retaining the current wording is justified. Do not invent changes to show activity.
+Preview ALL current slides at the latest saved revision and inspect the results.
+Return the complete updated summary and required review fields. Set review_passed=true only when
+the hook meets the content guide and scope; otherwise identify the blocker.

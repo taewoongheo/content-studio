@@ -77,13 +77,14 @@ export async function GET(request: Request) {
           })
         : new Response(null, { status: 404 });
     }
+    const tasks = id ? [] : store.list();
     return Response.json(
       id
         ? store.get(id)
         : {
-            tasks: store.list(),
+            tasks,
             logs: store.logs(params.get("query") ?? ""),
-            planningLogs: store.planningLogs(),
+            planningLogs: tasks.length ? store.analysisInputs(tasks[0].id) : store.planningLogs(),
             externalReferences: externalReferences(store.db, "", "", true),
             referenceAccounts: referenceAccounts(store.db),
             visuals: listVisuals(store.db),

@@ -9,6 +9,7 @@ import { join } from "node:path";
 
 export async function runCodex(input: {
   model?: string;
+  capabilities?: {webSearch: boolean; shell: boolean};
   prompt: string;
   images?: string[];
   schema: unknown;
@@ -55,8 +56,9 @@ export async function runCodex(input: {
           "--json",
           "--ephemeral",
           "-c",
-          input.displayOnly ? 'web_search="disabled"' : 'web_search="live"',
-          ...(input.displayOnly ? ["--skip-git-repo-check", "-c", "features.shell_tool=false", "-c", "features.unified_exec=false", "-c", 'model_reasoning_effort="low"'] : []),
+          !input.displayOnly && input.capabilities?.webSearch ? 'web_search="live"' : 'web_search="disabled"',
+          ...(!input.capabilities?.shell || input.displayOnly ? ["-c", "features.shell_tool=false", "-c", "features.unified_exec=false"] : []),
+          ...(input.displayOnly ? ["--skip-git-repo-check", "-c", 'model_reasoning_effort="low"'] : []),
           "--sandbox",
           "read-only",
           "--output-schema",

@@ -51,8 +51,9 @@ test("every stage shares metadata meanings; only analysis may collect external p
     const prompt = stagePrompt("metadata-check",id);
     assert.match(prompt,/docs\/content-metadata\.md/);
     assert.match(prompt,/Analyze EVERY post/);
-    assert.match(prompt,/Only in analysis, if the pool is insufficient/);
-    assert.match(prompt,/collection of new posts is forbidden/);
+    assert.ok(prompt.includes(`"external_collection":${id === "analysis"}`));
+    assert.ok(prompt.includes(`"external_post_limit":${id === "visual" ? 0 : 5}`));
+    assert.ok(prompt.includes(`"web_search":"${id === "production" || id === "hook" ? "live" : "disabled"}"`));
   }
   for (const step of ["production","hook","visual"] as const) {
     const validate = new Ajv({strict:false}).compile(resultSchema(step));
