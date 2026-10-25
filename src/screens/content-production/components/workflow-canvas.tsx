@@ -39,6 +39,8 @@ export function WorkflowCanvas({
   onSelect,
   onSelectSync,
   onSelectProject,
+  onComplete,
+  onOpen,
   onStop,
   onReset,
   resetDisabled,
@@ -58,6 +60,8 @@ export function WorkflowCanvas({
   onSelect: (id: string, step: ProductionStep) => void;
   onSelectSync: () => void;
   onSelectProject: (id: string) => void;
+  onComplete: (id: string) => void;
+  onOpen: (id: string) => void;
   onReset: () => void;
   resetDisabled: boolean;
   onStop: () => void;
@@ -74,9 +78,9 @@ export function WorkflowCanvas({
     const measured = measurements[node.id];
     if (node.type === "start") return { ...node, measured, data: { content: startContent } };
     const task = tasksById.get(node.id.split(":")[0]);
-    const step = node.data.stage === "result" || node.data.stage === "sync" ? "visual" : node.data.stage;
+    const step = node.data.stage === "result" || node.data.stage === "sync" ? "polish" : node.data.stage;
     const action: TaskControlAction | null = task ? node.data.stage === "result" ? "delete_post" : getPlaybackAction(task, step) : null;
-    return { ...node, measured, selected: node.id === selectedNode, data: { ...node.data, onComplete: node.data.stage === "result" && task ? () => onSelectProject(task.id) : undefined, controls: task ? {
+    return { ...node, measured, selected: node.id === selectedNode, data: { ...node.data, onComplete: node.data.stage === "result" && task ? () => onComplete(task.id) : undefined, onOpen: node.data.stage === "result" && task?.project_id ? () => onOpen(task.project_id!) : undefined, controls: task ? {
       action,
       disabled: busy,
       onAction: () => { if (action) onTaskAction(task.id, action, action === "delete_post" ? undefined : step); },

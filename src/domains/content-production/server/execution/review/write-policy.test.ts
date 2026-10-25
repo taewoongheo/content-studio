@@ -35,3 +35,23 @@ test("visual review allows layout changes and rejects copy or image replacement"
   for (const type of ["set_slot_value", "set_local_image", "remove_slide", "set_slide_role", "add_slide", "remove_placement"])
     assert.throws(() => assertReviewWrite("visual", { commands: [{ type }] }, document), /시각 검증/);
 });
+
+
+test("polishing can correct copy on every page but cannot alter styles, images or the badge", () => {
+  const document = createBlankDocument({ structure: "sequential", aspectRatio: "4:5", slideCount: 3 });
+  document.elements.push(makeElementDefinition({ id: "copy", kind: "text" }));
+  for (const slide of document.slides) slide.placements.push({
+    id: "copy", elementId: "copy", value: "Use same weight", frameOverride: null, styleOverride: null,
+  });
+  const command = { type: "set_slot_value", slideId: document.slides[1].id, placementId: "copy", value: "Use the same weight" };
+  assert.doesNotThrow(() => assertReviewWrite("polish", { commands: [command] }, document));
+  for (const rejected of [
+    { ...command, textWeights: [] },
+    { ...command, textColors: [] },
+    { type: "update_visual", slideId: command.slideId, placementId: "copy", style: { fontSize: 35 } },
+    { type: "set_local_image", slideId: command.slideId, placementId: "copy", localPath: "/tmp/image.png" },
+    { type: "remove_slide", slideId: command.slideId },
+  ]) assert.throws(() => assertReviewWrite("polish", { commands: [rejected] }, document), /영어 폴리싱/);
+  document.slides[1].placements.find(placement => placement.id === "copy")!.value = "LIFTCODE";
+  assert.throws(() => assertReviewWrite("polish", { commands: [command] }, document), /영어 폴리싱/);
+});

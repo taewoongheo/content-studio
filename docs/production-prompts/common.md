@@ -3,7 +3,7 @@
 ## Contract
 
 Produce one LiftCode TikTok slideshow. The sequence is analysis → first-draft production →
-hook review → visual verification. The current stage owns only the work defined in its instructions.
+hook review → visual verification → English polishing. The current stage owns only the work defined in its instructions.
 Until app launch, use a short relevant follow CTA, not an install or "Try LiftCode" invitation.
 This workflow ends with an unpublished draft; do not register publication.
 
@@ -59,7 +59,7 @@ Final sources entries contain kind, id, url, part, used_for and visual_set_id. U
 id/url/visual_set_id, with at least an id or URL. Intermediate production_save_draft calls instead
 omit unused optional source fields. part identifies the material; used_for explains the decision.
 
-For production, hook and visual, summary describes the entire CURRENT content, not just edits.
+For production, hook, visual and polish, summary describes the entire CURRENT content, not just edits.
 Use actual slide copy and appearance, and verify metadata under the shared metadata guide.
 Preserve preceding approved information. changes lists actual changes in this stage, or [] if none.
 Use an empty caption and hashtags array when absent; do not invent them.

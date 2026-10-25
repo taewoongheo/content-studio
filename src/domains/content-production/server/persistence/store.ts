@@ -4,6 +4,8 @@ import { z } from "zod";
 import type Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
 import {
+  productionSteps,
+  reviewSteps,
   analysisPatchSchema,
   analysisResultSchema,
   productionPatchSchema,
@@ -85,7 +87,7 @@ export class ProductionStore {
       return { data: { ...decoded, research: research.filter(item => ![EXTERNAL_CONTEXT, ANALYSIS_INPUTS].includes(item.question)) }, external: readExternalContext(research) };
     };
     const decoded = stage(analysis);
-    const reviews = (["hook", "visual"] as const).map(step => {
+    const reviews = reviewSteps.map(step => {
       const row = this.row(`SELECT * FROM content_${step}_drafts WHERE draft_id=?`, id);
       return { step, value: row ? stage(row) : null };
     });
@@ -229,12 +231,14 @@ export class ProductionStore {
     if (step === "analysis") throw new Error("분석 단계는 제작 완료로 저장할 수 없습니다.");
     const detail = this.assertActive(id, step),
       now = this.now();
-    const next = step === "production" ? "hook" : step === "hook" ? "visual" : null;
+    const next = productionSteps[productionSteps.findIndex(value => value.id === step) + 1]?.id ?? null;
     if (step !== "production" && !result.review?.trim()) throw new Error("검토 결과를 남겨 주세요.");
     if (result.review) assertEnglish(result.review, "review_result.review");
     assertEnglish(result.summary, "production_result.summary");
     assertEnglish(result.sources, "production_result.sources");
     const metadata = readContentMetadata(result.summary);
+    if (step === "polish" && contentMetadataFields.some(key => metadata[key] !== detail.log[key]))
+      throw new Error("영어 폴리싱에서는 확정한 소재·메시지·포맷을 변경할 수 없습니다.");
     this.db.transaction(() => {
       if (detail.task.project_id !== result.project_id)
         throw new Error("이 작업의 프로젝트만 완료할 수 있습니다.");

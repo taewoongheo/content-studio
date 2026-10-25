@@ -27,10 +27,10 @@ test("작업은 병렬로 진행하고 각 작업의 노드는 시작한 단계�
   assert.ok(analysis.type === "stage");
   assert.equal(analysis.data.outputTitle, "주 3일 전신 루틴");
   assert.match(analysis.data.outputText, /기본 동작 5개/);
-  tasks = tasks.map((task, index) => ({ ...task, current_step: "visual", state: "finished", project_id: `post-${index + 1}` }));
+  tasks = tasks.map((task, index) => ({ ...task, current_step: "polish", state: "finished", project_id: `post-${index + 1}` }));
   const finished = graph();
-  assert.equal(finished.nodes.length, 22);
-  assert.equal(finished.edges.length, 22);
+  assert.equal(finished.nodes.length, 26);
+  assert.equal(finished.edges.length, 26);
   assert.equal(finished.nodes.filter(node => node.type === "stage" && node.data.stage === "result").length, 4);
   assert.ok(finished.edges.every(edge => finished.nodes.some(node => node.id === edge.source) && finished.nodes.some(node => node.id === edge.target)));
 });
@@ -39,7 +39,7 @@ test("시작 노드는 고정 원점에 있고 모든 경로의 출발점이다"
   const before = buildWorkflowGraph([], {}, {}, {}, false);
   assert.deepEqual(before.nodes.map(node => node.id), ["start"]);
   assert.deepEqual(before.nodes[0].position, { x: 0, y: 0 });
-  const tasks = Array.from({ length: 4 }, (_, index) => task(index + 1, { state: "finished", current_step: "visual", project_id: `post-${index + 1}` }));
+  const tasks = Array.from({ length: 4 }, (_, index) => task(index + 1, { state: "finished", current_step: "polish", project_id: `post-${index + 1}` }));
   const graph = buildWorkflowGraph(tasks, details(tasks), {}, {}, false);
   assert.deepEqual(graph.nodes.find(node => node.id === "start")?.position, before.nodes[0].position);
   assert.deepEqual(graph.nodes.find(node => node.id === "sync")?.position, { x: 380, y: 0 });

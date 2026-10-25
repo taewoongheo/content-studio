@@ -20,7 +20,7 @@ const aspects: Record<string, string> = { hook: "훅", body: "본문", cta: "CTA
 
 function TextValue({ value, field }: { value: unknown; field?: string }) {
   const states: Record<string, string> = {pending:"응답 대기",failed:"실패",succeeded:"성공",empty:"필요한 결과 없음"};
-  const phases: Record<string,string> = {cli:"CLI 실행",output:"응답 형식 검증",validation:"완료 조건 검증",save:"저장",analysis:"분석 및 제작 방향",production:"초안 제작",hook:"훅 검토",visual:"시각 검증"};
+  const phases: Record<string,string> = {cli:"CLI 실행",output:"응답 형식 검증",validation:"완료 조건 검증",save:"저장",analysis:"분석 및 제작 방향",production:"초안 제작",hook:"훅 검토",visual:"시각 검증",polish:"영어 폴리싱"};
   const text = field === "phase" || field === "step" ? phases[String(value)] ?? String(value) : field === "status" ? states[String(value)] ?? String(value) : field === "kind" ? kinds[String(value)] ?? String(value)
     : field === "aspect" || field === "role" ? aspects[String(value)] ?? String(value)
     : typeof value === "boolean" ? value ? "예" : "아니요" : String(value);

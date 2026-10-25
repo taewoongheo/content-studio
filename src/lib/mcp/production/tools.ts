@@ -159,7 +159,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     "production_save_draft",
     {
       description:
-        "Persist current-stage progress only. Analysis draft: analysis/direction plus research/sources/actions. Production draft: content/direction_changes plus research/sources/actions. Hook/visual drafts: review/content plus research/sources/actions, each stored separately. Saving actual content sets draft_saved_at. Saves trigger UI pulse after DB commit.",
+        "Persist current-stage progress only. Analysis draft: analysis/direction plus research/sources/actions. Production draft: content/direction_changes plus research/sources/actions. Hook/visual/polish drafts: review/content plus research/sources/actions, each stored separately. Saving actual content sets draft_saved_at. Saves trigger UI pulse after DB commit.",
       inputSchema: z.object({
         patch: z.union([analysisPatchSchema, productionPatchSchema, reviewDraftPatchSchema]),
       }),

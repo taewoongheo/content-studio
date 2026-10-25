@@ -67,7 +67,7 @@ export function resultSchema(step: ProductionStep) {
           sources: sourcesField,
         }
       : {
-          ...(step === "hook" || step === "visual" ? { review: stringField, review_passed: { type: "boolean" } } : {}),
+          ...(step !== "production" ? { review: stringField, review_passed: { type: "boolean" } } : {}),
           project_id: stringField,
           summary: summaryField,
           sources: sourcesField,

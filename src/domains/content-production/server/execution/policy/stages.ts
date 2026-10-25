@@ -13,7 +13,7 @@ export const editorWriteTools = [
 ];
 /** Tool availability and native CLI capabilities are separate enforcement boundaries. */
 export function stagePolicy(step: ProductionStep) {
-  const external = step !== "visual";
+  const external = step === "analysis" || step === "production" || step === "hook";
   return {
     externalCollection: step === "analysis",
     externalLimit: external ? REFERENCE_LIMIT : 0,
@@ -23,7 +23,7 @@ export function stagePolicy(step: ProductionStep) {
       ...commonTools.filter(name => external || !["production_external_references", "production_describe_reference", "production_read_images"].includes(name)),
       ...(step === "visual" ? ["production_visual_references"] : []),
       ...(step === "production" ? [...editorReadTools, ...editorWriteTools]
-        : step === "hook" || step === "visual" ? [...editorReadTools, "edit_project"] : []),
+        : step === "hook" || step === "visual" || step === "polish" ? [...editorReadTools, "edit_project"] : []),
     ]),
   };
 }

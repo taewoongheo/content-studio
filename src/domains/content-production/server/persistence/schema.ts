@@ -1,3 +1,5 @@
+import { reviewSteps } from "../../domain/contracts";
+
 const direction = `topic TEXT, content_type TEXT, message TEXT, answer TEXT, presentation TEXT,
   reason TEXT, expected_response TEXT, goal_connection TEXT, difference_from_recent TEXT`;
 const progress = `research_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(research_json)),
@@ -18,7 +20,7 @@ CREATE INDEX IF NOT EXISTS content_logs_created_idx ON content_creation_logs(cre
 CREATE TABLE IF NOT EXISTS content_drafts (
  id TEXT PRIMARY KEY, log_id TEXT UNIQUE NOT NULL REFERENCES content_creation_logs(id),
  project_id TEXT UNIQUE REFERENCES content_projects(id) ON DELETE SET NULL,
- current_step TEXT NOT NULL CHECK(current_step IN ('analysis','production','hook','visual')),
+ current_step TEXT NOT NULL CHECK(current_step IN ('analysis','production','hook','visual','polish')),
  state TEXT NOT NULL CHECK(state IN ('pending','running','stopped','failed','finished')),
  created_at TEXT NOT NULL, updated_at TEXT NOT NULL
 );
@@ -33,16 +35,12 @@ CREATE TABLE IF NOT EXISTS content_production_drafts (
  direction_changes TEXT, draft_saved_at TEXT, ${progress},
  created_at TEXT NOT NULL, updated_at TEXT NOT NULL, completed_at TEXT
 );
-CREATE TABLE IF NOT EXISTS content_hook_drafts (
+${reviewSteps.map(step => `CREATE TABLE IF NOT EXISTS content_${step}_drafts (
  draft_id TEXT PRIMARY KEY REFERENCES content_drafts(id) ON DELETE CASCADE,
  state TEXT NOT NULL DEFAULT 'pending', review TEXT, content_json TEXT CHECK(content_json IS NULL OR json_valid(content_json)),
  ${progress}, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, completed_at TEXT
 );
-CREATE TABLE IF NOT EXISTS content_visual_drafts (
- draft_id TEXT PRIMARY KEY REFERENCES content_drafts(id) ON DELETE CASCADE,
- state TEXT NOT NULL DEFAULT 'pending', review TEXT, content_json TEXT CHECK(content_json IS NULL OR json_valid(content_json)),
- ${progress}, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, completed_at TEXT
-);
+`).join("\n")}
 CREATE TABLE IF NOT EXISTS content_visual_sets (
  id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK(kind IN ('reference','published')),
  log_id TEXT UNIQUE REFERENCES content_creation_logs(id) ON DELETE CASCADE, source_url TEXT NOT NULL,

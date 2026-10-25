@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { Handle, Position, useUpdateNodeInternals, type Node, type NodeProps } from "@xyflow/react";
-import { ArrowUpRight, Database, FileText, Layers, ScanText, MessageSquare, Eye } from "lucide-react";
+import { ArrowUpRight, Database, FileText, Layers, ScanText, MessageSquare, Eye, SpellCheck } from "lucide-react";
 import { StatusIcon } from "./status-icon";
 import { StageControlButton } from "./controls/stage-control-button";
 import type { ProductionStep } from "@/domains/content-production/domain/contracts";
@@ -19,8 +19,9 @@ export type StageNodeModel = Node<{
   kind: string;
   controls?: StageControl;
   onComplete?: () => void;
+  onOpen?: () => void;
 }, "stage">;
-const stageIcons = { sync: Database, analysis: ScanText, production: Layers, result: FileText, hook: MessageSquare, visual: Eye };
+const stageIcons = { sync: Database, analysis: ScanText, production: Layers, result: FileText, hook: MessageSquare, visual: Eye, polish: SpellCheck };
 export function StageNode({ id, data, selected }: NodeProps<StageNodeModel>) {
   const updateNodeInternals = useUpdateNodeInternals();
   // A controlled node can lose its handle measurements without changing size.
@@ -40,9 +41,10 @@ export function StageNode({ id, data, selected }: NodeProps<StageNodeModel>) {
       {!!data.facts.length && <div className="production-output-facts">{data.facts.map(fact => <span key={fact}>{fact}</span>)}</div>}
     </div>
     <div className="production-stage-footer">
-      <span className="production-stage-action">{data.stage === "result" ? <>내용 보기<ArrowUpRight size={14} /></> : data.activity || (data.stage === "analysis" ? "분석 보기" : data.stage === "production" ? "작성 내용 보기" : data.stage === "hook" || data.stage === "visual" ? "검토 보기" : "성과 보기")}</span>
-      <div className="flex items-center gap-2">
-      {data.stage === "result" && data.onComplete && <button type="button" className="production-button primary" onClick={event => { event.stopPropagation(); data.onComplete?.(); }}>완료</button>}
+      {data.stage !== "result" && <span className="production-stage-action">{data.activity || (data.stage === "analysis" ? "분석 보기" : data.stage === "production" ? "작성 내용 보기" : data.stage === "hook" || data.stage === "visual" || data.stage === "polish" ? "검토 보기" : "성과 보기")}</span>}
+      <div className={`flex flex-wrap items-center gap-2 ${data.stage === "result" ? "w-full justify-end" : ""}`}>
+      {data.stage === "result" && data.onOpen && <button type="button" className="production-button nodrag nopan" onClick={event => { event.stopPropagation(); data.onOpen?.(); }}>편집기로 열기<ArrowUpRight size={14} /></button>}
+      {data.stage === "result" && data.onComplete && <button type="button" className="production-button primary nodrag nopan" onClick={event => { event.stopPropagation(); data.onComplete?.(); }}>완료</button>}
       <StageControlButton title={data.title} control={data.controls} />
       {data.write > 0 && <span className="production-save-indicator" aria-label="draft 저장" title="draft 저장">
         <span key={data.write} className="production-save-dot production-write-pulse" />

@@ -41,7 +41,7 @@ if (args[0] === "mcp") {
     assert.ok(overrides.includes("mcp_servers.production.enabled=true"));
     assert.ok(overrides.includes('mcp_servers.production.url="http://127.0.0.1:3000/api/content-production/agent/task"'));
     assert.equal(args.includes("test-token"), false);
-    for (const step of ["analysis","visual","hook"] as const) {
+    for (const step of ["analysis","visual","hook","polish"] as const) {
       await runCodex({capabilities:stagePolicy(step),prompt:"Check stage capabilities",schema:{},origin:"http://127.0.0.1:3000",
         taskId:"task",token:"test-token",signal:new AbortController().signal,onActivity() {}});
       const stageArgs:string[] = JSON.parse(await readFile(argsPath,"utf8"));

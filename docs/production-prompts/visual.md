@@ -3,7 +3,7 @@
 ## Scope
 
 Read the latest linked project and hook draft or log summary. Do not restore an earlier hook.
-Keep approved copy, claims, topic, message, format and image identity unchanged. This final stage
+Keep approved copy, claims, topic, message, format and image identity unchanged. This stage
 repairs presentation within the allowed edit scope; it does not rewrite content.
 
 ## Inspect sources and the current slides
@@ -38,5 +38,4 @@ Do not hide text off-slide, under images, at tiny size or in the background colo
 Save source observations, assessment, actual repairs and unresolved issues. A strong draft can
 pass unchanged. After edits, preview ALL slides at the latest saved revision and inspect every image.
 Return the complete current summary and required review fields. Set review_passed=true only when
-all applicable guide criteria pass; otherwise identify the blocker. The task finishes only after
-this review passes.
+all applicable guide criteria pass; otherwise identify the blocker. English polishing follows only after this review passes.

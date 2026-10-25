@@ -2,13 +2,15 @@ import type { ExternalContext, ReferenceStep } from "./references/context";
 import { z } from "zod";
 import { contentMetadataSchema } from "@/domains/content-metadata/schema";
 
-export const stepSchema = z.enum(["analysis", "production", "hook", "visual"]);
+export const stepSchema = z.enum(["analysis", "production", "hook", "visual", "polish"]);
 export type ProductionStep = z.infer<typeof stepSchema>;
+export const reviewSteps = ["hook", "visual", "polish"] as const;
 export const productionSteps = [
   { id: "analysis", label: "분석 및 제작 방향" },
   { id: "production", label: "초안 제작" },
   { id: "hook", label: "훅 검토·수정" },
   { id: "visual", label: "시각 검증·수정" },
+  { id: "polish", label: "영어 폴리싱" },
 ] as const;
 export const directionSchema = contentMetadataSchema.extend({
   answer: z.string().trim().min(1),
@@ -93,6 +95,7 @@ export interface WorkDetail {
   log: Row;
   hook?: Row | null;
   visual?: Row | null;
+  polish?: Row | null;
 }
 export interface ChangeEvent {
   task_id?: string;

@@ -58,9 +58,9 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       const step = store.get(id).task.current_step;
       const { projectId } = step === "production" ? createTaskProject(store, id, 1) : { projectId: store.get(id).task.project_id! };
       const job = contentJobRegistry.get(projectId);
-      if (step === "hook" || step === "visual") {
+      if (step === "hook" || step === "visual" || step === "polish") {
         if (step === "visual") visualReferenceProjects(id, ["owned-source"]);
-        recordSourceReview(id, step === "visual" ? "owned-source" : undefined);
+        if (step !== "polish") recordSourceReview(id, step === "visual" ? "owned-source" : undefined);
         recordReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => s.id));
         return { project_id: projectId, summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "test" }, sources: [],
           review: "The current content meets the review criteria.", review_passed: true,
@@ -105,11 +105,12 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       };
     };
     await execute(id, "http://127.0.0.1:3000", executor);
-    assert.equal(calls, 4);
+    assert.equal(calls, 5);
     assert.equal(store.get(id).hook?.state, "completed");
     assert.equal(store.get(id).visual?.state, "completed");
+    assert.equal(store.get(id).polish?.state, "completed");
     assert.equal(store.get(id).task.state, "finished");
-    assert.equal(store.get(id).task.current_step, "visual");
+    assert.equal(store.get(id).task.current_step, "polish");
     assert.equal((store.get(id).log.sources as Array<{ part: string }>)[0].part, "Research summary");
     const projectId = store.get(id).task.project_id!;
     // Resume a review without reading source images: earlier stages' reviews cannot satisfy it.

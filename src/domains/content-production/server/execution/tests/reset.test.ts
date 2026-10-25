@@ -38,7 +38,7 @@ test("reset removes drafts/projects/assets, cancels late output and preserves fo
     finish({ bad: "late output" });
     await execution;
     assert.equal(store.list().length, 0);
-    for (const table of ["content_analysis_drafts", "content_production_drafts", "content_hook_drafts", "content_visual_drafts"])
+    for (const table of ["content_analysis_drafts", "content_production_drafts", "content_hook_drafts", "content_visual_drafts", "content_polish_drafts"])
       assert.equal((store.db.prepare(`SELECT count(*) n FROM ${table}`).get() as {n:number}).n, 0);
     for (const projectId of projects.slice(1)) {
       assert.equal(store.db.prepare("SELECT id FROM content_projects WHERE id=?").get(projectId), undefined);

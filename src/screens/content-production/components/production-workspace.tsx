@@ -8,6 +8,7 @@ import { useNodeDetails } from "../hooks/use-node-details";
 import { useDetailTranslationPrefetch } from "../hooks/display/use-detail-translation-prefetch";
 import { useProductionControls } from "../hooks/use-production-controls";
 import { StepDetails } from "./step-details";
+import { PublishDialog } from "./publication/publish-dialog";
 import { ProjectDetails } from "./details/project-details";
 import { LibraryPanel } from "./library/panel";
 import { ProductionSidebar } from "./navigation/production-sidebar";
@@ -30,6 +31,8 @@ export function ProductionWorkspace({ runtime, readWork, onOpen }: {
   const [count, setCount] = useState(1);
   const [panel, setPanel] = useState<"library" | "performance" | null>(null);
   const [selected, setSelected] = useState<{ id: string; step: ProductionStep | "project" } | null>(null);
+  const [publishTaskId, setPublishTaskId] = useState<string | null>(null);
+  const publishTask = data?.tasks.find(task => task.id === publishTaskId && task.state === "finished");
   const current = data?.tasks.find(t => t.id === selected?.id);
   const select = (id: string, step: ProductionStep) => { setPanel(null); setSelected({ id, step }); };
   const startContent = (
@@ -51,11 +54,11 @@ export function ProductionWorkspace({ runtime, readWork, onOpen }: {
       onLibrary={() => { setPanel("library"); setSelected(null); }} />
     <main className="relative min-h-0 min-w-0 flex-1" aria-label="제작 작업 공간">
       <WorkflowCanvas key={runtime.resetVersion} onReset={() => void (async () => {
-        if (await resetAll()) { setSelected(null); setPanel(null); setCount(1); }
-      })()} resetDisabled={resetDisabled} startContent={startContent} details={details} selectedNode={panel === "performance" ? "sync" : selected ? `${selected.id}:${selected.step === "project" && current?.state === "finished" ? "result" : selected.step}` : undefined} tasks={data?.tasks ?? []} writes={writes} activity={activity} syncing={data?.sync.running ?? false} syncReport={data?.sync.report ?? null} planningCount={data?.planningLogs.length ?? 0} onSelect={select} onSelectSync={() => { setSelected(null); setPanel("performance"); }} onSelectProject={id => { setPanel(null); setSelected({id,step:"project"}); }} onStop={() => void stopAll()} stopDisabled={stopDisabled} onTaskAction={taskAction} busy={controlsBusy} />
+        if (await resetAll()) { setSelected(null); setPanel(null); setCount(1); setPublishTaskId(null); }
+      })()} resetDisabled={resetDisabled} startContent={startContent} details={details} selectedNode={panel === "performance" ? "sync" : selected ? `${selected.id}:${selected.step === "project" && current?.state === "finished" ? "result" : selected.step}` : undefined} tasks={data?.tasks ?? []} writes={writes} activity={activity} syncing={data?.sync.running ?? false} syncReport={data?.sync.report ?? null} planningCount={data?.planningLogs.length ?? 0} onSelect={select} onSelectSync={() => { setSelected(null); setPanel("performance"); }} onComplete={setPublishTaskId} onOpen={id => void onOpen(id)} onSelectProject={id => { setPanel(null); setSelected({id,step:"project"}); }} onStop={() => void stopAll()} stopDisabled={stopDisabled} onTaskAction={taskAction} busy={controlsBusy} />
 
       {selected && current && <aside className="absolute inset-y-0 right-0 z-20 w-[420px] max-w-full overflow-y-auto border-l bg-background shadow-lg" aria-label="작업 상세">
-        {selected.step === "project" ? <ProjectDetails key={current.id} onPublish={url => act({ action: "register", id: current.log_id, url })} task={current} detail={details[current.id]} onSelectStep={select} onOpen={id => void onOpen(id)} onClose={() => setSelected(null)} /> : <StepDetails id={selected.id} step={selected.step} updated={current.updated_at} write={writes[`${selected.id}:${selected.step}`] ?? 0} readWork={readWork} onClose={() => setSelected(null)} />}
+        {selected.step === "project" ? <ProjectDetails key={current.id} task={current} detail={details[current.id]} onSelectStep={select} onOpen={id => void onOpen(id)} onClose={() => setSelected(null)} /> : <StepDetails id={selected.id} step={selected.step} updated={current.updated_at} write={writes[`${selected.id}:${selected.step}`] ?? 0} readWork={readWork} onClose={() => setSelected(null)} />}
       </aside>}
       {panel === "performance" && data && <aside className="absolute inset-y-0 right-0 z-20 w-[440px] max-w-full overflow-y-auto border-l bg-background shadow-lg">
         <PerformanceDetails report={data.sync.report} logs={data.planningLogs} details={details} onClose={() => setPanel(null)} />
@@ -64,6 +67,10 @@ export function ProductionWorkspace({ runtime, readWork, onOpen }: {
         <header className="flex shrink-0 items-center justify-between border-b px-6 py-4"><h2 className="flex items-center gap-2 text-sm font-semibold"><History size={16} />기록과 레퍼런스</h2><button className="production-button" onClick={() => setPanel(null)} aria-label="캔버스로 돌아가기"><X size={14} />닫기</button></header>
         <div className="min-h-0 flex-1 overflow-auto p-6">{data ? <LibraryPanel logs={data.logs} externalReferences={data.externalReferences} referenceAccounts={data.referenceAccounts} visuals={data.visuals} act={act} onOpen={id => void onOpen(id)} /> : null}</div>
       </section>}
+      {publishTask && <PublishDialog key={publishTask.id} onClose={() => setPublishTaskId(null)} onPublish={async url => {
+        await act({ action: "register", id: publishTask.log_id, url });
+        setPublishTaskId(null);
+      }} />}
     </main>
   </div>;
 }

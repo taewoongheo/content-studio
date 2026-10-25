@@ -31,7 +31,7 @@ test("all CLI output schemas require source parts and usage as structured fields
 
 test("content-stage summaries must be objects, not prose or encoded JSON strings", () => {
   const ajv = new Ajv({ strict: false });
-  for (const step of ["production", "hook", "visual"] as const) {
+  for (const step of ["production", "hook", "visual", "polish"] as const) {
     const schema = resultSchema(step);
     const validate = ajv.compile(schema);
     const output = {
@@ -52,10 +52,10 @@ test("every stage shares metadata meanings; only analysis may collect external p
     assert.match(prompt,/docs\/content-metadata\.md/);
     assert.match(prompt,/Analyze EVERY post/);
     assert.ok(prompt.includes(`"external_collection":${id === "analysis"}`));
-    assert.ok(prompt.includes(`"external_post_limit":${id === "visual" ? 0 : 5}`));
+    assert.ok(prompt.includes(`"external_post_limit":${id === "visual" || id === "polish" ? 0 : 5}`));
     assert.ok(prompt.includes(`"web_search":"${id === "production" || id === "hook" ? "live" : "disabled"}"`));
   }
-  for (const step of ["production","hook","visual"] as const) {
+  for (const step of ["production","hook","visual","polish"] as const) {
     const validate = new Ajv({strict:false}).compile(resultSchema(step));
     const output = {project_id:"p",summary,sources:[],reviewed_slide_ids:["s"],reviewed_revision:0,
       ...(step === "production" ? {} : {review:"Checked",review_passed:true})};

@@ -209,6 +209,12 @@ test("검토 draft는 분리 저장하고 훅 통과 후 시각 검증까지 끝
     assert.equal(store.get(id).production?.content && (store.get(id).production!.content as {hook:string}).hook, "Start with three sets");
     store.state(id, "running");
     store.completeProduction(id, { ...result, review: "The hierarchy and spacing match the selected visual references." });
+    assert.equal(store.get(id).task.current_step, "polish");
+    assert.equal(store.get(id).task.state, "pending");
+    store.state(id, "running");
+    assert.throws(() => store.completeProduction(id, { ...result, summary: { ...result.summary, topic: "A different topic" } }), /소재·메시지·포맷/);
+    store.completeProduction(id, { ...result, review: "The English copy is natural and preserves the approved meaning." });
+    assert.equal(store.get(id).polish?.state, "completed");
     assert.equal(store.get(id).task.state, "finished");
     store.remove(id);
     assert.equal((db.prepare("SELECT count(*) n FROM content_hook_drafts").get() as {n:number}).n, 0);

@@ -237,7 +237,7 @@ export async function execute(
         continue;
       }
       const { review: reviewText, review_passed, ...rest } = fields;
-      if (run.step === "hook" || run.step === "visual") {
+      if (run.step !== "production") {
         z.object({review:z.string(),review_passed:z.boolean()}).parse(fields);
         phase = "save";
         store.save(id, run.step, { review: reviewText, sources });
@@ -253,7 +253,7 @@ export async function execute(
           if (missing.length) throw requiredToolFailure(run.toolCalls.filter(call => missing.includes(String(call.input.projectId))),
             ["production_preview_project"], `선택한 내부 게시글 이미지 확인이 누락됐습니다: ${missing.join(", ")}.`);
         }
-        if (!run.sourceImages)
+        if (run.step !== "polish" && !run.sourceImages)
           throw requiredToolFailure(run.toolCalls, ["production_preview_project", "production_read_images"], "참고 게시글의 실제 이미지 확인이 필요합니다.");
       }
       phase = "output";
@@ -310,7 +310,7 @@ export async function execute(
         throw new OperationError("REVIEW_SLIDES_INCOMPLETE", "모든 슬라이드를 이미지로 검토해 주세요.");
       phase = "save";
       store.completeProduction(id, { ...output, review: typeof reviewText === "string" ? reviewText : undefined });
-      if (run.step === "visual") break;
+      if (store.get(id).task.state === "finished") break;
     }
   } catch (error) {
     if (!run.controller.signal.aborted) {
