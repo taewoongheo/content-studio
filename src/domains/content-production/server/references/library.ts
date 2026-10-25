@@ -2,7 +2,7 @@ import type Database from "better-sqlite3";
 import { socialSource } from "@/domains/research/domain/source";
 import type { Row } from "../../domain/contracts";
 import { publishChange } from "../events";
-import { contentMetadataSchema } from "@/domains/content-metadata/schema";
+import { readContentMetadata, type ContentMetadata } from "@/domains/content-metadata/schema";
 import { assertEnglish } from "@/lib/text/english";
 
 export function accountIdentity(raw: string) {
@@ -36,8 +36,8 @@ export function setReferenceExcluded(db: Database.Database, id: string, excluded
     throw new Error("외부 레퍼런스를 찾을 수 없습니다.");
   publishChange({ kind: "library" });
 }
-export function describeReference(db: Database.Database, id: string, description: { title: string; topic: string; content_type: string; message: string }) {
-  const metadata = contentMetadataSchema.parse({topic:description.topic,message:description.message,content_type:description.content_type});
+export function describeReference(db: Database.Database, id: string, description: ContentMetadata & { title: string }) {
+  const metadata = readContentMetadata(description);
   assertEnglish({...description,...metadata}, "reference_description");
   if (!db.prepare("UPDATE content_external_references SET title=?,topic=?,content_type=?,message=? WHERE id=? AND excluded=0")
     .run(description.title, metadata.topic, metadata.content_type, metadata.message, id).changes)

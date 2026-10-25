@@ -1,7 +1,7 @@
 import { contentMetadataSchema } from "@/domains/slideshow/projects/metadata";
 import { contentJobErrorResponse } from "@/domains/slideshow/http/http";
 import { notifyProjectsChanged } from "@/domains/workspace/server/project-events";
-import { updateContentMetadata } from "@/domains/content-production/server/projects";
+import { updateContentMetadata } from "@/domains/content-production/server/projects/metadata";
 import { getLocalDatabase } from "@/lib/local-db/database";
 import { isLocalRequest } from "@/lib/http/local-request";
 

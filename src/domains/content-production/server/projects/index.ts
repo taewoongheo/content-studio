@@ -1,14 +1,12 @@
-import type Database from "better-sqlite3";
-import type { ContentMetadata } from "@/domains/content-metadata/schema";
-import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
+import { readContentMetadata } from "@/domains/content-metadata/schema";
 import {
   createContentProject,
   defaultProjectStores,
   saveContentProject,
 } from "@/domains/slideshow/projects/service";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
-import { ProductionStore } from "./persistence/store";
-import { publishChange } from "./events";
+import { ProductionStore } from "../persistence/store";
+import { publishChange } from "../events";
 import { deleteProject } from "@/domains/slideshow/projects/lifecycle/management";
 
 export function discardTask(store: ProductionStore, taskId: string) {
@@ -36,18 +34,13 @@ export function createTaskProject(
     return { projectId: String(detail.task.project_id) };
   return contentJobRegistry.transaction(() =>
     store.db.transaction(() => {
-      const topic = String(detail.log.topic),
-        message = String(detail.log.message);
+      const metadata = readContentMetadata(detail.log);
       const job = createContentProject(contentJobRegistry, {
-        name: topic,
+        name: metadata.topic,
         slideCount,
       });
-      saveContentProject(contentJobRegistry, job.id, topic);
-      defaultProjectStores().projects.updateMetadata(job.id, {
-        topic,
-        message,
-        content_type: String(detail.log.content_type),
-      });
+      saveContentProject(contentJobRegistry, job.id, metadata.topic);
+      defaultProjectStores().projects.updateMetadata(job.id, metadata);
       store.db
         .prepare(
           "UPDATE content_drafts SET project_id=?,updated_at=? WHERE id=?",
@@ -59,14 +52,4 @@ export function createTaskProject(
       return { projectId: job.id };
     })(),
   );
-}
-
-/** One saved description for editor projects and their published creation logs. */
-export function updateContentMetadata(db: Database.Database, projectId: string, input: ContentMetadata) {
-  return db.transaction(() => {
-    const project = new ContentProjectStore(db).updateMetadata(projectId, input);
-    db.prepare("UPDATE content_creation_logs SET topic=?,message=?,content_type=?,updated_at=? WHERE project_id=?")
-      .run(project.topic,project.message,project.content_type,project.updatedAt,projectId);
-    return project;
-  })();
 }

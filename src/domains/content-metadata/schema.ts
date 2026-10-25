@@ -7,3 +7,10 @@ export const contentMetadataSchema = z.strictObject({
   content_type: z.string().trim().min(1).max(1000),
 });
 export type ContentMetadata = z.infer<typeof contentMetadataSchema>;
+
+export const contentMetadataFields = Object.keys(contentMetadataSchema.shape) as Array<keyof ContentMetadata>;
+
+/** Extract authored metadata from a larger direction, summary or reference record. */
+export function readContentMetadata(source: Record<string, unknown>): ContentMetadata {
+  return contentMetadataSchema.parse(Object.fromEntries(contentMetadataFields.map(key => [key, source[key]])));
+}

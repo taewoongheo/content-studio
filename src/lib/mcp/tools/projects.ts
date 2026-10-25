@@ -1,4 +1,4 @@
-import { updateContentMetadata } from "@/domains/content-production/server/projects";
+import { updateContentMetadata } from "@/domains/content-production/server/projects/metadata";
 import { requestIdSchema } from "../protocol/requests";
 import { OperationError } from "@/lib/errors/operation";
 import { registerTool } from "../protocol/tools";
