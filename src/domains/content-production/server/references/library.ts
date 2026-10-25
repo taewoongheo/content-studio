@@ -3,7 +3,6 @@ import { socialSource } from "@/domains/research/domain/source";
 import type { Row } from "../../domain/contracts";
 import { publishChange } from "../events";
 import { readContentMetadata, type ContentMetadata } from "@/domains/content-metadata/schema";
-import { assertEnglish } from "@/lib/text/english";
 
 export function accountIdentity(raw: string) {
   const source = socialSource(raw.startsWith("https://") ? raw : `https://www.tiktok.com/@${raw.replace(/^@/, "")}`, "account");
@@ -38,7 +37,6 @@ export function setReferenceExcluded(db: Database.Database, id: string, excluded
 }
 export function describeReference(db: Database.Database, id: string, description: ContentMetadata & { title: string }) {
   const metadata = readContentMetadata(description);
-  assertEnglish({...description,...metadata}, "reference_description");
   if (!db.prepare("UPDATE content_external_references SET title=?,topic=?,content_type=?,message=? WHERE id=? AND excluded=0")
     .run(description.title, metadata.topic, metadata.content_type, metadata.message, id).changes)
     throw new Error("사용 가능한 외부 레퍼런스가 아닙니다.");

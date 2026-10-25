@@ -2,8 +2,6 @@ import type Database from "better-sqlite3";
 import { SlideshowMetadataError } from "@/domains/slideshow/domain/errors";
 import { contentMetadataSchema, type ContentMetadata } from "@/domains/slideshow/projects/metadata";
 import { saveAssets, readAssets, readAsset, type SavedSlideshowAsset } from "../assets";
-import { assertEnglish } from "@/lib/text/english";
-import { assertDocumentEnglish, isEnglishProject } from "./language";
 
 import type { SavedProjectSummary } from "@/domains/slideshow/domain/projects";
 export type SavedProjectAsset = SavedSlideshowAsset;
@@ -53,7 +51,6 @@ export class ContentProjectStore {
     return this.database.transaction(() => {
       const project = this.getSummary(id);
       if (!project) throw new SlideshowMetadataError("PROJECT_NOT_FOUND");
-      if (isEnglishProject(project.outputLanguage)) assertEnglish(metadata, "metadata");
       this.database.prepare("UPDATE content_projects SET topic = ?, message = ?, content_type = ?, updated_at = ? WHERE id = ?")
         .run(metadata.topic, metadata.message, metadata.content_type, new Date().toISOString(), id);
       return this.getSummary(id)!;
@@ -82,7 +79,6 @@ export class ContentProjectStore {
       throw new Error("프로젝트 이름을 120자 이하로 입력해 주세요.");
     if (!Number.isInteger(input.slideCount) || input.slideCount < 1)
       throw new Error("프로젝트 슬라이드 수가 올바르지 않습니다.");
-    assertDocumentEnglish(input.document, input.outputLanguage);
     const document = JSON.stringify(input.document);
     const now = new Date().toISOString();
     this.database.transaction(() => {

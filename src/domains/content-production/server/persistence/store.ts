@@ -21,7 +21,6 @@ import {
 import { readContentMetadata, contentMetadataFields } from "@/domains/content-metadata/schema";
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 import { publishChange } from "../events";
-import { assertEnglish } from "@/lib/text/english";
 import { ANALYSIS_INPUTS, analysisInputRecord, readAnalysisInputs } from "./planning/input";
 import { readPlanningLogs } from "./planning/logs";
 
@@ -163,7 +162,6 @@ export class ProductionStore {
     if (patch.research) {
       patch.research = patch.research.filter(item => ![EXTERNAL_CONTEXT, ANALYSIS_INPUTS].includes(item.question));
     }
-    assertEnglish(patch, `${step}_draft`);
     if (patch.research) {
       const row = this.row(`SELECT research_json FROM content_${step}_drafts WHERE draft_id=?`, id)!;
       const existing = JSON.parse(String(row.research_json)) as Array<z.infer<typeof researchSchema>>;
@@ -195,7 +193,6 @@ export class ProductionStore {
     const detail = this.assertActive(id, "analysis"),
       result = analysisResultSchema.parse(raw),
       now = this.now();
-    assertEnglish(result, "analysis_result");
     this.db.transaction(() => {
       const values: Row = {
         analysis: result.analysis,
@@ -233,9 +230,6 @@ export class ProductionStore {
       now = this.now();
     const next = productionSteps[productionSteps.findIndex(value => value.id === step) + 1]?.id ?? null;
     if (step !== "production" && !result.review?.trim()) throw new Error("검토 결과를 남겨 주세요.");
-    if (result.review) assertEnglish(result.review, "review_result.review");
-    assertEnglish(result.summary, "production_result.summary");
-    assertEnglish(result.sources, "production_result.sources");
     const metadata = readContentMetadata(result.summary);
     if (step === "polish" && contentMetadataFields.some(key => metadata[key] !== detail.log[key]))
       throw new Error("영어 폴리싱에서는 확정한 소재·메시지·포맷을 변경할 수 없습니다.");
@@ -282,8 +276,6 @@ export class ProductionStore {
     const detail = this.assertActive(id, "production"),
       direction = directionSchema.parse(raw),
       now = this.now();
-    assertEnglish(direction, "direction");
-    if (reason) assertEnglish(reason, "direction.reason");
     if (cause === "research" && !reason?.trim())
       throw new Error("추가 조사에 따른 변경 이유가 필요합니다.");
     this.db.transaction(() => {
@@ -391,7 +383,6 @@ export class ProductionStore {
       )
       .strict()
       .parse(raw);
-    assertEnglish(patch, "log");
     const log = this.row("SELECT project_id FROM content_creation_logs WHERE id=?", id);
     if (!log) throw new Error("로그를 찾을 수 없습니다.");
     this.db.transaction(() => {

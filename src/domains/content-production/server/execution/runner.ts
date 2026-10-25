@@ -23,7 +23,6 @@ import {
 } from "../../domain/contracts";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import { loadContentProject } from "@/domains/slideshow/projects/service";
-import { assertEnglish } from "@/lib/text/english";
 
 type Run = {
   controller: AbortController;
@@ -288,10 +287,6 @@ export async function execute(
           element.kind,
         ]),
       );
-      for (const slide of project.editor.document.slides)
-        for (const placement of slide.placements)
-          if (kinds.get(placement.elementId) === "text")
-            assertEnglish(placement.value, `slides.${slide.id}.${placement.id}`);
       if (
         project.editor.document.slides.some(
           (slide) =>

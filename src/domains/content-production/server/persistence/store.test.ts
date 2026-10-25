@@ -14,25 +14,24 @@ const direction = {
   difference_from_recent: "new",
 };
 
-test("비영어 draft·완료 결과·방향 변경·로그 수정은 DB 변경 전에 거부한다", () => {
+test("language detection does not reject authored drafts; output structure remains validated", () => {
   const db = openLocalDatabase(":memory:"), store = new ProductionStore(db);
   try {
     const [id] = store.create(1);
     store.state(id, "running");
-    const before = store.get(id);
-    assert.throws(() => store.save(id, "analysis", { analysis: "영문이 아님" }), /ENGLISH_REQUIRED/);
-    assert.throws(() => store.completeAnalysis(id, { ...direction, analysis: "분석", sources: [] }), /ENGLISH_REQUIRED/);
-    assert.deepEqual(store.get(id), before);
-    store.completeAnalysis(id, { ...direction, analysis: "A practical plan for beginners.", sources: [] });
+    store.save(id, "analysis", { analysis: "분석 메모" });
+    assert.equal(store.get(id).analysis.analysis, "분석 메모");
+    assert.throws(() => store.completeAnalysis(id, { analysis: "No required direction fields" }));
+    store.completeAnalysis(id, { ...direction, analysis: "분석 메모", sources: [] });
     store.state(id, "running");
-    const productionBefore = store.get(id);
-    for (const patch of [{ content: { slides: [{ body: "한국어 본문" }] } }, { research: [{ question: "Why?", source: "https://example.com", finding: "검증 결과", judgment: "useful" }] }, { sources: [{ kind: "log", id: "log", part: "hook", used_for: "참고 이유" }] }])
-      assert.throws(() => store.save(id, "production", patch), /ENGLISH_REQUIRED/);
-    assert.throws(() => store.changeDirection(id, { ...direction, answer: "한국어" }, "collision"), /ENGLISH_REQUIRED/);
-    assert.throws(() => store.changeDirection(id, direction, "research", "수정 이유"), /ENGLISH_REQUIRED/);
-    assert.throws(() => store.completeProduction(id, { project_id: "none", summary: { hook: "한국어" }, sources: [] }), /ENGLISH_REQUIRED/);
-    assert.throws(() => store.editLog(productionBefore.task.log_id, { topic: "한국어" }), /ENGLISH_REQUIRED/);
-    assert.deepEqual(store.get(id), productionBefore);
+    const content = { slides: [{ visual: "Fixed bottom-left LIFTCODE badge", copy: ["3 sets of 8 reps", "설명"] }] };
+    store.save(id, "production", { content, research: [{ question:"Question",source:"https://example.com",finding:"조사 기록",judgment:"참고" }] });
+    assert.deepEqual(store.get(id).production?.content,content);
+    assert.throws(() => store.save(id,"production",{research:"wrong shape"}));
+    store.changeDirection(id, direction, "research", "수정 이유");
+    assert.match(String(store.get(id).production?.direction_changes),/수정 이유/);
+    store.editLog(store.get(id).task.log_id, { reason: "작성 이유" });
+    assert.equal(store.get(id).log.reason,"작성 이유");
   } finally { db.close(); }
 });
 
@@ -185,7 +184,7 @@ test("검토 draft는 분리 저장하고 훅 통과 후 시각 검증까지 끝
     const beforeInvalidMetadata = store.get(id);
     assert.throws(() => store.completeProduction(id, {project_id:"review-project",summary:{topic:"arms",message:"Train with three sets"},sources:[]}));
     assert.deepEqual(store.get(id),beforeInvalidMetadata,"missing format must not advance or overwrite the draft");
-    store.completeProduction(id, { project_id: "review-project", summary: { topic: "arms", message: "Train with three sets", content_type: "Routine cards", hook: "Start with three sets" }, sources: [] });
+    store.completeProduction(id, { project_id: "review-project", summary: { topic: "arms", message: "Train with three sets", content_type: "Routine cards", hook: "Start with three sets", slides: [{visual:"Fixed bottom-left LIFTCODE badge"}] }, sources: [] });
     const storedMetadata = db.prepare("SELECT topic,message,content_type FROM content_projects WHERE id='review-project'").get();
     assert.deepEqual(storedMetadata,{topic:"arms",message:"Train with three sets",content_type:"Routine cards"});
     assert.equal(store.get(id).log.content_type,"Routine cards");
@@ -195,7 +194,6 @@ test("검토 draft는 분리 저장하고 훅 통과 후 시각 검증까지 끝
     assert.equal(store.get(id).visual, null);
     store.state(id, "running");
     const before = store.get(id);
-    assert.throws(() => store.save(id, "hook", { review: "훅 검토 결과" }), /ENGLISH_REQUIRED/);
     assert.throws(() => store.save(id, "hook", { direction_changes: "A different topic" }));
     assert.deepEqual(store.get(id), before);
     store.save(id, "hook", { review: "The hook now states the answer clearly." });

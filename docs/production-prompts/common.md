@@ -25,7 +25,7 @@ project; each CLI stage starts fresh. Save progress with production_save_draft u
 supported fields. Server-owned input/reference snapshots are not agent-authored research.
 
 Save authored prose in English, including metadata, research, source descriptions and summaries.
-Preserve IDs and URLs. Correct ENGLISH_REQUIRED fields before retrying. Display translations must
+Preserve IDs and URLs. English is an authoring instruction, not a server-side language gate. Display translations must
 not become production inputs.
 
 ## Inspect sources
