@@ -8,14 +8,13 @@ import { z } from "zod";
 import type { PerformanceRefresh } from "../../domain/performance";
 import { discardTask } from "../projects";
 import { OPEN_DRAFT_MESSAGE } from "../../domain/start-policy";
-import { readProductionSettings } from "../settings";
 import { randomUUID } from "node:crypto";
 import { getLocalDatabase } from "@/lib/local-db/database";
 import { ProductionStore } from "../persistence/store";
 import { publishChange } from "../events";
 import { refreshMetrics } from "../publication/service";
 import { runCodex } from "./process";
-import { stagePolicy } from "./policy/stages";
+import { stagePolicy, PRODUCTION_MODEL } from "./policy/stages";
 import { resultSchema, stageImages, stagePrompt } from "./prompts";
 import {
   productionResultSchema,
@@ -180,7 +179,6 @@ export async function execute(
     detail = store.get(id);
   if (detail.task.state === "finished")
     throw new Error("제작이 끝난 작업입니다.");
-  const { model } = readProductionSettings();
   const run: Run = {
     controller: new AbortController(),
     token: randomUUID(),
@@ -217,7 +215,7 @@ export async function execute(
       const result = await executor({
         capabilities,
         onThreadStarted: threadId => { run.imageThreadId = threadId; },
-        model,
+        model: PRODUCTION_MODEL,
         prompt: stagePrompt(id, run.step, inputs),
         images: stageImages(run.step),
         schema: resultSchema(run.step),

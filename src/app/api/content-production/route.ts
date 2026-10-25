@@ -1,8 +1,4 @@
 import { streamDisplayTranslation } from "@/domains/content-production/server/display/stream";
-import {
-  readProductionSettings,
-  saveProductionSettings,
-} from "@/domains/content-production/server/settings";
 import { z } from "zod";
 import { isLocalRequest } from "@/lib/http/local-request";
 import {
@@ -28,7 +24,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("reset") }),
-  z.object({ action: z.literal("settings"), settings: z.unknown() }),
   z.object({ action: z.literal("translate_display"), id: z.string().min(1), step: stepSchema, stream: z.boolean().optional() }),
   z.object({ action: z.literal("start"), count: z.number().int().positive() }),
   z.object({
@@ -89,7 +84,6 @@ export async function GET(request: Request) {
             referenceAccounts: referenceAccounts(store.db),
             visuals: listVisuals(store.db),
             sync: syncState(),
-            settings: readProductionSettings(),
             configured: { apify: !!process.env.APIFY_API_TOKEN?.trim() },
           },
       { headers: { "Cache-Control": "no-store" } },
@@ -121,8 +115,6 @@ export async function POST(request: Request) {
       case "reset":
         resetProduction();
         break;
-      case "settings":
-        return Response.json(saveProductionSettings(input.settings));
       case "start":
         return Response.json({
           ids: await startProduction(input.count, origin),

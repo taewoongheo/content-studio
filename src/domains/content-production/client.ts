@@ -8,7 +8,6 @@ export interface ProductionSnapshot {
   referenceAccounts: Row[];
   visuals: Row[];
   sync: { running: boolean; report: PerformanceRefresh | null };
-  settings: { model: string };
   configured: { apify: boolean };
 }
 export async function fetchProduction<T>(params = ""): Promise<T> {

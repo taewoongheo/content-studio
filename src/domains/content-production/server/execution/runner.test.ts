@@ -47,7 +47,8 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       else process.env.APIFY_API_TOKEN = previousToken;
     }
     let calls = 0;
-    const executor: typeof runCodex = async () => {
+    const executor: typeof runCodex = async input => {
+      assert.equal(input.model,"gpt-6.1-sol");
       calls++;
       if (calls === 1) {
         assert.equal(store.get(id).task.current_step, "analysis");

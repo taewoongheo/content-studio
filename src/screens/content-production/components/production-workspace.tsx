@@ -49,8 +49,8 @@ export function ProductionWorkspace({ runtime, readWork, onOpen }: {
       </div>
   );
   return <div className="flex h-full min-h-0 overflow-hidden">
-    <ProductionSidebar openDraftIds={openDraftIds} tasks={data?.tasks ?? []} model={data?.settings.model ?? "gpt-5.6-sol"} busy={busy} selectedId={selected?.id} selectedStep={selected?.step}
-      onSelect={task => { setPanel(null); setSelected({ id: task.id, step: "project" }); }} onSelectStep={select} onAction={safe} onDelete={removeTask}
+    <ProductionSidebar openDraftIds={openDraftIds} tasks={data?.tasks ?? []} busy={busy} selectedId={selected?.id} selectedStep={selected?.step}
+      onSelect={task => { setPanel(null); setSelected({ id: task.id, step: "project" }); }} onSelectStep={select} onDelete={removeTask}
       onLibrary={() => { setPanel("library"); setSelected(null); }} />
     <main className="relative min-h-0 min-w-0 flex-1" aria-label="제작 작업 공간">
       <WorkflowCanvas key={runtime.resetVersion} onReset={() => void (async () => {

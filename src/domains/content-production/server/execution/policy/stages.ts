@@ -1,6 +1,8 @@
 import { REFERENCE_LIMIT } from "../../../domain/references/context";
 import type { ProductionStep } from "../../../domain/contracts";
 
+export const PRODUCTION_MODEL = "gpt-6.1-sol";
+
 const commonTools = [
   "production_context", "production_query", "production_external_references",
   "production_describe_reference", "production_comparisons", "production_read_images",
