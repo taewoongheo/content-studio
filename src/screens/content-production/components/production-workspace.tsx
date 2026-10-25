@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { Play, RefreshCw, X, History } from "lucide-react";
 import { getOpenDrafts, OPEN_DRAFT_MESSAGE } from "@/domains/content-production/domain/start-policy";
 import { useNodeDetails } from "../hooks/use-node-details";
-import { useTranslatedDetails } from "../hooks/display/use-translated-details";
+import { useDetailTranslationPrefetch } from "../hooks/display/use-detail-translation-prefetch";
 import { useProductionControls } from "../hooks/use-production-controls";
 import { StepDetails } from "./step-details";
 import { ProjectDetails } from "./details/project-details";
@@ -26,8 +26,7 @@ export function ProductionWorkspace({ runtime, readWork, onOpen }: {
   const openDraftIds = new Set(data ? getOpenDrafts(data.tasks).map(task => task.id) : []);
   const blockedByDraft = openDraftIds.size > 0;
   const details = useNodeDetails(data?.tasks, readWork);
-  const display = useTranslatedDetails(details);
-  const displayTasks = data?.tasks.map(task => ({ ...task, topic: String(display.details[task.id]?.analysis.topic ?? task.topic ?? "") || null }));
+  useDetailTranslationPrefetch(details);
   const [count, setCount] = useState(1);
   const [panel, setPanel] = useState<"library" | "performance" | null>(null);
   const [selected, setSelected] = useState<{ id: string; step: ProductionStep | "project" } | null>(null);
@@ -47,17 +46,16 @@ export function ProductionWorkspace({ runtime, readWork, onOpen }: {
       </div>
   );
   return <div className="flex h-full min-h-0 overflow-hidden">
-    <ProductionSidebar openDraftIds={openDraftIds} tasks={displayTasks ?? []} model={data?.settings.model ?? "gpt-5.6-sol"} busy={busy} selectedId={selected?.id} selectedStep={selected?.step}
+    <ProductionSidebar openDraftIds={openDraftIds} tasks={data?.tasks ?? []} model={data?.settings.model ?? "gpt-5.6-sol"} busy={busy} selectedId={selected?.id} selectedStep={selected?.step}
       onSelect={task => { setPanel(null); setSelected({ id: task.id, step: "project" }); }} onSelectStep={select} onAction={safe} onDelete={removeTask}
       onLibrary={() => { setPanel("library"); setSelected(null); }} />
     <main className="relative min-h-0 min-w-0 flex-1" aria-label="제작 작업 공간">
       <WorkflowCanvas key={runtime.resetVersion} onReset={() => void (async () => {
         if (await resetAll()) { setSelected(null); setPanel(null); setCount(1); }
-      })()} resetDisabled={resetDisabled} startContent={startContent} details={display.details} selectedNode={panel === "performance" ? "sync" : selected ? `${selected.id}:${selected.step}` : undefined} tasks={displayTasks ?? []} writes={writes} activity={activity} syncing={data?.sync.running ?? false} syncReport={data?.sync.report ?? null} planningCount={data?.planningLogs.length ?? 0} onSelect={select} onSelectSync={() => { setSelected(null); setPanel("performance"); }} onOpen={id => void onOpen(id)} onStop={() => void stopAll()} stopDisabled={stopDisabled} onTaskAction={taskAction} busy={controlsBusy} />
-      {display.error && <p role="alert" className="absolute bottom-4 left-16 right-16 z-10 rounded border bg-background p-3 text-xs text-destructive">{display.error}</p>}
+      })()} resetDisabled={resetDisabled} startContent={startContent} details={details} selectedNode={panel === "performance" ? "sync" : selected ? `${selected.id}:${selected.step}` : undefined} tasks={data?.tasks ?? []} writes={writes} activity={activity} syncing={data?.sync.running ?? false} syncReport={data?.sync.report ?? null} planningCount={data?.planningLogs.length ?? 0} onSelect={select} onSelectSync={() => { setSelected(null); setPanel("performance"); }} onOpen={id => void onOpen(id)} onStop={() => void stopAll()} stopDisabled={stopDisabled} onTaskAction={taskAction} busy={controlsBusy} />
 
       {selected && current && <aside className="absolute inset-y-0 right-0 z-20 w-[420px] max-w-full overflow-y-auto border-l bg-background shadow-lg" aria-label="작업 상세">
-        {selected.step === "project" ? <ProjectDetails key={current.id} onPublish={url => act({ action: "register", id: current.log_id, url })} task={displayTasks?.find(task => task.id === current.id) ?? current} onSelectStep={select} onOpen={id => void onOpen(id)} onClose={() => setSelected(null)} /> : <StepDetails id={selected.id} step={selected.step} updated={current.updated_at} write={writes[`${selected.id}:${selected.step}`] ?? 0} readWork={readWork} onClose={() => setSelected(null)} />}
+        {selected.step === "project" ? <ProjectDetails key={current.id} onPublish={url => act({ action: "register", id: current.log_id, url })} task={current} onSelectStep={select} onOpen={id => void onOpen(id)} onClose={() => setSelected(null)} /> : <StepDetails id={selected.id} step={selected.step} updated={current.updated_at} write={writes[`${selected.id}:${selected.step}`] ?? 0} readWork={readWork} onClose={() => setSelected(null)} />}
       </aside>}
       {panel === "performance" && data && <aside className="absolute inset-y-0 right-0 z-20 w-[440px] max-w-full overflow-y-auto border-l bg-background shadow-lg">
         <PerformanceDetails report={data.sync.report} logs={data.planningLogs} details={details} onClose={() => setPanel(null)} />

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { productionStore } from "../../execution/runner";
 
-test("canvas API batches summaries, detail API reuses sentences and neither changes canonical drafts", async () => {
+test("detail prefetch fills the sentence cache without changing drafts; node translation is unavailable", async () => {
   const directory = mkdtempSync(join(tmpdir(), "translation-api-"));
   process.env.CONTENT_STUDIO_DB_PATH = join(directory, "test.sqlite");
   process.env.CONTENT_STUDIO_PRODUCTION_RUNTIME_DIR = directory;
@@ -40,21 +40,16 @@ else {
     const post = (body: unknown) => POST(new Request("http://127.0.0.1:3000/api/content-production", {
       method: "POST", headers: { host: "127.0.0.1:3000", origin: "http://127.0.0.1:3000", "Content-Type": "application/json" }, body: JSON.stringify(body),
     }));
-    const body = { action: "translate_canvas", items: ids.map(id => ({ id, step: "analysis" })) };
-    const first = await post(body);
-    assert.equal(first.status, 200);
-    const data = await first.json();
-    assert.equal(data.source[`${ids[0]}:analysis`].analysis, undefined);
-    assert.equal(data.translated[`${ids[0]}:analysis`].topic, "근력 운동");
-    assert.equal((await post(body)).status, 200);
-    let prompts = JSON.parse(readFileSync(calls, "utf8")) as string[];
-    assert.equal(prompts.length, 1);
-    assert.equal(prompts[0].includes("An actionable plan for readers."), false);
-    assert.equal((await post({ action: "translate_display", id: ids[0], step: "analysis" })).status, 200);
-    prompts = JSON.parse(readFileSync(calls, "utf8"));
-    assert.equal(prompts.length, 2);
-    assert.equal(prompts[1].includes("An actionable plan for readers."), true);
-    assert.equal(prompts[1].includes('"Build muscle"'), false);
+    const first=await post({action:"translate_display",id:ids[0],step:"analysis"});
+    assert.equal(first.status,200);
+    const data=await first.json();
+    assert.equal(data.source.analysis,"An actionable plan for readers.");
+    assert.equal(data.translated.analysis,"근력 운동");
+    const prompts=JSON.parse(readFileSync(calls,"utf8")) as string[];
+    assert.equal(prompts.length,1);assert.ok(prompts[0].includes("An actionable plan for readers."));
+    assert.equal((await post({action:"translate_display",id:ids[1],step:"analysis"})).status,200);
+    assert.equal(JSON.parse(readFileSync(calls,"utf8")).length,1,"cached detail sentences are reused across tasks");
+    assert.equal((await post({action:"translate_canvas",items:[{id:ids[0],step:"analysis"}]})).status,400);
     const stream=await post({action:"translate_display",id:ids[0],step:"analysis",stream:true});
     assert.match(stream.headers.get("content-type")!,/application\/x-ndjson/);
     const events=(await stream.text()).trim().split("\n").map(line=>JSON.parse(line));

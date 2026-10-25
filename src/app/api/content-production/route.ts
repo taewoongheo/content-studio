@@ -30,7 +30,6 @@ const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("reset") }),
   z.object({ action: z.literal("settings"), settings: z.unknown() }),
   z.object({ action: z.literal("translate_display"), id: z.string().min(1), step: stepSchema, stream: z.boolean().optional() }),
-  z.object({ action: z.literal("translate_canvas"), items: z.array(z.object({ id: z.string().min(1), step: stepSchema })).min(1).max(256) }),
   z.object({ action: z.literal("start"), count: z.number().int().positive() }),
   z.object({
     action: z.enum(["stop", "resume", "remove"]),
@@ -111,12 +110,6 @@ export async function POST(request: Request) {
       `${new URL(request.url).protocol}//${request.headers.get("host")}`,
     ).origin;
     switch (input.action) {
-      case "translate_canvas": {
-        const source = Object.fromEntries(input.items.map(({ id, step }) =>
-          [`${id}:${step}`, displayContent(store.get(id)[step] ?? {}, "canvas")]));
-        const translated = await translateDisplay(source, request.signal);
-        return Response.json({ source, translated }, { headers: { "Cache-Control": "no-store" } });
-      }
       case "translate_display": {
         const detail = store.get(input.id);
         const context = detail[input.step];

@@ -65,14 +65,3 @@ export async function requestDisplayTranslation(id: string, step: ProductionStep
     return translated;
   } finally { await reader.cancel().catch(()=>undefined); reader.releaseLock(); }
 }
-
-export type CanvasTranslationRequest = { id: string; step: ProductionStep; source: string };
-export async function requestCanvasTranslation(items: CanvasTranslationRequest[], signal: AbortSignal) {
-  const response = await productionAction({ action: "translate_canvas", items: items.map(({ id, step }) => ({ id, step })) }, signal) as { source: Row; translated: Row };
-  return Object.fromEntries(items.map(item => {
-    const key = `${item.id}:${item.step}`;
-    if (JSON.stringify(response.source[key]) !== item.source)
-      throw new Error("내용이 갱신되었습니다. 다시 번역해 주세요.");
-    return [key, { source: item.source, value: response.translated[key] as Row }];
-  }));
-}
