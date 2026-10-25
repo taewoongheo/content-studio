@@ -1,3 +1,4 @@
+import { streamDisplayTranslation } from "@/domains/content-production/server/display/stream";
 import {
   readProductionSettings,
   saveProductionSettings,
@@ -28,7 +29,7 @@ export const dynamic = "force-dynamic";
 const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("reset") }),
   z.object({ action: z.literal("settings"), settings: z.unknown() }),
-  z.object({ action: z.literal("translate_display"), id: z.string().min(1), step: stepSchema }),
+  z.object({ action: z.literal("translate_display"), id: z.string().min(1), step: stepSchema, stream: z.boolean().optional() }),
   z.object({ action: z.literal("translate_canvas"), items: z.array(z.object({ id: z.string().min(1), step: stepSchema })).min(1).max(256) }),
   z.object({ action: z.literal("start"), count: z.number().int().positive() }),
   z.object({
@@ -120,6 +121,7 @@ export async function POST(request: Request) {
         const detail = store.get(input.id);
         const context = detail[input.step];
         const source = displayContent(context ?? {});
+        if (input.stream) return streamDisplayTranslation(source, request.signal);
         return Response.json({ source, translated: await translateDisplay(source, request.signal) }, { headers: { "Cache-Control": "no-store" } });
       }
       case "reset":

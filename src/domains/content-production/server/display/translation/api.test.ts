@@ -21,7 +21,8 @@ else {
  process.stdin.on("end", () => {
   const calls = fs.existsSync(${JSON.stringify(calls)}) ? JSON.parse(fs.readFileSync(${JSON.stringify(calls)},"utf8")) : [];
   calls.push(prompt);fs.writeFileSync(${JSON.stringify(calls)},JSON.stringify(calls));
-  const schema = JSON.parse(fs.readFileSync(args[args.indexOf("--output-schema")+1],"utf8"));
+  if(args[args.indexOf("--model")+1]!=="gpt-6-luna")process.exit(2);
+ const schema = JSON.parse(fs.readFileSync(args[args.indexOf("--output-schema")+1],"utf8"));
   fs.writeFileSync(args[args.indexOf("--output-last-message")+1],JSON.stringify(Object.fromEntries(Object.keys(schema.properties).map(key=>[key,"근력 운동"]))));
  });
 }
@@ -54,6 +55,11 @@ else {
     assert.equal(prompts.length, 2);
     assert.equal(prompts[1].includes("An actionable plan for readers."), true);
     assert.equal(prompts[1].includes('"Build muscle"'), false);
+    const stream=await post({action:"translate_display",id:ids[0],step:"analysis",stream:true});
+    assert.match(stream.headers.get("content-type")!,/application\/x-ndjson/);
+    const events=(await stream.text()).trim().split("\n").map(line=>JSON.parse(line));
+    assert.ok(events.some(event=>event.field==="analysis" && event.translated==="근력 운동"));
+    assert.equal(events.at(-1).type,"done");
     assert.deepEqual(ids.map(id => store.get(id)), before);
   } finally { store.db.close(); rmSync(directory, { recursive: true, force: true }); }
 });

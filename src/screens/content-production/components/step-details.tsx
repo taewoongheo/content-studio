@@ -118,7 +118,7 @@ export function StepDetails({
               )
               .map(([key, label]) => (
                 <div key={key} className="min-w-0 rounded-lg bg-muted/35 p-4">
-                  <h4 className="mb-2 text-xs font-semibold">{label}</h4>
+                  <h4 className="mb-2 flex items-center gap-2 text-xs font-semibold">{label}{!original && translation.pendingFields.has(key) && <span role="status" className="font-normal text-muted-foreground">번역 중…</span>}</h4>
                   <StructuredValue value={visible?.[key]} field={key} />
                 </div>
               ))}

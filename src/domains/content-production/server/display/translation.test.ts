@@ -87,3 +87,21 @@ test("last viewer cancellation stops the worker and a subsequent request can ret
   assert.deepEqual(await translate({ answer: "Use 3 sets" }, "model"), { answer: "3세트를 수행한다" });
   assert.equal(calls, 2);
 });
+
+test("parallel sections share a two-worker limit and cancelled queued work never starts",async()=>{
+  let active=0,max=0,calls=0;
+  const releases:Array<()=>void>=[];
+  const translate=createDisplayTranslator(async strings=>{
+    calls++;active++;max=Math.max(max,active);
+    await new Promise<void>(resolve=>{releases.push(resolve);});
+    active--;return strings.map(value=>`번역 ${value}`);
+  });
+  const controller=new AbortController();
+  const a=translate({message:"Alpha"}),b=translate({message:"Bravo"});
+  const c=translate({message:"Charlie"},"",controller.signal);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(active,2);assert.equal(calls,2);
+  controller.abort();await assert.rejects(c,{name:"AbortError"});
+  releases.forEach(resolve=>resolve());await Promise.all([a,b]);
+  assert.equal(max,2);assert.equal(calls,2);
+});

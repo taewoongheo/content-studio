@@ -19,6 +19,23 @@ export function createDisplayTranslator(translate: Translator, options: {
 } = {}) {
   const cache = options.cache ?? new Map<string, string>();
   const pending = new Map<string, Pending>();
+  let running = 0;
+  const queue = new Set<() => void>();
+  async function limitedTranslate(texts: string[], signal: AbortSignal, model: string) {
+    signal.throwIfAborted();
+    await new Promise<void>((resolve, reject) => {
+      const cancel = () => { queue.delete(wake); reject(signal.reason); };
+      const wake = () => {
+        if (running >= 2) return;
+        queue.delete(wake); signal.removeEventListener("abort", cancel);
+        running++; resolve();
+      };
+      signal.addEventListener("abort", cancel, { once: true });
+      queue.add(wake); wake();
+    });
+    try { signal.throwIfAborted(); return await translate(texts, signal, model); }
+    finally { running--; for (const wake of queue) wake(); }
+  }
   function touch(key: string, value: string) {
     cache.delete(key); cache.set(key, value);
   }
@@ -38,7 +55,7 @@ export function createDisplayTranslator(translate: Translator, options: {
     batch.work = Promise.resolve().then(async () => {
       const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(120_000)]);
       signal.throwIfAborted();
-      const translated = await translate(texts, signal, model);
+      const translated = await limitedTranslate(texts, signal, model);
       signal.throwIfAborted();
       validateTranslation(texts, translated);
       remember(keys, translated);
