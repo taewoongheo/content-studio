@@ -38,7 +38,7 @@ export function WorkflowCanvas({
   selectedNode,
   onSelect,
   onSelectSync,
-  onOpen,
+  onSelectProject,
   onStop,
   onReset,
   resetDisabled,
@@ -57,7 +57,7 @@ export function WorkflowCanvas({
   selectedNode?: string;
   onSelect: (id: string, step: ProductionStep) => void;
   onSelectSync: () => void;
-  onOpen: (id: string) => void;
+  onSelectProject: (id: string) => void;
   onReset: () => void;
   resetDisabled: boolean;
   onStop: () => void;
@@ -76,7 +76,7 @@ export function WorkflowCanvas({
     const task = tasksById.get(node.id.split(":")[0]);
     const step = node.data.stage === "result" || node.data.stage === "sync" ? "visual" : node.data.stage;
     const action: TaskControlAction | null = task ? node.data.stage === "result" ? "delete_post" : getPlaybackAction(task, step) : null;
-    return { ...node, measured, selected: node.id === selectedNode, data: { ...node.data, controls: task ? {
+    return { ...node, measured, selected: node.id === selectedNode, data: { ...node.data, onComplete: node.data.stage === "result" && task ? () => onSelectProject(task.id) : undefined, controls: task ? {
       action,
       disabled: busy,
       onAction: () => { if (action) onTaskAction(task.id, action, action === "delete_post" ? undefined : step); },
@@ -87,8 +87,7 @@ export function WorkflowCanvas({
     if (node.id === "start") return;
     const [id, step] = node.id.split(":");
     if (step === "result") {
-      const task = tasksById.get(id);
-      if (task?.project_id) onOpen(task.project_id);
+      onSelectProject(id);
     } else onSelect(id, step as ProductionStep);
   };
   return (
