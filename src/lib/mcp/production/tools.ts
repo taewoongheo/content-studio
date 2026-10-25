@@ -1,7 +1,11 @@
+import type { ProjectWriteValidator } from "@/domains/slideshow/server/project-writes";
+import { join } from "node:path";
+import { OperationError } from "@/lib/errors/operation";
+import { readFreshGeneratedImage, generatedImagesRoot } from "@/domains/content-production/server/images/generated";
+import { imageExecution } from "@/domains/content-production/server/execution/runner";
 import { registerVisualReferenceTool } from "./visual-references";
 import { registerSourceTools } from "./sources";
 import { importSlideshowImage } from "@/domains/slideshow/server/import-image";
-import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
@@ -17,7 +21,7 @@ import {
 } from "@/domains/content-production/domain/contracts";
 import { createTaskProject } from "@/domains/content-production/server/projects";
 
-export function registerProductionTools(server: McpServer, taskId?: string, origin = "http://127.0.0.1:3000") {
+export function registerProductionTools(server: McpServer, taskId?: string, origin = "http://127.0.0.1:3000", validateProject?: ProjectWriteValidator) {
   registerSourceTools(server, origin);
   registerTool(
     server,
@@ -83,54 +87,30 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
   registerVisualReferenceTool(server, taskId);
   registerTool(
     server,
-    "production_import_image",
+    "production_use_generated_image",
     {
-      description:
-        "Copy an image from an existing saved project asset or stored reference slide into this task's image placement. No shell downloads or persistent temporary files. Re-read latest revision after success.",
+      description: "Production only. Import an actual newly created native image_gen output from CODEX_HOME/generated_images into an existing image placement. localPath must be the real path returned by image_gen in THIS execution; older outputs and external files are rejected. Converts to lossless WebP and saves bytes in this project only. Duplicate image placements in this project are rejected atomically. Re-read revision after success. Never import past post/reference assets or reuse one generated asset in multiple placements.",
       inputSchema: z.object({
-        slideId: z.string(),
-        placementId: z.string(),
-        expectedRevision: z.number().int(),
-        expectedTabId: z.string(),
-        source: z.union([
-          z.object({ projectId: z.string(), assetId: z.string() }),
-          z.object({
-            setId: z.string(),
-            index: z.number().int().nonnegative(),
-          }),
-        ]),
+        slideId:z.string(),placementId:z.string(),expectedRevision:z.number().int(),expectedTabId:z.string(),localPath:z.string().min(1),
       }),
       annotations: annotations(false),
     },
-    (input) =>
-      guarded(async () => {
-        const store = productionStore(),
-          detail = store.assertActive(taskId, "production"),
-          projectId = String(detail.task.project_id ?? "");
-        if (!projectId) throw new Error("먼저 프로젝트를 생성해 주세요.");
-        const data =
-          "projectId" in input.source
-            ? new ContentProjectStore(store.db).getAsset(
-                input.source.projectId,
-                input.source.assetId,
-              )?.bytes
-            : (
-                store.db
-                  .prepare(
-                    "SELECT data FROM content_visual_slides WHERE set_id=? AND slide_index=?",
-                  )
-                  .get(input.source.setId, input.source.index) as
-                  { data: Buffer } | undefined
-              )?.data;
-        if (!data) throw new Error("원본 이미지를 찾을 수 없습니다.");
-        const job = await importSlideshowImage(
-          contentJobRegistry,
-          store.db,
-          { ...input, projectId },
-          data,
-        );
-        return json({ ...job });
-      }),
+    input => guarded(async () => {
+      const store = productionStore();
+      const detail = store.assertActive(taskId,"production");
+      const projectId = detail.task.project_id;
+      if (!projectId) throw new Error("먼저 프로젝트를 생성해 주세요.");
+      const execution = imageExecution(taskId);
+      const bytes = await readFreshGeneratedImage(input.localPath,execution.startedAt,join(generatedImagesRoot(),execution.threadId));
+      // Recheck after file work: cancellation must not result in a late write.
+      store.assertActive(taskId,"production");
+      if (imageExecution(taskId).threadId !== execution.threadId) throw new OperationError("RUN_STAGE_CHANGED", "이미지 생성 실행이 변경되었습니다.");
+      return json({...await importSlideshowImage(contentJobRegistry,store.db,{...input,projectId},bytes,project => {
+        store.assertActive(taskId,"production");
+        if (imageExecution(taskId).threadId !== execution.threadId) throw new OperationError("RUN_STAGE_CHANGED", "이미지 생성 실행이 변경되었습니다.");
+        validateProject?.(project);
+      })});
+    }),
   );
   registerTool(
     server,

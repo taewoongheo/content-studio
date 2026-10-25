@@ -295,7 +295,7 @@ pnpm test:mcp --production
 
 ## 콘텐츠 제작 실행
 
-- `src/domains/content-production`은 작업·단계별 draft, 확정 로그, 외부 자료함, 실행 제어와 게시 연결을 소유한다. 단계는 analysis → production → hook → visual 순서로 고정한다. 각 단계 지침은 docs/production-prompts/의 Markdown에서 관리하고 공통 지침과 합친다.
+- `src/domains/content-production`은 작업·단계별 draft, 확정 로그, 외부 자료함, 실행 제어와 게시 연결을 소유한다. 단계는 analysis → production → hook → polish → visual 순서로 고정한다. 각 단계 지침은 docs/production-prompts/의 Markdown에서 관리하고 공통 지침과 합친다.
 - 실행 도구는 작업별 MCP 주소와 실행 토큰으로 제한한다. 분석에는 편집기 열기·읽기·미리보기를 제공하지 않는다. 참고 게시글은 production_read_project / production_preview_project로 DB 저장본을 읽는다. 제작·검토의 일반 편집기 도구도 해당 작업 프로젝트만 열고 읽고 수정할 수 있다. hook은 훅 슬라이드의 텍스트와 local 배치만, visual은 배치·스타일만 수정한다. 검토 단계는 새 프로젝트 생성·방향 변경·이전 단계 undo를 제공하지 않는다. 중간 저장과 상태 변경은 앱 API/MCP를 사용한다.
 - 훅·시각 검토는 해당 실행에서 실제 참고 이미지 조회와 최신 저장본 전체 슬라이드 미리보기를 확인해야 통과한다. review_passed가 true이고 시각 검증까지 끝나야 finished가 된다. 실패 시 해당 단계에서 중단하며 재개할 수 있다. 현재 CTA는 콘텐츠와 관련된 짧은 팔로우 유도로 작성한다.
 - 제작 실패의 `error_json`에는 단계·발생 구간·오류 코드·필드별 오류와 이번 실행의 MCP 호출 기록을 남긴다. 호출 생략·연결/도구 실패·빈 이미지 응답·JSON/스키마 오류·검토 조건 미충족을 구분한다. 재개는 새 실행 기록을 사용하며 기존 실패에 없던 호출 내역을 소급 생성하지 않는다.
@@ -303,7 +303,7 @@ pnpm test:mcp --production
 - 분석 자료 노드를 누르면 오른쪽에서 성과 상위 10개·하위 10개·최신 10개(앞 그룹과 중복 제외)의 실제 수치·관측 시각·활용 근거를 확인한다. 최신 갱신 실행의 성공·실패와 결과는 서버 메모리에 유지한다. 서버 재시작 후에는 DB 최신 성과와 남은 분석 draft의 출처를 표시하며 과거 실행의 갱신 결과로 단정하지 않는다.
 - 제작용 모델 기본값은 `gpt-5.6-sol`이며 콘텐츠 제작 화면 하단에서 변경한다. 설정은 작업공간의 `.content-studio-production/settings.json`에 저장하며 전역 Codex 설정은 변경하지 않는다. 검증에서는 `CONTENT_STUDIO_PRODUCTION_RUNTIME_DIR` 절대 경로로 설정 파일을 분리한다.
 - `CONTENT_STUDIO_CODEX_BIN`은 실행할 CLI 경로를 지정한다. 일반 실행은 `codex`를 사용한다. 자동 검사에서만 격리된 실행 fixture를 사용할 수 있고 실제 모델 제작 성공과 구분한다.
-- `production_context`, `production_save_draft`, `production_comparisons`, `production_change_direction`, `production_create_project`, `production_import_image`는 실행 중인 작업 전용 MCP에서만 제공한다. 단계 완료는 서버 실행기가 필수 출력·저장·실제 이미지 검토를 검사해 처리한다.
+- `production_context`, `production_save_draft`, `production_comparisons`, `production_change_direction`, `production_create_project`, `production_use_generated_image`는 실행 중인 작업 전용 MCP에서만 제공한다. 단계 완료는 서버 실행기가 필수 출력·저장·실제 이미지 검토를 검사해 처리한다.
 - 캔버스 하단 초기화는 확인 후 모든 제작 작업을 중단하고 draft·연결된 미게시 프로젝트와 이미지를 삭제한다. 게시 콘텐츠·일반 저장 프로젝트·외부 자료함는 보존한다. 성과 갱신 중에는 초기화를 막는다.
 - 취소·제거는 실행 권한과 프로세스를 종료하고 작업 전체 및 모든 단계 draft를 삭제한다. 중단은 저장 내용을 유지한다. 게시 콘텐츠 중복 범위는 최근 24시간이고 성과 갱신 범위는 한국 날짜 오늘~3일 전이다.
 - DB v20는 구형 템플릿 저장소와 프로젝트 게시 컬럼을 사용하지 않는다. 기존 DB를 자동 변환하지 않는다. 직접 변환은 사용자가 명시적으로 요청했을 때만 수행하고 프로젝트 문서·자산 보존과 외래키를 확인한다.
@@ -327,3 +327,5 @@ pnpm test:mcp --production
 - 단계별 도구 목록과 웹·쉘 권한은 `src/domains/content-production/server/execution/policy/stages.ts`에서 관리한다. API의 수정 범위 검사와 CLI 실행 설정이 같은 정책을 사용한다.
 
 - 자동 제작은 분석 → 초안 → 훅 검토 → 영어 폴리싱 → 시각 검증 순서로 실행한다. 폴리싱은 텍스트 내용만 수정하며 배치·스타일·이미지·뱃지를 보존한다. 새 외부 자료 수집과 웹 검색은 허용하지 않는다.
+
+- 자동 제작 초안에서는 각 장에 필요한 1~2개 이미지를 계획하고 내장 image_gen으로 새로 생성한다. production_use_generated_image가 이번 CLI 실행의 생성 결과를 lossless WebP로 변환해 프로젝트 DB에 저장한다. 다른 게시글의 자산 가져오기는 제공하지 않는다. 생성 이미지는 재사용 풀로 운영하지 않으며, 자동 제작 MCP 저장과 완료 시 동일 이미지의 중복 배치를 검사한다. 훅·CTA 문구 규칙의 원문은 docs/content-guidelines.md에서 관리한다.

@@ -3,7 +3,7 @@ import type { ContentJobRegistry } from "../workflow/registry";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { SlideshowProjectWrites } from "./project-writes";
+import { SlideshowProjectWrites, type ProjectWriteValidator } from "./project-writes";
 export async function importSlideshowImage(
   registry: ContentJobRegistry,
   db: Database.Database,
@@ -15,12 +15,13 @@ export async function importSlideshowImage(
     expectedTabId: string;
   },
   bytes: Buffer,
+  validate?: ProjectWriteValidator,
 ) {
   const directory = await mkdtemp(join(tmpdir(), "studio-image-import-")),
     path = join(directory, "image.webp");
   try {
     await writeFile(path, bytes);
-    return await new SlideshowProjectWrites(registry, db).edit(
+    return await new SlideshowProjectWrites(registry, db, validate).edit(
       input.projectId,
       [
         {

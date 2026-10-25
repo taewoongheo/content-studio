@@ -16,6 +16,8 @@ or production_read_images. Previous stages' image checks do not satisfy this req
 
 Compare a few natural US English candidates against the actual body. Make the value apparent and
 give the intended viewer a specific reason to continue. Keep the current hook if it is stronger.
+Apply the content guide’s hook typography, single contiguous red emphasis and at-most-one supporting
+phrase. Do not add a second supporting phrase; line breaks do not create additional phrases.
 
 Only set_slot_value, set_text_colors, set_text_weights and local update_visual on hook-role text
 placements are allowed. Preserve the badge, body, CTA, images, slide roles and shared styles.

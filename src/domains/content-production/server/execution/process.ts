@@ -9,7 +9,7 @@ import { join } from "node:path";
 
 export async function runCodex(input: {
   model?: string;
-  capabilities?: {webSearch: boolean; shell: boolean};
+  capabilities?: {webSearch: boolean; shell: boolean; imageGeneration?: boolean};
   prompt: string;
   images?: string[];
   schema: unknown;
@@ -19,6 +19,7 @@ export async function runCodex(input: {
   signal: AbortSignal;
   onActivity: (message: string) => void;
   displayOnly?: boolean;
+  onThreadStarted?: (id: string) => void;
   onToolActivity?: (event: {callId:string;name:string;input:unknown;result?:CallToolResult}) => void;
 }) {
   const directory = await mkdtemp(join(tmpdir(), "content-production-")),
@@ -53,6 +54,7 @@ export async function runCodex(input: {
           "exec",
           ...(input.model ? ["--model", input.model] : []),
           ...(!input.displayOnly ? (input.images ?? []).flatMap(path => ["--image", path]) : []),
+          "-c", `features.image_generation=${!input.displayOnly && !!input.capabilities?.imageGeneration}`,
           "--json",
           "--ephemeral",
           "-c",
@@ -110,6 +112,7 @@ export async function runCodex(input: {
         for (const line of lines) {
           try {
             const event = JSON.parse(line);
+            if (event.type === "thread.started" && typeof event.thread_id === "string") input.onThreadStarted?.(event.thread_id);
             if (event.item?.type === "mcp_tool_call" && ["item.started", "item.completed"].includes(event.type)) {
               const item = event.item;
               input.onToolActivity?.({ callId: `cli:${item.id}`, name: item.tool, input: item.arguments,

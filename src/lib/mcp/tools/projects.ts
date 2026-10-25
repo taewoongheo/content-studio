@@ -11,7 +11,7 @@ import { defaultProjectStores, loadContentProject } from "@/domains/slideshow/pr
 import { getLocalDatabase } from "@/lib/local-db/database";
 import { cloneSchema, editSchema, previewSchema, projectSchema, readProjectSchema, undoSchema, setContentMetadataSchema } from "./schema";
 import type { LocalImageCommand } from "@/domains/slideshow/server/local-images";
-import { SlideshowProjectWrites } from "@/domains/slideshow/server/project-writes";
+import { SlideshowProjectWrites, type ProjectWriteValidator } from "@/domains/slideshow/server/project-writes";
 import { previewSlides } from "@/domains/slideshow/server/rendering/preview";
 import { captureSlideshowRender } from "@/domains/slideshow/server/rendering/input";
 import { exportSlideshow } from "@/domains/slideshow/server/rendering/export";
@@ -22,12 +22,12 @@ import { renameProject } from "@/domains/slideshow/projects/lifecycle/management
 import { notifyProjectsChanged } from "@/domains/workspace/server/project-events";
 import { json, guarded, annotations } from "../protocol/result";
 
-export function registerProjectTools(server: McpServer, origin: string) {
+export function registerProjectTools(server: McpServer, origin: string, validateProject?: ProjectWriteValidator) {
   registerTool(server, "create_project", {
     description: "Create and save a slideshow without a template. Read docs/content-metadata.md before saving topic/message/content_type. Metadata must come from user or production planning. Follow docs/content-guidelines.md, reference actual past post images and review all slides. Returns the open editor identity.",
     inputSchema: setContentMetadataSchema.omit({projectId:true}).extend({name:z.string().min(1).max(120),slideCount:z.number().int().min(1).max(20).default(6),requestId:requestIdSchema}), annotations:annotations(false),deduplicate:true,
   }, input => guarded(() => {
-    const job=new SlideshowProjectWrites(contentJobRegistry,getLocalDatabase()).create(input);
+    const job=new SlideshowProjectWrites(contentJobRegistry,getLocalDatabase(),validateProject).create(input);
     return json({...job,url:`${origin}/?job=${encodeURIComponent(job.id)}`});
   }));
   const describe = (id: string) => {
@@ -68,7 +68,7 @@ export function registerProjectTools(server: McpServer, origin: string) {
     description: "Duplicate an existing slideshow and its assets into an independent project. Preserve the source; optionally supply topic, message and content_type together. This is manual duplication, not automatic content planning.",
     inputSchema: cloneSchema, annotations: annotations(false), deduplicate: true,
   }, (input) => guarded(() => {
-    const job = new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase()).clone(input);
+    const job = new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase(), validateProject).clone(input);
     return json(describe(job.id));
   }));
   registerTool(server, "read_project", {
@@ -81,13 +81,13 @@ export function registerProjectTools(server: McpServer, origin: string) {
     inputSchema: editSchema, annotations: annotations(false),
   }, (raw) => guarded(async () => {
     const { projectId, commands, expectedRevision, expectedTabId, includeDocument } = raw as { projectId: string; commands: Array<EditorCommand | LocalImageCommand>; expectedRevision: number; expectedTabId: string; includeDocument?: boolean };
-    const job = await new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase()).edit(projectId, commands, expectedRevision, expectedTabId);
+    const job = await new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase(), validateProject).edit(projectId, commands, expectedRevision, expectedTabId);
     return json({ ...(includeDocument === false ? summarizeSlideshow(job) : job), warnings: job.warnings ?? [], url: `${origin}/?job=${encodeURIComponent(job.id)}` });
   }));
   registerTool(server, "undo_project", {
     description: "Undo the last edit batch, including text, styles and image placement. Imported assets remain available. Saves the restored document before returning success with the new document and revision. Include expectedTabId from the latest read.",
     inputSchema: undoSchema, annotations: annotations(false),
-  }, ({ projectId, expectedRevision, expectedTabId }) => guarded(() => json({ ...new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase()).undo(projectId, expectedRevision, expectedTabId) })));
+  }, ({ projectId, expectedRevision, expectedTabId }) => guarded(() => json({ ...new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase(), validateProject).undo(projectId, expectedRevision, expectedTabId) })));
   registerTool(server, "preview_slide", {
     description: "See one slide as a PNG rendered by the same renderer as the editor/export. Uses a snapshot and returns its revision. Does not save the project.",
     inputSchema: previewSchema, annotations: annotations(true),

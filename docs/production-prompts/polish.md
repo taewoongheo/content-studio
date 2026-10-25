@@ -5,7 +5,8 @@
 Read production_context, the latest linked project and hook-stage summary. Review all slide copy,
 title, caption and hashtags for natural American English, grammar, exercise terminology, awkward
 phrasing, redundancy and consistent voice. Preserve the topic, message, format, claims, prescriptions,
-numbers and approved hook promise. Do not add information or rewrite the content direction.
+numbers and approved hook promise. Preserve the content guide’s uppercase hook/CTA titles and
+intentional emphasis while correcting their English. Do not add information or rewrite the content direction.
 
 Use the current copy and, only if needed, wording in recent published own posts as voice examples
 via production_query and production_read_project. No external references, web research or image

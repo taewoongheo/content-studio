@@ -1,3 +1,4 @@
+import { assertUniqueProjectImages } from "../images/unique";
 import type { ToolAttempt } from "../../domain/diagnostics";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { OperationError } from "@/lib/errors/operation";
@@ -35,6 +36,8 @@ type Run = {
   externalCompared: boolean;
   toolCalls: ToolAttempt[];
   visualProjects: string[] | null;
+  imageStartedAt: number;
+  imageThreadId: string | null;
   reviews: Map<string, { revision: number; slides: Set<string> }>;
 };
 const shared = globalThis as typeof globalThis & {
@@ -101,6 +104,13 @@ export function recordToolCall(id: string, event: {callId: string; name: string;
     const attempt = run.toolCalls.find(call => call.call_id === event.callId);
     if (attempt) { finishToolCall(attempt, event.result); if (attempt.message) attempt.message = attempt.message.replaceAll(run.token, "[redacted]"); }
   }
+}
+export function imageExecution(id: string) {
+  const run = runs.get(id);
+  if (!run || run.step !== "production" || run.controller.signal.aborted) throw new Error("이미지는 실행 중인 초안 제작 단계에서만 가져올 수 있습니다.");
+  if (!run.imageThreadId || !/^[a-zA-Z0-9-]+$/.test(run.imageThreadId))
+    throw new OperationError("IMAGE_EXECUTION_NOT_READY", "현재 CLI 실행의 이미지 출력 위치가 아직 확인되지 않았습니다.");
+  return {startedAt:run.imageStartedAt,threadId:run.imageThreadId};
 }
 export function visualReferenceProjects(id: string, selected?: string[]) {
   const run = runs.get(id);
@@ -182,6 +192,8 @@ export async function execute(
     externalCompared: false,
     toolCalls: [],
     visualProjects: null,
+    imageStartedAt: Date.now(),
+    imageThreadId: null,
   };
   runs.set(id, run);
   let phase = "cli";
@@ -197,11 +209,14 @@ export async function execute(
       run.externalCompared = false;
       run.toolCalls = [];
       run.visualProjects = null;
+      run.imageStartedAt = Date.now();
+      run.imageThreadId = null;
       phase = "cli";
       const inputs = run.step === "analysis" ? store.analysisInputs(id, true) : [];
       const capabilities = stagePolicy(run.step);
       const result = await executor({
         capabilities,
+        onThreadStarted: threadId => { run.imageThreadId = threadId; },
         model,
         prompt: stagePrompt(id, run.step, inputs),
         images: stageImages(run.step),
@@ -268,6 +283,7 @@ export async function execute(
       await loadContentProject(contentJobRegistry, output.project_id);
       const project = contentJobRegistry.get(output.project_id),
         review = run.reviews.get(output.project_id);
+      assertUniqueProjectImages(contentJobRegistry.getRecord(output.project_id));
       const kinds = new Map(
         project.editor.document.elements.map((element) => [
           element.id,

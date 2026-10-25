@@ -1,3 +1,4 @@
+import { assertUniqueProjectImages } from "@/domains/content-production/server/images/unique";
 import { stagePolicy, editorReadTools, editorWriteTools as writeTools } from "@/domains/content-production/server/execution/policy/stages";
 import { REFERENCE_LIMIT } from "@/domains/content-production/domain/references/context";
 import { OperationError } from "@/lib/errors/operation";
@@ -67,8 +68,11 @@ export async function POST(
           if (projectId !== productionStore().get(taskId).task.project_id)
             throw new Error("이 작업에 연결된 프로젝트만 수정할 수 있습니다.");
           if (writeTools.includes(name)) assertEnglish(input, name);
-          if (name === "edit_project" && projectId)
+          if (name === "edit_project" && projectId) {
+            if (step === "production" && (input as {commands:Array<{type:string}>}).commands.some(command => command.type === "set_local_image"))
+              throw new OperationError("GENERATED_IMAGE_IMPORT_REQUIRED", "새 이미지 생성 후 production_use_generated_image로 가져와 주세요. 과거 이미지나 임의 파일을 사용할 수 없습니다.");
             assertReviewWrite(step, input, contentJobRegistry.get(projectId).editor.document);
+          }
         }
       },
       after(name, input, result) {
@@ -100,6 +104,7 @@ export async function POST(
       },
     },
     taskId,
+    assertUniqueProjectImages,
   );
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,

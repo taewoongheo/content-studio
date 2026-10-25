@@ -10,6 +10,7 @@ test("제작 CLI는 실행별 웹 검색과 작업 전용 MCP를 사용하고 �
   const directory = await mkdtemp(join(tmpdir(), "production-cli-test-"));
   const executable = join(directory, "codex.cjs"), argsPath = join(directory, "args.json");
   const previous = process.env.CONTENT_STUDIO_CODEX_BIN;
+  const threadIds:string[] = [];
   const toolEvents: Array<{callId:string;name:string;result?:{isError?:boolean}}> = [];
   try {
     await writeFile(executable, `#!/usr/bin/env node
@@ -18,6 +19,7 @@ const args = process.argv.slice(2);
 if (args[0] === "mcp") {
   console.log(JSON.stringify([{name:"other",enabled:true,transport:{url:"http://127.0.0.1:9999/mcp"}}]));
 } else {
+  console.log(JSON.stringify({type:"thread.started",thread_id:"test-image-thread"}));
   console.log(JSON.stringify({type:"item.started",item:{type:"mcp_tool_call",id:"tool-1",tool:"production_preview_project",arguments:{projectId:"source"}}}));
   console.log(JSON.stringify({type:"item.completed",item:{type:"mcp_tool_call",id:"tool-1",tool:"production_preview_project",arguments:{projectId:"source"},error:{message:"Connection refused"},result:null}}));
   fs.writeFileSync(${JSON.stringify(argsPath)},JSON.stringify(args));
@@ -26,9 +28,11 @@ if (args[0] === "mcp") {
 `, { mode: 0o700 });
     process.env.CONTENT_STUDIO_CODEX_BIN = executable;
     const result = await runCodex({ capabilities: stagePolicy("production"), prompt: "test", schema: {}, origin: "http://127.0.0.1:3000",
+      onThreadStarted:id=>threadIds.push(id),
       images: ["/tmp/turnaround.png", "/tmp/face.png", "/tmp/example.png"],
       taskId: "task", token: "test-token", signal: new AbortController().signal, onActivity() {}, onToolActivity(event) { toolEvents.push(event); } });
     assert.deepEqual(result, { ok: true });
+    assert.deepEqual(threadIds,["test-image-thread"]);
     assert.equal(toolEvents.length,2);
     assert.equal(toolEvents[0].result,undefined);
     assert.equal(toolEvents[1].result?.isError,true);
@@ -37,6 +41,7 @@ if (args[0] === "mcp") {
     assert.equal(args[args.indexOf("--sandbox") + 1], "read-only");
     const overrides = args.flatMap((value, index) => value === "-c" ? [args[index + 1]] : []);
     assert.ok(overrides.includes('web_search="live"'));
+    assert.ok(overrides.includes("features.image_generation=true"));
     assert.ok(overrides.includes("mcp_servers.other.enabled=false"));
     assert.ok(overrides.includes("mcp_servers.production.enabled=true"));
     assert.ok(overrides.includes('mcp_servers.production.url="http://127.0.0.1:3000/api/content-production/agent/task"'));
@@ -46,6 +51,7 @@ if (args[0] === "mcp") {
         taskId:"task",token:"test-token",signal:new AbortController().signal,onActivity() {}});
       const stageArgs:string[] = JSON.parse(await readFile(argsPath,"utf8"));
       const values=stageArgs.flatMap((value,index)=>value==="-c"?[stageArgs[index+1]]:[]);
+      assert.ok(values.includes("features.image_generation=false"));
       assert.ok(values.includes(step === "hook" ? 'web_search="live"' : 'web_search="disabled"'));
       assert.equal(values.includes("features.shell_tool=false"),step !== "hook");
       assert.equal(values.includes("features.unified_exec=false"),step !== "hook");
@@ -55,6 +61,7 @@ if (args[0] === "mcp") {
     assert.equal(displayArgs.includes("--image"), false);
     const displayOverrides = displayArgs.flatMap((value, index) => value === "-c" ? [displayArgs[index + 1]] : []);
     assert.ok(displayOverrides.includes('web_search="disabled"'));
+    assert.ok(displayOverrides.includes("features.image_generation=false"));
     assert.ok(displayOverrides.includes("mcp_servers.other.enabled=false"));
     assert.ok(displayOverrides.includes("features.shell_tool=false"));
     assert.ok(displayOverrides.includes("features.unified_exec=false"));

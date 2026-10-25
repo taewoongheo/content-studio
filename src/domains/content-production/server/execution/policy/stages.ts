@@ -8,13 +8,14 @@ const commonTools = [
 ];
 export const editorReadTools = ["open_project", "read_project", "preview_slide", "preview_slides"];
 export const editorWriteTools = [
-  "production_create_project", "production_import_image", "production_change_direction",
+  "production_create_project", "production_use_generated_image", "production_change_direction",
   "edit_project", "undo_project", "rename_project", "set_content_metadata",
 ];
 /** Tool availability and native CLI capabilities are separate enforcement boundaries. */
 export function stagePolicy(step: ProductionStep) {
   const external = step === "analysis" || step === "production" || step === "hook";
   return {
+    imageGeneration: step === "production",
     externalCollection: step === "analysis",
     externalLimit: external ? REFERENCE_LIMIT : 0,
     webSearch: step === "production" || step === "hook",

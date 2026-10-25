@@ -17,7 +17,9 @@ do not count. Use those images to assess what suits the current content, not to 
 Record actual reuse and its location; adoption is optional.
 
 Preview ALL current slides. Apply the content guide's visual rules to the exported slide boundary,
-including image count and prominence, crops, typography, spacing, contrast, fonts and the fixed badge.
+including one or two distinct images per slide, image prominence, crops, typography, spacing,
+contrast, fonts and the fixed badge. Inspect hook AND CTA against the content guide’s exact title
+size/font/case, single contiguous red emphasis and optional single supporting phrase specification.
 Check saved properties as well as images: apparent badge size is not a substitute for its exact
 specification, and its text-size exception must not be normalized to the general minimum.
 

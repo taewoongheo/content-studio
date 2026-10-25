@@ -1,3 +1,4 @@
+import type { ProjectWriteValidator } from "@/domains/slideshow/server/project-writes";
 import { registerProductionTools } from "./production/tools";
 import { setToolPolicy, type ToolPolicy } from "./protocol/tools";
 import { registerRenderJobTools } from "./tools/jobs";
@@ -10,6 +11,7 @@ export function createStudioMcpServer(
   origin: string,
   policy?: ToolPolicy,
   taskId?: string,
+  validateProject?: ProjectWriteValidator,
 ) {
   const server = new McpServer(
     { name: "content-studio", version: "0.1.0" },
@@ -19,9 +21,9 @@ export function createStudioMcpServer(
     },
   );
   if (policy) setToolPolicy(server, policy);
-  registerProductionTools(server, taskId, origin);
+  registerProductionTools(server, taskId, origin, validateProject);
   registerRenderJobTools(server);
-  registerProjectTools(server, origin);
+  registerProjectTools(server, origin, validateProject);
   registerVideoTools(server, origin);
   registerResearchTools(server);
   return server;

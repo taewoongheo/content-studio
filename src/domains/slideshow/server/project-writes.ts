@@ -1,7 +1,7 @@
 import { inspectSharedElements } from "../editor/inspection/shared-elements";
 import type Database from "better-sqlite3";
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
-import type { ContentJobSnapshot } from "@/domains/slideshow/domain/types";
+import type { ContentJobRecord, ContentJobSnapshot } from "@/domains/slideshow/domain/types";
 import type { ContentJobRegistry } from "@/domains/slideshow/workflow/registry";
 import { EditorService } from "@/domains/slideshow/editor/service";
 import type { EditorCommand } from "@/domains/slideshow/editor/types";
@@ -14,11 +14,14 @@ import {
   type LocalImageCommand,
 } from "@/domains/slideshow/server/local-images";
 
+export type ProjectWriteValidator = (project: ContentJobRecord) => void;
+
 export class SlideshowProjectWrites {
   private readonly stores;
   constructor(
     private readonly registry: ContentJobRegistry,
     private readonly database: Database.Database,
+    private readonly validate?: ProjectWriteValidator,
   ) {
     this.stores = { projects: new ContentProjectStore(database) };
   }
@@ -105,6 +108,7 @@ export class SlideshowProjectWrites {
     return this.registry.transaction(() =>
       this.database.transaction(() => {
         const changed = apply();
+        this.validate?.(this.registry.getRecord(changed.id));
         saveContentProject(
           this.registry,
           changed.id,
