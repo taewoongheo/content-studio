@@ -2,7 +2,7 @@
 
 ## Scope
 
-Read the latest linked project and hook draft or log summary. Do not restore an earlier hook.
+Read the latest linked project and polish draft or log summary. Preserve the polished copy; do not restore an earlier version.
 Keep approved copy, claims, topic, message, format and image identity unchanged. This stage
 repairs presentation within the allowed edit scope; it does not rewrite content.
 
@@ -38,4 +38,5 @@ Do not hide text off-slide, under images, at tiny size or in the background colo
 Save source observations, assessment, actual repairs and unresolved issues. A strong draft can
 pass unchanged. After edits, preview ALL slides at the latest saved revision and inspect every image.
 Return the complete current summary and required review fields. Set review_passed=true only when
-all applicable guide criteria pass; otherwise identify the blocker. English polishing follows only after this review passes.
+all applicable guide criteria pass; otherwise identify the blocker. This is the final review stage.
+Repair any wrapping, spacing or clipping caused by the preceding English polishing without changing its copy.

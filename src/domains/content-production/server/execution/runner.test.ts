@@ -110,7 +110,7 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
     assert.equal(store.get(id).visual?.state, "completed");
     assert.equal(store.get(id).polish?.state, "completed");
     assert.equal(store.get(id).task.state, "finished");
-    assert.equal(store.get(id).task.current_step, "polish");
+    assert.equal(store.get(id).task.current_step, "visual");
     assert.equal((store.get(id).log.sources as Array<{ part: string }>)[0].part, "Research summary");
     const projectId = store.get(id).task.project_id!;
     // Resume a review without reading source images: earlier stages' reviews cannot satisfy it.

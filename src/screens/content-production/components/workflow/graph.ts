@@ -27,7 +27,7 @@ export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, Wo
   tasks.forEach((task, index) => {
     if (task.state === "pending" && task.current_step === "analysis" && !writes[`${task.id}:analysis`]) return;
     const color = instanceColor(task.id), detail = details[task.id], analysis = detail?.analysis ?? {};
-    const content = record(detail?.polish?.content ?? detail?.visual?.content ?? detail?.hook?.content ?? detail?.production?.content ?? detail?.log.content_summary);
+    const content = record(detail?.visual?.content ?? detail?.polish?.content ?? detail?.hook?.content ?? detail?.production?.content ?? detail?.log.content_summary);
     const topic = text(analysis.topic) || task.topic || "소재 분석 중";
     const answer = text(analysis.answer) || text(detail?.log.answer) || text(analysis.message);
     const currentIndex = productionSteps.findIndex(value => value.id === task.current_step);
@@ -35,9 +35,9 @@ export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, Wo
     let previous = "sync";
     for (const [stageIndex, stage] of ([...productionSteps.map(value => value.id), "result"] as const).entries()) {
       if (stage !== "result" && stageIndex > currentIndex) continue;
-      if (stage === "result" && (!completed || task.current_step !== "polish" || !task.project_id)) continue;
+      if (stage === "result" && (!completed || task.current_step !== "visual" || !task.project_id)) continue;
       const state = stage === "result" ? "completed" : getStepState(task, stage);
-      const stepWrites = writes[`${task.id}:${stage === "result" ? "polish" : stage}`] ?? 0;
+      const stepWrites = writes[`${task.id}:${stage === "result" ? "visual" : stage}`] ?? 0;
       const facts = stage === "analysis" ? [text(analysis.content_type) || task.content_type, count(analysis.sources) ? `참고 자료 ${count(analysis.sources)}개` : null] : [count(content.slides) ? `${count(content.slides)}장` : null, text(analysis.content_type) || task.content_type];
       const id = `${task.id}:${stage}`;
       nodes.push({ id, type: "stage", position: { x: 760 + stageIndex * 380, y: index * 320 }, data: {

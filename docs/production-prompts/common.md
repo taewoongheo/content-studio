@@ -3,7 +3,7 @@
 ## Contract
 
 Produce one LiftCode TikTok slideshow. The sequence is analysis → first-draft production →
-hook review → visual verification → English polishing. The current stage owns only the work defined in its instructions.
+hook review → English polishing → visual verification. The current stage owns only the work defined in its instructions.
 Until app launch, use a short relevant follow CTA, not an install or "Try LiftCode" invitation.
 This workflow ends with an unpublished draft; do not register publication.
 
