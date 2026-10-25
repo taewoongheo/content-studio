@@ -40,12 +40,12 @@ test("task MCP exposes bounded external selection and English description persis
     assert.deepEqual(repeated.structuredContent!.posts, posts);
     assert.equal((await call("production_external_references", { ids: ["0", "1", "2", "3"] })).isError, true);
     assert.equal((await call("production_describe_reference", {
-      id: posts[0].id, title: "Arm plan", topic: "Arms", content_type: "routine", notes: "Large movement images and short prescriptions.",
+      id: posts[0].id, title: "Arm plan", topic: "Arms", content_type: "routine", message: "Large movement images and short prescriptions.",
     })).isError, undefined);
     assert.equal((store.db.prepare("SELECT title FROM content_external_references WHERE id=?").get(posts[0].id) as { title: string }).title, "Arm plan");
     const unselected = ["0", "1", "2", "3", "4", "5"].find(value => !posts.some(post => post.id === value))!;
     assert.equal((await call("production_describe_reference", {
-      id: unselected, title: "Unknown", topic: "Arms", content_type: "routine", notes: "Not inspected.",
+      id: unselected, title: "Unknown", topic: "Arms", content_type: "routine", message: "Not inspected.",
     })).isError, true);
     await call("production_save_draft", { patch: { research: [] } });
     assert.ok(observations.some(event=>event.name === "production_external_references" && event.result?.isError &&

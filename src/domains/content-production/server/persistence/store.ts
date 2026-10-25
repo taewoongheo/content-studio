@@ -16,6 +16,8 @@ import {
   type WorkItem,
   type WorkDetail,
 } from "../../domain/contracts";
+import { contentMetadataSchema } from "@/domains/content-metadata/schema";
+import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 import { publishChange } from "../events";
 import { assertEnglish } from "@/lib/text/english";
 import { readPlanningLogs } from "./planning/logs";
@@ -87,9 +89,9 @@ export class ProductionStore {
       return { step, value: row ? stage(row) : null };
     });
     return {
-      task, analysis: decoded.data, production: production ? decode(production) : null, log: decode(log),
+      task, analysis: decoded.data, production: production ? stage(production).data : null, log: decode(log),
       ...Object.fromEntries(reviews.map(({step,value}) => [step,value?.data ?? null])),
-      external: { analysis: decoded.external, ...Object.fromEntries(reviews.map(({step,value}) => [step,value?.external ?? null])) },
+      external: { analysis: decoded.external, production: production ? stage(production).external : null, ...Object.fromEntries(reviews.map(({step,value}) => [step,value?.external ?? null])) },
     };
   }
   create(count: number) {
@@ -230,15 +232,18 @@ export class ProductionStore {
     if (result.review) assertEnglish(result.review, "review_result.review");
     assertEnglish(result.summary, "production_result.summary");
     assertEnglish(result.sources, "production_result.sources");
+    const metadata = contentMetadataSchema.parse({topic:result.summary.topic,message:result.summary.message,content_type:result.summary.content_type});
     this.db.transaction(() => {
       if (detail.task.project_id !== result.project_id)
         throw new Error("이 작업의 프로젝트만 완료할 수 있습니다.");
+      new ContentProjectStore(this.db).updateMetadata(result.project_id, metadata);
       const sources = [...(detail.log.sources as unknown[]), ...result.sources];
       const summary = {
         ...result.summary,
         direction_changes: detail.production?.direction_changes ?? null,
       };
       this.update("content_creation_logs", "id", detail.task.log_id, {
+        ...metadata,
         content_summary_json: JSON.stringify(summary),
         sources_json: JSON.stringify(sources),
         updated_at: now,
@@ -358,12 +363,20 @@ export class ProductionStore {
       .strict()
       .parse(raw);
     assertEnglish(patch, "log");
-    if (!this.row("SELECT id FROM content_creation_logs WHERE id=?", id))
-      throw new Error("로그를 찾을 수 없습니다.");
-    this.update("content_creation_logs", "id", id, {
-      ...patch,
-      updated_at: this.now(),
-    });
+    const log = this.row("SELECT project_id FROM content_creation_logs WHERE id=?", id);
+    if (!log) throw new Error("로그를 찾을 수 없습니다.");
+    this.db.transaction(() => {
+      const metadataFields = Object.keys(contentMetadataSchema.shape);
+      if (log.project_id && metadataFields.some(key => key in patch)) {
+        const projects = new ContentProjectStore(this.db);
+        const project = projects.getSummary(String(log.project_id));
+        if (!project) throw new Error("프로젝트를 찾을 수 없습니다.");
+        const metadata = contentMetadataSchema.parse(Object.fromEntries(metadataFields.map(key =>
+          [key, key in patch ? patch[key] : project[key as keyof typeof project]])));
+        projects.updateMetadata(project.id, metadata);
+      }
+      this.update("content_creation_logs", "id", id, { ...patch, updated_at: this.now() });
+    })();
     publishChange({ kind: "library" });
   }
 }

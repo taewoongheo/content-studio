@@ -11,17 +11,19 @@ group needs more examples. The "recent" group is the newest REMAINING posts, not
 For novelty checks, sort the combined pool by actual_published_at and inspect its newest ten.
 Compare external alternatives with production_external_references at least once before completion.
 Inspect actual copy and source images for the examples used to explain reader experience or visual features.
-Group multiple posts by broad content type across exercise topics: choice/comparison, explanation,
-ranking, ready-to-use routine, or another useful broad category. These are examples, not a fixed list.
+Group multiple posts by broad presentation format across exercise subjects. Choice/comparison,
+explanation, ranking and ready-to-use routine are examples, never an exhaustive list.
+Use docs/content-metadata.md to distinguish topic, message and content_type; classify similar
+information/visual structures together without requiring the same exercise subject.
 Do not narrow the main groups to combinations such as back-exercise explanation.
 Follow the grouped-comparison criteria in docs/research-guidelines.md and distinguish:
 
-- Content-type/value patterns: what kind of answer readers respond to.
+- Format/value patterns: how broadly similar structures and the answers themselves relate to response.
 - Presentation patterns: how hook wording, images, text density and layout deliver that answer.
 Compare stronger and weaker cases within a type and different types with similar presentation.
 Keep content_type broad; store the specific exercise subject in topic.
 
-## Explain what readers gained or had to do
+## Assess content value and delivery
 
 For the examples that influence your decision, identify the log, relevant slide/copy and metrics.
 Connect the observation to the reader's experience:
@@ -29,14 +31,15 @@ Connect the observation to the reader's experience:
 1. What situation or desired outcome does the hook address, and what answer does it promise?
 2. What answer does the post actually deliver? Is it a finished plan, a usable choice, a demonstration,
    or advice the reader must turn into their own plan?
-3. What must the reader still interpret, assemble, compare or decide before using it?
-   Explain how the topic, promised payoff, copy and visual presentation affect that effort.
+3. What value does the reader gain: a usable plan, understanding, comparison, discovery, motivation,
+   or another benefit? Explain how the actual content and presentation deliver that value.
+   Do not automatically penalize complexity, further thought or interpretation, or prefer simple topics.
 4. Why might that experience have encouraged or weakened saving, liking, commenting or continuing?
    Compare specific stronger and weaker examples and state a concrete working estimate.
 5. Which lesson will you apply to this draft, and why does it help the upper-level goal?
 
 Do not stop at "large images," "too much text" or "explanation-heavy."
-Explain what becomes easier or harder for the intended reader and where it happens in the post.
+Explain how the intended value becomes clear or is weakened, identifying where it happens in the post.
 Also evaluate the appeal of the topic and answer itself, not only its packaging.
 Do not treat an explanation-led content type and dense explanatory text as the same weakness.
 A ready-to-use answer and general advice may differ in value even if both have clean layouts.
@@ -55,7 +58,8 @@ Do not automatically reuse a weak post's topic simply because its presentation c
 Successful topics can be developed for a new situation; do not restrict all candidates to one
 recurring training decision.
 
-Choose one topic, complete answer and presentation direction. Explain the expected response,
+Choose one topic, concrete message, free-text format, complete answer and presentation direction,
+following docs/content-metadata.md. Explain the expected response,
 goal connection and difference from recent content. View actual references for the visual direction.
 Plan enough slides to satisfy docs/content-guidelines.md without dense text-only pages.
 

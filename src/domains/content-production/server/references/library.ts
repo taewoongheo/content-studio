@@ -2,6 +2,7 @@ import type Database from "better-sqlite3";
 import { socialSource } from "@/domains/research/domain/source";
 import type { Row } from "../../domain/contracts";
 import { publishChange } from "../events";
+import { contentMetadataSchema } from "@/domains/content-metadata/schema";
 import { assertEnglish } from "@/lib/text/english";
 
 export function accountIdentity(raw: string) {
@@ -24,10 +25,10 @@ export function externalReferences(db: Database.Database, query = "", type = "",
       THEN 1.0*(like_count+comment_count+save_count)/view_count END AS engagement_rate,
     COALESCE(v.slide_count,0) AS slide_count
     FROM content_external_references r LEFT JOIN content_visual_sets v ON v.id=r.visual_set_id
-    WHERE (? OR r.excluded=0) AND (r.caption LIKE ? OR r.title LIKE ? OR r.topic LIKE ? OR r.notes LIKE ?)
-      AND (?='' OR r.content_type=? OR r.content_type='')
+    WHERE (? OR r.excluded=0) AND (r.caption LIKE ? OR r.title LIKE ? OR r.topic LIKE ? OR r.message LIKE ? OR r.content_type LIKE ?)
+      AND (?='' OR r.content_type LIKE ? OR r.content_type='')
     ORDER BY r.last_selected_at IS NULL DESC,r.last_selected_at,engagement_rate DESC,r.published_at DESC,r.id`)
-    .all(includeExcluded ? 1 : 0, ...Array(4).fill(`%${query}%`), type, type) as Row[];
+    .all(includeExcluded ? 1 : 0, ...Array(5).fill(`%${query}%`), type, `%${type}%`) as Row[];
   return rows.map(({images_json: images,...post}) => { void images; return post; });
 }
 export function setReferenceExcluded(db: Database.Database, id: string, excluded: boolean) {
@@ -35,10 +36,11 @@ export function setReferenceExcluded(db: Database.Database, id: string, excluded
     throw new Error("외부 레퍼런스를 찾을 수 없습니다.");
   publishChange({ kind: "library" });
 }
-export function describeReference(db: Database.Database, id: string, description: { title: string; topic: string; content_type: string; notes: string }) {
-  assertEnglish(description, "reference_description");
-  if (!db.prepare("UPDATE content_external_references SET title=?,topic=?,content_type=?,notes=? WHERE id=? AND excluded=0")
-    .run(description.title, description.topic, description.content_type, description.notes, id).changes)
+export function describeReference(db: Database.Database, id: string, description: { title: string; topic: string; content_type: string; message: string }) {
+  const metadata = contentMetadataSchema.parse({topic:description.topic,message:description.message,content_type:description.content_type});
+  assertEnglish({...description,...metadata}, "reference_description");
+  if (!db.prepare("UPDATE content_external_references SET title=?,topic=?,content_type=?,message=? WHERE id=? AND excluded=0")
+    .run(description.title, metadata.topic, metadata.content_type, metadata.message, id).changes)
     throw new Error("사용 가능한 외부 레퍼런스가 아닙니다.");
   publishChange({ kind: "library" });
 }

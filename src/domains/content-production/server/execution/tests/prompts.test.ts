@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import Ajv from "ajv";
-import { resultSchema } from "../prompts";
+import { resultSchema, stagePrompt } from "../prompts";
 import { productionSteps } from "../../../domain/contracts";
 const summary = {
-  title: "A simple plan", topic: "Arms", message: "A complete session", hook: "Start here",
+  title: "A simple plan", topic: "Arms", message: "A complete session", content_type: "Routine cards", hook: "Start here",
   caption: "", hashtags: [], slides: [{ slide_id: "slide-1", role: "hook", copy: ["Start here"], visual: "A large lifter image" }], changes: [],
 };
 
@@ -42,5 +42,24 @@ test("content-stage summaries must be objects, not prose or encoded JSON strings
     assert.equal(validate({ ...output, summary: "First draft is complete." }), false);
     assert.equal(validate({ ...output, summary: JSON.stringify(summary) }), false);
     assert.equal(validate({ ...output, summary: { ...summary, slides: "All six slides" } }), false);
+  }
+});
+
+
+test("every stage shares metadata meanings; only analysis may collect external posts", () => {
+  for (const {id} of productionSteps) {
+    const prompt = stagePrompt("metadata-check",id);
+    assert.match(prompt,/docs\/content-metadata\.md/);
+    assert.match(prompt,/Analyze EVERY post/);
+    assert.match(prompt,/Only in analysis, if the pool is insufficient/);
+    assert.match(prompt,/collection of new posts is forbidden/);
+  }
+  for (const step of ["production","hook","visual"] as const) {
+    const validate = new Ajv({strict:false}).compile(resultSchema(step));
+    const output = {project_id:"p",summary,sources:[],reviewed_slide_ids:["s"],reviewed_revision:0,
+      ...(step === "production" ? {} : {review:"Checked",review_passed:true})};
+    const {content_type: _format,...incomplete} = summary;
+    void _format;
+    assert.equal(validate({...output,summary:incomplete}),false);
   }
 });

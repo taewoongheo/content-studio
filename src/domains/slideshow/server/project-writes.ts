@@ -26,6 +26,7 @@ export class SlideshowProjectWrites {
     name: string;
     topic: string;
     message: string;
+    content_type: string;
     slideCount?: number;
   }) {
     return this.commit(
@@ -39,6 +40,7 @@ export class SlideshowProjectWrites {
         this.stores.projects.updateMetadata(changed.id, {
           topic: input.topic,
           message: input.message,
+          content_type: input.content_type,
         });
       },
     );
@@ -48,9 +50,10 @@ export class SlideshowProjectWrites {
     name?: string;
     topic?: string;
     message?: string;
+    content_type?: string;
   }) {
-    if ((input.topic === undefined) !== (input.message === undefined))
-      throw new Error("주제와 메시지를 함께 입력해 주세요.");
+    if ([input.topic,input.message,input.content_type].some(value => value !== undefined) && [input.topic,input.message,input.content_type].some(value => value === undefined))
+      throw new Error("소재·메시지·포맷을 함께 입력해 주세요.");
     return this.commit(
       () => {
         const created = createContentProject(
@@ -63,10 +66,12 @@ export class SlideshowProjectWrites {
         });
       },
       (changed) => {
-        if (input.topic !== undefined && input.message !== undefined)
+        this.stores.projects.copyMetadata(input.projectId, changed.id);
+        if (input.topic !== undefined && input.message !== undefined && input.content_type !== undefined)
           this.stores.projects.updateMetadata(changed.id, {
             topic: input.topic,
             message: input.message,
+            content_type: input.content_type,
           });
       },
     );

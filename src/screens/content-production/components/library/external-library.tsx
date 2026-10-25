@@ -17,7 +17,7 @@ export function ExternalLibrary({ posts, accounts, act }: { posts: Row[]; accoun
     } finally { setBusy(""); }
   };
   const types=[...new Set(posts.map(post=>String(post.content_type??"")).filter(Boolean))];
-  const rows=posts.filter(post=>(excluded||!post.excluded)&&(!type||post.content_type===type)&&[post.caption,post.title,post.topic,post.notes,post.account].some(value=>String(value??"").toLowerCase().includes(query.toLowerCase())));
+  const rows=posts.filter(post=>(excluded||!post.excluded)&&(!type||post.content_type===type)&&[post.caption,post.title,post.topic,post.message,post.content_type,post.account].some(value=>String(value??"").toLowerCase().includes(query.toLowerCase())));
   return <div className="mt-5 space-y-5">
     <section className="rounded-xl border p-4" aria-label="지정 계정">
       <h3 className="text-sm font-semibold">지정 계정</h3>
@@ -38,8 +38,8 @@ export function ExternalLibrary({ posts, accounts, act }: { posts: Row[]; accoun
     {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
     {notice&&<p role="status" className="text-sm text-muted-foreground">{notice}</p>}
     <div className="flex flex-wrap gap-2">
-      <input className="production-field !w-auto min-w-0 flex-1" aria-label="외부 레퍼런스 검색" placeholder="소재·내용·계정 검색" value={query} onChange={e=>setQuery(e.target.value)} />
-      <select className="production-field !w-auto" aria-label="외부 레퍼런스 유형" value={type} onChange={e=>setType(e.target.value)}><option value="">모든 유형</option>{types.map(value=><option key={value}>{value}</option>)}</select>
+      <input className="production-field !w-auto min-w-0 flex-1" aria-label="외부 레퍼런스 검색" placeholder="소재·메시지·포맷·계정 검색" value={query} onChange={e=>setQuery(e.target.value)} />
+      <select className="production-field !w-auto" aria-label="외부 레퍼런스 포맷" value={type} onChange={e=>setType(e.target.value)}><option value="">모든 포맷</option>{types.map(value=><option key={value}>{value}</option>)}</select>
     </div>
     <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={excluded} onChange={e=>setExcluded(e.target.checked)} />제외한 게시글 보기</label>
     <div className="space-y-4">{rows.map(post=><ReferenceCard key={String(post.id)} post={post} onExclude={value=>void safe(String(post.id),{action:"exclude_reference",id:post.id,excluded:value})} />)}</div>

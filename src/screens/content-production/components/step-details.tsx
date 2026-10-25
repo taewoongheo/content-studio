@@ -13,7 +13,7 @@ const labels: Record<string, string> = {
   analysis: "분석",
   review: "검토 결과",
   topic: "소재",
-  content_type: "유형",
+  content_type: "포맷",
   message: "메시지",
   answer: "제공할 답",
   presentation: "표현 방향",

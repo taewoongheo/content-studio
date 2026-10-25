@@ -16,6 +16,6 @@ export function ReferenceCard({ post, onExclude }: { post: Row; onExclude?: (exc
       <img loading="lazy" src={`/api/content-production?image=${encodeURIComponent(String(post.visual_set_id))}&slide=${index}`} alt={`@${String(post.account)} 슬라이드 ${index+1}`} className="h-36 w-auto rounded border" />
     </a>)}</div>}
     {!!post.image_error && <p className="mt-2 text-xs text-destructive">슬라이드 이미지 수집 실패</p>}
-    {!!post.notes && <p className="mt-3 whitespace-pre-wrap border-t pt-3 text-xs leading-5">{String(post.notes)}</p>}
+    {!!post.message && <p className="mt-3 whitespace-pre-wrap border-t pt-3 text-xs leading-5">{String(post.message)}</p>}
   </article>;
 }

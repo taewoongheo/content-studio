@@ -8,6 +8,7 @@ export const PROJECT_SCHEMA = `
     document_json TEXT NOT NULL,
     topic TEXT NOT NULL DEFAULT '',
     message TEXT NOT NULL DEFAULT '',
+    content_type TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );

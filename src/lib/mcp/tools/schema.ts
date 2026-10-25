@@ -23,5 +23,6 @@ export const cloneSchema = z.strictObject({
   projectId: z.string().min(1),
   topic: contentMetadataSchema.shape.topic.optional(),
   message: contentMetadataSchema.shape.message.optional(),
-}).refine(input => (input.topic === undefined) === (input.message === undefined), { message: "주제와 메시지를 함께 입력해 주세요." });
+  content_type: contentMetadataSchema.shape.content_type.optional(),
+}).refine(input => [input.topic,input.message,input.content_type].every(value => value === undefined) || [input.topic,input.message,input.content_type].every(value => value !== undefined), { message: "소재·메시지·포맷을 함께 입력해 주세요." });
 export const setContentMetadataSchema = projectSchema.extend(contentMetadataSchema.shape);

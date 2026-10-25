@@ -11,7 +11,7 @@ const labels: Record<string, string> = {
   reason: "선택 이유", usage_context: "활용 상황", hook: "훅", body: "본문", cta: "CTA",
   visual: "시각 표현", slides: "슬라이드", title: "제목", text: "내용", role: "역할",
   topic: "소재", message: "메시지", answer: "제공할 답", summary: "요약",
-  content_type: "유형", presentation: "표현 방향", caption: "캡션", hashtags: "해시태그",
+  content_type: "포맷", presentation: "표현 방향", caption: "캡션", hashtags: "해시태그",
   project_id: "프로젝트 ID", slide_id: "슬라이드 ID", reviewed_slide_ids: "검토한 슬라이드",
   reviewed_revision: "검토 버전", index: "순서", name: "이름", description: "설명",
 };

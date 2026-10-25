@@ -71,7 +71,7 @@ export function LibraryPanel({
                       {String(log.name ?? log.topic ?? "진행 중인 콘텐츠")}
                     </h3>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {String(log.content_type ?? "유형 미입력")} ·{" "}
+                      {String(log.content_type ?? "포맷 미입력")} ·{" "}
                       {log.completed_at ? "게시 연결 완료" : "게시 정보 미등록"}
                     </p>
                   </div>

@@ -9,8 +9,8 @@ If a candidate hook requires a different body or a stronger promise, reject that
 ## Assess and revise
 
 Read the hook and body. Query relevant own posts with production_query(kind="logs", query=...);
-this keyword search uses saved topic/title text. If useful, query external alternatives within the
-shared allowance. Inspect at least one actual source hook image in THIS execution through
+this keyword search uses saved topic/title text. If useful, query existing external examples within the
+shared allowance. Do not collect new external posts or explore a new topic during hook review. Inspect at least one actual source hook image in THIS execution through
 production_preview_project or production_read_images. Earlier stages' image checks do not count.
 Compare the promised answer and wording against what the current body actually delivers.
 

@@ -35,6 +35,7 @@ const summaryField = {
     title: stringField,
     topic: stringField,
     message: stringField,
+    content_type: stringField,
     hook: stringField,
     caption: stringField,
     hashtags: { type: "array", items: stringField },
@@ -54,7 +55,7 @@ const summaryField = {
     },
     changes: { type: "array", items: stringField },
   },
-  required: ["title", "topic", "message", "hook", "caption", "hashtags", "slides", "changes"],
+  required: ["title", "topic", "message", "content_type", "hook", "caption", "hashtags", "slides", "changes"],
   additionalProperties: false,
 };
 export function resultSchema(step: ProductionStep) {

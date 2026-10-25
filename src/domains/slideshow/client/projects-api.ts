@@ -38,7 +38,7 @@ export function deleteProject(id: string, expectedTabId?: string) {
   return projectMutation(id, "DELETE", { expectedTabId });
 }
 
-export async function updateProjectMetadata(id: string, input: { topic: string; message: string }) {
+export async function updateProjectMetadata(id: string, input: { topic: string; message: string; content_type: string }) {
   const response = await fetch(`/api/content-projects/${encodeURIComponent(id)}/metadata`, {
     method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
   });

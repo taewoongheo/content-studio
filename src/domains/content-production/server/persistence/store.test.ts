@@ -182,7 +182,13 @@ test("검토 draft는 분리 저장하고 훅 통과 후 시각 검증까지 끝
     store.state(id, "running");
     db.prepare("INSERT INTO content_projects(id,name,aspect_ratio,slide_count,output_language,document_json,created_at,updated_at) VALUES('review-project','Review','4:5',1,'English','{}','now','now')").run();
     db.prepare("UPDATE content_drafts SET project_id='review-project' WHERE id=?").run(id);
-    store.completeProduction(id, { project_id: "review-project", summary: { hook: "Start with three sets" }, sources: [] });
+    const beforeInvalidMetadata = store.get(id);
+    assert.throws(() => store.completeProduction(id, {project_id:"review-project",summary:{topic:"arms",message:"Train with three sets"},sources:[]}));
+    assert.deepEqual(store.get(id),beforeInvalidMetadata,"missing format must not advance or overwrite the draft");
+    store.completeProduction(id, { project_id: "review-project", summary: { topic: "arms", message: "Train with three sets", content_type: "Routine cards", hook: "Start with three sets" }, sources: [] });
+    const storedMetadata = db.prepare("SELECT topic,message,content_type FROM content_projects WHERE id='review-project'").get();
+    assert.deepEqual(storedMetadata,{topic:"arms",message:"Train with three sets",content_type:"Routine cards"});
+    assert.equal(store.get(id).log.content_type,"Routine cards");
     assert.equal(store.get(id).task.current_step, "hook");
     assert.equal(store.get(id).task.state, "pending");
     assert.equal(store.get(id).production?.state, "completed");
@@ -196,7 +202,7 @@ test("검토 draft는 분리 저장하고 훅 통과 후 시각 검증까지 끝
     store.state(id, "stopped");
     assert.throws(() => store.save(id, "hook", { review: "A late write." }), /현재 실행 단계/);
     store.state(id, "running");
-    const result = { project_id: "review-project", summary: { hook: "Three sets to start" }, sources: [], review: "The hook matches the existing body." };
+    const result = { project_id: "review-project", summary: { topic: "arms", message: "Train with three sets", content_type: "Routine cards", hook: "Three sets to start" }, sources: [], review: "The hook matches the existing body." };
     store.completeProduction(id, result);
     assert.equal(store.get(id).task.current_step, "visual");
     assert.equal(store.get(id).hook?.state, "completed");
@@ -208,4 +214,18 @@ test("검토 draft는 분리 저장하고 훅 통과 후 시각 검증까지 끝
     assert.equal((db.prepare("SELECT count(*) n FROM content_hook_drafts").get() as {n:number}).n, 0);
     assert.equal((db.prepare("SELECT count(*) n FROM content_visual_drafts").get() as {n:number}).n, 0);
   } finally { db.close(); }
+});
+
+
+test("log metadata edits update the project atomically and reject incomplete replacements", () => {
+  const db=openLocalDatabase(":memory:"),store=new ProductionStore(db);
+  try {
+    db.prepare("INSERT INTO content_projects(id,name,aspect_ratio,slide_count,output_language,document_json,topic,message,content_type,created_at,updated_at) VALUES('p','Post','4:5',1,'English','{}','Arms','Choose a curl','Comparison','now','now')").run();
+    db.prepare("INSERT INTO content_creation_logs(id,project_id,topic,message,content_type,created_at,updated_at) VALUES('l','p','Arms','Choose a curl','Comparison','now','now')").run();
+    store.editLog("l",{message:"Compare curl options",content_type:"A tier chart with ranked rows"});
+    assert.deepEqual(db.prepare("SELECT topic,message,content_type FROM content_projects WHERE id='p'").get(),
+      {topic:"Arms",message:"Compare curl options",content_type:"A tier chart with ranked rows"});
+    assert.throws(()=>store.editLog("l",{content_type:""}));
+    assert.equal((db.prepare("SELECT content_type FROM content_creation_logs WHERE id='l'").get() as {content_type:string}).content_type,"A tier chart with ranked rows");
+  } finally {db.close();}
 });

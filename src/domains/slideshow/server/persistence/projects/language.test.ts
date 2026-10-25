@@ -11,8 +11,8 @@ test("English 프로젝트의 실제 텍스트와 메타데이터를 DB 저장 �
     store.save(input);
     const before = store.get("project");
     assert.throws(() => store.save({ ...input, document: { ...document, slides: [{ id: "one", placements: [{ id: "copy", elementId: "body", value: "주 3회 운동" }] }] } }), /ENGLISH_REQUIRED/);
-    assert.throws(() => store.updateMetadata("project", { topic: "등 운동", message: "선택 기준" }), /ENGLISH_REQUIRED/);
+    assert.throws(() => store.updateMetadata("project", { topic: "등 운동", message: "선택 기준", content_type: "Comparison" }), /ENGLISH_REQUIRED/);
     assert.deepEqual(store.get("project"), before);
-    store.updateMetadata("project", { topic: "Back training", message: "Train three times per week" });
+    store.updateMetadata("project", { topic: "Back training", message: "Train three times per week", content_type: "Routine cards" });
   } finally { db.close(); }
 });

@@ -21,7 +21,7 @@ test("게시 달력은 URL과 실제 게시 시각을 가진 로그만 조회한
     });
     assert.equal((await metadata(request({topic:"등",message:"선택 기준"},"https://evil.example"),context)).status,403);
     assert.equal((await metadata(request({topic:"등",message:"선택 기준",templateId:"old"}),context)).status,400);
-    assert.equal((await metadata(request({topic:"Back",message:"Exercise selection"}),context)).status,200);
+    assert.equal((await metadata(request({topic:"Back",message:"Exercise selection",content_type:"Comparison cards"}),context)).status,200);
     const list = async () => (await listPosts(new Request(`${origin}/api/published-content`, {headers}))).json();
     assert.deepEqual(await list(), []);
     db.prepare(`INSERT INTO content_creation_logs(id,project_id,created_at,updated_at) VALUES('log','post','now','now')`).run();
@@ -31,6 +31,9 @@ test("게시 달력은 URL과 실제 게시 시각을 가진 로그만 조회한
     assert.equal(posts[0].id,"post");
     assert.equal(posts[0].publishedOn,"2026-10-23");
     assert.equal(posts[0].postUrl,"https://www.tiktok.com/@a/photo/123");
+    assert.equal((await metadata(request({topic:"Back",message:"Choose a row for your equipment",content_type:"Alternative exercises shown side by side"}),context)).status,200);
+    assert.deepEqual(db.prepare("SELECT topic,message,content_type FROM content_creation_logs WHERE id='log'").get(),
+      {topic:"Back",message:"Choose a row for your equipment",content_type:"Alternative exercises shown side by side"});
     store.delete("post");
     assert.deepEqual(await list(), []);
   } finally {

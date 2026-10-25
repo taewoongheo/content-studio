@@ -21,12 +21,13 @@ type ProjectRow = {
   output_language: string;
   topic: string;
   message: string;
+  content_type: string;
   document_json: string;
   created_at: string;
   updated_at: string;
 };
 
-const SUMMARY_COLUMNS = `id, name, aspect_ratio, slide_count, output_language, topic, message, created_at, updated_at`;
+const SUMMARY_COLUMNS = `id, name, aspect_ratio, slide_count, output_language, topic, message, content_type, created_at, updated_at`;
 const PROJECT_COLUMNS = `${SUMMARY_COLUMNS}, document_json`;
 
 function summary(row: ProjectRow): SavedProjectSummary {
@@ -38,6 +39,7 @@ function summary(row: ProjectRow): SavedProjectSummary {
     outputLanguage: row.output_language,
     topic: row.topic,
     message: row.message,
+    content_type: row.content_type,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -52,10 +54,18 @@ export class ContentProjectStore {
       const project = this.getSummary(id);
       if (!project) throw new SlideshowMetadataError("PROJECT_NOT_FOUND");
       if (isEnglishProject(project.outputLanguage)) assertEnglish(metadata, "metadata");
-      this.database.prepare("UPDATE content_projects SET topic = ?, message = ?, updated_at = ? WHERE id = ?")
-        .run(metadata.topic, metadata.message, new Date().toISOString(), id);
+      this.database.prepare("UPDATE content_projects SET topic = ?, message = ?, content_type = ?, updated_at = ? WHERE id = ?")
+        .run(metadata.topic, metadata.message, metadata.content_type, new Date().toISOString(), id);
       return this.getSummary(id)!;
     })();
+  }
+
+  /** Clones retain even incomplete legacy metadata; authored replacements use updateMetadata. */
+  copyMetadata(sourceId: string, targetId: string) {
+    const source = this.getSummary(sourceId);
+    if (!source) return;
+    this.database.prepare("UPDATE content_projects SET topic=?,message=?,content_type=? WHERE id=?")
+      .run(source.topic,source.message,source.content_type,targetId);
   }
 
   save(input: {

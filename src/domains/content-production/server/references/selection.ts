@@ -14,7 +14,7 @@ function assertActive(db: Database.Database, id: string, step: ProductionStep) {
 export function referenceImagesAllowed(db: Database.Database, id: string, step: ProductionStep, setId: string) {
   const external = db.prepare("SELECT id FROM content_external_references WHERE visual_set_id=?").get(setId);
   if (!external) return true; // Existing published/legacy images keep their own read path.
-  return !!getReferenceContext(db,id,step === "production" ? "analysis" : step)?.posts.some(post => post.visual_set_id === setId);
+  return !!getReferenceContext(db,id,step)?.posts.some(post => post.visual_set_id === setId);
 }
 export function queryStageReferences(db: Database.Database, id: string, step: ProductionStep, input: {
   query: string; content_type: string; collect: boolean; ids?: string[];
@@ -28,11 +28,8 @@ export function queryStageReferences(db: Database.Database, id: string, step: Pr
   async function run() {
     assertActive(db,id,step);
     if (step === "visual") throw new Error("시각 검증은 외부 레퍼런스를 사용하지 않습니다. 내부 게시글을 조회해 주세요.");
+    if (input.collect && step !== "analysis") throw new Error("새 외부 레퍼런스 수집은 분석 및 제작 방향 단계에서만 가능합니다. 기존 자료를 조회해 주세요.");
     assertEnglish({query:input.query,content_type:input.content_type},"reference_query");
-    if (step === "production") {
-      if (input.collect) throw new Error("초안 제작은 분석 단계의 외부 자료를 재사용합니다.");
-      return getReferenceContext(db,id,"analysis") ?? empty("No external examples were available during analysis.");
-    }
     let context = getReferenceContext(db,id,step) ?? empty("");
     if (!context.queries.includes(input.query)) context.queries.push(input.query);
     const select = () => {

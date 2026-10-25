@@ -6,6 +6,7 @@ export type SlideshowSummary = {
   outputLanguage: string;
   topic: string;
   message: string;
+  content_type: string;
   createdAt: string;
   updatedAt: string;
 };

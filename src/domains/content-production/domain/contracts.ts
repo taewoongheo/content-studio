@@ -1,5 +1,6 @@
 import type { ExternalContext, ReferenceStep } from "./references/context";
 import { z } from "zod";
+import { contentMetadataSchema } from "@/domains/content-metadata/schema";
 
 export const stepSchema = z.enum(["analysis", "production", "hook", "visual"]);
 export type ProductionStep = z.infer<typeof stepSchema>;
@@ -9,10 +10,7 @@ export const productionSteps = [
   { id: "hook", label: "훅 검토·수정" },
   { id: "visual", label: "시각 검증·수정" },
 ] as const;
-export const directionSchema = z.object({
-  topic: z.string().trim().min(1),
-  content_type: z.string().trim().min(1),
-  message: z.string().trim().min(1),
+export const directionSchema = contentMetadataSchema.extend({
   answer: z.string().trim().min(1),
   presentation: z.string().trim().min(1),
   reason: z.string().trim().min(1),

@@ -62,7 +62,7 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
         if (step === "visual") visualReferenceProjects(id, ["owned-source"]);
         recordSourceReview(id, step === "visual" ? "owned-source" : undefined);
         recordReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => s.id));
-        return { project_id: projectId, summary: { hook: "test" }, sources: [],
+        return { project_id: projectId, summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "test" }, sources: [],
           review: "The current content meets the review criteria.", review_passed: true,
           reviewed_slide_ids: job.editor.document.slides.map(s => s.id), reviewed_revision: job.editor.revision };
       }
@@ -98,7 +98,7 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       );
       return {
         project_id: projectId,
-        summary: { hook: "test" },
+        summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "test" },
         sources: [],
         reviewed_slide_ids: job.editor.document.slides.map((s) => s.id),
         reviewed_revision: final.editor.revision,
@@ -118,7 +118,7 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       const job = contentJobRegistry.get(projectId);
       visualReferenceProjects(id, ["owned-source"]);
       recordReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => s.id));
-      return { project_id: projectId, summary: { hook: "test" }, sources: [],
+      return { project_id: projectId, summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "test" }, sources: [],
         review: "The layout appears readable.", review_passed: true,
         reviewed_slide_ids: job.editor.document.slides.map(s => s.id), reviewed_revision: job.editor.revision };
     });

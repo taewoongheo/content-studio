@@ -1,3 +1,4 @@
+import { updateContentMetadata } from "@/domains/content-production/server/projects";
 import { requestIdSchema } from "../protocol/requests";
 import { OperationError } from "@/lib/errors/operation";
 import { registerTool } from "../protocol/tools";
@@ -23,8 +24,8 @@ import { json, guarded, annotations } from "../protocol/result";
 
 export function registerProjectTools(server: McpServer, origin: string) {
   registerTool(server, "create_project", {
-    description: "Create and save a slideshow without a template. Topic/message must come from user or production planning. Follow docs/content-guidelines.md, reference actual past post images and review all slides. Returns the open editor identity.",
-    inputSchema: z.object({name:z.string().min(1).max(120),topic:z.string().min(1),message:z.string().min(1),slideCount:z.number().int().min(1).max(20).default(6),requestId:requestIdSchema}), annotations:annotations(false),deduplicate:true,
+    description: "Create and save a slideshow without a template. Read docs/content-metadata.md before saving topic/message/content_type. Metadata must come from user or production planning. Follow docs/content-guidelines.md, reference actual past post images and review all slides. Returns the open editor identity.",
+    inputSchema: setContentMetadataSchema.omit({projectId:true}).extend({name:z.string().min(1).max(120),slideCount:z.number().int().min(1).max(20).default(6),requestId:requestIdSchema}), annotations:annotations(false),deduplicate:true,
   }, input => guarded(() => {
     const job=new SlideshowProjectWrites(contentJobRegistry,getLocalDatabase()).create(input);
     return json({...job,url:`${origin}/?job=${encodeURIComponent(job.id)}`});
@@ -43,16 +44,16 @@ export function registerProjectTools(server: McpServer, origin: string) {
     for (const job of contentJobRegistry.list()) {
       entries.set(job.id, { id: job.id, name: job.name ?? entries.get(job.id)?.name ?? "새 프로젝트",
         aspectRatio: job.aspectRatio, slideCount: job.slideCount, outputLanguage: job.outputLanguage,
-        topic: entries.get(job.id)?.topic ?? "", message: entries.get(job.id)?.message ?? "",
+        topic: entries.get(job.id)?.topic ?? "", message: entries.get(job.id)?.message ?? "", content_type: entries.get(job.id)?.content_type ?? "",
         createdAt: job.createdAt, updatedAt: job.updatedAt, state: job.savedRevision === job.editor.revision ? "saved" : "draft", url: `${origin}/?job=${encodeURIComponent(job.id)}` });
     }
     return json({ projects: [...entries.values()] });
   }));
   registerTool(server, "set_content_metadata", {
-    description: "Save the current post topic and concrete message. Does not save active slide edits or register a publication.",
+    description: "Save topic, message and free-text content_type following docs/content-metadata.md. Does not save active slide edits or register a publication.",
     inputSchema: setContentMetadataSchema, annotations: annotations(false),
-  }, ({ projectId, topic, message }) => guarded(() => {
-    const project = defaultProjectStores().projects.updateMetadata(projectId, { topic, message });
+  }, ({ projectId, topic, message, content_type }) => guarded(() => {
+    const project = updateContentMetadata(getLocalDatabase(), projectId, { topic, message, content_type });
     notifyProjectsChanged();
     return json({ project });
   }));
@@ -64,7 +65,7 @@ export function registerProjectTools(server: McpServer, origin: string) {
     return json(describe(projectId));
   }));
   registerTool(server, "clone_project", {
-    description: "Duplicate an existing slideshow and its assets into an independent project. Preserve the source; optionally supply topic and message together. This is manual duplication, not automatic content planning.",
+    description: "Duplicate an existing slideshow and its assets into an independent project. Preserve the source; optionally supply topic, message and content_type together. This is manual duplication, not automatic content planning.",
     inputSchema: cloneSchema, annotations: annotations(false), deduplicate: true,
   }, (input) => guarded(() => {
     const job = new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase()).clone(input);

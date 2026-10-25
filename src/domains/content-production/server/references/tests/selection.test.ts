@@ -4,7 +4,7 @@ import { openLocalDatabase } from "@/lib/local-db/database";
 import { ProductionStore } from "../../persistence/store";
 import { queryStageReferences, referenceImagesAllowed } from "../selection";
 import { getReferenceContext } from "../context";
-import { addReferenceAccount, setReferenceExcluded, describeReference } from "../library";
+import { addReferenceAccount, setReferenceExcluded, describeReference, externalReferences } from "../library";
 const input={query:"",content_type:"",collect:false};
 function seed(db:ReturnType<typeof openLocalDatabase>,count=12) {
   for(let i=0;i<count;i++)db.prepare("INSERT INTO content_external_references(id,url,account,caption,observed_at,images_json,created_at,view_count,like_count,comment_count,save_count) VALUES(?,?, 'example',?,'now','[]','now',100,?,1,2)")
@@ -24,11 +24,14 @@ test("three distinct examples per stage survive repeat calls, research saves and
   store.state(id,"stopped");store.state(id,"running");
   assert.equal((await queryStageReferences(db,id,"analysis",input)).posts.length,3);
   store.completeAnalysis(id,direction);store.state(id,"running");
-  assert.deepEqual((await queryStageReferences(db,id,"production",input)).posts.map(p=>p.id),first.posts.map(p=>p.id));
-  await assert.rejects(()=>queryStageReferences(db,id,"production",{...input,collect:true}),/재사용/);
+  assert.deepEqual((await queryStageReferences(db,id,"production",{...input,ids:first.posts.map(p=>String(p.id))})).posts.map(p=>p.id),first.posts.map(p=>p.id));
+  await assert.rejects(()=>queryStageReferences(db,id,"production",{...input,collect:true}),/분석 및 제작 방향/);
   for(const step of ["hook"] as const){
    db.prepare(`INSERT INTO content_${step}_drafts(draft_id,created_at,updated_at) VALUES(?,'now','now')`).run(id);
    db.prepare("UPDATE content_drafts SET current_step=? WHERE id=?").run(step,id);
+   let hookCollections=0;
+   await assert.rejects(()=>queryStageReferences(db,id,step,{...input,collect:true},async()=>{hookCollections++;return 0;}),/분석 및 제작 방향/);
+   assert.equal(hookCollections,0,"hook must reject before calling the collector");
    const selected=await queryStageReferences(db,id,step,input);assert.equal(selected.posts.length,3);
   }
   const all=["analysis","hook"].flatMap(step=>store.get(id).external?.[step as "analysis"]?.posts??[]);
@@ -62,7 +65,10 @@ test("excluded examples stay excluded and source image reads require stage selec
   assert.equal(referenceImagesAllowed(db,id,"analysis","set"),false);
   setReferenceExcluded(db,"5",true);
   const found=await queryStageReferences(db,id,"analysis",input);assert.ok(!found.posts.some(p=>p.id==='5'));
-  describeReference(db,String(found.posts[0].id),{title:"An arm workout",topic:"Arms",content_type:"routine",notes:"Clear visual comparison"});
+  describeReference(db,String(found.posts[0].id),{title:"An arm workout",topic:"Arms",content_type:"A tier chart that groups exercises into ranked rows.",message:"Compare exercise choices"});
+  assert.equal(externalReferences(db,"Compare exercise choices").length,1,"search includes the shared message field");
+  assert.throws(()=>describeReference(db,String(found.posts[0].id),{title:"An arm workout",topic:"Arms",message:"Compare exercise choices",content_type:""}));
+  assert.equal(externalReferences(db,"ranked rows").length,1,"free text search includes format");
   const [next]=store.create(1);store.state(next,"running");setReferenceExcluded(db,"5",false);
   await queryStageReferences(db,next,"analysis",{...input,ids:["5"]});assert.equal(referenceImagesAllowed(db,next,"analysis","set"),true);
   store.state(next,"stopped");await assert.rejects(()=>queryStageReferences(db,next,"analysis",input),/실행 중/);

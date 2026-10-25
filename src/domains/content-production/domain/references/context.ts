@@ -1,5 +1,5 @@
 import { z } from "zod";
-export const referenceStepSchema = z.enum(["analysis", "hook", "visual"]);
+export const referenceStepSchema = z.enum(["analysis", "production", "hook", "visual"]);
 export type ReferenceStep = z.infer<typeof referenceStepSchema>;
 export const REFERENCE_LIMIT = 3;
 export const EXTERNAL_CONTEXT = "External reference comparison";

@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS content_reference_accounts (
 );
 CREATE TABLE IF NOT EXISTS content_external_references (
  id TEXT PRIMARY KEY, url TEXT NOT NULL UNIQUE, account TEXT NOT NULL, caption TEXT NOT NULL,
- title TEXT NOT NULL DEFAULT '', topic TEXT NOT NULL DEFAULT '', content_type TEXT NOT NULL DEFAULT '', notes TEXT NOT NULL DEFAULT '',
+ title TEXT NOT NULL DEFAULT '', topic TEXT NOT NULL DEFAULT '', content_type TEXT NOT NULL DEFAULT '', message TEXT NOT NULL DEFAULT '',
  published_at TEXT, observed_at TEXT NOT NULL, view_count INTEGER, like_count INTEGER, comment_count INTEGER, save_count INTEGER, share_count INTEGER,
  images_json TEXT NOT NULL CHECK(json_valid(images_json)), visual_set_id TEXT REFERENCES content_visual_sets(id), image_error TEXT,
  excluded INTEGER NOT NULL DEFAULT 0 CHECK(excluded IN (0,1)), created_at TEXT NOT NULL, last_selected_at TEXT

@@ -3,7 +3,7 @@ import type { Row } from "@/domains/content-production/domain/contracts";
 const fields: Record<string, string> = {
   analysis: "분석",
   topic: "소재",
-  content_type: "유형",
+  content_type: "포맷",
   message: "메시지",
   answer: "제공할 답",
   presentation: "표현 방향",
