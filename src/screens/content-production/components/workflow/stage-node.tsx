@@ -2,11 +2,14 @@
 import { useEffect } from "react";
 import { Handle, Position, useUpdateNodeInternals, type Node, type NodeProps } from "@xyflow/react";
 import { ArrowUpRight, Database, FileText, Layers, ScanText, MessageSquare, Eye, SpellCheck } from "lucide-react";
+import { ExecutionTimer } from "./timing/execution-timer";
+import type { ExecutionInterval } from "@/domains/content-production/domain/timing";
 import { StatusIcon } from "./status-icon";
 import { StageControlButton } from "./controls/stage-control-button";
 import type { ProductionStep } from "@/domains/content-production/domain/contracts";
 import type { StageControl } from "../../model/task-controls";
 export type StageNodeModel = Node<{
+  intervals?: ExecutionInterval[];
   title: string;
   stage: "sync" | ProductionStep | "result";
   outputTitle: string;
@@ -32,7 +35,10 @@ export function StageNode({ id, data, selected }: NodeProps<StageNodeModel>) {
     <Handle type="target" position={Position.Left} />
     <div className="production-stage-header">
       <span className="production-stage-title"><StageIcon size={17} />{data.title}</span>
-      <StatusIcon state={data.state} />
+      <span className="flex items-center gap-3">
+        <ExecutionTimer intervals={data.intervals ?? []} />
+        <StatusIcon state={data.state} />
+      </span>
     </div>
     <div className="production-stage-content">
       {data.kind && <span className="production-instance-label">{data.kind}</span>}

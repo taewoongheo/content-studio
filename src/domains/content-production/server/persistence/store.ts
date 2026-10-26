@@ -23,6 +23,7 @@ import { ContentProjectStore } from "@/domains/slideshow/server/persistence/proj
 import { publishChange } from "../events";
 import { ANALYSIS_INPUTS, analysisInputRecord, readAnalysisInputs } from "./planning/input";
 import { readPlanningLogs } from "./planning/logs";
+import { readTaskTiming, updateTaskTiming, removeTaskTiming } from "../timing";
 
 const directionKeys = Object.keys(directionSchema.shape) as Array<
   keyof Direction
@@ -92,6 +93,7 @@ export class ProductionStore {
     });
     return {
       analysis_inputs: (readAnalysisInputs(JSON.parse(String(analysis.research_json))) ?? []).map(({id,project_id,selection_group}) => ({id,project_id,selection_group})),
+      timing: readTaskTiming(this.db, id),
       task, analysis: decoded.data, production: production ? stage(production).data : null, log: decode(log),
       ...Object.fromEntries(reviews.map(({step,value}) => [step,value?.data ?? null])),
       external: { analysis: decoded.external, production: production ? stage(production).external : null, ...Object.fromEntries(reviews.map(({step,value}) => [step,value?.external ?? null])) },
@@ -147,6 +149,7 @@ export class ProductionStore {
         },
       );
     })();
+    updateTaskTiming(this.db, id, detail.task.current_step, state === "running", now);
     publishChange({
       task_id: id,
       step: detail.task.current_step,
@@ -217,6 +220,7 @@ export class ProductionStore {
         updated_at: now,
       });
     })();
+    updateTaskTiming(this.db, id, "analysis", false, now);
     publishChange({ task_id: id, step: "analysis", kind: "saved" });
     return this.get(id);
   }
@@ -265,6 +269,7 @@ export class ProductionStore {
         updated_at: now,
       });
     })();
+    updateTaskTiming(this.db, id, step, false, now);
     publishChange({ task_id: id, step, kind: "saved" });
   }
   changeDirection(
@@ -315,6 +320,7 @@ export class ProductionStore {
       this.db.prepare("DELETE FROM content_drafts WHERE id=?").run(id);
       this.db.prepare("DELETE FROM content_creation_logs WHERE id=? AND project_id IS NULL AND post_url IS NULL").run(detail.task.log_id);
     })();
+    removeTaskTiming(this.db, id);
     publishChange({ task_id: id, kind: "removed" });
   }
   recover() {

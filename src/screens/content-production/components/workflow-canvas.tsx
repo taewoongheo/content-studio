@@ -9,6 +9,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { CenterInitialStart, HorizontalWheelPan, StartNodeControl } from "./workflow/viewport/viewport-controls";
+import { WorkflowTimer } from "./workflow/timing/workflow-timer";
 import { StageNode } from "./workflow/stage-node";
 import { StartNode } from "./workflow/start-node";
 import { AdaptiveEdge, BranchEdge, BranchTrunk } from "./workflow/edges/branch-edges";
@@ -111,6 +112,7 @@ export function WorkflowCanvas({
         maxZoom={1.4}
         aria-label="콘텐츠 제작 파이프라인"
       >
+        <WorkflowTimer details={details} report={syncReport} />
         <CenterInitialStart />
         <HorizontalWheelPan containerRef={containerRef} />
         <Background gap={24} size={1} />

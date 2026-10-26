@@ -19,6 +19,7 @@ export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, Wo
   const edges: Edge[] = [];
   if (syncing || tasks.length || report) {
     nodes.push({ id: "sync", type: "stage", position: { x: 380, y: 0 }, data: {
+      intervals: report ? [{ started_at: report.started_at, ended_at: report.completed_at }] : [],
       title: "분석 자료", stage: "sync", state: syncing ? "running" : report?.state === "failed" ? "failed" : report?.state === "completed" || tasks.some(task => task.state !== "pending") ? "completed" : "pending", color: "#475569", write: 0, kind: "",
       outputTitle: "분석 참고 게시글", outputText: syncing ? "최신 반응을 가져오고 있어요" : "조회 · 좋아요 · 저장 · 댓글 · 공유", facts: [`${planningCount}개 게시글`], activity: syncing ? "성과 조회 중" : report?.state === "failed" ? "수집 실패" : "",
     } });
@@ -41,6 +42,7 @@ export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, Wo
       const facts = stage === "analysis" ? [text(analysis.content_type) || task.content_type, count(analysis.sources) ? `참고 자료 ${count(analysis.sources)}개` : null] : [count(content.slides) ? `${count(content.slides)}장` : null, text(analysis.content_type) || task.content_type];
       const id = `${task.id}:${stage}`;
       nodes.push({ id, type: "stage", position: { x: 760 + stageIndex * 380, y: index * 320 }, data: {
+        intervals: stage === "result" ? Object.values(detail?.timing ?? {}).flat() : detail?.timing?.[stage] ?? [],
         title: stage === "result" ? "완성 포스트" : productionSteps.find(value => value.id === stage)!.label, stage,
         outputTitle: stage === "hook" ? text(detail?.hook?.content && record(detail.hook.content).hook) || text(content.hook) || topic : stage === "production" ? text(content.hook) || topic : topic,
         outputText: stage === "analysis" ? answer : stage === "hook" || stage === "visual" || stage === "polish" ? text(detail?.[stage]?.review) : "", facts: facts.filter((fact): fact is string => !!fact),

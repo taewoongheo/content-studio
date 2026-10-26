@@ -87,6 +87,7 @@ export interface WorkItem extends Row {
   content_type: string | null;
 }
 export interface WorkDetail {
+  timing?: import("./timing").TaskTiming;
   analysis_inputs?: Row[];
   external?: Partial<Record<ReferenceStep, ExternalContext | null>>;
   task: WorkItem;
