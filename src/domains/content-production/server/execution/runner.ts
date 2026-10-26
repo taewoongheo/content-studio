@@ -247,7 +247,9 @@ export async function execute(
         store.save(id, run.step, { review: reviewText, sources });
         phase = "validation";
         if (review_passed !== true || typeof reviewText !== "string" || !reviewText.trim())
-          throw new OperationError("REVIEW_REJECTED", "검토를 통과하지 못했습니다. 검토 결과를 확인해 주세요.");
+          throw new OperationError("REVIEW_REJECTED", "검토를 통과하지 못했습니다. 검토 결과를 확인해 주세요.", {
+            review: reviewText, review_passed,
+          });
         if (run.step === "visual" && sources.length)
           throw new OperationError("VISUAL_REFERENCES_FORBIDDEN", "시각 검증에서는 레퍼런스를 조회하거나 출처로 기록하지 않습니다.");
         if (run.step === "hook" && !run.sourceImages)

@@ -116,6 +116,16 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
     assert.equal(store.get(id).task.current_step, "visual");
     assert.equal((store.get(id).log.sources as Array<{ part: string }>)[0].part, "Research summary");
     const projectId = store.get(id).task.project_id!;
+    // A quality rejection must preserve the reviewer’s actual reason in diagnostics.
+    store.db.prepare("UPDATE content_drafts SET current_step='visual',state='stopped' WHERE id=?").run(id);
+    const rejectedReview = "Confirmed clipping on slide-1 at the latest saved revision.";
+    await execute(id, "http://127.0.0.1:3000", async () => ({
+      review: rejectedReview, review_passed: false, sources: [],
+    }));
+    const rejected = store.get(id).visual?.error as { code: string; details: { review: string; review_passed: boolean } };
+    assert.equal(rejected.code, "REVIEW_REJECTED");
+    assert.equal(rejected.details.review, rejectedReview);
+    assert.equal(rejected.details.review_passed, false);
     // Visual review must use only the current project; missing source previews do not block it.
     store.db.prepare("UPDATE content_drafts SET current_step='visual',state='stopped' WHERE id=?").run(id);
     await execute(id, "http://127.0.0.1:3000", async () => {

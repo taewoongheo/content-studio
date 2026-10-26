@@ -31,6 +31,22 @@ The editor's alignment guides are optional snapping aids, not safe-area boundari
 shown in exported previews. Do not constrain the composition to them. Cropping an image at the
 slide edge is allowed when its key pose/equipment remains clear under the content guide.
 
+## Confirm suspected omissions
+
+If a thumbnail or multi-slide response appears to omit text, a badge or part of an image, do not
+immediately restyle the element or conclude that the renderer is broken. Read the current placement,
+check layer order and visible bounds, then use preview_slide for that slide alone at full resolution
+at the SAME saved revision. Inspect each affected slide separately and compare with the thumbnail.
+A single ambiguous image observation is not enough to establish a rendering defect.
+
+If the independent full-resolution preview shows the expected element, do not keep the earlier
+missing-element claim as an unresolved blocker. Continue the review against the current verified
+render. If an actual discrepancy persists, identify the slide/placement, preview size, revision,
+and observed difference. Distinguish a confirmed layout problem, an inconsistent preview result,
+and uncertainty about what was visible; do not label all three as an application-renderer defect.
+Repair only confirmed layout issues within scope. Report reproducible problems outside scope
+without changing the content merely to work around an unverified omission.
+
 ## Allowed repairs
 
 Use update_visual, reorder_layers, set_slide_background, set_text_colors and set_text_weights.
