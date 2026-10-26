@@ -1,3 +1,4 @@
+import { usedImageAssetIds } from "../editor/inspection/used-assets";
 import { ensureSharedBackground, validateEditorDocument } from "@/domains/slideshow/editor/document";
 import type { EditorDocument } from "@/domains/slideshow/editor/types";
 import { ContentJobError, type ContentJobRegistry } from "@/domains/slideshow/workflow/registry";
@@ -5,28 +6,12 @@ import type { ContentJobRecord } from "@/domains/slideshow/domain/types";
 import { getLocalDatabase } from "@/lib/local-db/database";
 import { ContentProjectStore, type SavedProjectAsset } from "@/domains/slideshow/server/persistence/projects/store";
 import { notifyProjectsChanged } from "@/domains/workspace/server/project-events";
-import type { ProjectReuseUpdate } from "@/domains/slideshow/projects/composition";
 
 export function defaultProjectStores() {
   const database = getLocalDatabase();
   return {
     projects: new ContentProjectStore(database),
   };
-}
-
-export function updateContentProjectReuse(projectId: string, input: ProjectReuseUpdate, stores = defaultProjectStores()) {
-  const updated = stores.projects.updateReuse(projectId, input);
-  notifyProjectsChanged();
-  return updated;
-}
-
-function projectAssetIds(document: EditorDocument) {
-  const imageElementIds = new Set(document.elements
-    .filter((element) => element.kind === "image")
-    .map((element) => element.id));
-  return [...new Set(document.slides.flatMap((slide) => slide.placements
-    .filter((placement) => imageElementIds.has(placement.elementId) && placement.value)
-    .map((placement) => placement.value)))];
 }
 
 function readProjectAsset(assetId: string, job: ContentJobRecord): SavedProjectAsset {
@@ -81,7 +66,7 @@ export function saveContentProject(
     slideCount: document.slides.length,
     outputLanguage: record.outputLanguage,
     document,
-    assets: projectAssetIds(document).map((assetId) => readProjectAsset(assetId, record)),
+    assets: [...usedImageAssetIds(document)].map((assetId) => readProjectAsset(assetId, record)),
   });
   registry.update(jobId, (job) => {
     job.editor.document = document;

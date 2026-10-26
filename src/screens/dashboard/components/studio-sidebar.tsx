@@ -1,6 +1,10 @@
 "use client";
 
-import { CalendarDays, LayoutTemplate, Plus, Settings } from "lucide-react";
+import {
+  CalendarDays,
+  Files,
+  Plus,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -11,12 +15,10 @@ import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function StudioSidebar({
   activeTab,
-  needsLogin,
   onOpenEditor,
   opening,
 }: {
   activeTab: string;
-  needsLogin: boolean;
   onOpenEditor: () => void;
   opening: boolean;
 }) {
@@ -46,26 +48,30 @@ export function StudioSidebar({
             <Plus aria-hidden="true" />
             <span>편집기 열기</span>
           </SidebarMenuButton>
+
+          <SidebarMenuButton
+            className="h-11"
+            isActive={activeTab === "all"}
+            render={<TabsTrigger value="all" className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent" />}
+          >
+            <Files aria-hidden="true" />
+            <span>모든 콘텐츠</span>
+          </SidebarMenuButton>
+
           <SidebarMenuButton
             className="h-11"
             isActive={activeTab === "published"}
-            render={<TabsTrigger value="published" className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent" />}
+            render={
+              <TabsTrigger
+                value="published"
+                className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent"
+              />
+            }
           >
             <CalendarDays aria-hidden="true" />
             <span>게시 콘텐츠</span>
           </SidebarMenuButton>
-          <SidebarMenuButton
-            className="h-11" isActive={activeTab === "templates"}
-            render={<TabsTrigger value="templates" className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent" />}
-          >
-            <LayoutTemplate aria-hidden="true" />
-            <span>템플릿 프로젝트</span>
-          </SidebarMenuButton>
-          <SidebarMenuButton className="h-11" isActive={activeTab === "settings"}
-            render={<TabsTrigger value="settings" className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent" />}>
-            <Settings aria-hidden="true" /><span>설정</span>
-            {needsLogin && <span className="ml-auto text-xs text-destructive">재로그인 필요</span>}
-          </SidebarMenuButton>
+
         </TabsList>
       </SidebarContent>
     </Sidebar>

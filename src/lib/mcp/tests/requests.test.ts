@@ -23,17 +23,17 @@ test("creation and clones replay across MCP connections without new tabs, even a
   }
   const first = await connect(), second = await connect();
   try {
-    const base = createContentProject(contentJobRegistry, {}); saveContentProject(contentJobRegistry, base.id, "template");
-    await first.call("register_template", { projectId: base.id, composition: "한 장에 짧은 정보를 전달하는 구성" });
-    const args = { templateProjectId: base.id, requestId: randomUUID(), name: "one clone" };
+    const base = createContentProject(contentJobRegistry, {}); saveContentProject(contentJobRegistry, base.id, "source");
+    const args = { projectId: base.id, requestId: randomUUID(), name: "one clone" };
     const [a, b] = await Promise.all([first.call("clone_project", args), second.call("clone_project", args)]);
     assert.equal(a.isError, undefined); assert.deepEqual(a, b); assert.equal(contentJobRegistry.list().length, 2);
-    await first.call("unregister_template", { projectId: base.id });
+    contentJobRegistry.remove(base.id);
+    getLocalDatabase().prepare("DELETE FROM content_projects WHERE id=?").run(base.id);
     assert.deepEqual(await second.call("clone_project", args), a, "replay precedes current source validation");
     const conflict = await second.call("clone_project", { ...args, name: "changed" });
     assert.equal(conflict.isError, true);
     assert.equal((conflict.structuredContent as { error: { code: string } }).error.code, "REQUEST_ID_REUSED");
-    assert.equal(contentJobRegistry.list().length, 2);
+    assert.equal(contentJobRegistry.list().length, 1);
     const videoArgs = { requestId: randomUUID(), name: "one video" };
     const [created, retried] = await Promise.all([first.call("create_video_project", videoArgs), second.call("create_video_project", videoArgs)]);
     assert.deepEqual(created, retried); assert.equal(videoTabs().length, 1);

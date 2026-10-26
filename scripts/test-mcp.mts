@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import Database from "better-sqlite3";
 import { spawn } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
@@ -12,7 +13,6 @@ import sharp from "sharp";
 import JSZip from "jszip";
 import type { ContentJobSnapshot } from "@/domains/slideshow/domain/types";
 
-const routineGuide = "도입 후 그룹별로 여러 선택지를 함께 보여주고 하나를 선택하도록 안내한다.";
 
 type Project = ContentJobSnapshot & { url: string };
 const directory = await mkdtemp(join(tmpdir(), "studio-mcp-smoke-"));
@@ -34,7 +34,7 @@ function startApp() {
   const child = spawn("pnpm", [production ? "start" : "dev", "--port", String(port)], {
     env: { ...process.env, CONTENT_STUDIO_DIST_DIR: distDir,
       ...(isolatedTsconfig ? { CONTENT_STUDIO_TSCONFIG_PATH: isolatedTsconfig } : {}),
-      CONTENT_STUDIO_DB_PATH: join(directory, "test.sqlite"), CONTENT_STUDIO_RESEARCH_RUNTIME_DIR: join(directory, "research") },
+      CONTENT_STUDIO_DB_PATH: join(directory, "test.sqlite") },
     stdio: ["ignore", "pipe", "pipe"], detached: true,
   });
   child.stdout.on("data", (chunk) => { serverLog += chunk; });
@@ -78,35 +78,28 @@ try {
     assert.equal(saved.status, 201);
     return (await call("read_project", { projectId: job.id })).structuredContent as Project;
   }
-  async function registerTemplate(projectId: string) {
-    const result = await call("register_template", { projectId, composition: routineGuide });
-    assert.equal((result.structuredContent as { project: { isTemplate: boolean } }).project.isTemplate, true);
-  }
-  async function cloneTemplate(projectId: string, name: string) {
-    await registerTemplate(projectId);
-    return (await call("clone_project", { templateProjectId: projectId, name })).structuredContent as Project;
+  async function duplicateProject(projectId: string, name: string) {
+    return (await call("clone_project", { projectId, name })).structuredContent as Project;
   }
   const tools = (await client.listTools()).tools.map((tool) => tool.name);
   assert.deepEqual([...tools].sort(), [
-    "list_projects", "get_content_plan", "set_content_metadata", "list_template_guides", "set_reuse_guide", "register_template", "unregister_template", "open_project", "clone_project", "read_project",
+    "create_project", "production_query", "production_read_project", "production_preview_project", "production_read_images",
+    "list_projects", "set_content_metadata", "open_project", "clone_project", "read_project",
     "edit_project", "undo_project", "preview_slide", "preview_slides", "export_slideshow", "rename_project", "get_render_job", "cancel_render_job",
     "list_video_projects", "create_video_project", "open_video_project", "read_video_project", "edit_video_project", "undo_video_project", "redo_video_project", "rename_video_project", "clone_video_project", "preview_video", "export_video", "start_video_export", "close_video_project", "delete_video_project",
-    "search_social_candidates", "get_research_accounts", "list_account_posts", "read_social_post", "read_post_images", "get_collection_job",
-    "solve_collection_captcha", "open_collection_browser", "resume_collection", "close_collection_session",
+    "search_social_candidates", "list_account_posts", "read_social_post", "read_post_images", "get_collection_job",
+    "resume_collection", "close_collection_session",
   ].sort(), "MCP exposes supported slideshow/research/video tools; slideshow deletion and close remain UI-only");
   assert.equal(tools.includes("add_image"), false);
   console.log("connected", tools);
 
   // Browser-created drafts and MCP-created drafts must use the same app registry.
+  assert.ok(!tools.includes("get_content_plan"));
   const uiJob = await fetch(`${origin}/api/content-jobs`, {
     method: "POST", headers: { origin },
   }).then((response) => response.json()) as ContentJobSnapshot;
   const readUiJob = (await call("read_project", { projectId: uiJob.id })).structuredContent as Project;
   assert.equal(readUiJob.id, uiJob.id);
-  const emptyGuides = await call("list_template_guides", {});
-  assert.deepEqual(emptyGuides.structuredContent, { templates: [] });
-  const blocked = CallToolResultSchema.parse(await client.callTool({ name: "clone_project", arguments: { templateProjectId: uiJob.id } }));
-  assert.equal(blocked.isError, true);
   const created = await seedProject("MCP smoke");
   const id = created.id;
   const api = await fetch(`${origin}/api/content-jobs/${id}`).then((response) => response.json()) as ContentJobSnapshot;
@@ -116,156 +109,20 @@ try {
   try {
     const listPage = await browser.newPage();
     await listPage.goto(origin);
-    const savedColumn = listPage.getByRole("region", { name: "저장된 프로젝트", exact: true });
-    const templateColumn = listPage.getByRole("region", { name: "템플릿 프로젝트", exact: true });
-    assert.equal(await listPage.getByRole("tab", { name: "저장된 프로젝트", exact: true }).count(), 0);
-    await savedColumn.getByRole("button", { name: "MCP smoke 루프에 추가", exact: true }).click();
-    const reuseDialog = listPage.getByRole("dialog");
-    await reuseDialog.getByLabel("구성", { exact: true }).fill(routineGuide);
-    await reuseDialog.getByRole("button", { name: "저장하고 루프에 추가", exact: true }).click();
-    await reuseDialog.waitFor({ state: "hidden" });
-    await templateColumn.getByRole("heading", { name: /^1\. MCP smoke$/ }).waitFor();
-    await savedColumn.getByRole("button", { name: "템플릿 지정됨", exact: true }).waitFor();
-    const previews = templateColumn.getByRole("region", { name: "MCP smoke 슬라이드 미리보기", exact: true });
-    await previews.locator("canvas").first().waitFor();
-    assert.ok(await previews.locator("figure").count() > 1);
-    assert.equal((await fetch(`${origin}/api/content-projects/${id}/preview`)).status, 200);
-    assert.equal((await fetch(`${origin}/api/content-projects/missing/preview`)).status, 404);
-
-    const registeredGuides = (await call("list_template_guides", {})).structuredContent as { templates: Array<{ id: string; composition: string }> };
-    assert.equal(registeredGuides.templates[0].id, id);
-    assert.deepEqual(registeredGuides.templates[0].composition, routineGuide);
-    await listPage.setViewportSize({ width: 1440, height: 1000 });
-    const leftBounds = await templateColumn.boundingBox();
-    const rightBounds = await savedColumn.boundingBox();
-    assert.ok(leftBounds && rightBounds && leftBounds.x < rightBounds.x && Math.abs(leftBounds.y - rightBounds.y) < 2);
-    await listPage.screenshot({ path: "/tmp/content-studio-template-columns-desktop.png", fullPage: true });
-    await listPage.setViewportSize({ width: 390, height: 844 });
-    assert.ok(await listPage.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "mobile page must not scroll horizontally");
-    assert.ok(await previews.evaluate(element => element.scrollWidth > element.clientWidth));
-    await previews.evaluate(element => { element.scrollLeft = element.scrollWidth; });
-    await previews.locator("figure").last().locator("canvas").waitFor();
-    await previews.evaluate(element => { element.scrollLeft = 0; });
-    await listPage.screenshot({ path: "/tmp/content-studio-template-columns-mobile.png", fullPage: true });
-    await listPage.setViewportSize({ width: 1440, height: 1000 });
-    listPage.once("dialog", dialog => void dialog.dismiss());
-    await templateColumn.getByRole("button", { name: "MCP smoke 루프에서 제외", exact: true }).click();
-    await templateColumn.getByRole("heading", { name: /^1\. MCP smoke$/ }).waitFor();
-    listPage.once("dialog", dialog => void dialog.accept());
-    await templateColumn.getByRole("button", { name: "MCP smoke 루프에서 제외", exact: true }).click();
-    await templateColumn.getByRole("heading", { name: /^1\. MCP smoke$/ }).waitFor({ state: "detached" });
-    await savedColumn.getByRole("heading", { name: "MCP smoke", exact: true }).waitFor();
-    assert.equal(await listPage.getByRole("region", { name: "루프에서 제외된 템플릿", exact: true }).count(), 0);
-    await registerTemplate(id);
-    await templateColumn.getByRole("heading", { name: /^1\. MCP smoke$/ }).waitFor();
-    assert.equal(await listPage.getByRole("dialog").count(), 0);
-    console.log("PASS two-column template dashboard, atomic guide/designation, direct designation/unregister and mobile layout");
-    const loopB = await seedProject("Loop B");
-    await registerTemplate(loopB.id);
-    const planBefore = (await call("get_content_plan", {})).structuredContent as { nextTemplateId: string };
-    assert.equal(planBefore.nextTemplateId, id);
-    const publicationClone = (await call("clone_project", { templateProjectId: id, name: "Loop publication" })).structuredContent as Project;
-    const publicationCard = savedColumn.getByRole("listitem").filter({ has: listPage.getByRole("heading", { name: "Loop publication", exact: true }) });
-    await publicationCard.getByRole("button", { name: "Loop publication 내용 정보", exact: true }).click();
-    const metadataDialog = listPage.getByRole("dialog");
-    await metadataDialog.getByLabel("주제", { exact: true }).fill("등 운동");
-    await metadataDialog.getByLabel("메시지", { exact: true }).fill("허리 부담을 줄이는 운동 선택 기준을 설명한다.");
-    await metadataDialog.getByRole("button", { name: "저장", exact: true }).click();
-    await metadataDialog.waitFor({ state: "hidden" });
-    await publicationCard.getByText("허리 부담을 줄이는 운동 선택 기준을 설명한다.", { exact: true }).waitFor();
-    await publicationCard.getByText("부모 템플릿: MCP smoke", { exact: true }).waitFor();
-    assert.equal(await publicationCard.getByRole("img").count(), 0);
-    await publicationCard.getByRole("button", { name: "Loop publication 게시 등록", exact: true }).click();
-    await publicationCard.getByText(/^게시됨 ·/).waitFor();
-    const planAfter = (await call("get_content_plan", {})).structuredContent as { nextTemplateId: string; published: Array<{ id: string; sourceTemplateProjectId: string; topic: string; message: string }> };
-    assert.equal(planAfter.nextTemplateId, loopB.id);
-    assert.equal(planAfter.published[0].id, publicationClone.id);
-    assert.equal(planAfter.published[0].sourceTemplateProjectId, id);
-    assert.equal(planAfter.published[0].topic, "등 운동");
-    await listPage.getByText("다음 템플릿: 2. Loop B", { exact: true }).waitFor();
-    const loopBHandle = templateColumn.getByRole("button", { name: "Loop B 템플릿 순서 이동", exact: true });
-    await loopBHandle.focus();
-    await loopBHandle.press("Space");
-    await listPage.waitForFunction(() => document.querySelector('[aria-label="Loop B 템플릿 순서 이동"]')?.getAttribute("aria-pressed") === "true");
-    await listPage.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-    await loopBHandle.press("ArrowUp");
-    await listPage.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-    await loopBHandle.press("Space");
-    await templateColumn.getByRole("heading", { name: "1. Loop B", exact: true }).waitFor();
-    const aHandle = templateColumn.getByRole("button", { name: "MCP smoke 템플릿 순서 이동", exact: true });
-    await aHandle.scrollIntoViewIfNeeded();
-    const aBox = await aHandle.boundingBox(), bBox = await loopBHandle.boundingBox();
-    assert.ok(aBox && bBox);
-    await listPage.mouse.move(aBox.x + aBox.width / 2, aBox.y + aBox.height / 2);
-    await listPage.mouse.down();
-    await listPage.mouse.move(bBox.x + bBox.width / 2, bBox.y + bBox.height / 2, { steps: 20 });
-    await listPage.mouse.up();
-    await templateColumn.getByRole("heading", { name: "1. MCP smoke", exact: true }).waitFor();
-    // PointerSensor briefly suppresses clicks after a drop; let its cleanup finish.
-    await listPage.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))));
-    await templateColumn.getByRole("button", { name: "MCP smoke 템플릿 설정", exact: true }).click();
-    const settingsDialog = listPage.getByRole("dialog");
-    assert.equal(await settingsDialog.getByLabel("템플릿 색상", { exact: true }).count(), 0);
-    await settingsDialog.getByRole("button", { name: "취소", exact: true }).click();
-    await settingsDialog.waitFor({ state: "hidden" });
-    await listPage.getByRole("tab", { name: "게시 콘텐츠", exact: true }).click();
-    await listPage.getByRole("region", { name: "게시 기록 목록", exact: true }).getByText("Loop publication", { exact: true }).waitFor();
-    await listPage.screenshot({ path: "/tmp/content-studio-loop-published-desktop.png", fullPage: true });
-    await listPage.setViewportSize({ width: 390, height: 844 });
-    assert.ok(await listPage.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
-    await listPage.screenshot({ path: "/tmp/content-studio-loop-published-mobile.png", fullPage: true });
-    await listPage.setViewportSize({ width: 1440, height: 1000 });
-    const confirmCancel = listPage.waitForEvent("dialog").then(dialog => dialog.accept());
-    await listPage.getByRole("button", { name: "Loop publication 로컬 기록 삭제", exact: true }).click();
-    await confirmCancel;
-    await listPage.getByText("아직 등록된 게시물이 없습니다.", { exact: true }).waitFor();
-    await listPage.getByRole("tab", { name: "템플릿 프로젝트", exact: true }).click();
-    console.log("PASS loop ordering, metadata UI, manual publication, no template color, calendar and publication cancellation");
-    async function setParent(value: string) {
-      await publicationCard.getByRole("button", { name: "Loop publication 내용 정보", exact: true }).click();
-      const dialog = listPage.getByRole("dialog");
-      await dialog.getByLabel("부모 템플릿", { exact: true }).selectOption(value);
-      await dialog.getByRole("button", { name: "저장", exact: true }).click();
-      await dialog.waitFor({ state: "hidden" });
-    }
-    await setParent(loopB.id);
-    await publicationCard.getByText("부모 템플릿: Loop B", { exact: true }).waitFor();
-    await setParent("");
-    await publicationCard.getByText("부모 템플릿: Loop B", { exact: true }).waitFor({ state: "hidden" });
-    await setParent(id);
-    listPage.once("dialog", dialog => void dialog.accept());
-    await templateColumn.getByRole("button", { name: "MCP smoke 루프에서 제외", exact: true }).click();
-    await publicationCard.getByText("부모 템플릿: MCP smoke", { exact: true }).waitFor({ state: "hidden" });
-    const removedParent = (await fetch(`${origin}/api/content-projects`).then(r => r.json())).find((item: { id: string }) => item.id === publicationClone.id);
-    assert.equal(removedParent.sourceTemplateProjectId, null);
-    await registerTemplate(id);
-    await templateColumn.getByRole("button", { name: "MCP smoke 루프에서 제외", exact: true }).waitFor();
-    await setParent(id);
-    await publicationCard.getByText("부모 템플릿: MCP smoke", { exact: true }).waitFor();
-    const originalInfo = (await fetch(`${origin}/api/content-projects`).then(r => r.json())).find((item: { id: string }) => item.id === publicationClone.id);
-    await publicationCard.getByRole("button", { name: "Loop publication 루프에 추가", exact: true }).click();
-    const registration = listPage.getByRole("dialog");
-    await registration.getByLabel("템플릿 이름", { exact: true }).fill("Independent template");
-    await registration.getByLabel("템플릿 주제", { exact: true }).fill("템플릿의 별도 주제");
-    await registration.getByLabel("템플릿 메시지", { exact: true }).fill("템플릿의 별도 메시지");
-    await registration.getByLabel("구성", { exact: true }).fill(routineGuide);
-    await registration.getByRole("button", { name: "저장하고 루프에 추가", exact: true }).click();
-    await registration.waitFor({ state: "hidden" });
-    await publicationCard.getByRole("button", { name: "템플릿 지정됨", exact: true }).waitFor();
-    assert.equal(await publicationCard.getByText(/템플릿으로 등록됨/).count(), 0);
-    const registeredInfo = (await fetch(`${origin}/api/content-projects`).then(r => r.json())).find((item: { id: string }) => item.id === publicationClone.id);
-    assert.equal(registeredInfo.name, originalInfo.name);
-    assert.equal(registeredInfo.topic, originalInfo.topic);
-    assert.equal(registeredInfo.message, originalInfo.message);
-    assert.equal(registeredInfo.sourceTemplateProjectId, null);
-    await publicationCard.getByRole("button", { name: "열기", exact: true }).click();
-    await listPage.getByRole("button", { name: "ZIP 내보내기", exact: true }).waitFor();
-    assert.equal(await listPage.getByText(/템플릿으로 등록된 콘텐츠/).count(), 0);
-    await listPage.screenshot({ path: "/tmp/content-studio-template-editor-banner.png", fullPage: true });
+    await listPage.getByRole("button", { name: "제작 캔버스", exact: true }).waitFor();
+    assert.equal(await listPage.locator("#production-count").inputValue(), "1");
+    assert.equal(await listPage.getByText("템플릿 프로젝트", { exact: true }).count(), 0);
+    assert.equal(await listPage.getByText("제작 모델", { exact: true }).count(), 0);
+    assert.equal(await listPage.locator("#production-model").count(), 0);
     await listPage.getByRole("button", { name: "대시보드", exact: true }).click();
-    await savedColumn.getByRole("heading", { name: "Loop publication", exact: true }).waitFor();
-    console.log("PASS pointer/keyboard drag, parent change/detach, confirmed removal/re-registration, registration detaches parent, independent metadata and no redundant registration indicators");
-
+    await listPage.getByRole("heading", { name: "게시 콘텐츠", exact: true }).waitFor();
+    await listPage.getByRole("button", { name: "제작 캔버스", exact: true }).click();
+    await listPage.getByRole("button", { name: "시작 노드로 이동", exact: true }).waitFor();
+    await listPage.getByRole("button", { name: "제작 기록·레퍼런스", exact: true }).click();
+    const recordPanel = await listPage.getByRole("region", { name: "기록과 레퍼런스", exact: true }).boundingBox();
+    assert.ok(recordPanel && recordPanel.width <= 560 && recordPanel.x > 256, "records open beside the canvas");
+    await listPage.getByRole("button", { name: "캔버스로 돌아가기", exact: true }).click();
+    console.log("PASS fixed production/dashboard tabs, default count, right records panel and fixed production model");
 
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
     page.on("pageerror", error => console.error("Browser error", error.message));
@@ -274,7 +131,7 @@ try {
     const frame = { x: 0.1, y: 0.2, width: 0.8, height: 0.2 };
     const style = {
       color: "#111111", backgroundColor: "transparent", fontSize: 64, lineHeight: 1.2,
-      fontWeight: 700, textAlign: "center", borderRadius: 0, fontFamily: "sans-serif", imageFit: "contain",
+      fontWeight: 700, textAlign: "center", borderRadius: 0, fontFamily: "inter", imageFit: "contain",
     };
     const localPath = join(directory, "image.png");
     await writeFile(localPath, await sharp({ create: {
@@ -328,8 +185,29 @@ try {
     assert.deepEqual(await archive.file("slide-01.png")!.async("nodebuffer"), bytes, "ZIP uses the same full-resolution preview renderer");
     console.log("PASS slideshow batch/cache preview and asynchronous full-resolution PNG ZIP export");
 
-    const cloned = await cloneTemplate(id, "Clone");
-    await savedColumn.getByRole("heading", { name: "Clone", exact: true }).waitFor();
+    const source = await duplicateProject(id, "Saved reference preview");
+    // Published-source reads replace the removed manual-reference API. Seed only the isolated test DB.
+    const fixtureDb = new Database(join(directory, "test.sqlite"));
+    try {
+      fixtureDb.prepare("INSERT INTO content_creation_logs(id,project_id,post_url,actual_published_at,created_at,updated_at) VALUES(?,?,?,datetime('now'),datetime('now'),datetime('now'))")
+        .run("saved-source-fixture", source.id, "https://example.com/saved-source-fixture");
+    } finally { fixtureDb.close(); }
+    const closed = await fetch(origin + "/api/content-jobs/" + source.id,{method:"DELETE",headers:{origin,"content-type":"application/json"},
+      body:JSON.stringify({expectedTabId:source.tabId,expectedRevision:source.editor.revision,decision:"check"})});
+    assert.equal(closed.status,204);
+    const tabsBefore = await fetch(origin + "/api/content-jobs").then(response=>response.json());
+    const savedSource = (await call("production_read_project",{projectId:source.id,outline:true})).structuredContent as {source:string;slides:unknown[]};
+    assert.equal(savedSource.source,"saved"); assert.ok(savedSource.slides.length);
+    const savedPreview = await call("production_preview_project",{projectId:source.id,slideIds:["slide-1"],width:540});
+    const savedImage = savedPreview.content.find(item=>item.type==="image");
+    assert.ok(savedImage?.type==="image");
+    assert.equal((await sharp(Buffer.from(savedImage.data,"base64")).metadata()).width,540);
+    assert.deepEqual(await fetch(origin + "/api/content-jobs").then(response=>response.json()),tabsBefore);
+    await fetch(origin + "/api/content-projects/" + source.id,{method:"DELETE",headers:{origin,"content-type":"application/json"},body:"{}"});
+    console.log("PASS saved published-source document and image previews do not open editor tabs");
+
+
+    const cloned = await duplicateProject(id, "Clone");
     assert.notEqual(cloned.id, id);
     assert.equal(cloned.editor.document.slides[0].name, "Live MCP");
     const undone = (await call("undo_project", { projectId: id, expectedRevision: 1 })).structuredContent as Project;
@@ -344,8 +222,7 @@ try {
     assert.equal(save.status, 201);
     const opened = (await call("open_project", { projectId: cloned.id })).structuredContent as Project;
     assert.equal(opened.name, "Saved clone");
-    await savedColumn.getByRole("heading", { name: "Saved clone", exact: true }).waitFor();
-    recovery = await cloneTemplate(cloned.id, "Restart recovery");
+    recovery = await duplicateProject(cloned.id, "Restart recovery");
     const listed = (await call("list_projects", {})).structuredContent as { projects: Array<{ id: string }> };
     assert.equal(listed.projects.filter((project) => project.id === cloned.id).length, 1);
     const invalid = await client.callTool({ name: "edit_project", arguments: {
@@ -424,7 +301,7 @@ try {
       Math.min(data[i * 3], data[i * 3 + 1], data[i * 3 + 2])));
     assert.deepEqual(ink(afterPixels), ink(beforePixels), "color changes must preserve glyph positions, wrapping and alignment");
     assert.ok(afterPixels.some((value, i) => i % 3 === 0 && value > 200 && afterPixels[i + 1] < 30), "selected word must contain red ink");
-    const colorClone = await cloneTemplate(colorProject.id, "Colored clone");
+    const colorClone = await duplicateProject(colorProject.id, "Colored clone");
     assert.deepEqual(colorClone.editor.document, colored.editor.document);
     const colorUndo = (await call("undo_project", { projectId: colorProject.id, expectedRevision: colored.editor.revision })).structuredContent as Project;
     assert.equal(colorUndo.editor.document.slides[0].placements.find(p => p.id === "color-title-1")?.textColors, undefined);
@@ -496,7 +373,7 @@ try {
     const rgbAt = (x: number, y: number) => [...roundedPixels.subarray((y * 1080 + x) * 3, (y * 1080 + x) * 3 + 3)];
     assert.deepEqual(rgbAt(110, 205), [255, 255, 255], "rounded corner must reveal the slide background");
     assert.deepEqual(rgbAt(150, 215), [0, 0, 0], "text background must be painted inside the rounded frame");
-    const weightedClone = await cloneTemplate(colorProject.id, "Weighted clone");
+    const weightedClone = await duplicateProject(colorProject.id, "Weighted clone");
     assert.deepEqual(weightedClone.editor.document, rounded.editor.document);
     await page.getByRole("button", { name: "Weighted clone 탭 닫기", exact: true }).click();
     await page.getByRole("button", { name: "Weighted clone 탭 닫기", exact: true }).waitFor({ state: "detached" });
@@ -525,14 +402,14 @@ try {
     const switchedBackground = (await call("read_project", { projectId: colorProject.id })).structuredContent as Project;
     assert.equal(switchedBackground.editor.document.slides[0].backgroundColor, "#123456");
     await page.getByRole("button", { name: /^2장 .*선택 및 순서 이동$/ }).click();
-    await page.getByRole("checkbox", { name: "가이드", exact: true }).uncheck();
+    await page.getByRole("checkbox", { name: "정렬 가이드", exact: true }).uncheck();
     await tabBar.getByRole("button", { name: "Partial colors", exact: true }).click();
     await page.waitForURL(url => url.searchParams.get("job") === colorProject.id);
     await page.locator(`[data-tab-id="${colorProject.tabId}"]`).waitFor();
     await tabBar.getByRole("button", { name: "Colored clone", exact: true }).click();
     await page.waitForURL(url => url.searchParams.get("job") === colorClone.id);
     await page.locator(`[data-tab-id="${colorClone.tabId}"]`).waitFor();
-    assert.equal(await page.getByRole("checkbox", { name: "가이드", exact: true }).isChecked(), false);
+    assert.equal(await page.getByRole("checkbox", { name: "정렬 가이드", exact: true }).isChecked(), false);
     assert.equal(await page.getByRole("button", { name: /^2장 .*선택 및 순서 이동$/ }).getAttribute("aria-current"), "page");
     await page.getByRole("button", { name: "새 탭", exact: true }).click();
     await writeFile("/tmp/content-studio-new-tab.png", await page.getByRole("dialog").screenshot());
@@ -544,7 +421,6 @@ try {
     await listPage.waitForURL(url => url.searchParams.get("job") === colorClone.id);
     await page.getByRole("button", { name: "Colored clone 탭 닫기", exact: true }).click();
     await page.getByRole("button", { name: "Colored clone 탭 닫기", exact: true }).waitFor({ state: "detached" });
-    await listPage.getByRole("heading", { name: "템플릿 프로젝트", exact: true, level: 1 }).waitFor();
     assert.equal((await fetch(`${origin}/api/content-jobs/${colorClone.id}`)).status, 404);
     const closedEdit = await client.callTool({ name: "edit_project", arguments: { projectId: colorClone.id,
       expectedTabId: colorClone.tabId, expectedRevision: switchedClone.editor.revision,
@@ -636,15 +512,18 @@ try {
     await page.getByRole("dialog").getByLabel("프로젝트 이름", { exact: true }).fill("Saved renamed");
     await page.getByRole("dialog").getByRole("button", { name: "이름 변경", exact: true }).click();
     await page.getByRole("button", { name: "저장됨", exact: true }).waitFor();
-    await savedColumn.getByRole("heading", { name: "Saved renamed", exact: true }).waitFor();
     await page.getByRole("button", { name: "프로젝트 삭제", exact: true }).click();
+    const deletedTemporary = page.waitForResponse(response => response.request().method() === "DELETE" &&
+      response.url() === `${origin}/api/content-projects/${savedTemporary.id}`);
     await page.getByRole("dialog").getByRole("button", { name: "삭제", exact: true }).click();
+    assert.equal((await deletedTemporary).status(), 204);
     await tabBar.locator(`[data-project-tab="${savedTemporary.tabId}"]`).waitFor({ state: "detached" });
     assert.equal((await savedIds()).includes(temporary.id), false);
-    await savedColumn.getByRole("heading", { name: "Saved renamed", exact: true }).waitFor({ state: "detached" });
 
     const listDelete = await seedProject("Delete from list");
-    await listPage.getByRole("button", { name: "Delete from list 프로젝트 삭제", exact: true }).click();
+    await listPage.getByRole("button", { name: "새 탭", exact: true }).click();
+    await listPage.getByRole("dialog").getByRole("button", { name: /^Delete from list/ }).click();
+    await listPage.getByRole("button", { name: "프로젝트 삭제", exact: true }).click();
     await listPage.getByRole("dialog").getByRole("button", { name: "삭제", exact: true }).click();
     await tabBar.locator(`[data-project-tab="${listDelete.tabId}"]`).waitFor({ state: "detached" });
     assert.equal((await savedIds()).includes(listDelete.id), false);
@@ -675,14 +554,13 @@ try {
     }
 
     // The dashboard delegates a single project load to the workspace.
-    await tabBar.getByRole("button", { name: "대시보드", exact: true }).click();
-    await page.getByRole("heading", { name: "템플릿 프로젝트", exact: true, level: 1 }).waitFor();
+    await tabBar.getByRole("button", { name: "제작 캔버스", exact: true }).click();
     let openRequests = 0;
     page.on("request", request => {
       if (request.method() === "POST" && request.url().endsWith(`/api/content-projects/${colorProject.id}`)) openRequests++;
     });
-    await page.getByRole("region", { name: "저장된 프로젝트", exact: true }).getByRole("listitem").filter({ has: page.getByRole("heading", { name: "Partial colors", exact: true }) })
-      .getByRole("button", { name: "열기", exact: true }).click();
+    await page.getByRole("button", { name: "새 탭", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: /^Partial colors/ }).click();
     await page.locator(`[data-tab-id="${colorProject.tabId}"]`).waitFor();
     assert.equal(openRequests, 1);
 

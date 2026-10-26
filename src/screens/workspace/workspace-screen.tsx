@@ -7,8 +7,9 @@ import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { OpenProjectTab } from "@/domains/workspace/model";
 import type { ContentJobSnapshot } from "@/domains/slideshow/domain/types";
 import { DashboardContent } from "@/screens/dashboard/dashboard-content";
+import { ContentProductionScreen } from "@/screens/content-production/content-production-screen";
 import { SlideshowEditorScreen, type SlideshowEditorViewState, type SlideshowEditorWorkspaceHandle } from "@/screens/slideshow-editor/slideshow-editor-screen";
-import { createContentJob } from "@/domains/slideshow/client/api";
+import { createContentJob } from "@/domains/slideshow/client/editor/api";
 import { loadContentProject } from "@/domains/slideshow/client/projects-api";
 import { useOpenTabs } from "./hooks/use-open-tabs";
 import { useWorkspaceOperation } from "./hooks/use-workspace-operation";
@@ -36,6 +37,7 @@ export function WorkspaceScreen() {
   const [initialViewState, setInitialViewState] = useState<SlideshowEditorViewState>();
   const { busy, error, setError, run } = useWorkspaceOperation();
   const [chooser, setChooser] = useState(false);
+  const [dashboardActive, setDashboardActive] = useState(false);
   const editor = useRef<SlideshowEditorWorkspaceHandle>(null);
   const views = useRef(new Map<string, SlideshowEditorViewState>());
   const current = useRef(job);
@@ -67,6 +69,7 @@ export function WorkspaceScreen() {
   }
 
   async function showProject(projectId: string, replace = false) {
+    setDashboardActive(false);
     const known = tabs?.find(t => t.projectId === projectId);
     const isVideo = known ? known.projectType === "video" : (await listVideoProjects()).some(p => p.id === projectId);
     if (isVideo) { const next = await openVideoProject(projectId); currentVideo.current = next; setVideo(next); current.current = null; setJob(null); setChooser(false); updateUrl(next.id, replace, "video"); return; }
@@ -78,15 +81,25 @@ export function WorkspaceScreen() {
     if (job?.id === projectId || video?.id === projectId) { setChooser(false); return; }
     await run(async () => { await prepareSwitch(); await showProject(projectId); });
   }
+  function dashboard(showDashboard = false) {
+    void run(async () => { await prepareSwitch(); setDashboardActive(showDashboard); currentVideo.current = null; setVideo(null); current.current = null; setJob(null); updateUrl(null); });
+  }
   const handleWorkspaceShortcut = useEffectEvent((event: KeyboardEvent) => {
     const shortcut = workspaceShortcut(event);
     if (!shortcut || event.defaultPrevented) return;
     const activeTab = tabs?.find(tab => tab.tabId === (job?.tabId ?? video?.tabId));
-    if (!activeTab) return;
     // Reserve workspace shortcuts even while blocked, so a dialog or pending save cannot close the browser or navigate its history.
     event.preventDefault();
     if (event.repeat || busy || chooser || lifecycle.closing || lifecycle.renaming ||
       document.querySelector("[role='dialog'], [role='alertdialog']")) return;
+    if (!activeTab) {
+      if (shortcut === "next") {
+        if (dashboardActive) dashboard();
+        else if (tabs?.[0]) void select(tabs[0].projectId);
+      } else if (shortcut === "previous" && !dashboardActive) dashboard(true);
+      return;
+    }
+    if (shortcut === "previous" && tabs?.[0]?.tabId === activeTab.tabId) { dashboard(); return; }
     if (shortcut === "close") lifecycle.close(activeTab);
     else {
       const neighbor = adjacentTab(tabs ?? [], activeTab.tabId, shortcut);
@@ -99,12 +112,10 @@ export function WorkspaceScreen() {
     return () => window.removeEventListener("keydown", listener, true);
   }, []);
 
-  function dashboard() {
-    void run(async () => { await prepareSwitch(); currentVideo.current = null; setVideo(null); current.current = null; setJob(null); updateUrl(null); });
-  }
   function create(type: "slideshow" | "video") {
     void run(async () => {
       await prepareSwitch();
+      setDashboardActive(false);
       if (type === "video") { const next = await createVideoProject(); currentVideo.current = next; setVideo(next); current.current = null; setJob(null); setChooser(false); updateUrl(next.id, false, "video"); return; }
       const next = await createContentJob();
       currentVideo.current = null; setVideo(null);
@@ -153,13 +164,15 @@ export function WorkspaceScreen() {
 
   return <div className="flex h-svh min-h-0 flex-col bg-background text-foreground">
     <ProjectTabs tabs={tabs ?? []} activeTabId={job?.tabId ?? video?.tabId} busy={busy}
-      onSelect={tab => select(tab.projectId)} onClose={lifecycle.close} onRename={tab => { setError(""); lifecycle.requestRename(tab); }} onNew={() => setChooser(true)} onDashboard={dashboard} />
+      onSelect={tab => select(tab.projectId)} onClose={lifecycle.close} onRename={tab => { setError(""); lifecycle.requestRename(tab); }} onNew={() => setChooser(true)} dashboardActive={dashboardActive && !job && !video} onDashboard={() => dashboard(true)} onCanvas={() => dashboard()} />
     {(error || connectionError) && <p role="alert" className="shrink-0 border-b px-4 py-2 text-sm text-destructive">{error || connectionError}</p>}
     <div className="relative min-h-0 flex-1 overflow-auto">
       {busy && <div className="absolute inset-0 z-40 cursor-wait bg-background/20" aria-label="탭 처리 중" />}
-      {video ? <VideoEditorScreen key={video.tabId} ref={videoEditor} initial={video} onNewJob={dashboard} /> : job ? <SlideshowEditorScreen key={job.tabId} ref={editor} initialJob={job}
-        initialViewState={initialViewState} onNewJob={dashboard} />
-        : <DashboardContent onOpen={select} onNew={() => setChooser(true)} />}
+      <div className={video || job || dashboardActive ? "hidden" : "h-full"}><ContentProductionScreen onOpen={select} /></div>
+      {dashboardActive && !video && !job && <DashboardContent onNew={() => setChooser(true)} onOpen={select} />}
+      {video ? <VideoEditorScreen key={video.tabId} ref={videoEditor} initial={video} onNewJob={() => dashboard()} /> : job ? <SlideshowEditorScreen key={job.tabId} ref={editor} initialJob={job}
+        initialViewState={initialViewState} onNewJob={() => dashboard()} />
+        : null}
     </div>
     {lifecycle.closing && <CloseTabDialog tab={lifecycle.closing} busy={busy} error={error} onCancel={lifecycle.cancelClose} onDecision={lifecycle.decideClose} />}
     {lifecycle.renaming && <RenameTabDialog key={lifecycle.renaming.tabId} tab={lifecycle.renaming} busy={busy} error={error} onCancel={lifecycle.cancelRename} onRename={lifecycle.rename} />}

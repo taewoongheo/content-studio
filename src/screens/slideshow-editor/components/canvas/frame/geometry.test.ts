@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CANVAS_SAFE_AREA, frameForDroppedImage, moveOrResizeFrame } from "./geometry";
+import { CANVAS_GUIDE_INSETS, frameForDroppedImage, moveOrResizeFrame } from "./geometry";
 
 const frame = { x: 0.2, y: 0.2, width: 0.3, height: 0.2 };
 
@@ -13,15 +13,15 @@ test("중앙선에 가까우면 맞춰 붙고 다른 위치에는 스냅되지 �
   assert.deepEqual(moveOrResizeFrame(frame, "move", 0.145, 0.19), { x: 0.35, y: 0.4, width: 0.3, height: 0.2 });
   assert.deepEqual(moveOrResizeFrame(frame, "move", 0.164, 0), { x: 0.35, y: 0.2, width: 0.3, height: 0.2 });
   assert.deepEqual(moveOrResizeFrame(frame, "move", 0.168, 0), { x: 0.368, y: 0.2, width: 0.3, height: 0.2 });
-  assert.deepEqual(moveOrResizeFrame(frame, "move", -0.09, -0.065),
-    { x: 0.11, y: 0.135, width: 0.3, height: 0.2 });
+  assert.deepEqual(moveOrResizeFrame(frame, "move", -0.09, -0.07),
+    { x: 0.11, y: 0.13, width: 0.3, height: 0.2 });
 });
 
-test("이동할 때 Element의 네 변이 안전 영역 경계에 맞춰 붙는다", () => {
-  assert.deepEqual(moveOrResizeFrame(frame, "move", -0.125, -0.085),
-    { x: CANVAS_SAFE_AREA.left, y: CANVAS_SAFE_AREA.top, width: 0.3, height: 0.2 });
-  assert.deepEqual(moveOrResizeFrame(frame, "move", 0.42, 0.425),
-    { x: 0.633, y: 0.624, width: 0.3, height: 0.2 });
+test("이동할 때 Element의 네 변이 정렬 가이드에 맞춰 붙는다", () => {
+  assert.deepEqual(moveOrResizeFrame(frame, "move", -0.159, -0.159),
+    { x: CANVAS_GUIDE_INSETS.left, y: CANVAS_GUIDE_INSETS.top, width: 0.3, height: 0.2 });
+  assert.deepEqual(moveOrResizeFrame(frame, "move", 0.455, 0.559),
+    { x: 0.66, y: 0.76, width: 0.3, height: 0.2 });
 });
 
 test("가이드를 끄면 중앙선에 맞춰 붙지 않는다", () => {
@@ -37,11 +37,11 @@ test("크기 조절도 중앙선에 맞춰 붙는다", () => {
     { x: 0.2, y: 0.2, width: 0.318, height: 0.2 });
 });
 
-test("크기 조절 시 각 모서리가 안전 영역 경계에 맞춰 붙는다", () => {
-  assert.deepEqual(moveOrResizeFrame(frame, "nw", -0.125, -0.085),
-    { x: CANVAS_SAFE_AREA.left, y: CANVAS_SAFE_AREA.top, width: 0.433, height: 0.285 });
-  assert.deepEqual(moveOrResizeFrame(frame, "se", 0.42, 0.425),
-    { x: 0.2, y: 0.2, width: 0.733, height: 0.624 });
+test("크기 조절 시 각 모서리가 정렬 가이드에 맞춰 붙는다", () => {
+  assert.deepEqual(moveOrResizeFrame(frame, "nw", -0.152, -0.152),
+    { x: CANVAS_GUIDE_INSETS.left, y: CANVAS_GUIDE_INSETS.top, width: 0.46, height: 0.36 });
+  assert.deepEqual(moveOrResizeFrame(frame, "se", 0.46, 0.56),
+    { x: 0.2, y: 0.2, width: 0.76, height: 0.76 });
 });
 
 test("모서리 크기 조절은 반대쪽 모서리를 고정하고 최소 크기를 보장한다", () => {
@@ -90,4 +90,12 @@ test("가장자리에 드롭한 이미지도 슬라이드 영역 안에 배치�
   const dropped = frameForDroppedImage({ x: 0.98, y: 0.98 }, 16 / 9, 4 / 5);
   assert.equal(dropped.x + dropped.width, 1);
   assert.equal(dropped.y + dropped.height, 1);
+});
+
+
+test("추가 가로 정렬선은 25%·75%에서 이동과 크기 조절을 돕고 끌 수 있다",()=>{
+  assert.equal(moveOrResizeFrame(frame,"move",0,0.04).y,0.25);
+  assert.equal(moveOrResizeFrame(frame,"move",0,0.44).y,0.65);
+  assert.equal(moveOrResizeFrame(frame,"move",0,0.04,false).y,0.24);
+  assert.equal(moveOrResizeFrame(frame,"se",0,0.34).height,0.55);
 });

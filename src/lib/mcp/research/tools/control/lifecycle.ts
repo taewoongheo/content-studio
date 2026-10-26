@@ -8,11 +8,11 @@ import { researchAnnotations as annotations, jobSchema } from "../../shared";
 
 export function registerLifecycleTools(server: McpServer, registry: CollectionRegistry) {
   registerTool(server, "resume_collection", {
-    description: "Retry a blocked collection in the retained session after addressing its actual block reason. Max three attempts per job. A successful data response confirms recovery; solving a visual challenge alone does not. No automatic retry loop or required research workflow is imposed.",
+    description: "Retry a blocked collection in the retained session after addressing its failure. Max three attempts per job. No automatic retry loop or required research workflow is imposed.",
     inputSchema: jobSchema, annotations,
   }, ({ jobId }) => guarded(() => json(registry.resume(jobId))));
   registerTool(server, "close_collection_session", {
-    description: "Cancel jobs, close only this research session's dedicated browser and discard its temporary in-memory results/cursors. Idempotent. Does not close Content Studio projects or the user's browser. Use after finishing research.",
+    description: "Cancel this YouTube research session and discard its temporary results and cursors. Idempotent. Does not close Content Studio projects. Use after finishing research.",
     inputSchema: z.strictObject({ sessionId: z.uuid() }), annotations,
   }, ({ sessionId }) => guarded(async () => json(await registry.close(sessionId))));
 }

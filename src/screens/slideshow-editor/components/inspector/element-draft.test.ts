@@ -7,7 +7,7 @@ const element: ElementDefinition = {
   id: "title", name: "제목", role: "훅", kind: "text",
   frame: { x: 0.1, y: 0.1, width: 0.8, height: 0.2 },
   style: { color: "#111111", backgroundColor: "transparent", fontSize: 36, lineHeight: 1.2,
-    fontWeight: 700, textAlign: "center", borderRadius: 0, fontFamily: "sans-serif", imageFit: "cover" },
+    fontWeight: 700, textAlign: "center", borderRadius: 0, fontFamily: "inter", imageFit: "cover" },
   };
 const placement: PlacedElement = { id: "placed-title", elementId: "title", value: "현재 제목",
   frameOverride: null, styleOverride: null };

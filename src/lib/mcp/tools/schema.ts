@@ -1,6 +1,6 @@
 import { requestIdSchema } from "../protocol/requests";
 import * as z from "zod/v4";
-import { compositionSchema, requiredCompositionSchema, contentMetadataSchema, templateTopicSchema, templateMessageSchema } from "@/domains/slideshow/projects/composition";
+import { contentMetadataSchema } from "@/domains/slideshow/projects/metadata";
 import { localEditorCommandsSchema } from "@/domains/slideshow/editor/local-schema";
 
 export const editSchema = z.fromJSONSchema({
@@ -20,16 +20,9 @@ export const previewSchema = projectSchema.extend({ slideId: z.string().min(1) }
 export const cloneSchema = z.strictObject({
   requestId: requestIdSchema,
   name: z.string().trim().min(1).max(120).optional(),
-  templateProjectId: z.string().min(1),
+  projectId: z.string().min(1),
   topic: contentMetadataSchema.shape.topic.optional(),
   message: contentMetadataSchema.shape.message.optional(),
-}).refine(input => (input.topic === undefined) === (input.message === undefined), { message: "주제와 메시지를 함께 입력해 주세요." });
-export const setCompositionSchema = projectSchema.extend({ composition: compositionSchema });
-export const registerTemplateSchema = projectSchema.extend({
-  composition: requiredCompositionSchema.optional(),
-  templateName: z.string().trim().min(1).max(120).optional(),
-  templateTopic: templateTopicSchema.optional(),
-  templateMessage: templateMessageSchema.optional(),
-  templateOrder: z.number().int().positive().optional(),
-});
+  content_type: contentMetadataSchema.shape.content_type.optional(),
+}).refine(input => [input.topic,input.message,input.content_type].every(value => value === undefined) || [input.topic,input.message,input.content_type].every(value => value !== undefined), { message: "소재·메시지·포맷을 함께 입력해 주세요." });
 export const setContentMetadataSchema = projectSchema.extend(contentMetadataSchema.shape);

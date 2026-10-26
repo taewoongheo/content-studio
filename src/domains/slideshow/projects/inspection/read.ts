@@ -20,6 +20,6 @@ export function inspectSlideshow(job: ContentJobSnapshot, options: SlideshowRead
     editor: { ...job.editor, document: partial ? { ...document, slides, elements } : document } };
 }
 export function summarizeSlideshow(job: ContentJobSnapshot) {
-  return { projectId: job.id, tabId: job.tabId, revision: job.editor.revision, savedRevision: job.savedRevision, name: job.name,
+  return { projectId: job.id, tabId: job.tabId, revision: job.editor.revision, savedRevision: job.savedRevision, name: job.name, warnings: job.warnings ?? [],
     slides: job.editor.document.slides.map(slide => ({ id: slide.id, name: slide.name, placements: slide.placements.map(placement => ({ id: placement.id, elementId: placement.elementId })) })) };
 }

@@ -9,12 +9,6 @@
     "lint": "eslint",
     "test": "tsx --test 'src/**/*.test.ts'",
     "test:mcp": "tsx scripts/test-mcp.mts",
-    "setup:research": "tsx scripts/setup-research.mts",
-    "setup:captcha": "tsx scripts/research/setup-captcha.mts",
-    "test:research": "tsx scripts/research/smoke.mts",
-    "test:search": "tsx scripts/research/search-smoke.mts",
-    "test:research-accounts": "tsx scripts/research/dashboard-smoke.mts",
-    "migrate:template-loop": "tsx scripts/migrate-template-loop.mts",
     "test:video": "tsx scripts/video/smoke.mts"
   },
   "dependencies": {
@@ -27,6 +21,7 @@
     "@remotion/google-fonts": "4.0.535",
     "@remotion/player": "4.0.535",
     "@remotion/renderer": "4.0.535",
+    "@xyflow/react": "^12.12.0",
     "ajv": "8.20.0",
     "better-sqlite3": "13.0.3",
     "class-variance-authority": "^0.7.1",

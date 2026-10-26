@@ -59,7 +59,7 @@ export function TextContentControl({ value, textColors, textWeights, baseColor, 
         </div>
         {(textColors.length > 0 || textWeights.length > 0) && <>
           <div aria-label="부분 스타일 미리보기" className="whitespace-pre-wrap break-words rounded-md border bg-background p-2 text-sm"
-            style={{ color: baseColor, fontWeight: supportedFontWeight(fontFamily, baseWeight), fontFamily: `var(${editorFont(fontFamily).variable}), sans-serif` }}>
+            style={{ color: baseColor, fontWeight: supportedFontWeight(fontFamily, baseWeight), fontFamily: `var(${editorFont(fontFamily).variable})` }}>
             {styledTextParts(value, textColors, textWeights).map((part, index) => <span key={index}
               style={{ color: part.color, fontWeight: part.fontWeight === undefined ? undefined : supportedFontWeight(fontFamily, part.fontWeight) }}>{part.text}</span>)}
           </div>

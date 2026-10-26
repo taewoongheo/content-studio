@@ -3,7 +3,7 @@ import { openVideoProject, videoEndpoint, videoRequest } from "@/domains/video/c
 
 import { useState } from "react";
 import type { OpenProjectTab } from "@/domains/workspace/model";
-import { getContentJob } from "@/domains/slideshow/client/api";
+import { getContentJob } from "@/domains/slideshow/client/editor/api";
 import { renameProject } from "@/domains/slideshow/client/projects-api";
 import { closeTab, type CloseDecision } from "../api";
 import type { WorkspaceOperation } from "./use-workspace-operation";

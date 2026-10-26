@@ -1,10 +1,11 @@
+import { PRODUCTION_SCHEMA } from "@/domains/content-production/server/persistence/schema";
 import { VIDEO_SCHEMA } from "@/domains/video/server/persistence/schema";
 import Database from "better-sqlite3";
 import { mkdirSync } from "node:fs";
 import { dirname, isAbsolute } from "node:path";
-import { ensureProjectSchema } from "@/domains/slideshow/server/persistence/projects/schema";
+import { PROJECT_SCHEMA } from "@/domains/slideshow/server/persistence/projects/schema";
 
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 20;
 
 export function defaultDatabasePath() {
   const override = process.env.CONTENT_STUDIO_DB_PATH;
@@ -24,14 +25,14 @@ export function openLocalDatabase(path = defaultDatabasePath()) {
     if (version > SCHEMA_VERSION)
       throw new Error(`지원하지 않는 Content Studio DB 버전입니다: ${version}`);
     const projectColumns = database.prepare("PRAGMA table_info(content_projects)").all() as Array<{ name: string }>;
-    const missingColumns = ["template_id", "topic", "message", "published_at"].filter(name => !projectColumns.some(column => column.name === name));
-    const hasTemplateColor = (database.prepare("PRAGMA table_info(content_templates)").all() as Array<{ name: string }>).some(column => column.name === "color");
-    if (projectColumns.length && (missingColumns.length || hasTemplateColor))
-      throw new Error(`지원하지 않는 프로젝트 DB 스키마입니다 (${missingColumns.join(", ")} 누락). 자동 마이그레이션은 제공하지 않습니다. 서버를 종료하고 pnpm migrate:template-loop로 명시적으로 전환해 주세요.`);
+    const missingColumns = ["topic", "message", "content_type", "document_json"].filter(name => !projectColumns.some(column => column.name === name));
+    if (projectColumns.length && (version !== SCHEMA_VERSION || missingColumns.length))
+      throw new Error("지원하지 않는 프로젝트 DB 스키마입니다. 서버를 종료하고 DB를 확인해 주세요. 자동 변환은 제공하지 않습니다.");
     database.pragma("journal_mode = WAL");
     database.transaction(() => {
-      ensureProjectSchema(database);
+      database.exec(PROJECT_SCHEMA);
       database.exec(VIDEO_SCHEMA);
+      database.exec(PRODUCTION_SCHEMA);
       database.pragma(`user_version = ${SCHEMA_VERSION}`);
     })();
     return database;

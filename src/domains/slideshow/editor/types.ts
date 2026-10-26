@@ -66,6 +66,8 @@ export type EditorDocument = {
 export type EditorCommand =
   | { type: "set_aspect_ratio"; aspectRatio: EditorDocument["aspectRatio"] }
   | { type: "reorder_slides"; slideIds: string[] }
+  | { type: "set_slide_role"; slideId: string; role: SlideRole }
+  | { type: "remove_element"; elementId: string }
   | { type: "rename_slide"; slideId: string; name: string }
   | { type: "reorder_layers"; slideId: string; placementIds: string[] }
   | { type: "set_slide_background"; slideId: string; color: string }
@@ -75,6 +77,7 @@ export type EditorCommand =
   | { type: "update_visual"; scope: "common"; elementId: string; frame?: ElementFrame; style?: Partial<ElementStyle> }
   | { type: "update_visual"; scope: "local"; slideId: string; placementId: string; frame?: ElementFrame; style?: Partial<ElementStyle> }
   | { type: "update_element"; elementId: string; name?: string; role?: string }
+  | { type: "rebind_element"; slideId: string; placementId: string; elementId: string }
   | { type: "add_element"; element: ElementDefinition }
   | { type: "place_element"; slideId: string; elementId: string; placementId: string }
   | { type: "add_slide"; afterSlideId: string; sourceSlideId: string; newSlideId: string; copyContent: boolean }

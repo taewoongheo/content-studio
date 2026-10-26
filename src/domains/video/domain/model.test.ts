@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createLayer, newVideoDocument, splitVideoLayer, videoDocumentSchema, videoDuration, type VideoLayer } from "@/domains/video/domain/model";
+import { createLayer, newVideoDocument, parseSavedVideoDocument, splitVideoLayer, videoDocumentSchema, videoDuration, type VideoLayer } from "@/domains/video/domain/model";
 test("독립 영상 여러 개가 겹쳐도 순서대로 합산하지 않고 마지막 종료 시점으로 길이를 계산한다", () => {
   const doc = newVideoDocument(); doc.duration = 1;
   const shape = createLayer("shape", doc);
@@ -61,4 +61,16 @@ test("이어붙이기는 영상뿐 아니라 오디오·텍스트의 마지막 �
   const extended = { ...clip, id: crypto.randomUUID(), duration: 30, trimEnd: 30, sequenceIndex: 1, sequenceStart: 0 };
   const shorter = { ...clip, duration: 45, trimEnd: 45 };
   assert.deepEqual(reflowSequence({ ...doc, layers: [shorter, extended] }).layers.map(l => l.from), [600, 645]);
+});
+
+test("영상도 두 글꼴만 허용하고 저장된 이전 글꼴은 Inter로 읽는다", () => {
+  const doc = newVideoDocument();
+  const layer = createLayer("text", doc);
+  for (const family of ["Space Grotesk", "sans-serif"]) {
+    const old = { ...doc, layers: [{ ...layer, fontFamily: family }] };
+    assert.equal(videoDocumentSchema.safeParse(old).success, false);
+    const normalized = parseSavedVideoDocument(old);
+    assert.equal(normalized.layers[0].kind === "text" && normalized.layers[0].fontFamily, "Inter");
+    assert.equal(old.layers[0].fontFamily, family);
+  }
 });

@@ -3,7 +3,7 @@ import type { SlideshowStructure } from "@/domains/slideshow/editor/types";
 import { EDITOR_FONT_FAMILIES } from "@/domains/slideshow/editor/typography/fonts";
 import { remapTextColors, validTextColors } from "@/domains/slideshow/editor/typography/ranges/text-colors";
 import { remapTextWeights, validTextWeights } from "@/domains/slideshow/editor/typography/ranges/text-weights";
-import { validBorder, validRotation } from "@/domains/slideshow/editor/elements/style";
+import { validBorder, validRotation, withStyleDefaults } from "@/domains/slideshow/editor/elements/style";
 import { MAX_FRAME_COORDINATE, MAX_FRAME_DIMENSION } from "@/domains/slideshow/editor/types";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_FRAME, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, syncBackgroundColors } from "@/domains/slideshow/editor/background";
 import type {
@@ -52,7 +52,7 @@ export function validateEditorDocument(document: EditorDocument): string[] {
     document.elements.filter((element) => element.kind === "background").length !== 1 ||
     !Object.keys(BACKGROUND_FRAME).every((key) => background.frame[key as keyof ElementFrame] === BACKGROUND_FRAME[key as keyof ElementFrame]))
     errors.push("공통 배경 Element가 올바르지 않습니다.");
-  if (document.slides.length < 2 || document.slides.length > 20)
+  if (document.slides.length < 1 || document.slides.length > 20)
     errors.push("슬라이드 수가 올바르지 않습니다.");
   if (document.structure === "repeating" && document.slides.length < 3)
     errors.push("반복형에는 본문 슬라이드가 한 장 이상 필요합니다.");
@@ -253,6 +253,33 @@ export function applyEditorCommand(document: EditorDocument, command: EditorComm
       if (element.kind === "background") throw new Error("배경 Element의 정의는 바꿀 수 없습니다.");
       if (command.name !== undefined) element.name = command.name;
       if (command.role !== undefined) element.role = command.role;
+      break;
+    }
+    case "rebind_element": {
+      const placement = requirePlacement(requireSlide(next, command.slideId), command.placementId);
+      const source = next.elements.find(element => element.id === placement.elementId)!;
+      const target = next.elements.find(element => element.id === command.elementId);
+      if (!target || source.kind === "background" || target.kind !== source.kind)
+        throw new Error("같은 종류의 배경이 아닌 Element로 연결해 주세요.");
+      if (source.id === target.id) break;
+      const frame = structuredClone(placement.frameOverride ?? source.frame);
+      placement.frameOverride = (Object.keys(frame) as Array<keyof ElementFrame>).some(key => frame[key] !== target.frame[key]) ? frame : null;
+      const style = withStyleDefaults({ ...source.style, ...placement.styleOverride });
+      const targetStyle = withStyleDefaults(target.style);
+      const overrides = Object.fromEntries(Object.entries(style).filter(([key, value]) => value !== targetStyle[key as keyof ElementStyle]));
+      placement.styleOverride = Object.keys(overrides).length ? overrides : null;
+      placement.elementId = target.id;
+      break;
+    }
+    case "set_slide_role":
+      requireSlide(next, command.slideId).role = command.role;
+      break;
+    case "remove_element": {
+      const element = next.elements.find(item => item.id === command.elementId);
+      if (!element || element.kind === "background") throw new Error("삭제할 일반 Element를 찾을 수 없습니다.");
+      if (next.slides.some(slide => slide.placements.some(placement => placement.elementId === element.id)))
+        throw new Error("배치에서 사용 중인 Element는 삭제할 수 없습니다.");
+      next.elements = next.elements.filter(item => item.id !== element.id);
       break;
     }
     case "add_element":

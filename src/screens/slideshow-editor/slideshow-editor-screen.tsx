@@ -8,8 +8,8 @@ import type { EditorCommand, ElementFrame, ElementKind } from "@/domains/slidesh
 import { makeElementDefinition } from "@/domains/slideshow/editor/elements/factory";
 import { slideActionCommand } from "@/domains/slideshow/editor/slides/commands";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, getDuplicateTargets } from "@/domains/slideshow/editor/document";
-import { getContentJob, uploadEditorImage } from "@/domains/slideshow/client/api";
-import { useContentJob } from "@/domains/slideshow/client/use-content-job";
+import { getContentJob, uploadEditorImage } from "@/domains/slideshow/client/editor/api";
+import { useContentJob } from "@/domains/slideshow/client/editor/use-content-job";
 import { ElementInspector, type ElementInspectorHandle } from "./components/inspector/element-inspector";
 import { ElementScopePicker } from "./components/element-scope-picker";
 import { removalCommandsForScope, selectVisualSlides, type ScopeChoice } from "./components/element-scope";
@@ -470,16 +470,16 @@ export function SlideshowEditorScreen({ ref, initialViewState, initialJob, onNew
                     onClick={() => void addSlide(true)}><Copy className="size-3.5" aria-hidden="true" /> 장 복제</Button>
                   <Button type="button" variant="ghost" size="icon-sm" className="text-destructive hover:text-destructive"
                     aria-label="현재 슬라이드 제거" title="현재 슬라이드 제거"
-                    disabled={disabled || document.slides.length <= (document.structure === "repeating" ? 3 : 2) ||
+                    disabled={disabled || document.slides.length <= (document.structure === "repeating" ? 3 : 1) ||
                       (document.structure === "repeating" && slide.role !== "body")}
                     onClick={() => void removeSlide()}><Trash2 className="size-3.5" aria-hidden="true" /></Button>
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="flex items-center gap-2 text-xs">
+                  <label className="flex items-center gap-2 text-xs" title="편집용 정렬선과 스냅입니다. 배치를 제한하지 않으며 내보내기에 포함되지 않습니다.">
                     <input type="checkbox" checked={showGuides}
                       onChange={(event) => setShowGuides(event.target.checked)}
                       className="size-4 accent-primary" />
-                    가이드
+                    정렬 가이드
                   </label>
                   <label className="flex items-center gap-2 text-xs">
                     <input type="checkbox" checked={showOverflow}

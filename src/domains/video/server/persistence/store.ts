@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
-import { videoDocumentSchema, videoDuration, type VideoAsset, type VideoDocument, type VideoSummary } from "@/domains/video/domain/model";
+import { parseSavedVideoDocument, videoDocumentSchema, videoDuration, type VideoAsset, type VideoDocument, type VideoSummary } from "@/domains/video/domain/model";
 
 import { VIDEO_SCHEMA } from "@/domains/video/server/persistence/schema";
 type Row = { id: string; name: string; document_json: string; revision: number; updated_at: string };
@@ -8,13 +8,13 @@ export class VideoStore {
   constructor(private db: Database.Database) { db.exec(VIDEO_SCHEMA); }
   list(): VideoSummary[] {
     return (this.db.prepare("SELECT * FROM video_projects ORDER BY updated_at DESC, id").all() as Row[]).map(row => {
-      const doc = videoDocumentSchema.parse(JSON.parse(row.document_json));
+      const doc = parseSavedVideoDocument(JSON.parse(row.document_json));
       return { id: row.id, name: row.name, projectType: "video", revision: row.revision, width: doc.width, height: doc.height, fps: doc.fps, duration: videoDuration(doc), updatedAt: row.updated_at };
     });
   }
   get(id: string) {
     const row = this.db.prepare("SELECT * FROM video_projects WHERE id = ?").get(id) as Row | undefined;
-    return row ? { id: row.id, name: row.name, revision: row.revision, document: videoDocumentSchema.parse(JSON.parse(row.document_json)) } : null;
+    return row ? { id: row.id, name: row.name, revision: row.revision, document: parseSavedVideoDocument(JSON.parse(row.document_json)) } : null;
   }
   save(id: string, name: string, document: VideoDocument, revision: number) {
     const doc = videoDocumentSchema.parse(document);

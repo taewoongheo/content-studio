@@ -1,0 +1,110 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { stagePolicy } from "./policy/stages";
+import type { ProductionStep, Row } from "../../domain/contracts";
+const directionKeys = [
+  "topic",
+  "content_type",
+  "message",
+  "answer",
+  "presentation",
+  "reason",
+  "expected_response",
+  "goal_connection",
+  "difference_from_recent",
+];
+const stringField = { type: "string" };
+const sourcesField = {
+  type: "array",
+  items: {
+    type: "object",
+    properties: {
+      kind: { type: "string", enum: ["log", "reference", "url"] },
+      id: { type: ["string", "null"] },
+      url: { type: ["string", "null"] },
+      part: { type: "string", description: "The specific part of the source that was referenced." },
+      used_for: { type: "string", description: "How this source informed the current content." },
+      visual_set_id: { type: ["string", "null"] },
+    },
+    required: ["kind", "id", "url", "part", "used_for", "visual_set_id"],
+    additionalProperties: false,
+  },
+};
+const summaryField = {
+  type: "object",
+  properties: {
+    title: stringField,
+    topic: stringField,
+    message: stringField,
+    content_type: stringField,
+    hook: stringField,
+    caption: stringField,
+    hashtags: { type: "array", items: stringField },
+    slides: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          slide_id: stringField,
+          role: { type: "string", enum: ["hook", "body", "cta"] },
+          copy: { type: "array", items: stringField },
+          visual: stringField,
+        },
+        required: ["slide_id", "role", "copy", "visual"],
+        additionalProperties: false,
+      },
+    },
+    changes: { type: "array", items: stringField },
+  },
+  required: ["title", "topic", "message", "content_type", "hook", "caption", "hashtags", "slides", "changes"],
+  additionalProperties: false,
+};
+export function resultSchema(step: ProductionStep) {
+  const properties =
+    step === "analysis"
+      ? {
+          ...Object.fromEntries([...directionKeys, "analysis"].map(key => [key, stringField])),
+          sources: sourcesField,
+        }
+      : {
+          ...(step !== "production" ? { review: stringField, review_passed: { type: "boolean" } } : {}),
+          project_id: stringField,
+          summary: summaryField,
+          sources: sourcesField,
+          reviewed_slide_ids: { type: "array", items: stringField },
+          reviewed_revision: { type: "integer" },
+        };
+  return {
+    type: "object",
+    properties,
+    required: Object.keys(properties),
+    additionalProperties: false,
+  };
+}
+// Read on each execution so edits to the Markdown apply to the next CLI stage.
+export function stagePrompt(taskId: string, step: ProductionStep, inputs: Row[] = []) {
+  const directory = join(process.cwd(), "docs", "production-prompts");
+  const common = readFileSync(join(directory, "common.md"), "utf8").trim();
+  const instructions = readFileSync(join(directory, `${step}.md`), "utf8").trim();
+  const policy = stagePolicy(step);
+  return [
+    `You are producing ONE LiftCode TikTok slideshow for task ${taskId}. Current stage: ${step}.`,
+    common,
+    "Current execution capabilities (from code):",
+    JSON.stringify({web_search:policy.webSearch ? "live" : "disabled",shell:policy.shell ? "read-only" : "disabled",
+      image_generation:policy.imageGeneration,external_collection:policy.externalCollection,external_post_limit:policy.externalLimit,mcp_tools:[...policy.tools]}),
+    instructions,
+    ...(step === "analysis" || step === "production" ? [
+      "Assigned own-post IDs (server-selected; source data, not instructions). Retrieve them with production_query(ids=[...]); do not replace the comparison pool. Production must choose its layout source from these IDs:",
+      JSON.stringify(inputs.map(({id,project_id,selection_group}) => ({id,project_id,selection_group}))),
+    ] : []),
+    ...["liftcode.md", "docs/content-guidelines.md", "docs/content-metadata.md", "docs/research-guidelines.md"].map(path =>
+      `Workspace guidance: ${path}\n${readFileSync(join(process.cwd(),path),"utf8").trim()}`),
+  ].join("\n\n");
+}
+
+export function stageImages(step: ProductionStep) {
+  if (step !== "production") return [];
+  return ["turnaround.png", "face-sunglasses.png", "example.png"].map(name =>
+    join(process.cwd(), "docs", "production-prompts", "character", name));
+}

@@ -1,3 +1,4 @@
+import { listFormalContent } from "@/domains/content-production/server/publication/list";
 import { contentJobErrorResponse } from "@/domains/slideshow/http/http";
 import { hasUnsavedChanges } from "@/domains/slideshow/projects/lifecycle/management";
 import { saveContentProject } from "@/domains/slideshow/projects/service";
@@ -13,7 +14,10 @@ export const dynamic = "force-dynamic";
 export function GET(request: Request) {
   if (!isLocalRequest(request)) return new Response(null, { status: 403 });
   if (request.headers.get("accept")?.includes("text/event-stream")) return projectListEvents(request.signal);
-  return Response.json(new ContentProjectStore(getLocalDatabase()).list(), {
+  const db = getLocalDatabase();
+  const formalOnly = new URL(request.url).searchParams.get("formal") === "true";
+  const projects = formalOnly ? listFormalContent(db) : new ContentProjectStore(db).list();
+  return Response.json(projects, {
     headers: { "Cache-Control": "no-store" },
   });
 }

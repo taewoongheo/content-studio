@@ -20,19 +20,22 @@ test("MCP rejects off-platform URLs, shares job state across protocol instances 
   const first = await connect(), second = await connect();
   try {
     const tools = (await first.client.listTools()).tools;
-    assert.equal(tools.length, 10);
+    assert.equal(tools.length, 7);
     assert.equal(tools.some(tool => /comments|reply/.test(tool.name)), false);
     assert.equal(tools.find(tool => tool.name === "read_social_post")?.annotations?.openWorldHint, true);
     const bad = await first.client.callTool({ name: "read_social_post", arguments: { url: "https://localhost/post/1" } });
     assert.equal(bad.isError, true); assert.equal(calls, 0);
-    const start = await first.client.callTool({ name: "read_social_post", arguments: { url: "https://www.instagram.com/p/abc/", criteria: { minViews: 100_000, format: "slideshow" } } });
+    const start = await first.client.callTool({ name: "read_social_post", arguments: { url: "https://www.youtube.com/post/abc", criteria: { minViews: 100_000, format: "slideshow" } } });
     const job = start.structuredContent as { jobId: string; sessionId: string };
     await new Promise(resolve => setImmediate(resolve));
     const read = await second.client.callTool({ name: "get_collection_job", arguments: { jobId: job.jobId } });
     assert.equal((read.structuredContent as { status: string }).status, "complete");
     assert.equal(calls, 1);
-    const solve = await first.client.callTool({ name: "solve_collection_captcha", arguments: { jobId: job.jobId } });
-    assert.equal(solve.isError, true);
+    for (const name of ["get_research_accounts","solve_collection_captcha","open_collection_browser"])
+      assert.equal(tools.some(tool => tool.name === name), false);
+    const legacy = await first.client.callTool({ name: "read_social_post", arguments: { url: "https://www.instagram.com/p/abc/" } });
+    assert.equal(legacy.isError,true);
+    assert.equal(calls,1);
     await second.client.callTool({ name: "close_collection_session", arguments: { sessionId: job.sessionId } });
     assert.equal((await first.client.callTool({ name: "get_collection_job", arguments: { jobId: job.jobId } })).isError, true);
   } finally { await first.client.close(); await first.server.close(); await second.client.close(); await second.server.close(); }

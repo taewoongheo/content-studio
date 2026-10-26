@@ -7,9 +7,10 @@ const SNAP_DISTANCE = 0.016;
 const PRECISION = 10_000;
 const DROPPED_IMAGE_LONG_SIDE = 0.5;
 
-export const CANVAS_SAFE_AREA = { left: 0.067, right: 0.067, top: 0.115, bottom: 0.176 } as const;
-const HORIZONTAL_GUIDES = [CANVAS_SAFE_AREA.left, 0.5, 1 - CANVAS_SAFE_AREA.right] as const;
-const VERTICAL_GUIDES = [CANVAS_SAFE_AREA.top, 0.5, 1 - CANVAS_SAFE_AREA.bottom] as const;
+export const CANVAS_GUIDE_INSETS = { left: 0.04, right: 0.04, top: 0.04, bottom: 0.04 } as const;
+export const CANVAS_ROW_GUIDES = [0.25, 0.5, 0.75] as const;
+const HORIZONTAL_GUIDES = [CANVAS_GUIDE_INSETS.left, 0.5, 1 - CANVAS_GUIDE_INSETS.right] as const;
+const VERTICAL_GUIDES = [CANVAS_GUIDE_INSETS.top, ...CANVAS_ROW_GUIDES, 1 - CANVAS_GUIDE_INSETS.bottom] as const;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -45,11 +46,12 @@ export function frameForDroppedImage(
   };
 }
 
-function snapMovedAxis(start: number, size: number, startGuide: number, endGuide: number) {
+function snapMovedAxis(start: number, size: number, startGuide: number, endGuide: number, extraGuides: readonly number[] = []) {
   const candidates = [
     { distance: Math.abs(start - startGuide), start: startGuide },
     { distance: Math.abs(start + size / 2 - 0.5), start: 0.5 - size / 2 },
     { distance: Math.abs(start + size - endGuide), start: endGuide - size },
+    ...extraGuides.flatMap(guide => [0, size / 2, size].map(offset => ({distance: Math.abs(start + offset - guide), start: guide - offset}))),
   ];
   const nearest = candidates.reduce((best, candidate) => candidate.distance < best.distance ? candidate : best);
   return nearest.distance <= SNAP_DISTANCE ? nearest.start : start;
@@ -61,8 +63,8 @@ export function moveOrResizeFrame(frame: ElementFrame, mode: DragMode, deltaX: n
     let x = frame.x + deltaX;
     let y = frame.y + deltaY;
     if (guidesEnabled) {
-      x = snapMovedAxis(x, frame.width, CANVAS_SAFE_AREA.left, 1 - CANVAS_SAFE_AREA.right);
-      y = snapMovedAxis(y, frame.height, CANVAS_SAFE_AREA.top, 1 - CANVAS_SAFE_AREA.bottom);
+      x = snapMovedAxis(x, frame.width, CANVAS_GUIDE_INSETS.left, 1 - CANVAS_GUIDE_INSETS.right);
+      y = snapMovedAxis(y, frame.height, CANVAS_GUIDE_INSETS.top, 1 - CANVAS_GUIDE_INSETS.bottom, CANVAS_ROW_GUIDES.filter(guide => guide !== 0.5));
     }
     return { ...frame, x: round(x), y: round(y) };
   }

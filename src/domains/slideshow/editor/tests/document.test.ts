@@ -29,7 +29,7 @@ const analysis: EditorAnalysis = {
         fontWeight: 700,
         textAlign: "center",
         borderRadius: 0,
-        fontFamily: "sans-serif",
+        fontFamily: "inter",
         imageFit: "cover",
       },
       },

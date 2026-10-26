@@ -24,11 +24,7 @@ export function renameProject(registry: ContentJobRegistry, id: string, requeste
     if (expectedTabId) registry.requireTab(id, expectedTabId);
     if (!registry.has(id) && !stores.projects.getSummary(id)) throw new ContentJobError("JOB_NOT_FOUND", "프로젝트를 찾을 수 없습니다.");
     stores.projects.rename(id, name);
-    if (registry.has(id)) registry.update(id, job => {
-      if (job.name !== name) job.editor.revision++;
-      job.name = name;
-      if (stores.projects.getContent(id) && !hasUnsavedChanges(job, stores)) job.savedRevision = job.editor.revision;
-    });
+    syncOpenProjectName(registry, id, name, stores);
     registry.afterCommit(notifyProjectsChanged);
   })());
 }
@@ -42,4 +38,12 @@ export function deleteProject(registry: ContentJobRegistry, id: string, expected
     if (registry.has(id)) registry.remove(id);
     registry.afterCommit(notifyProjectsChanged);
   })());
+}
+
+export function syncOpenProjectName(registry: ContentJobRegistry, id: string, name: string, stores: Stores) {
+  if (registry.has(id)) registry.update(id, job => {
+      if (job.name !== name) job.editor.revision++;
+      job.name = name;
+      if (stores.projects.getContent(id) && !hasUnsavedChanges(job, stores)) job.savedRevision = job.editor.revision;
+    });
 }
