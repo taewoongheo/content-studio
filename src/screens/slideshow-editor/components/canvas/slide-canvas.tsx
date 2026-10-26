@@ -11,7 +11,8 @@ import {
   BACKGROUND_PLACEMENT_ID,
 } from "@/domains/slideshow/editor/document";
 import {
-  CANVAS_SAFE_AREA,
+  CANVAS_GUIDE_INSETS,
+  CANVAS_ROW_GUIDES,
   type DragMode,
 } from "./frame/geometry";
 import { moveOrResizeRotatedFrame } from "./frame/rotation";
@@ -341,23 +342,25 @@ export function SlideCanvas({
         >
           <div
             className="absolute inset-x-0 top-0 bg-black/15"
-            style={{ height: `${CANVAS_SAFE_AREA.top * 100}%` }}
+            style={{ height: `${CANVAS_GUIDE_INSETS.top * 100}%` }}
           />
           <div
             className="absolute inset-x-0 bottom-0 bg-black/15"
-            style={{ height: `${CANVAS_SAFE_AREA.bottom * 100}%` }}
+            style={{ height: `${CANVAS_GUIDE_INSETS.bottom * 100}%` }}
           />
+          <div className="absolute left-0 bg-black/15" style={{width:`${CANVAS_GUIDE_INSETS.left*100}%`,top:`${CANVAS_GUIDE_INSETS.top*100}%`,bottom:`${CANVAS_GUIDE_INSETS.bottom*100}%`}} />
+          <div className="absolute right-0 bg-black/15" style={{width:`${CANVAS_GUIDE_INSETS.right*100}%`,top:`${CANVAS_GUIDE_INSETS.top*100}%`,bottom:`${CANVAS_GUIDE_INSETS.bottom*100}%`}} />
           <div
             className="absolute border border-dashed border-emerald-400/80"
             style={{
-              left: `${CANVAS_SAFE_AREA.left * 100}%`,
-              right: `${CANVAS_SAFE_AREA.right * 100}%`,
-              top: `${CANVAS_SAFE_AREA.top * 100}%`,
-              bottom: `${CANVAS_SAFE_AREA.bottom * 100}%`,
+              left: `${CANVAS_GUIDE_INSETS.left * 100}%`,
+              right: `${CANVAS_GUIDE_INSETS.right * 100}%`,
+              top: `${CANVAS_GUIDE_INSETS.top * 100}%`,
+              bottom: `${CANVAS_GUIDE_INSETS.bottom * 100}%`,
             }}
           />
           <div className="absolute inset-y-0 left-1/2 border-l border-dashed border-emerald-300/25" />
-          <div className="absolute inset-x-0 top-1/2 border-t border-dashed border-emerald-300/25" />
+          {CANVAS_ROW_GUIDES.map(y => <div key={y} className="absolute inset-x-0 border-t border-dashed border-emerald-300/25" style={{top:`${y*100}%`}} />)}
         </div>
       )}
       {imageDragActive && (

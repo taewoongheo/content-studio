@@ -475,11 +475,11 @@ export function SlideshowEditorScreen({ ref, initialViewState, initialJob, onNew
                     onClick={() => void removeSlide()}><Trash2 className="size-3.5" aria-hidden="true" /></Button>
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="flex items-center gap-2 text-xs">
+                  <label className="flex items-center gap-2 text-xs" title="편집용 정렬선과 스냅입니다. 배치를 제한하지 않으며 내보내기에 포함되지 않습니다.">
                     <input type="checkbox" checked={showGuides}
                       onChange={(event) => setShowGuides(event.target.checked)}
                       className="size-4 accent-primary" />
-                    가이드
+                    정렬 가이드
                   </label>
                   <label className="flex items-center gap-2 text-xs">
                     <input type="checkbox" checked={showOverflow}
