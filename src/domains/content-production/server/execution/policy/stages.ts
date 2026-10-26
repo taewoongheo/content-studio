@@ -3,9 +3,11 @@ import type { ProductionStep } from "../../../domain/contracts";
 
 export const PRODUCTION_MODEL = "gpt-6.1-sol";
 
+const referenceTools = [
+  "production_external_references", "production_describe_reference", "production_read_images",
+];
 const commonTools = [
-  "production_context", "production_query", "production_external_references",
-  "production_describe_reference", "production_comparisons", "production_read_images",
+  "production_context", "production_query", "production_comparisons",
   "production_save_draft", "production_read_project", "production_preview_project",
 ];
 export const editorReadTools = ["open_project", "read_project", "preview_slide", "preview_slides"];
@@ -13,19 +15,25 @@ export const editorWriteTools = [
   "production_clone_project", "production_use_generated_image", "production_change_direction",
   "edit_project", "undo_project", "rename_project", "set_content_metadata",
 ];
+
+const toolsByStage: Record<ProductionStep, readonly string[]> = {
+  analysis: [...commonTools, ...referenceTools],
+  production: [...commonTools, ...referenceTools, ...editorReadTools, ...editorWriteTools],
+  hook: [...commonTools, ...referenceTools, ...editorReadTools, "edit_project"],
+  polish: [...commonTools, ...editorReadTools, "edit_project"],
+  visual: ["production_context", "production_save_draft", ...editorReadTools, "edit_project"],
+};
+
 /** Tool availability and native CLI capabilities are separate enforcement boundaries. */
 export function stagePolicy(step: ProductionStep) {
-  const external = step === "analysis" || step === "production" || step === "hook";
+  const usesReferences = step === "analysis" || step === "production" || step === "hook";
+  const canResearchCopy = step === "production" || step === "hook";
   return {
     imageGeneration: step === "production",
     externalCollection: step === "analysis",
-    externalLimit: external ? REFERENCE_LIMIT : 0,
-    webSearch: step === "production" || step === "hook",
-    shell: step === "production" || step === "hook",
-    tools: new Set(step === "visual" ? ["production_context","production_save_draft",...editorReadTools,"edit_project"] : [
-      ...commonTools.filter(name => external || !["production_external_references", "production_describe_reference", "production_read_images"].includes(name)),
-      ...(step === "production" ? [...editorReadTools, ...editorWriteTools]
-        : step === "hook" || step === "polish" ? [...editorReadTools, "edit_project"] : []),
-    ]),
+    externalLimit: usesReferences ? REFERENCE_LIMIT : 0,
+    webSearch: canResearchCopy,
+    shell: canResearchCopy,
+    tools: new Set(toolsByStage[step]),
   };
 }
