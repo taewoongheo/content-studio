@@ -1,9 +1,9 @@
+import { stageContext } from "@/domains/content-production/server/execution/policy/context";
 import type { ProjectWriteValidator } from "@/domains/slideshow/server/project-writes";
 import { join } from "node:path";
 import { OperationError } from "@/lib/errors/operation";
 import { readFreshGeneratedImage, generatedImagesRoot } from "@/domains/content-production/server/images/generated";
 import { imageExecution } from "@/domains/content-production/server/execution/runner";
-import { registerVisualReferenceTool } from "./visual-references";
 import { registerSourceTools } from "./sources";
 import { importSlideshowImage } from "@/domains/slideshow/server/import-image";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
@@ -19,7 +19,7 @@ import {
   reviewDraftPatchSchema,
   directionSchema,
 } from "@/domains/content-production/domain/contracts";
-import { createTaskProject } from "@/domains/content-production/server/projects";
+import { cloneTaskProject } from "@/domains/content-production/server/projects";
 
 export function registerProductionTools(server: McpServer, taskId?: string, origin = "http://127.0.0.1:3000", validateProject?: ProjectWriteValidator) {
   registerSourceTools(server, origin);
@@ -28,7 +28,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     "production_query",
     {
       description:
-        "During analysis, retrieve assigned own-post IDs with ids; selection and metrics come from the material node snapshot. Query keywords do not replace that set. In other stages, query published content logs: up to 10 best posts by (likes+comments+saves)/views, 10 lowest excluding the best, then 10 newest remaining, up to 30 unique. query filters eligible topic/name before selection. selection_group identifies performance/low_performance/recent. Missing metrics exclude rate rankings, not recency. Use production_external_references for the shared external library. Unpublished drafts are available through production_comparisons.",
+        "During analysis, retrieve assigned own-post IDs with ids; selection and metrics come from the material node snapshot. Query keywords do not replace that set. Production queries only that SAME assigned pool; query filters its title/topic/message/format and never expands it. In other stages, query published content logs: up to 10 best posts by (likes+comments+saves)/views, 10 lowest excluding the best, then 10 newest remaining, up to 30 unique. query filters eligible topic/name before selection. selection_group identifies performance/low_performance/recent. Missing metrics exclude rate rankings, not recency. Use production_external_references for the shared external library. Unpublished drafts are available through production_comparisons.",
       inputSchema: z.object({
         kind: z.literal("logs"),
         query: z.string().default(""),
@@ -38,7 +38,14 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     },
     (input) => guarded(() => {
       const store = productionStore();
-      if (taskId && store.get(taskId).task.current_step === "analysis") {
+      const step = taskId ? store.get(taskId).task.current_step : undefined;
+      if (taskId && step === "production") {
+        const ids = input.ids ?? store.analysisInputs(taskId).map(row=>String(row.id));
+        const rows = ids.length ? store.analysisLogs(taskId,ids) : [];
+        const query = input.query.toLowerCase();
+        return json({items:rows.filter(row=>[row.name,row.topic,row.message,row.content_type].some(value=>String(value??"").toLowerCase().includes(query)))});
+      }
+      if (taskId && step === "analysis") {
         if (!input.ids) throw new Error("분석 단계에서는 전달받은 게시글 ID 목록으로 조회해 주세요.");
         return json({items:store.analysisLogs(taskId,input.ids)});
       }
@@ -84,7 +91,6 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
   );
   if (!taskId) return;
   registerExternalReferenceTools(server, taskId);
-  registerVisualReferenceTool(server, taskId);
   registerTool(
     server,
     "production_use_generated_image",
@@ -121,7 +127,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
       inputSchema: z.object({}),
       annotations: annotations(true),
     },
-    () => guarded(() => json({ ...productionStore().get(taskId) })),
+    () => guarded(() => json({ ...stageContext(productionStore().get(taskId)) })),
   );
   registerTool(
     server,
@@ -178,18 +184,19 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
   );
   registerTool(
     server,
-    "production_create_project",
+    "production_clone_project",
     {
       description:
-        "Create a saved slideshow without a template and link it to this production task; reuses linked project on resume. Then open/read/edit using normal project tools.",
+        "Production only. Choose ONE saved published project from this task’s assigned analysis_inputs (up to 30), inspect its actual slides, then copy its layout as an independent draft. Select by broad format, information structure, image count and visual quality; matching topic or performance alone is insufficient. Preserves frames, styles, shared elements, slide roles and badge; clears source text and all images, copies no source asset bytes. Change wording, create fresh images, adapt page count and layout. Records the source and reason. Reuses an existing linked project on resume without overwriting it.",
       inputSchema: z.object({
-        slideCount: z.number().int().min(1).max(20).default(6),
+        sourceProjectId: z.string().min(1),
+        reason: z.string().trim().min(1),
       }),
       annotations: annotations(false),
     },
     (input) =>
       guarded(() =>
-        json(createTaskProject(productionStore(), taskId, input.slideCount)),
+        json(cloneTaskProject(productionStore(), taskId, input.sourceProjectId, input.reason)),
       ),
   );
 }

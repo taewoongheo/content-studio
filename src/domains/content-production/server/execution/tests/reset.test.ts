@@ -1,10 +1,11 @@
+import { seedLayoutSource } from "../../projects/testing/fixtures";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { productionStore, execute, resetProduction } from "../runner";
-import { createTaskProject } from "../../projects";
+import { cloneTaskProject } from "../../projects";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 
 test("reset removes drafts/projects/assets, cancels late output and preserves formal content/references", async () => {
@@ -15,12 +16,13 @@ test("reset removes drafts/projects/assets, cancels late output and preserves fo
     answer: "3 sets", presentation: "cards", reason: "useful", expected_response: "save",
     goal_connection: "install", difference_from_recent: "new", sources: [] };
   try {
-    const ids = store.create(3);
+    const source = seedLayoutSource(store.db);
+    const ids = store.create(3,[source]);
     const projects = ids.map(id => {
       store.state(id, "running");
       store.completeAnalysis(id, direction);
       store.state(id, "running");
-      const { projectId } = createTaskProject(store, id, 1);
+      const { projectId } = cloneTaskProject(store, id, source.project_id,"A suitable saved routine structure.");
       store.db.prepare("INSERT INTO content_project_assets(project_id,asset_id,name,mime_type,byte_size,data) VALUES(?,'image','Image','image/png',1,?)")
         .run(projectId, Buffer.from([1]));
       return projectId;

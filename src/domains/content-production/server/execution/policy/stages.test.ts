@@ -10,9 +10,12 @@ test("stage tools, native web and shell follow the same explicit capability poli
     assert.equal(policy.tools.has("production_import_image"),false);
     assert.equal(policy.webSearch,step === "production" || step === "hook");
     assert.equal(policy.shell,policy.webSearch);
-    assert.equal(policy.tools.has("production_create_project"),step === "production");
+    assert.equal(policy.tools.has("production_create_project"),false);
+    assert.equal(policy.tools.has("production_clone_project"),step === "production");
     assert.equal(policy.tools.has("production_change_direction"),step === "production");
-    assert.equal(policy.tools.has("production_visual_references"),step === "visual");
+    assert.equal(policy.tools.has("production_visual_references"),false);
+    if(step === "visual") for(const tool of ["production_query","production_comparisons","production_read_project","production_preview_project","production_read_images"])
+      assert.equal(policy.tools.has(tool),false,tool);
     assert.equal(policy.tools.has("production_external_references"),step !== "visual" && step !== "polish");
     assert.equal(policy.tools.has("edit_project"),step !== "analysis");
   }

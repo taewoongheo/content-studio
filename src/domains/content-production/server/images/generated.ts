@@ -26,8 +26,12 @@ export async function readFreshGeneratedImage(path: string, startedAt: number, r
     const image = sharp(input, {limitInputPixels:40_000_000});
     const metadata = await image.metadata();
     if (!["png","jpeg","webp"].includes(metadata.format ?? "") || (metadata.pages ?? 1) > 1) throw new Error("Unsupported image");
+    const stats = await image.clone().stats(), alpha = stats.channels.at(-1);
+    if (!metadata.hasAlpha || stats.isOpaque || alpha?.min !== 0 || alpha.max === 0)
+      throw new OperationError("GENERATED_IMAGE_NOT_TRANSPARENT", "생성 이미지는 실제 투명 배경이어야 합니다. 투명 배경으로 다시 생성해 주세요.");
     bytes = await image.rotate().webp({lossless:true}).toBuffer();
-  } catch {
+  } catch (error) {
+    if (error instanceof OperationError) throw error;
     throw new OperationError("GENERATED_IMAGE_INVALID", "생성 결과를 단일 WebP 이미지로 변환할 수 없습니다.");
   }
   if (bytes.length > 10 * 1024 * 1024)

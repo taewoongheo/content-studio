@@ -33,7 +33,6 @@ type Run = {
   sourceProjects: Set<string>;
   externalCompared: boolean;
   toolCalls: ToolAttempt[];
-  visualProjects: string[] | null;
   imageStartedAt: number;
   imageThreadId: string | null;
   reviews: Map<string, { revision: number; slides: Set<string> }>;
@@ -110,12 +109,6 @@ export function imageExecution(id: string) {
     throw new OperationError("IMAGE_EXECUTION_NOT_READY", "현재 CLI 실행의 이미지 출력 위치가 아직 확인되지 않았습니다.");
   return {startedAt:run.imageStartedAt,threadId:run.imageThreadId};
 }
-export function visualReferenceProjects(id: string, selected?: string[]) {
-  const run = runs.get(id);
-  if (!run || run.step !== "visual") throw new Error("시각 검증 단계에서만 사용할 수 있습니다.");
-  if (selected && !run.visualProjects?.length) run.visualProjects = selected;
-  return run.visualProjects;
-}
 export function syncState() {
   return { running: !!shared.productionSync, report: shared.productionRefresh ?? null };
 }
@@ -188,7 +181,6 @@ export async function execute(
     sourceProjects: new Set(),
     externalCompared: false,
     toolCalls: [],
-    visualProjects: null,
     imageStartedAt: Date.now(),
     imageThreadId: null,
   };
@@ -205,11 +197,10 @@ export async function execute(
       run.sourceProjects.clear();
       run.externalCompared = false;
       run.toolCalls = [];
-      run.visualProjects = null;
       run.imageStartedAt = Date.now();
       run.imageThreadId = null;
       phase = "cli";
-      const inputs = run.step === "analysis" ? store.analysisInputs(id, true) : [];
+      const inputs = run.step === "analysis" || run.step === "production" ? store.analysisInputs(id, true) : [];
       const capabilities = stagePolicy(run.step);
       const result = await executor({
         capabilities,
@@ -256,16 +247,9 @@ export async function execute(
         phase = "validation";
         if (review_passed !== true || typeof reviewText !== "string" || !reviewText.trim())
           throw new OperationError("REVIEW_REJECTED", "검토를 통과하지 못했습니다. 검토 결과를 확인해 주세요.");
-        const selectedVisual = run.step === "visual" ? visualReferenceProjects(id) : null;
-        if (run.step === "visual" && !selectedVisual?.length)
-          throw new OperationError(selectedVisual === null ? "VISUAL_REFERENCES_NOT_QUERIED" : "VISUAL_REFERENCES_NO_MATCH",
-            selectedVisual === null ? "관련 내부 게시글을 조회하지 않았습니다." : "검색어에 맞는 내부 게시글이 없습니다. 검색어를 조정해 주세요.");
-        if (run.step === "visual") {
-          const missing = selectedVisual!.filter(projectId => !run.sourceProjects.has(projectId));
-          if (missing.length) throw requiredToolFailure(run.toolCalls.filter(call => missing.includes(String(call.input.projectId))),
-            ["production_preview_project"], `선택한 내부 게시글 이미지 확인이 누락됐습니다: ${missing.join(", ")}.`);
-        }
-        if (run.step !== "polish" && !run.sourceImages)
+        if (run.step === "visual" && sources.length)
+          throw new OperationError("VISUAL_REFERENCES_FORBIDDEN", "시각 검증에서는 레퍼런스를 조회하거나 출처로 기록하지 않습니다.");
+        if (run.step === "hook" && !run.sourceImages)
           throw requiredToolFailure(run.toolCalls, ["production_preview_project", "production_read_images"], "참고 게시글의 실제 이미지 확인이 필요합니다.");
       }
       phase = "output";

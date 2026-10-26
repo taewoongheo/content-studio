@@ -14,7 +14,6 @@ import {
   recordReview,
   recordToolCall,
   recordAnalysisRead,
-  visualReferenceProjects,
   recordExternalComparison,
   recordSourceReview,
 } from "@/domains/content-production/server/execution/runner";
@@ -44,19 +43,16 @@ export async function POST(
       before(name, input) {
         const active = authorizeRun(taskId, request.headers.get("authorization"));
         if (active.step !== step) throw new OperationError("RUN_STAGE_CHANGED", "실행 단계가 변경되었습니다.");
-        if (step === "analysis" && ["production_preview_project", "production_read_project"].includes(name)) {
+        if ((step === "analysis" || step === "production") && ["production_preview_project", "production_read_project"].includes(name)) {
           const projectId = (input as {projectId:string}).projectId;
           if (!productionStore().analysisInputs(taskId).some(row => row.project_id === projectId))
             throw new OperationError("ANALYSIS_SOURCE_NOT_ASSIGNED", "분석 자료 노드가 전달한 내부 게시글만 확인할 수 있습니다.");
         }
-        if (step === "visual" && ["production_preview_project", "production_read_project"].includes(name)) {
-          const selected = visualReferenceProjects(taskId);
-          const projectId = (input as { projectId: string }).projectId;
-          if (!selected?.includes(projectId))
-            throw new OperationError("VISUAL_SOURCE_NOT_SELECTED", "관련 내부 게시글을 먼저 조회하고 선택 결과의 프로젝트를 사용해 주세요.");
+        if (name === "production_clone_project") {
+          const sourceProjectId = (input as {sourceProjectId:string}).sourceProjectId;
+          if (!active.sourceProjects.has(sourceProjectId))
+            throw new OperationError("LAYOUT_SOURCE_NOT_REVIEWED", "복제할 원본의 실제 슬라이드를 먼저 미리보기로 확인해 주세요.");
         }
-        if (step === "visual" && name === "production_query")
-          throw new OperationError("VISUAL_QUERY_REQUIRED", "시각 검증에서는 production_visual_references로 관련 내부 게시글 최대 5개를 조회해 주세요.");
         if (name === "production_read_images") {
           const setId = (input as {set_id:string}).set_id;
           if (!referenceImagesAllowed(productionStore().db,taskId,step,setId))

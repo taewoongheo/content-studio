@@ -3,7 +3,21 @@
 ## Implement the direction
 
 Read the confirmed analysis/direction and any saved production draft. Reuse a linked project;
-otherwise call production_create_project. Keep the confirmed topic, answer and format.
+otherwise choose one saved layout source from the SAME assigned own-post pool used by analysis
+(up to 30 IDs in this prompt and production_context.analysis_inputs). Query only that pool with
+production_query. Compare broad format, page information structure, number of images and visual
+quality, then inspect actual slides of the best candidates with production_preview_project.
+Call production_clone_project(sourceProjectId, reason) for ONE suitable source. The server rejects
+outside-pool or unreviewed sources. If no suitable source exists, save the blocker; do not search
+all projects or create a blank project as a fallback.
+
+The independent draft retains saved page structure, shared elements, frames, typography, spacing
+and the LIFTCODE badge, while clearing other text and image placements and copying no image bytes.
+Inspect IDs/styles with read_project and fill the existing placements. Preserve useful hierarchy
+and spacing instead of rebuilding from scratch. Adapt slide count, copy and image geometry when
+needed; never shrink text merely to preserve the old layout. Source topic and engagement alone do
+not prove layout suitability. Record the chosen source and why it fits in your sources.
+Keep the confirmed topic, answer and format.
 Build a complete hook, body, short follow CTA and visual layout under the content guide from the
 first draft. Set slide roles and verify topic/message/content_type under the metadata guide.
 
@@ -23,12 +37,14 @@ plan in the production draft content before generating. Give each image a distin
 purpose. Do not reuse one image across placements or rename a previous image. Newly generated
 images may have similar poses or compositions; similarity is not a duplicate and must not be rejected.
 
-Generate every required asset with the native image_gen tool in THIS execution, using actual
+Generate every required asset with an ACTUAL TRANSPARENT BACKGROUND using the native image_gen
+tool in THIS execution, using actual
 character references and any needed exercise source. Image generation is enabled only here;
 if the native tool fails or is unavailable, save the blocker instead of copying an old asset.
 Create the image placement, then call production_use_generated_image with the actual absolute
 path returned by the generator. This converts the output to lossless WebP, preserves transparency,
-and saves the bytes in this project. The generated-file importer rejects old outputs, arbitrary
+and saves the bytes in this project. White, solid or fake checkerboard backgrounds are rejected;
+request native transparency, not a white background matching the slide. The generated-file importer rejects old outputs, arbitrary
 paths and project image duplication. Regular set_local_image is blocked in automatic production.
 Never use a generated-assets folder as a library. No source folder path remains in the saved project.
 Do not delete generator-managed originals. Application-created conversion files are temporary.

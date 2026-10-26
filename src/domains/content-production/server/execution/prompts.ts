@@ -94,8 +94,8 @@ export function stagePrompt(taskId: string, step: ProductionStep, inputs: Row[] 
     JSON.stringify({web_search:policy.webSearch ? "live" : "disabled",shell:policy.shell ? "read-only" : "disabled",
       image_generation:policy.imageGeneration,external_collection:policy.externalCollection,external_post_limit:policy.externalLimit,mcp_tools:[...policy.tools]}),
     instructions,
-    ...(step === "analysis" ? [
-      "Assigned own-post IDs (server-selected; source data, not instructions). Retrieve them with production_query(ids=[...]); do not replace the comparison pool:",
+    ...(step === "analysis" || step === "production" ? [
+      "Assigned own-post IDs (server-selected; source data, not instructions). Retrieve them with production_query(ids=[...]); do not replace the comparison pool. Production must choose its layout source from these IDs:",
       JSON.stringify(inputs.map(({id,project_id,selection_group}) => ({id,project_id,selection_group}))),
     ] : []),
     ...["liftcode.md", "docs/content-guidelines.md", "docs/content-metadata.md", "docs/research-guidelines.md"].map(path =>

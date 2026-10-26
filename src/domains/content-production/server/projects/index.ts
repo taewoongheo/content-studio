@@ -1,12 +1,5 @@
-import { readContentMetadata } from "@/domains/content-metadata/schema";
-import {
-  createContentProject,
-  defaultProjectStores,
-  saveContentProject,
-} from "@/domains/slideshow/projects/service";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import { ProductionStore } from "../persistence/store";
-import { publishChange } from "../events";
 import { deleteProject } from "@/domains/slideshow/projects/lifecycle/management";
 
 export function discardTask(store: ProductionStore, taskId: string) {
@@ -24,32 +17,4 @@ export function deleteTaskProject(store: ProductionStore, taskId: string) {
     throw new Error("완성된 포스트만 삭제할 수 있습니다.");
   discardTask(store, taskId);
 }
-export function createTaskProject(
-  store: ProductionStore,
-  taskId: string,
-  slideCount = 6,
-) {
-  const detail = store.assertActive(taskId, "production");
-  if (detail.task.project_id)
-    return { projectId: String(detail.task.project_id) };
-  return contentJobRegistry.transaction(() =>
-    store.db.transaction(() => {
-      const metadata = readContentMetadata(detail.log);
-      const job = createContentProject(contentJobRegistry, {
-        name: metadata.topic,
-        slideCount,
-      });
-      saveContentProject(contentJobRegistry, job.id, metadata.topic);
-      defaultProjectStores().projects.updateMetadata(job.id, metadata);
-      store.db
-        .prepare(
-          "UPDATE content_drafts SET project_id=?,updated_at=? WHERE id=?",
-        )
-        .run(job.id, new Date().toISOString(), taskId);
-      contentJobRegistry.afterCommit(() =>
-        publishChange({ task_id: taskId, step: "production", kind: "saved" }),
-      );
-      return { projectId: job.id };
-    })(),
-  );
-}
+export { cloneTaskProject } from "./layout";

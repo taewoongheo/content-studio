@@ -1,3 +1,4 @@
+import { seedLayoutSource } from "../projects/testing/fixtures";
 import { SlideshowProjectWrites } from "@/domains/slideshow/server/project-writes";
 import { makeElementDefinition } from "@/domains/slideshow/editor/elements/factory";
 import test from "node:test";
@@ -13,9 +14,9 @@ import {
   recordReview,
   recordSourceReview,
   recordExternalComparison,
-  visualReferenceProjects,
+  recordAnalysisRead,
 } from "./runner";
-import { createTaskProject, deleteTaskProject } from "../projects";
+import { cloneTaskProject, deleteTaskProject } from "../projects";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import type { runCodex } from "./process";
 const direction = {
@@ -36,7 +37,8 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
   process.env.CONTENT_STUDIO_DB_PATH = join(dir, "test.sqlite");
   const store = productionStore();
   try {
-    const [id] = store.create(1);
+    const source = seedLayoutSource(store.db);
+    const [id] = store.create(1,[source]);
     const previousToken = process.env.APIFY_API_TOKEN;
     try {
       process.env.APIFY_API_TOKEN = "test-key";
@@ -53,15 +55,15 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       if (calls === 1) {
         assert.equal(store.get(id).task.current_step, "analysis");
         recordExternalComparison(id);
+        recordAnalysisRead(id,[source.id]);
         return direction;
       }
       assert.equal(store.get(id).analysis.state, "completed");
       const step = store.get(id).task.current_step;
-      const { projectId } = step === "production" ? createTaskProject(store, id, 1) : { projectId: store.get(id).task.project_id! };
+      const { projectId } = step === "production" ? cloneTaskProject(store, id, source.project_id, "The saved routine layout fits this content.") : { projectId: store.get(id).task.project_id! };
       const job = contentJobRegistry.get(projectId);
       if (step === "hook" || step === "visual" || step === "polish") {
-        if (step === "visual") visualReferenceProjects(id, ["owned-source"]);
-        if (step !== "polish") recordSourceReview(id, step === "visual" ? "owned-source" : undefined);
+        if (step === "hook") recordSourceReview(id);
         recordReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => s.id));
         return { project_id: projectId, summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "test" }, sources: [],
           review: "The current content meets the review criteria.", review_passed: true,
@@ -114,18 +116,16 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
     assert.equal(store.get(id).task.current_step, "visual");
     assert.equal((store.get(id).log.sources as Array<{ part: string }>)[0].part, "Research summary");
     const projectId = store.get(id).task.project_id!;
-    // Resume a review without reading source images: earlier stages' reviews cannot satisfy it.
+    // Visual review must use only the current project; missing source previews do not block it.
     store.db.prepare("UPDATE content_drafts SET current_step='visual',state='stopped' WHERE id=?").run(id);
     await execute(id, "http://127.0.0.1:3000", async () => {
       const job = contentJobRegistry.get(projectId);
-      visualReferenceProjects(id, ["owned-source"]);
       recordReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => s.id));
       return { project_id: projectId, summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "test" }, sources: [],
         review: "The layout appears readable.", review_passed: true,
         reviewed_slide_ids: job.editor.document.slides.map(s => s.id), reviewed_revision: job.editor.revision };
     });
-    assert.equal(store.get(id).task.state, "failed");
-    assert.equal((store.get(id).visual?.error as {code:string}).code, "REQUIRED_TOOL_NOT_CALLED");
+    assert.equal(store.get(id).task.state, "finished");
     store.state(id, "finished");
     store.db.prepare("INSERT INTO content_project_assets(project_id,asset_id,name,mime_type,byte_size,data) VALUES(?,?,?,?,?,?)")
       .run(projectId, "delete-test", "image", "image/png", 1, Buffer.from([1]));
@@ -157,7 +157,7 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
     unblock(direction);
     await execution;
     assert.throws(() => store.get(canceled), /취소/);
-    const [withoutComparison] = store.create(1);
+    const [withoutComparison] = store.create(1,[]);
     await execute(withoutComparison, "http://127.0.0.1:3000", async () => direction);
     assert.equal(store.get(withoutComparison).task.state, "failed");
     assert.match(String((store.get(withoutComparison).analysis.error as { message: string }).message), /外部|외부/);
