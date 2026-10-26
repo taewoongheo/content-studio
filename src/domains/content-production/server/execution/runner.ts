@@ -17,6 +17,7 @@ import { runCodex } from "./process";
 import { stagePolicy, PRODUCTION_MODEL } from "./policy/stages";
 import { resultSchema, stageImages, stagePrompt } from "./prompts";
 import {
+  PRODUCTION_ASPECT_RATIO,
   productionResultSchema,
   sourceSchema,
   type ProductionStep,
@@ -264,6 +265,8 @@ export async function execute(
       await loadContentProject(contentJobRegistry, output.project_id);
       const project = contentJobRegistry.get(output.project_id),
         review = run.reviews.get(output.project_id);
+      if (project.editor.document.aspectRatio !== PRODUCTION_ASPECT_RATIO)
+        throw new OperationError("PRODUCTION_ASPECT_RATIO_FIXED", "자동 제작 완료 전 화면 비율을 4:5로 맞춰 주세요.");
       assertUniqueProjectImages(contentJobRegistry.getRecord(output.project_id));
       const kinds = new Map(
         project.editor.document.elements.map((element) => [

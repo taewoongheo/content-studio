@@ -19,6 +19,7 @@ test("cloning uses only the assigned saved layout, clears old copy/images, prese
   try{
     const original=projects.get(source.project_id)!;
     const document=original.document as EditorDocument;
+    document.aspectRatio="9:16";
     document.elements.push(makeElementDefinition({id:"title",kind:"text"}),makeElementDefinition({id:"image",kind:"image"}));
     document.elements.find(element=>element.id==="title")!.style.fontSize=72;
     document.slides[0].placements.push(
@@ -26,7 +27,7 @@ test("cloning uses only the assigned saved layout, clears old copy/images, prese
       {id:"badge",elementId:"title",value:"LIFTCODE",frameOverride:null,styleOverride:{fontSize:25}},
       {id:"image",elementId:"image",value:"source-image",frameOverride:{x:0.1,y:0.3,width:0.8,height:0.5},styleOverride:null},
     );
-    projects.save({...original,document,assets:[{assetId:"source-image",name:"Original",type:"image/png",bytes:Buffer.from([1,2,3])}]});
+    projects.save({...original,aspectRatio:"9:16",document,assets:[{assetId:"source-image",name:"Original",type:"image/png",bytes:Buffer.from([1,2,3])}]});
     const before=projects.get(source.project_id);
     loadContentProject(contentJobRegistry,source.project_id,{projects});
     contentJobRegistry.update(source.project_id,record=>{record.editor.document.elements.find(element=>element.id==="title")!.style.fontSize=999;});
@@ -37,6 +38,9 @@ test("cloning uses only the assigned saved layout, clears old copy/images, prese
     const cloned=cloneTaskProject(store,id,source.project_id,"The source has clear hierarchy and enough image space.");cloneId=cloned.projectId;
     const target=projects.get(cloned.projectId)!;
     const copy=target.document as EditorDocument;
+    assert.equal(target.aspectRatio,"4:5");
+    assert.equal(copy.aspectRatio,"4:5");
+    assert.equal((before!.document as EditorDocument).aspectRatio,"9:16");
     assert.equal(copy.elements.find(element=>element.id==="title")!.style.fontSize,72,"must use DB, not the open unsaved source");
     assert.deepEqual(copy.slides[0].placements.find(item=>item.id==="title")!.frameOverride,document.slides[0].placements.find(item=>item.id==="title")!.frameOverride);
     assert.equal(copy.slides[0].placements.find(item=>item.id==="title")!.value,"");

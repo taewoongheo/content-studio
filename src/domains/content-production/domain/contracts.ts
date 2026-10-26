@@ -2,6 +2,8 @@ import type { ExternalContext, ReferenceStep } from "./references/context";
 import { z } from "zod";
 import { contentMetadataSchema } from "@/domains/content-metadata/schema";
 
+export const PRODUCTION_ASPECT_RATIO = "4:5";
+
 export const stepSchema = z.enum(["analysis", "production", "hook", "polish", "visual"]);
 export type ProductionStep = z.infer<typeof stepSchema>;
 export const reviewSteps = ["hook", "polish", "visual"] as const;

@@ -1,3 +1,4 @@
+import { PRODUCTION_ASPECT_RATIO } from "../../domain/contracts";
 import { readContentMetadata } from "@/domains/content-metadata/schema";
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 import { createContentProject, saveContentProject } from "@/domains/slideshow/projects/service";
@@ -29,6 +30,7 @@ function layoutDocument(savedDocument: EditorDocument): EditorDocument {
   if (errors.length) {
     throw new OperationError("LAYOUT_SOURCE_INVALID", "원본 게시글의 슬라이드 구조가 올바르지 않습니다.", { errors });
   }
+  document.aspectRatio = PRODUCTION_ASPECT_RATIO;
   const kinds = new Map(document.elements.map(element => [element.id, element.kind]));
   for (const slide of document.slides) {
     delete slide.name;

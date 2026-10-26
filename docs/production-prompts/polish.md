@@ -16,7 +16,9 @@ creation. Reference wording is optional; do not copy claims or unrelated content
 
 Use edit_project with set_slot_value on existing text placements only. Keep placement IDs, slides,
 images, style, layout and the LIFTCODE badge unchanged. The server rejects other edits.
-Prefer small corrections of similar length; retain intentional line breaks where practical.
+Apply the content guide’s content-editing criteria while preserving approved information.
+Do not shorten correct explanations to meet a word or line target. Retain intentional line breaks
+where practical, but let the following visual stage handle wrapping after necessary wording edits.
 Do not change correct, natural wording just to demonstrate activity.
 
 ## Finish

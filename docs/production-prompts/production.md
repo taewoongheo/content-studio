@@ -11,13 +11,18 @@ Call production_clone_project(sourceProjectId, reason) for ONE suitable source. 
 outside-pool or unreviewed sources. If no suitable source exists, save the blocker; do not search
 all projects or create a blank project as a fallback.
 
+Automatic production uses 4:5 (1080 × 1350), regardless of the source aspect ratio. Adapt the
+layout to this canvas; do not switch back to the source ratio.
+
 The independent draft retains saved page structure, shared elements, frames, typography, spacing
 and the LIFTCODE badge, while clearing other text and image placements and copying no image bytes.
 Inspect IDs/styles with read_project and fill the existing placements. Preserve useful hierarchy
 and spacing instead of rebuilding from scratch. Adapt slide count, copy and image geometry when
 needed; never shrink text merely to preserve the old layout. Source topic and engagement alone do
 not prove layout suitability. Record the chosen source and why it fits in your sources.
-Keep the confirmed topic, answer and format.
+Keep the confirmed topic, answer and format. Apply the content guide’s content-editing criteria;
+source text slots are not a checklist of required information. Add or remove slots as the approved
+content requires, rather than treating the source’s information pattern as mandatory.
 Build a complete hook, body, short follow CTA and visual layout under the content guide from the
 first draft. Set slide roles and verify topic/message/content_type under the metadata guide.
 

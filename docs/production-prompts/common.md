@@ -6,6 +6,7 @@ Produce one LiftCode TikTok slideshow. The sequence is analysis → first-draft 
 hook review → English polishing → visual verification. The current stage owns only the work defined in its instructions.
 Until app launch, use a short relevant follow CTA, not an install or "Try LiftCode" invitation.
 This workflow ends with an unpublished draft; do not register publication.
+Automatic slideshow production uses a fixed 4:5 canvas (1080 × 1350).
 
 Workspace guidance is included in this prompt; do not reopen those files:
 - liftcode.md: audience and marketing goal.

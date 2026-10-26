@@ -1,3 +1,4 @@
+import { PRODUCTION_ASPECT_RATIO } from "@/domains/content-production/domain/contracts";
 import { assertUniqueProjectImages } from "@/domains/content-production/server/images/unique";
 import { stagePolicy, editorReadTools, editorWriteTools as writeTools } from "@/domains/content-production/server/execution/policy/stages";
 import { REFERENCE_LIMIT } from "@/domains/content-production/domain/references/context";
@@ -65,6 +66,9 @@ export async function POST(
           if (name === "edit_project" && projectId) {
             if (step === "production" && (input as {commands:Array<{type:string}>}).commands.some(command => command.type === "set_local_image"))
               throw new OperationError("GENERATED_IMAGE_IMPORT_REQUIRED", "새 이미지 생성 후 production_use_generated_image로 가져와 주세요. 과거 이미지나 임의 파일을 사용할 수 없습니다.");
+            if ((input as {commands:Array<{type:string;aspectRatio?:string}>}).commands.some(command =>
+              command.type === "set_aspect_ratio" && command.aspectRatio !== PRODUCTION_ASPECT_RATIO))
+              throw new OperationError("PRODUCTION_ASPECT_RATIO_FIXED", "자동 제작의 화면 비율은 4:5로 고정됩니다.");
             assertReviewWrite(step, input, contentJobRegistry.get(projectId).editor.document);
           }
         }

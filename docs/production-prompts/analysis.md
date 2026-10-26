@@ -53,6 +53,8 @@ In the additional direction fields,
 answer is the substantive planned content beyond the concise message; presentation is the planned
 page flow and use of images to implement the format. Do not repeat the same sentence across these
 fields. Explain expected response, goal connection and difference from
-recent content. Plan enough slides to meet the content guide and inspect actual references before
+recent content. Let the selected content determine its information structure and explanation depth; do not prefer
+shorter candidates or apply a fixed information checklist to every body page.
+Plan enough slides to meet the content guide and inspect actual references before
 claiming a visual direction. Save sources and research findings; do not create or edit a project.
 Return analysis, the direction fields and structured sources required by the schema.
