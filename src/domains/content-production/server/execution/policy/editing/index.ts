@@ -1,10 +1,18 @@
-import type { ProductionStep } from "../../../domain/contracts";
+import { PRODUCTION_ASPECT_RATIO, type ProductionStep } from "../../../../domain/contracts";
+import { OperationError } from "@/lib/errors/operation";
 import type { EditorDocument } from "@/domains/slideshow/editor/types";
 
-// Review may improve presentation, but cannot silently turn into a new content task.
-export function assertReviewWrite(step: ProductionStep, input: unknown, document: EditorDocument) {
-  if (step !== "hook" && step !== "visual" && step !== "polish") return;
+// Stage-specific edits stay within their assigned content and asset responsibilities.
+export function assertStageWrite(step: ProductionStep, input: unknown, document: EditorDocument) {
   const commands = (input as { commands?: Array<Record<string, unknown>> }).commands;
+  if (step === "production") {
+    if (commands?.some(command => command.type === "set_local_image"))
+      throw new OperationError("GENERATED_IMAGE_IMPORT_REQUIRED", "새 이미지 생성 후 production_use_generated_image로 가져와 주세요. 과거 이미지나 임의 파일을 사용할 수 없습니다.");
+    if (commands?.some(command => command.type === "set_aspect_ratio" && command.aspectRatio !== PRODUCTION_ASPECT_RATIO))
+      throw new OperationError("PRODUCTION_ASPECT_RATIO_FIXED", "자동 제작의 화면 비율은 4:5로 고정됩니다.");
+    return;
+  }
+  if (step !== "hook" && step !== "visual" && step !== "polish") return;
   if (!Array.isArray(commands)) throw new Error("검토 단계는 편집 명령 배열이 필요합니다.");
   for (const command of commands) {
     if (step === "visual") {

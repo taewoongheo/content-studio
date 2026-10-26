@@ -1,4 +1,4 @@
-import { assertUniqueProjectImages } from "../images/unique";
+import { assertCompleteProjectReview, type ObservedReview } from "./review/validation";
 import type { ToolAttempt } from "../../domain/diagnostics";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { OperationError } from "@/lib/errors/operation";
@@ -17,7 +17,6 @@ import { runCodex } from "./process";
 import { stagePolicy, PRODUCTION_MODEL } from "./policy/stages";
 import { resultSchema, stageImages, stagePrompt } from "./prompts";
 import {
-  PRODUCTION_ASPECT_RATIO,
   productionResultSchema,
   sourceSchema,
   type ProductionStep,
@@ -36,7 +35,7 @@ type Run = {
   toolCalls: ToolAttempt[];
   imageStartedAt: number;
   imageThreadId: string | null;
-  reviews: Map<string, { revision: number; slides: Set<string> }>;
+  reviews: Map<string, ObservedReview>;
 };
 const shared = globalThis as typeof globalThis & {
   productionRuns?: Map<string, Run>;
@@ -265,47 +264,10 @@ export async function execute(
       if (detail.task.project_id !== output.project_id)
         throw new OperationError("PROJECT_RESULT_MISMATCH", "연결된 프로젝트와 결과가 다릅니다.");
       await loadContentProject(contentJobRegistry, output.project_id);
-      const project = contentJobRegistry.get(output.project_id),
-        review = run.reviews.get(output.project_id);
-      if (project.editor.document.aspectRatio !== PRODUCTION_ASPECT_RATIO)
-        throw new OperationError("PRODUCTION_ASPECT_RATIO_FIXED", "자동 제작 완료 전 화면 비율을 4:5로 맞춰 주세요.");
-      assertUniqueProjectImages(contentJobRegistry.getRecord(output.project_id));
-      const kinds = new Map(
-        project.editor.document.elements.map((element) => [
-          element.id,
-          element.kind,
-        ]),
+      assertCompleteProjectReview(
+        contentJobRegistry.getRecord(output.project_id), output,
+        run.reviews.get(output.project_id), run.toolCalls,
       );
-      if (
-        project.editor.document.slides.some(
-          (slide) =>
-            !slide.placements.some((placement) => {
-              const kind = kinds.get(placement.elementId);
-              return (
-                kind &&
-                kind !== "background" &&
-                (kind === "text" || kind === "image"
-                  ? !!placement.value.trim()
-                  : true)
-              );
-            }),
-        )
-      )
-        throw new OperationError("EMPTY_SLIDE", "내용이 비어 있는 슬라이드가 있습니다.");
-      if (!review) throw requiredToolFailure(run.toolCalls, ["preview_slide", "preview_slides"], "현재 슬라이드의 실제 이미지 검토가 필요합니다.");
-      if (
-        project.savedRevision !== project.editor.revision ||
-        project.editor.revision !== output.reviewed_revision ||
-        review?.revision !== output.reviewed_revision
-      )
-        throw new OperationError("REVIEW_REVISION_MISMATCH", "최신 저장본의 이미지 검토가 필요합니다.", {saved_revision: project.savedRevision, current_revision: project.editor.revision, reported_revision: output.reviewed_revision, observed_revision: review?.revision ?? null});
-      if (
-        !project.editor.document.slides.every(
-          (s) =>
-            review.slides.has(s.id) && output.reviewed_slide_ids.includes(s.id),
-        )
-      )
-        throw new OperationError("REVIEW_SLIDES_INCOMPLETE", "모든 슬라이드를 이미지로 검토해 주세요.");
       phase = "save";
       store.completeProduction(id, { ...output, review: typeof reviewText === "string" ? reviewText : undefined });
       if (store.get(id).task.state === "finished") break;
