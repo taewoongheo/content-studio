@@ -42,8 +42,7 @@ try {
   await page.goto(`${origin}/?job=${slide.id}`);
   await page.getByRole("complementary", { name: "Element 레이어", exact: true }).waitFor();
   await page.screenshot({ path: join(tmpdir(), "content-studio-slideshow-ux-reference.png") });
-  await page.getByRole("button", { name: "새 작업으로 돌아가기", exact: true }).click();
-  await page.getByRole("button", { name: "편집기 열기", exact: true }).click();
+  await page.getByRole("button", { name: "새 탭", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: /SLIDESHOW_ONLY/ }).waitFor();
   await dialog.getByRole("button", { name: "영상", exact: true }).click();

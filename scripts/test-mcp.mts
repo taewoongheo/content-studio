@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import Database from "better-sqlite3";
 import { spawn } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
@@ -111,8 +112,8 @@ try {
     await listPage.getByRole("button", { name: "제작 캔버스", exact: true }).waitFor();
     assert.equal(await listPage.locator("#production-count").inputValue(), "1");
     assert.equal(await listPage.getByText("템플릿 프로젝트", { exact: true }).count(), 0);
-    await listPage.getByText("제작 모델", { exact: true }).click();
-    await listPage.locator("#production-model").waitFor({ state: "visible" });
+    assert.equal(await listPage.getByText("제작 모델", { exact: true }).count(), 0);
+    assert.equal(await listPage.locator("#production-model").count(), 0);
     await listPage.getByRole("button", { name: "대시보드", exact: true }).click();
     await listPage.getByRole("heading", { name: "게시 콘텐츠", exact: true }).waitFor();
     await listPage.getByRole("button", { name: "제작 캔버스", exact: true }).click();
@@ -121,7 +122,7 @@ try {
     const recordPanel = await listPage.getByRole("region", { name: "기록과 레퍼런스", exact: true }).boundingBox();
     assert.ok(recordPanel && recordPanel.width <= 560 && recordPanel.x > 256, "records open beside the canvas");
     await listPage.getByRole("button", { name: "캔버스로 돌아가기", exact: true }).click();
-    console.log("PASS fixed production/dashboard tabs, default count, right records panel and sidebar model control");
+    console.log("PASS fixed production/dashboard tabs, default count, right records panel and fixed production model");
 
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
     page.on("pageerror", error => console.error("Browser error", error.message));
@@ -185,12 +186,12 @@ try {
     console.log("PASS slideshow batch/cache preview and asynchronous full-resolution PNG ZIP export");
 
     const source = await duplicateProject(id, "Saved reference preview");
-    const referenceResponse = await fetch(origin + "/api/content-production", {method:"POST",headers:{origin,"content-type":"application/json"},body:JSON.stringify({
-      action:"reference",reference:{title:"Source",topic:"test",content_type:"test",project_id:source.id,
-        parts:[{aspect:"visual",location:"slide 1",reason:"test",usage_context:"test"}]},
-    })});
-    assert.ok(referenceResponse.ok);
-    const referenceId = (await referenceResponse.json()).id;
+    // Published-source reads replace the removed manual-reference API. Seed only the isolated test DB.
+    const fixtureDb = new Database(join(directory, "test.sqlite"));
+    try {
+      fixtureDb.prepare("INSERT INTO content_creation_logs(id,project_id,post_url,actual_published_at,created_at,updated_at) VALUES(?,?,?,datetime('now'),datetime('now'),datetime('now'))")
+        .run("saved-source-fixture", source.id, "https://example.com/saved-source-fixture");
+    } finally { fixtureDb.close(); }
     const closed = await fetch(origin + "/api/content-jobs/" + source.id,{method:"DELETE",headers:{origin,"content-type":"application/json"},
       body:JSON.stringify({expectedTabId:source.tabId,expectedRevision:source.editor.revision,decision:"check"})});
     assert.equal(closed.status,204);
@@ -202,10 +203,8 @@ try {
     assert.ok(savedImage?.type==="image");
     assert.equal((await sharp(Buffer.from(savedImage.data,"base64")).metadata()).width,540);
     assert.deepEqual(await fetch(origin + "/api/content-jobs").then(response=>response.json()),tabsBefore);
-    await fetch(origin + "/api/content-production",{method:"POST",headers:{origin,"content-type":"application/json"},
-      body:JSON.stringify({action:"remove_reference",id:referenceId})});
     await fetch(origin + "/api/content-projects/" + source.id,{method:"DELETE",headers:{origin,"content-type":"application/json"},body:"{}"});
-    console.log("PASS saved reference document and image previews do not open editor tabs");
+    console.log("PASS saved published-source document and image previews do not open editor tabs");
 
 
     const cloned = await duplicateProject(id, "Clone");
@@ -403,14 +402,14 @@ try {
     const switchedBackground = (await call("read_project", { projectId: colorProject.id })).structuredContent as Project;
     assert.equal(switchedBackground.editor.document.slides[0].backgroundColor, "#123456");
     await page.getByRole("button", { name: /^2장 .*선택 및 순서 이동$/ }).click();
-    await page.getByRole("checkbox", { name: "가이드", exact: true }).uncheck();
+    await page.getByRole("checkbox", { name: "정렬 가이드", exact: true }).uncheck();
     await tabBar.getByRole("button", { name: "Partial colors", exact: true }).click();
     await page.waitForURL(url => url.searchParams.get("job") === colorProject.id);
     await page.locator(`[data-tab-id="${colorProject.tabId}"]`).waitFor();
     await tabBar.getByRole("button", { name: "Colored clone", exact: true }).click();
     await page.waitForURL(url => url.searchParams.get("job") === colorClone.id);
     await page.locator(`[data-tab-id="${colorClone.tabId}"]`).waitFor();
-    assert.equal(await page.getByRole("checkbox", { name: "가이드", exact: true }).isChecked(), false);
+    assert.equal(await page.getByRole("checkbox", { name: "정렬 가이드", exact: true }).isChecked(), false);
     assert.equal(await page.getByRole("button", { name: /^2장 .*선택 및 순서 이동$/ }).getAttribute("aria-current"), "page");
     await page.getByRole("button", { name: "새 탭", exact: true }).click();
     await writeFile("/tmp/content-studio-new-tab.png", await page.getByRole("dialog").screenshot());
@@ -514,7 +513,10 @@ try {
     await page.getByRole("dialog").getByRole("button", { name: "이름 변경", exact: true }).click();
     await page.getByRole("button", { name: "저장됨", exact: true }).waitFor();
     await page.getByRole("button", { name: "프로젝트 삭제", exact: true }).click();
+    const deletedTemporary = page.waitForResponse(response => response.request().method() === "DELETE" &&
+      response.url() === `${origin}/api/content-projects/${savedTemporary.id}`);
     await page.getByRole("dialog").getByRole("button", { name: "삭제", exact: true }).click();
+    assert.equal((await deletedTemporary).status(), 204);
     await tabBar.locator(`[data-project-tab="${savedTemporary.tabId}"]`).waitFor({ state: "detached" });
     assert.equal((await savedIds()).includes(temporary.id), false);
 
