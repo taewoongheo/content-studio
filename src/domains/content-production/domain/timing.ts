@@ -1,8 +1,9 @@
-import type { ProductionStep } from "./contracts";
+import { productionSteps, type ProductionStep, type WorkDetail } from "./contracts";
 
 export interface ExecutionInterval {
   started_at: string;
   ended_at: string | null;
+  estimated?: boolean;
 }
 export type TaskTiming = Partial<Record<ProductionStep, ExecutionInterval[]>>;
 
@@ -25,4 +26,19 @@ export function formatExecutionTime(milliseconds: number): string {
   return minutes >= 60
     ? `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`
     : `${String(minutes).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+/** Retained completed drafts still have a duration when runtime telemetry is unavailable. */
+export function stageExecutionIntervals(detail: WorkDetail | undefined, step: ProductionStep): ExecutionInterval[] {
+  const recorded = detail?.timing?.[step];
+  if (recorded?.length) return recorded;
+  const draft = detail?.[step];
+  if (typeof draft?.created_at !== "string" || typeof draft.completed_at !== "string") return [];
+  const start = Date.parse(draft.created_at), end = Date.parse(draft.completed_at);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return [];
+  return [{ started_at: draft.created_at, ended_at: draft.completed_at, estimated: true }];
+}
+
+export function taskExecutionIntervals(detail: WorkDetail | undefined): ExecutionInterval[] {
+  return productionSteps.flatMap(({ id }) => stageExecutionIntervals(detail, id));
 }

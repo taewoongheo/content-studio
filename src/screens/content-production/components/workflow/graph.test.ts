@@ -57,3 +57,23 @@ test("성과 갱신 실패 기록은 제작 작업이 없어도 노드에서 열
   assert.equal(sync.data.state,"failed");
   assert.equal(graph.edges[0].target,"sync");
 });
+
+test("completed stages and the final post retain durations without runtime telemetry", () => {
+  const completed = task(1, { state: "finished", current_step: "visual", project_id: "post" });
+  const detail = details([completed]);
+  detail[completed.id].analysis = { created_at: "2026-01-01T00:00:00Z", completed_at: "2026-01-01T00:02:00Z" };
+  detail[completed.id].production = { created_at: "2026-01-01T00:02:00Z", completed_at: "2026-01-01T00:05:00Z" };
+  const graph = buildWorkflowGraph([completed], detail, {}, {}, false);
+  const analysis = graph.nodes.find(node => node.id === "task-1:analysis");
+  const result = graph.nodes.find(node => node.id === "task-1:result");
+  assert.ok(analysis?.type === "stage" && result?.type === "stage");
+  assert.equal(analysis.data.intervals?.[0].ended_at, "2026-01-01T00:02:00Z");
+  assert.equal(analysis.data.intervals?.[0].estimated, true);
+  assert.equal(result.data.intervals?.length, 2);
+
+  const precise = [{ started_at: "2026-01-01T00:00:30Z", ended_at: "2026-01-01T00:01:00Z" }];
+  detail[completed.id].timing = { analysis: precise };
+  const updated = buildWorkflowGraph([completed], detail, {}, {}, false).nodes.find(node => node.id === "task-1:analysis");
+  assert.ok(updated?.type === "stage");
+  assert.deepEqual(updated.data.intervals, precise);
+});

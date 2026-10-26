@@ -1,3 +1,4 @@
+import { stageExecutionIntervals, taskExecutionIntervals } from "@/domains/content-production/domain/timing";
 import type { PerformanceRefresh } from "@/domains/content-production/domain/performance";
 import { MarkerType, type Edge } from "@xyflow/react";
 import { productionSteps, type WorkDetail, type WorkItem } from "@/domains/content-production/domain/contracts";
@@ -42,7 +43,7 @@ export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, Wo
       const facts = stage === "analysis" ? [text(analysis.content_type) || task.content_type, count(analysis.sources) ? `참고 자료 ${count(analysis.sources)}개` : null] : [count(content.slides) ? `${count(content.slides)}장` : null, text(analysis.content_type) || task.content_type];
       const id = `${task.id}:${stage}`;
       nodes.push({ id, type: "stage", position: { x: 760 + stageIndex * 380, y: index * 320 }, data: {
-        intervals: stage === "result" ? Object.values(detail?.timing ?? {}).flat() : detail?.timing?.[stage] ?? [],
+        intervals: stage === "result" ? taskExecutionIntervals(detail) : stageExecutionIntervals(detail, stage),
         title: stage === "result" ? "완성 포스트" : productionSteps.find(value => value.id === stage)!.label, stage,
         outputTitle: stage === "hook" ? text(detail?.hook?.content && record(detail.hook.content).hook) || text(content.hook) || topic : stage === "production" ? text(content.hook) || topic : topic,
         outputText: stage === "analysis" ? answer : stage === "hook" || stage === "visual" || stage === "polish" ? text(detail?.[stage]?.review) : "", facts: facts.filter((fact): fact is string => !!fact),
