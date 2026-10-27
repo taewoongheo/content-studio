@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type HTMLAttributes } from "react";
+import { useEffect, useEffectEvent, useRef, useState, type HTMLAttributes } from "react";
 import type { EditorDocument, EditorSlide, ElementFrame } from "@/domains/slideshow/editor/types";
 import type { ArtworkScene } from "@/domains/slideshow/rendering/artwork";
 import { createArtworkImageLoader } from "@/domains/slideshow/rendering/assets";
@@ -11,10 +11,12 @@ type SlideArtworkProps = Omit<HTMLAttributes<HTMLDivElement>, "children"> & {
   slide: EditorSlide;
   jobId: string;
   framePreview?: FramePreview;
+  onLoadSettled?: () => void;
 };
 
-export function SlideArtwork({ document, slide, jobId, framePreview = null,
+export function SlideArtwork({ document, slide, jobId, framePreview = null, onLoadSettled,
   className = "", style, ...props }: SlideArtworkProps) {
+  const notifyLoadSettled = useEffectEvent(() => onLoadSettled?.());
   const host = useRef<HTMLDivElement>(null);
   const [loadImage] = useState(createArtworkImageLoader);
   const [error, setError] = useState("");
@@ -51,8 +53,12 @@ export function SlideArtwork({ document, slide, jobId, framePreview = null,
       sceneRef.current = created;
       display(created.updatePreview(previewRef.current));
       setError("");
+      notifyLoadSettled();
     }).catch((cause) => {
-      if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "슬라이드를 그리지 못했습니다.");
+      if (!controller.signal.aborted) {
+        setError(cause instanceof Error ? cause.message : "슬라이드를 그리지 못했습니다.");
+        notifyLoadSettled();
+      }
     });
     return () => {
       controller.abort();

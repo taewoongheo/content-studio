@@ -49,11 +49,12 @@ export type SlideshowEditorViewState = {
 };
 export type SlideshowEditorWorkspaceHandle = { flushPending: () => Promise<boolean>; getViewState: () => SlideshowEditorViewState };
 
-export function SlideshowEditorScreen({ ref, initialViewState, initialJob, onNewJob }: {
+export function SlideshowEditorScreen({ ref, initialViewState, initialJob, onNewJob, onLoadSettled }: {
   ref?: Ref<SlideshowEditorWorkspaceHandle>;
   initialViewState?: SlideshowEditorViewState;
   initialJob: ContentJobSnapshot;
   onNewJob: () => void;
+  onLoadSettled?: () => void;
 }) {
   const { job, submitting, clientError, send } = useContentJob(initialJob);
   const [slideId, setSlideId] = useState(initialViewState?.slideId ?? "slide-1");
@@ -452,7 +453,7 @@ export function SlideshowEditorScreen({ ref, initialViewState, initialJob, onNew
           <section className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-background lg:col-start-2 lg:row-start-1 max-lg:order-1 max-lg:min-h-[620px] max-lg:border-b" aria-label="슬라이드 편집 영역">
 
             <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted/20 p-5 sm:p-6">
-              <SlideCanvas key={slide.id} document={document} slide={slide} jobId={job.id}
+              <SlideCanvas key={slide.id} onLoadSettled={onLoadSettled} document={document} slide={slide} jobId={job.id}
                 selectedPlacementId={placement?.id ?? null} disabled={disabled} showGuides={showGuides} showOverflow={showOverflow}
                 selectionAppliesToAll={appliedSlides.length > 1 && appliedSlides.every((item) => selectedSlideIds.includes(item.slideId))}
                 lockImageAspectRatio={imageAspectRatioLocked}

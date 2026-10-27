@@ -1,3 +1,5 @@
+import { editorLoadPriority } from "@/domains/workspace/client/editor-load-priority";
+import { createTranslationQueue } from "./client/translation-queue";
 import type { PerformanceRefresh } from "./domain/performance";
 import type { ProductionStep, Row, WorkDetail, WorkItem } from "./domain/contracts";
 export interface ProductionSnapshot {
@@ -33,7 +35,14 @@ export const fetchWork = (id: string) =>
   fetchProduction<WorkDetail>(`?id=${encodeURIComponent(id)}`);
 
 export type TranslationField = { field: string; source: unknown; translated?: unknown; error?: string };
-export async function requestDisplayTranslation(id: string, step: ProductionStep, sourceKey: string,
+const translationQueue = createTranslationQueue();
+editorLoadPriority.subscribe(translationQueue.setPaused);
+
+export function requestDisplayTranslation(id: string, step: ProductionStep, sourceKey: string,
+  signal?: AbortSignal, onField?: (result: TranslationField) => void): Promise<Row> {
+  return translationQueue.run(signal, requestSignal => translateDisplayRequest(id, step, sourceKey, requestSignal, onField));
+}
+async function translateDisplayRequest(id: string, step: ProductionStep, sourceKey: string,
   signal?: AbortSignal, onField?: (result: TranslationField) => void): Promise<Row> {
   if (!onField) {
     const response = await productionAction({ action: "translate_display", id, step }, signal) as { source: Row; translated: Row };
