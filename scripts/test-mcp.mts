@@ -1,3 +1,4 @@
+import { verifyStageReports } from "./production/report-smoke.mjs";
 import { verifySpy } from "./production/spy-smoke.mjs";
 import { verifyProductionStart } from "./production/start-inputs-smoke.mjs";
 import assert from "node:assert/strict";
@@ -110,6 +111,7 @@ try {
   const browser = await chromium.launch();
   try {
     await verifySpy(browser,origin);
+    await verifyStageReports(browser,origin);
     const listPage = await browser.newPage();
     await listPage.goto(origin);
     await listPage.getByRole("button", { name: "제작 캔버스", exact: true }).waitFor();
