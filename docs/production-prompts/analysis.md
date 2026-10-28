@@ -56,13 +56,33 @@ select one anyway and record which alternatives were considered and why the dupl
 Do not loop indefinitely or change a fixed source format/subject to avoid overlap.
 production_change_direction is unavailable in analysis.
 
-## Save the direction
+## Record the reasoning and hand off the direction
 
-Record format/value findings, delivery findings and candidate comparison in analysis, with the
-supporting cases and estimates. Use the metadata guide for topic, message and format.
+Return a concise synthesis in analysis and the consequential reasoning in reasoning:
+
+- observations: identify influential cases and the actual slide/copy that matters. Explain the
+  answer offered, hook promise versus body delivery, and observed metrics where available.
+  Describe what was actually inspected before interpreting why it worked. Reading every assigned
+  post does not require an equally detailed record for every post; include cases that changed the decision.
+- interpretations: connect observations to findings about format/value or delivery. Explain the
+  comparison supporting each finding and meaningful counterexamples or limits. Do not treat
+  correlation as a proven cause. Use an empty limits string when there is nothing consequential to add.
+- candidates: compare genuinely different options within the request constraints, the concrete
+  value a viewer would get, and the evidence-backed tradeoff behind selecting or rejecting each.
+  Candidate count follows the decision; do not fill a quota, invent weak alternatives or score a rubric.
+
+Keep observations, interpretation and the selected direction consistent without repeating entire
+paragraphs between them. Lists may be empty when the available evidence or fixed request leaves
+no meaningful comparison; explain consequential limitations in the synthesis rather than inventing evidence.
+Use the metadata guide for topic, message and format.
 In the additional direction fields,
-answer is the substantive planned content beyond the concise message; presentation is the planned
-page flow and use of images to implement the format. Do not repeat the same sentence across these
+answer states the actual answer the viewer will receive, beyond the concise message; presentation
+explains how the content progresses to that answer and what images contribute. A generic
+"problem → solution → CTA" is insufficient: name the problem/comparison, substantive explanation
+and intended takeaway for THIS content. This is a flexible production plan, not finished slide copy.
+reason connects the chosen direction to the comparisons. These fields are the next stage's
+confirmed direction and working plan; the production stage can refine the page flow while
+preserving the answer, format and start constraints. Do not repeat the same sentence across these
 fields. Explain expected response, goal connection and difference from
 recent content. Let the selected content determine its information structure and explanation depth; do not prefer
 shorter candidates or apply a fixed information checklist to every body page.
@@ -70,4 +90,7 @@ Plan enough slides to meet the content guide and inspect actual references befor
 claiming a visual direction. For past_post, presentation explains how the new subject fits the
 source format; do not select a new visual direction. For external_url, presentation describes the
 synthesized own-brand composition, not an obligation to copy one own post. Save sources and research findings; do not create or edit a project.
-Return analysis, the direction fields and structured sources required by the schema.
+Do not create an unresolved-claims checklist or a "things to verify" handoff. First-draft
+production verifies only the claims/numbers it actually uses. Save reasoning with
+production_save_draft along with the direction and relevant sources. Return analysis, reasoning,
+the direction fields and structured sources required by the schema.

@@ -21,6 +21,7 @@ import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import type { runCodex } from "./process";
 const direction = {
   analysis: "Observed",
+  reasoning: { observations: [], interpretations: [], candidates: [] },
   topic: "arms",
   content_type: "routine",
   message: "train",
@@ -101,6 +102,8 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       );
       return {
         project_id: projectId,
+        slide_plan: final.editor.document.slides.map(slide => ({ slide_id: slide.id, role: slide.role, purpose: "Give a starting prescription", copy: ["3 SETS TO START"], visual: "Demonstrate the exercise" })),
+        content_review: { assessment: "The prescription is supported and the hook matches the body.", issues: [] },
         summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "test" },
         sources: [],
         reviewed_slide_ids: job.editor.document.slides.map((s) => s.id),

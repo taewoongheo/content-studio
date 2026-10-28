@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { productionStore, execute, recordAnalysisRead, recordExternalComparison } from "../runner";
 import type { runCodex } from "../process";
 
-const direction={analysis:"Compare observed post performance.",topic:"Arms",content_type:"Comparison",message:"Choose an exercise",answer:"Compare available options",presentation:"Comparison cards",reason:"Observed interest",expected_response:"Save",goal_connection:"Relevant audience",difference_from_recent:"Another choice",sources:[]};
+const direction={analysis:"Compare observed post performance.",reasoning:{observations:[{source:"assigned-log",observation:"The comparison makes exercise choices visible."}],interpretations:[],candidates:[]},topic:"Arms",content_type:"Comparison",message:"Choose an exercise",answer:"Compare available options",presentation:"Comparison cards",reason:"Observed interest",expected_response:"Save",goal_connection:"Relevant audience",difference_from_recent:"Another choice",sources:[]};
 test("analysis cannot finish without all assigned reads; input IDs and disabled capabilities reach the CLI", async()=>{
   const dir=await mkdtemp(join(tmpdir(),"analysis-input-flow-"));
   process.env.CONTENT_STUDIO_DB_PATH=join(dir,"test.sqlite");
@@ -29,6 +29,7 @@ test("analysis cannot finish without all assigned reads; input IDs and disabled 
     const complete:typeof runCodex=async input=>{
       if(store.get(id).task.current_step === "production") {
         assert.equal(input.capabilities?.webSearch,true);
+        assert.deepEqual(store.get(id).analysis.reasoning, direction.reasoning);
         throw new Error("Stop before actual content generation");
       }
       const rows=store.analysisLogs(id,["assigned-log"]);

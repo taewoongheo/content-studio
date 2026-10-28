@@ -10,7 +10,7 @@ function seed(db:ReturnType<typeof openLocalDatabase>,count=12) {
   for(let i=0;i<count;i++)db.prepare("INSERT INTO content_external_references(id,url,account,caption,observed_at,images_json,created_at,view_count,like_count,comment_count,save_count) VALUES(?,?, 'example',?,'now','[]','now',100,?,1,2)")
     .run(String(i),`https://www.tiktok.com/@example/photo/${i}`,i<4?"Arm workout":"Back workout",i);
 }
-const direction={analysis:"A practical plan.",topic:"arms",content_type:"routine",message:"train",answer:"3 sets",presentation:"cards",reason:"useful",expected_response:"save",goal_connection:"install",difference_from_recent:"new",sources:[]};
+const direction={analysis: "A practical plan.", reasoning: { observations: [], interpretations: [], candidates: [] },topic:"arms",content_type:"routine",message:"train",answer:"3 sets",presentation:"cards",reason:"useful",expected_response:"save",goal_connection:"install",difference_from_recent:"new",sources:[]};
 
 test("분석은 고정된 최대 10개, 후속 단계는 관련 자료 최대 5개만 DB에서 조회한다",async()=>{
  const db=openLocalDatabase(":memory:"),store=new ProductionStore(db);seed(db);

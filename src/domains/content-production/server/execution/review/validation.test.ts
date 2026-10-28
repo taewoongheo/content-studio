@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { ContentJobRegistry } from "@/domains/slideshow/workflow/registry";
 import { makeElementDefinition } from "@/domains/slideshow/editor/elements/factory";
-import { assertCompleteProjectReview } from "./validation";
+import { assertCompleteProjectReview, assertCurrentSlidePlan } from "./validation";
 
 function project() {
   const registry = new ContentJobRegistry();
@@ -36,4 +36,16 @@ test("final validation rejects wrong canvas and empty content before accepting a
   record.editor.document.aspectRatio = "4:5";
   record.editor.document.slides[0].placements.find(placement => placement.id === "copy")!.value = " ";
   assert.throws(() => assertCompleteProjectReview(record, reported, observed, []), { code: "EMPTY_SLIDE" });
+});
+
+test("first-draft plans must follow the current pages, including their roles", () => {
+  const { record } = project();
+  const plan = record.editor.document.slides.map(slide => ({
+    slide_id: slide.id, role: slide.role, purpose: "Explain the exercise choice",
+    copy: ["A useful answer"], visual: "Show the two choices side by side",
+  }));
+  assert.doesNotThrow(() => assertCurrentSlidePlan(record, plan));
+  for (const invalid of [plan.slice(1), [...plan].reverse(), [plan[0], plan[0]],
+    plan.map(item => ({ ...item, role: "cta" as const }))])
+    assert.throws(() => assertCurrentSlidePlan(record, invalid), { code: "SLIDE_PLAN_MISMATCH" });
 });
