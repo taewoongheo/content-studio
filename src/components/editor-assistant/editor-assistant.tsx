@@ -9,8 +9,14 @@ export function EditorAssistant({ target, selection, scopeLabel, beforeStart, on
 } & AssistantControllerProps) {
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const [message, setMessage] = useState("");
+  const [clearedRequest, setClearedRequest] = useState<string>();
   const panel = useRef<HTMLDivElement>(null), cursor = useRef<HTMLSpanElement>(null), field = useRef<HTMLTextAreaElement>(null);
   const { status, sending, running, error, send: execute, stop } = useAssistantController({ target, selection, beforeStart, onSettled, onBusy });
+  // Clear once per completion so later status polls cannot erase a new draft.
+  if (status?.state === "completed" && status.requestId && status.requestId !== clearedRequest) {
+    setClearedRequest(status.requestId);
+    setMessage("");
+  }
   async function send(text: string) {
     if (running || !text.trim()) return;
     setMessage(text);

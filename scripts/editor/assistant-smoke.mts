@@ -64,7 +64,10 @@ export async function verifyEditorAssistant(browser: Browser, origin: string) {
       await page.getByRole("button", { name: "AI 명령 열기" }).click();
       await dialog.getByText("완료", { exact: true }).waitFor();
       assert.ok(await dialog.getByLabel("AI 편집 명령").isEnabled());
-      assert.equal(await dialog.getByLabel("AI 편집 명령").inputValue(), "제목을 키워 줘");
+      assert.equal(await dialog.getByLabel("AI 편집 명령").inputValue(), "");
+      await dialog.getByLabel("AI 편집 명령").fill("다음 명령 작성 중");
+      await page.waitForTimeout(1200);
+      assert.equal(await dialog.getByLabel("AI 편집 명령").inputValue(), "다음 명령 작성 중");
       await dialog.getByRole("button", { name: "AI 명령 닫기" }).click();
       // Right click anywhere in the editor toggles the same panel.
       await page.locator(`[data-tab-id="${tabId}"]`).click({ button: "right", position: { x: 12, y: 12 } });
