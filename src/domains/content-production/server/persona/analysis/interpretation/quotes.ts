@@ -7,7 +7,7 @@ function normalizeQuote(text: string) {
 }
 
 function inlineQuotes(text: string) {
-  return [...text.matchAll(/[“‘]([^”’]+)[”’]/g)].map(match => match[1]);
+  return [...text.matchAll(/“([^”]+)”/g)].map(match => match[1]);
 }
 
 // Validate examples and inline quotations against the original extracted text.

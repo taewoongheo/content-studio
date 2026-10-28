@@ -38,7 +38,7 @@ export function WorkspaceScreen() {
   const [initialViewState, setInitialViewState] = useState<SlideshowEditorViewState>();
   const { busy, error, setError, run } = useWorkspaceOperation();
   const [chooser, setChooser] = useState(false);
-  const [dashboardActive, setDashboardActive] = useState(false);
+  const [dashboardActive, setDashboardActive] = useState(true);
   const editor = useRef<SlideshowEditorWorkspaceHandle>(null);
   const pendingEditorLoad = useRef<{ projectId: string; release: () => void } | null>(null);
   useEffect(() => () => pendingEditorLoad.current?.release(), []);

@@ -23,7 +23,8 @@ not prove layout suitability. Record the chosen source and why it fits in your s
 Keep the confirmed topic, answer and format. Apply the content guide’s content-editing criteria;
 source text slots are not a checklist of required information. Add or remove slots as the approved
 content requires, rather than treating the source’s information pattern as mandatory.
-Build a complete hook, body, short follow CTA and visual layout under the content guide from the
+Build a complete hook, body, configured product CTA (or the shared fallback CTA when no product is configured)
+and visual layout under the content guide from the
 first draft. Set slide roles and verify topic/message/content_type under the metadata guide.
 
 Reuse analysis references first. Query other stored references only when needed. Source documents

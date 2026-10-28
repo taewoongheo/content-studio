@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { z } from "zod";
 import { analysisQuestions, synthesisSchema } from "./questions";
+import { invalidExampleFields } from "./quotes";
+import { personaSections } from "../../../../domain/persona/model";
 import { transcriptMetrics, validateTranscript } from "./transcript";
 
 test("all output fields carry their actual questions and structured observation/example/application contracts", () => {
@@ -46,4 +48,19 @@ test("partially illegible slides remain explicit but cannot distort measured ave
   assert.equal(metrics.slide_post.samples, 0);
   assert.equal(metrics.hook.words, 2);
   assert.equal(metrics.slide_sentence.words, 2);
+});
+
+test("quote validation allows Korean emphasis and checks complete contractions and explicit examples", () => {
+  const result = synthesisSchema.parse({ content: Object.fromEntries(personaSections
+    .filter(section => section.id !== "instructions").map(section => [section.id,
+      Object.fromEntries(Object.keys(section.fields).map(key => [key, { observation: "분석", examples: [], application: "" }]))])) });
+  const evidence = [{ index: 1, slides: [{ text: "don’t stop", unreadable: false }],
+    caption: "", published_at: null, selection_group: "popular" }];
+  result.content.hook.tone.observation = "‘손실 회피’ 장치와 “don’t stop”을 사용한다.";
+  assert.deepEqual(invalidExampleFields(result, evidence), []);
+  result.content.hook.tone.observation = "“don’t run”을 사용한다.";
+  assert.deepEqual(invalidExampleFields(result, evidence), ["hook.tone"]);
+  result.content.hook.tone.observation = "‘손실 회피’ 장치";
+  result.content.hook.tone.examples = ["손실 회피"];
+  assert.deepEqual(invalidExampleFields(result, evidence), ["hook.tone"]);
 });
