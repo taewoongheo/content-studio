@@ -280,22 +280,20 @@ export async function execute(
           throw requiredToolFailure(run.toolCalls, ["production_preview_project", "production_read_images"], "참고 게시글의 실제 이미지 확인이 필요합니다.");
       }
       phase = "output";
-      const output = (run.step === "production" ? firstDraftResultSchema : productionResultSchema).parse({
-        ...rest,
-        sources,
-      });
-      if (run.step === "production") {
-        const planning = firstDraftResultSchema.parse(output);
+      const rawOutput = { ...rest, sources };
+      const firstDraft = run.step === "production" ? firstDraftResultSchema.parse(rawOutput) : null;
+      const output = firstDraft ?? productionResultSchema.parse(rawOutput);
+      if (firstDraft) {
         phase = "save";
-        store.save(id, "production", { slide_plan: planning.slide_plan, content_review: planning.content_review });
+        store.save(id, "production", { slide_plan: firstDraft.slide_plan, content_review: firstDraft.content_review });
       }
       phase = "validation";
       const detail = store.get(id);
       if (detail.task.project_id !== output.project_id)
         throw new OperationError("PROJECT_RESULT_MISMATCH", "연결된 프로젝트와 결과가 다릅니다.");
       await loadContentProject(contentJobRegistry, output.project_id);
-      if (run.step === "production")
-        assertCurrentSlidePlan(contentJobRegistry.getRecord(output.project_id), firstDraftResultSchema.parse(output).slide_plan);
+      if (firstDraft)
+        assertCurrentSlidePlan(contentJobRegistry.getRecord(output.project_id), firstDraft.slide_plan);
       assertCompleteProjectReview(
         contentJobRegistry.getRecord(output.project_id), output,
         run.reviews.get(output.project_id), run.toolCalls,
