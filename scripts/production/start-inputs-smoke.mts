@@ -59,22 +59,41 @@ export async function verifyProductionStart(browser: Browser, origin: string, po
     selecting = true;
     await page.getByRole("radio", { name: "과거 게시글", exact: true }).check();
     const list = page.getByRole("radiogroup",{name:"원본 게시글",exact:true});
-    assert.equal(await list.getByRole("radio").count(),8,"mount only the first page of source cards");
+    const initialCount = await list.getByRole("radio").count();
+    assert.ok(initialCount>=8&&initialCount<posts.length,"mount only a page of text entries");
     await list.evaluate(element=>{element.scrollTop=element.scrollHeight;});
-    await page.waitForFunction(()=>document.querySelector('[role="radiogroup"]')!.querySelectorAll('input[type="radio"]').length>8);
+    await page.waitForFunction(count=>document.querySelector('[role="radiogroup"]')!.querySelectorAll('input[type="radio"]').length>count,initialCount);
     await page.getByLabel("과거 게시글 검색",{exact:true}).fill("페이지 확인 24");
     await page.getByRole("radio",{name:"페이지 확인 24",exact:true}).waitFor();
     assert.equal(await list.getByRole("radio").count(),1,"search includes posts beyond the mounted page");
     await page.getByLabel("과거 게시글 검색",{exact:true}).fill("");
     await list.evaluate(element=>{element.scrollTop=0;});
-    await page.waitForFunction(()=>document.querySelector<HTMLCanvasElement>('[role="radiogroup"] canvas')?.width===200);
-    assert.ok(assetReads.some(url=>url.includes("source-picker-cover")&&Number(new URL(url).searchParams.get("width"))<=200),"cover uses a small image derivative");
-    assert.ok(!assetReads.some(url=>url.includes("source-picker-body")),"unselected posts never load body-slide images");
+    assert.equal(await list.locator("canvas,img").count(),0,"source list has no images");
+    assert.equal(documentReads.size,0,"scrolling and searching the list never load slideshow documents");
+    assert.equal(assetReads.length,0,"images are loaded only after selecting a source");
     await page.getByRole("dialog").getByText(post.name, { exact: true }).click();
     assert.equal(await page.getByRole("dialog").getByRole("radio", { name: post.name, exact: true }).isChecked(),true);
     await page.getByRole("region", { name: `${post.name} 슬라이드 미리보기`, exact: true }).waitFor();
     await page.getByRole("img", { name: "1번 슬라이드", exact: true }).waitFor();
-    assert.equal(documentReads.get(post.id),1,"cover and expanded preview share one saved document request");
+    assert.equal(documentReads.get(post.id),1,"selected source document is loaded once");
+    for (const viewport of [{width:1440,height:1000},{width:390,height:844},{width:1024,height:600},{width:844,height:390}]) {
+      await page.setViewportSize(viewport);
+      try {
+        await page.waitForFunction(()=>{
+          const dialog=document.querySelector<HTMLElement>('[role="dialog"]')!;
+          const rect=dialog.getBoundingClientRect();
+          const list=dialog.querySelector<HTMLElement>('[role="radiogroup"]');
+          return dialog.scrollHeight<=dialog.clientHeight+1&&rect.y>=0&&rect.bottom<=window.innerHeight&&!!list&&list.clientHeight>=28;
+        },undefined,{timeout:5000});
+      } finally {
+        if(process.env.CONTENT_STUDIO_SMOKE_SCREENSHOT_DIR) await page.screenshot({path:`${process.env.CONTENT_STUDIO_SMOKE_SCREENSHOT_DIR}/dialog-${viewport.width}-${viewport.height}.png`,animations:"disabled"});
+      }
+      const dialog=await page.getByRole("dialog").boundingBox();
+      const submit=await page.getByRole("dialog").getByRole("button",{name:"추가",exact:true}).boundingBox();
+      const bounds=await list.boundingBox();
+      assert.ok(dialog&&submit&&bounds&&bounds.height>=28&&submit.y+submit.height<=dialog.y+dialog.height,"dialog fits without vertical scrolling and keeps list/footer accessible");
+    }
+    await page.setViewportSize({width:1440,height:1000});
     if (process.env.CONTENT_STUDIO_SMOKE_SCREENSHOT_DIR) await page.screenshot({path:`${process.env.CONTENT_STUDIO_SMOKE_SCREENSHOT_DIR}/source-picker.png`});
     await page.getByRole("dialog").getByRole("button", { name: "추가", exact: true }).click();
     await add.click();
@@ -107,6 +126,6 @@ export async function verifyProductionStart(browser: Browser, origin: string, po
       { mode: "automatic", instructions: "" },
     ]);
     assert.deepEqual(browserErrors, []);
-    console.log("PASS infinite source cards, full-list search, shared document read, start modal modes, saved preview, optional instructions, edit/delete, narrow viewport and failed-start recovery");
+    console.log("PASS text-only infinite source list, selection-only images, fixed dialog at four viewport sizes, full-list search, start modal modes, saved preview, optional instructions, edit/delete, narrow viewport and failed-start recovery");
   } finally { await page.close(); }
 }

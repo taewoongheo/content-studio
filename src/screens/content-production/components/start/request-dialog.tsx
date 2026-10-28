@@ -28,30 +28,32 @@ export function RequestDialog({ initial, posts, onClose, onSave }: {
     onSave(parsed.data);
   }
   return <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
-    <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-xl">
-      <DialogHeader><DialogTitle>{initial ? "제작 요청 수정" : "제작 요청 추가"}</DialogTitle>
-        <DialogDescription>시작 방식을 선택하고 필요한 지침을 입력하세요.</DialogDescription></DialogHeader>
-      <form className="min-w-0 space-y-5" onSubmit={submit}>
-        <fieldset className="grid gap-2 sm:grid-cols-3">
+    <DialogContent className={`flex max-h-[calc(100dvh-2rem)] flex-col gap-2 overflow-hidden p-3 sm:max-w-2xl [@media(max-height:450px)]:gap-1 [@media(max-height:450px)]:p-2 ${mode === "past_post" ? "h-[min(850px,calc(100dvh-2rem))]" : ""}`}>
+      <DialogHeader className="shrink-0 gap-1"><DialogTitle>{initial ? "제작 요청 수정" : "제작 요청 추가"}</DialogTitle>
+        <DialogDescription className="[@media(max-height:650px)]:hidden">시작 방식을 선택하고 필요한 지침을 입력하세요.</DialogDescription></DialogHeader>
+      <form className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 [@media(max-height:450px)]:gap-1" onSubmit={submit}>
+        <div className="shrink-0 space-y-2">
+        <fieldset className="grid grid-cols-3 gap-2">
           <legend className="sr-only">생성 방식</legend>
           {(Object.keys(productionModeLabels) as ProductionRequest["mode"][]).map(value =>
-            <label key={value} className={`cursor-pointer rounded-lg border p-3 ${mode === value ? "border-foreground bg-muted" : "hover:bg-muted/50"}`}>
-              <span className="flex items-center gap-2 text-sm font-medium"><input type="radio" aria-label={productionModeLabels[value]} name="production-mode" value={value} checked={mode === value} onChange={() => { setMode(value); setError(""); }} />{productionModeLabels[value]}</span>
-              <span className="mt-2 block text-xs leading-5 text-muted-foreground">{descriptions[value]}</span>
+            <label key={value} className={`min-w-0 cursor-pointer rounded-lg border p-2 ${mode === value ? "border-foreground bg-muted" : "hover:bg-muted/50"}`}>
+              <span className="flex items-center gap-2 whitespace-nowrap text-xs font-medium sm:text-sm"><input type="radio" aria-label={productionModeLabels[value]} name="production-mode" value={value} checked={mode === value} onChange={() => { setMode(value); setError(""); }} />{productionModeLabels[value]}</span>
             </label>)}
         </fieldset>
+        <p className="text-xs leading-5 text-muted-foreground [@media(max-height:650px)]:hidden">{descriptions[mode]}</p>
+        </div>
         {mode === "past_post" && <SourcePicker posts={posts} value={sourceProjectId} onChange={value => { setSource(value); setError(""); }} />}
         {mode === "external_url" && <div className="space-y-2">
           <label htmlFor="production-source-url" className="block text-xs font-medium">TikTok 슬라이드쇼 URL</label>
           <input id="production-source-url" className="production-field" type="url" value={url} onChange={event => { setUrl(event.target.value); setError(""); }} required placeholder="https://www.tiktok.com/@.../photo/..." />
           <p className="text-xs text-muted-foreground">게시글의 전체 URL을 입력하세요. 시작 후 캡션과 전체 슬라이드를 가져옵니다.</p>
         </div>}
-        <div className="space-y-2">
+        <div className="shrink-0 space-y-1">
           <label htmlFor="production-instructions" className="block text-xs font-medium">추가 지침 <span className="font-normal text-muted-foreground">선택</span></label>
-          <textarea id="production-instructions" className="production-field min-h-28 resize-y" value={instructions} onChange={event => { setInstructions(event.target.value); setError(""); }} maxLength={10000} placeholder={mode === "past_post" ? "예: 가슴 운동으로 바꾸고 덤벨만 사용해 줘" : "예: 홈트 초보자를 대상으로 만들어 줘"} />
+          <textarea id="production-instructions" className="production-field h-[clamp(40px,8dvh,72px)] min-h-0 resize-none" value={instructions} onChange={event => { setInstructions(event.target.value); setError(""); }} maxLength={10000} placeholder={mode === "past_post" ? "예: 가슴 운동으로 바꾸고 덤벨만 사용해 줘" : "예: 홈트 초보자를 대상으로 만들어 줘"} />
         </div>
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        <div className="flex justify-end gap-2"><button type="button" className="production-button" onClick={onClose}>취소</button>
+        {error && <p role="alert" className="shrink-0 text-xs text-destructive">{error}</p>}
+        <div className="flex shrink-0 justify-end gap-2"><button type="button" className="production-button" onClick={onClose}>취소</button>
           <button className="production-button primary">{initial ? "수정" : "추가"}</button></div>
       </form>
     </DialogContent>
