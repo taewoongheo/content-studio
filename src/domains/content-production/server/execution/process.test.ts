@@ -106,3 +106,44 @@ else fs.writeFileSync(args[args.indexOf("--output-last-message")+1], "First draf
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("작업 시작 전 라우팅 실패만 최대 두 번 재시도하고 취소와 실행된 작업은 보존한다", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "production-cli-retry-"));
+  const executable = join(directory, "codex.cjs"), countPath = join(directory, "count");
+  const previous = process.env.CONTENT_STUDIO_CODEX_BIN;
+  try {
+    process.env.CONTENT_STUDIO_CODEX_BIN = executable;
+    for (const scenario of ["recover", "exhaust", "started", "other", "cancel"] as const) {
+      await writeFile(countPath, "0");
+      await writeFile(executable, `#!/usr/bin/env node
+const fs = require("node:fs"), args = process.argv.slice(2);
+if (args[0] === "mcp") console.log("[]");
+else {
+  const path = ${JSON.stringify(countPath)}, n = Number(fs.readFileSync(path)) + 1;
+  fs.writeFileSync(path, String(n));
+  const scenario = ${JSON.stringify(scenario)};
+  console.log(JSON.stringify({type:"thread.started",thread_id:"attempt-"+n}));
+  if (scenario === "recover" && n === 2) {
+    fs.writeFileSync(args[args.indexOf("--output-last-message")+1], JSON.stringify({ok:true}));
+  } else {
+    if (scenario === "started") console.log(JSON.stringify({type:"item.started",item:{type:"mcp_tool_call",id:"edit",tool:"edit_project",arguments:{}}}));
+    console.log(JSON.stringify({type:"turn.failed",error:{message:scenario === "other" ? "unrelated failure" : "workspace routing discovery failed"}}));
+    process.exitCode = 1;
+  }
+}
+`, { mode: 0o700 });
+      const controller = new AbortController();
+      const result = runCodex({ prompt: "test", schema: {}, origin: "", taskId: "", token: "",
+        signal: controller.signal, onActivity(message) {
+          if (scenario === "cancel" && message === "실행 연결 재시도 중") controller.abort();
+        } });
+      if (scenario === "recover") assert.deepEqual(await result, { ok: true });
+      else await assert.rejects(result, scenario === "cancel" ? /abort/i : /Codex 실행 실패/);
+      assert.equal(Number(await readFile(countPath, "utf8")), scenario === "recover" ? 2 : scenario === "exhaust" ? 3 : 1);
+    }
+  } finally {
+    if (previous === undefined) delete process.env.CONTENT_STUDIO_CODEX_BIN;
+    else process.env.CONTENT_STUDIO_CODEX_BIN = previous;
+    await rm(directory, { recursive: true, force: true });
+  }
+});

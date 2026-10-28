@@ -3,6 +3,7 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { OperationError } from "@/lib/errors/operation";
 import { spawn, execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { setTimeout as delay } from "node:timers/promises";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -49,121 +50,139 @@ export async function runCodex(input: {
       ]);
     await writeFile(schema, JSON.stringify(input.schema));
     input.signal.throwIfAborted();
-    await new Promise<void>((resolve, reject) => {
-      const child = spawn(
-        process.env.CONTENT_STUDIO_CODEX_BIN || "codex",
-        [
-          "exec",
-          ...(input.model ? ["--model", input.model] : []),
-          ...(!input.displayOnly ? (input.images ?? []).flatMap(path => ["--image", path]) : []),
-          "-c", `features.image_generation=${!input.displayOnly && !!input.capabilities?.imageGeneration}`,
-          "--json",
-          "--ephemeral",
-          "-c",
-          !input.displayOnly && input.capabilities?.webSearch ? 'web_search="live"' : 'web_search="disabled"',
-          ...(!input.capabilities?.shell || input.displayOnly ? ["-c", "features.shell_tool=false", "-c", "features.unified_exec=false"] : []),
-          ...(isolated ? ["--skip-git-repo-check"] : []),
-          ...(input.displayOnly ? ["-c", 'model_reasoning_effort="low"'] : []),
-          "--sandbox",
-          "read-only",
-          "--output-schema",
-          schema,
-          "--output-last-message",
-          output,
-          ...disableServers,
-          ...(!isolated ? [
-            "-c", `mcp_servers.production.url=${JSON.stringify(`${input.origin}/api/content-production/agent/${input.taskId}`)}`,
-            "-c", 'mcp_servers.production.bearer_token_env_var="CONTENT_PRODUCTION_RUN_TOKEN"',
-            "-c", "mcp_servers.production.enabled=true",
-          ] : []),
-          "-",
-        ],
-        {
-          cwd: isolated ? directory : process.cwd(),
-          env: { ...process.env, CONTENT_PRODUCTION_RUN_TOKEN: input.token },
-          stdio: ["pipe", "pipe", "pipe"],
-          shell: false,
-          detached: process.platform !== "win32",
-        },
-      );
-      let tail = "",
-        errorTail = "",
-        protocolError = "";
-      const kill = () => {
-        try {
-          if (child.pid && process.platform !== "win32")
-            process.kill(-child.pid, "SIGTERM");
-          else child.kill("SIGTERM");
-        } catch {}
-      };
-      let force: ReturnType<typeof setTimeout> | undefined;
-      const abort = () => {
-        kill();
-        force = setTimeout(() => {
-          try {
-            if (child.pid && process.platform !== "win32")
-              process.kill(-child.pid, "SIGKILL");
-            else child.kill("SIGKILL");
-          } catch {}
-        }, 2000);
-      };
-      input.signal.addEventListener("abort", abort, { once: true });
-      child.stdout.on("data", (chunk) => {
-        tail += String(chunk);
-        const lines = tail.split("\n");
-        tail = lines.pop()!.slice(-65536);
-        for (const line of lines) {
-          try {
-            const event = JSON.parse(line);
-            if (event.type === "thread.started" && typeof event.thread_id === "string") input.onThreadStarted?.(event.thread_id);
-            if (event.item?.type === "mcp_tool_call" && ["item.started", "item.completed"].includes(event.type)) {
-              const item = event.item;
-              input.onToolActivity?.({ callId: `cli:${item.id}`, name: item.tool, input: item.arguments,
-                ...(event.type === "item.completed" ? { result: item.result ? {
-                  ...item.result,
-                  content: Array.isArray(item.result.content) ? item.result.content : [],
-                  structuredContent: item.result.structuredContent ?? item.result.structured_content,
-                  isError: item.status === "failed" || item.result.isError === true || item.result.is_error === true,
-                } : {
-                  isError: true, content: [], structuredContent: { error: { code: "MCP_CALL_NO_RESPONSE", message: item.error?.message ?? "MCP call finished without a response." } },
-                } } : {}) });
-            }
-            if (event.type === "error" || event.type === "turn.failed")
-              protocolError = JSON.stringify(event).slice(-4000);
-            if (
-              event.type === "item.started" ||
-              event.type === "item.completed"
-            )
-              input.onActivity(event.item?.type ?? "작업 진행");
-          } catch {}
-        }
-      });
-      child.stderr.on("data", (chunk) => {
-        errorTail = (errorTail + String(chunk)).slice(-3000);
-      });
-      const finish = () => {
-        input.signal.removeEventListener("abort", abort);
-        clearTimeout(force);
-      };
-      child.once("error", (error) => {
-        finish();
-        reject(error);
-      });
-      child.once("close", (code) => {
-        finish();
-        if (input.signal.aborted) reject(input.signal.reason);
-        else if (code === 0) resolve();
-        else
-          reject(
-            new OperationError("CLI_PROCESS_FAILED",
-              `Codex 실행 실패 (${code}): ${input.token ? (protocolError || errorTail).replaceAll(input.token, "[redacted]") : protocolError || errorTail}`,
-            ),
+    for (let attempt = 0; ; attempt++) {
+      let workStarted = false;
+      let routingFailed = false;
+      try {
+        input.signal.throwIfAborted();
+        await rm(output, { force: true });
+        await new Promise<void>((resolve, reject) => {
+          const child = spawn(
+            process.env.CONTENT_STUDIO_CODEX_BIN || "codex",
+            [
+              "exec",
+              ...(input.model ? ["--model", input.model] : []),
+              ...(!input.displayOnly ? (input.images ?? []).flatMap(path => ["--image", path]) : []),
+              "-c", `features.image_generation=${!input.displayOnly && !!input.capabilities?.imageGeneration}`,
+              "--json",
+              "--ephemeral",
+              "-c",
+              !input.displayOnly && input.capabilities?.webSearch ? 'web_search="live"' : 'web_search="disabled"',
+              ...(!input.capabilities?.shell || input.displayOnly ? ["-c", "features.shell_tool=false", "-c", "features.unified_exec=false"] : []),
+              ...(isolated ? ["--skip-git-repo-check"] : []),
+              ...(input.displayOnly ? ["-c", 'model_reasoning_effort="low"'] : []),
+              "--sandbox",
+              "read-only",
+              "--output-schema",
+              schema,
+              "--output-last-message",
+              output,
+              ...disableServers,
+              ...(!isolated ? [
+                "-c", `mcp_servers.production.url=${JSON.stringify(`${input.origin}/api/content-production/agent/${input.taskId}`)}`,
+                "-c", 'mcp_servers.production.bearer_token_env_var="CONTENT_PRODUCTION_RUN_TOKEN"',
+                "-c", "mcp_servers.production.enabled=true",
+              ] : []),
+              "-",
+            ],
+            {
+              cwd: isolated ? directory : process.cwd(),
+              env: { ...process.env, CONTENT_PRODUCTION_RUN_TOKEN: input.token },
+              stdio: ["pipe", "pipe", "pipe"],
+              shell: false,
+              detached: process.platform !== "win32",
+            },
           );
-      });
-      child.stdin.on("error", () => {});
-      child.stdin.end(input.prompt);
-      if (input.signal.aborted) abort();
-    });
+          let tail = "",
+            errorTail = "",
+            protocolError = "";
+          const kill = () => {
+            try {
+              if (child.pid && process.platform !== "win32")
+                process.kill(-child.pid, "SIGTERM");
+              else child.kill("SIGTERM");
+            } catch {}
+          };
+          let force: ReturnType<typeof setTimeout> | undefined;
+          const abort = () => {
+            kill();
+            force = setTimeout(() => {
+              try {
+                if (child.pid && process.platform !== "win32")
+                  process.kill(-child.pid, "SIGKILL");
+                else child.kill("SIGKILL");
+              } catch {}
+            }, 2000);
+          };
+          input.signal.addEventListener("abort", abort, { once: true });
+          child.stdout.on("data", (chunk) => {
+            tail += String(chunk);
+            const lines = tail.split("\n");
+            tail = lines.pop()!.slice(-65536);
+            for (const line of lines) {
+              try {
+                const event = JSON.parse(line);
+                // Never replay a process after model work or tool execution has started.
+                if (event.type?.startsWith("item.")) workStarted = true;
+                if (["error", "turn.failed"].includes(event.type) &&
+                  (event.error?.message ?? event.message) === "workspace routing discovery failed") routingFailed = true;
+                if (event.type === "thread.started" && typeof event.thread_id === "string") input.onThreadStarted?.(event.thread_id);
+                if (event.item?.type === "mcp_tool_call" && ["item.started", "item.completed"].includes(event.type)) {
+                  const item = event.item;
+                  input.onToolActivity?.({ callId: `cli:${item.id}`, name: item.tool, input: item.arguments,
+                    ...(event.type === "item.completed" ? { result: item.result ? {
+                      ...item.result,
+                      content: Array.isArray(item.result.content) ? item.result.content : [],
+                      structuredContent: item.result.structuredContent ?? item.result.structured_content,
+                      isError: item.status === "failed" || item.result.isError === true || item.result.is_error === true,
+                    } : {
+                      isError: true, content: [], structuredContent: { error: { code: "MCP_CALL_NO_RESPONSE", message: item.error?.message ?? "MCP call finished without a response." } },
+                    } } : {}) });
+                }
+                if (event.type === "error" || event.type === "turn.failed")
+                  protocolError = JSON.stringify(event).slice(-4000);
+                if (
+                  event.type === "item.started" ||
+                  event.type === "item.completed"
+                )
+                  input.onActivity(event.item?.type ?? "작업 진행");
+              } catch {}
+            }
+          });
+          child.stderr.on("data", (chunk) => {
+            errorTail = (errorTail + String(chunk)).slice(-3000);
+          });
+          const finish = () => {
+            input.signal.removeEventListener("abort", abort);
+            clearTimeout(force);
+          };
+          child.once("error", (error) => {
+            finish();
+            reject(error);
+          });
+          child.once("close", (code) => {
+            finish();
+            if (input.signal.aborted) reject(input.signal.reason);
+            else if (code === 0) resolve();
+            else
+              reject(
+                new OperationError("CLI_PROCESS_FAILED",
+                  `Codex 실행 실패 (${code}): ${input.token ? (protocolError || errorTail).replaceAll(input.token, "[redacted]") : protocolError || errorTail}`,
+                ),
+              );
+          });
+          child.stdin.on("error", () => {});
+          child.stdin.end(input.prompt);
+          if (input.signal.aborted) abort();
+        });
+        break;
+      } catch (error) {
+        if (input.signal.aborted || workStarted || !routingFailed || attempt >= 2 ||
+          !(error instanceof OperationError) || error.code !== "CLI_PROCESS_FAILED") throw error;
+        input.onActivity("실행 연결 재시도 중");
+        await delay(1000 * (attempt + 1), undefined, { signal: input.signal });
+      }
+    }
     const raw = await readFile(output, "utf8").catch(() => {
       throw new OperationError("CLI_OUTPUT_MISSING", "CLI가 최종 응답 파일을 생성하지 않았습니다.");
     });
