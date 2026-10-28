@@ -1,3 +1,5 @@
+import { START_INPUT, readStartInput, startInputRecord } from "../start/context";
+import { productionRequestSchema, type ProductionRequest, type PreparedSource } from "../../domain/start/input";
 import type { ProductionFailure } from "../../domain/diagnostics";
 import { EXTERNAL_CONTEXT, readExternalContext } from "../../domain/references/context";
 import { z } from "zod";
@@ -84,7 +86,7 @@ export class ProductionStore {
     )!;
     const stage = (row: Row) => {
       const decoded = decode(row), research = decoded.research as Array<z.infer<typeof researchSchema>>;
-      return { data: { ...decoded, research: research.filter(item => ![EXTERNAL_CONTEXT, ANALYSIS_INPUTS].includes(item.question)) }, external: readExternalContext(research) };
+      return { data: { ...decoded, research: research.filter(item => ![EXTERNAL_CONTEXT, ANALYSIS_INPUTS, START_INPUT].includes(item.question)) }, external: readExternalContext(research) };
     };
     const decoded = stage(analysis);
     const reviews = reviewSteps.map(step => {
@@ -92,6 +94,7 @@ export class ProductionStore {
       return { step, value: row ? stage(row) : null };
     });
     return {
+      input: readStartInput(JSON.parse(String(analysis.research_json))),
       analysis_inputs: (readAnalysisInputs(JSON.parse(String(analysis.research_json))) ?? []).map(({id,project_id,selection_group}) => ({id,project_id,selection_group})),
       timing: readTaskTiming(this.db, id),
       task, analysis: decoded.data, production: production ? stage(production).data : null, log: decode(log),
@@ -99,10 +102,14 @@ export class ProductionStore {
       external: { analysis: decoded.external, production: production ? stage(production).external : null, ...Object.fromEntries(reviews.map(({step,value}) => [step,value?.external ?? null])) },
     };
   }
-  create(count: number, inputs = this.planningLogs()) {
+  create(requests: number | ProductionRequest[], inputs = this.planningLogs()) {
+    const entries = typeof requests === "number"
+      ? Array.from({ length: requests }, () => productionRequestSchema.parse({ mode: "automatic" }))
+      : requests.map(request => productionRequestSchema.parse(request));
+    const sources = entries.map(request => this.requestSource(request));
     const ids: string[] = [];
     this.db.transaction(() => {
-      for (let i = 0; i < count; i++) {
+      for (const [index, request] of entries.entries()) {
         const id = randomUUID(),
           log = randomUUID(),
           now = this.now();
@@ -120,12 +127,32 @@ export class ProductionStore {
           .prepare(
             "INSERT INTO content_analysis_drafts(draft_id,created_at,updated_at,research_json) VALUES(?,?,?,?)",
           )
-          .run(id, now, now, JSON.stringify([analysisInputRecord(inputs)]));
+          .run(id, now, now, JSON.stringify([analysisInputRecord(inputs), startInputRecord({ request, ...(sources[index] ? { source: sources[index] } : {}) })]));
         ids.push(id);
       }
     })();
     publishChange({ kind: "state" });
     return ids;
+  }
+  requestSource(request: ProductionRequest): PreparedSource | undefined {
+    if (request.mode !== "past_post") return;
+    const source = this.row("SELECT l.id,l.project_id,p.name FROM content_creation_logs l JOIN content_projects p ON p.id=l.project_id WHERE l.project_id=? AND l.post_url IS NOT NULL", request.sourceProjectId);
+    if (!source) throw new Error("선택한 과거 게시글의 저장본을 찾을 수 없습니다.");
+    return { id: String(source.id), project_id: String(source.project_id), name: String(source.name) };
+  }
+  savePreparedSource(id: string, source: PreparedSource) {
+    const detail = this.assertActive(id, "analysis");
+    const row = this.row("SELECT research_json FROM content_analysis_drafts WHERE draft_id=?", id)!;
+    const research = JSON.parse(String(row.research_json)) as Row[];
+    this.update("content_analysis_drafts", "draft_id", id, {
+      research_json: JSON.stringify([...research.filter(row => row.question !== START_INPUT), startInputRecord({ ...detail.input!, source })]),
+      updated_at: this.now(),
+    });
+    publishChange({ task_id: id, step: "analysis", kind: "saved" });
+  }
+  sourceProjectAllowed(id: string, projectId: string) {
+    return this.analysisInputs(id).some(row => row.project_id === projectId)
+      || this.get(id).input?.source?.project_id === projectId;
   }
   assertActive(id: string, step: ProductionStep) {
     const detail = this.get(id);
@@ -163,12 +190,12 @@ export class ProductionStore {
     ).parse(raw);
     // Collection snapshots are server-owned evidence, not agent-authored prose.
     if (patch.research) {
-      patch.research = patch.research.filter(item => ![EXTERNAL_CONTEXT, ANALYSIS_INPUTS].includes(item.question));
+      patch.research = patch.research.filter(item => ![EXTERNAL_CONTEXT, ANALYSIS_INPUTS, START_INPUT].includes(item.question));
     }
     if (patch.research) {
       const row = this.row(`SELECT research_json FROM content_${step}_drafts WHERE draft_id=?`, id)!;
       const existing = JSON.parse(String(row.research_json)) as Array<z.infer<typeof researchSchema>>;
-      patch.research = [...existing.filter(item => [EXTERNAL_CONTEXT, ANALYSIS_INPUTS].includes(item.question)), ...patch.research];
+      patch.research = [...existing.filter(item => [EXTERNAL_CONTEXT, ANALYSIS_INPUTS, START_INPUT].includes(item.question)), ...patch.research];
     }
     const values: Row = { updated_at: this.now() };
     for (const [key, value] of Object.entries(patch))

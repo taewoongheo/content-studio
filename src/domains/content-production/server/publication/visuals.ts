@@ -8,12 +8,12 @@ export interface VisualSlide {
   width: number;
   height: number;
 }
-export async function collectVisuals(urls: string[]): Promise<VisualSlide[]> {
+export async function collectVisuals(urls: string[], signal?: AbortSignal): Promise<VisualSlide[]> {
   if (!urls.length)
     throw new Error("전체 슬라이드 이미지 URL이 반환되지 않았습니다.");
   const slides = [];
   for (const url of urls) {
-    const source = await readSourceImage(url);
+    const source = await readSourceImage(url, signal);
     const { data, info } = await sharp(Buffer.from(source.data, "base64"))
       .resize({ width: 540, withoutEnlargement: true })
       .webp({ quality: 82 })

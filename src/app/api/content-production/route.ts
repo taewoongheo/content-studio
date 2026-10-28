@@ -1,3 +1,4 @@
+import { productionRequestsSchema } from "@/domains/content-production/domain/start/input";
 import { streamDisplayTranslation } from "@/domains/content-production/server/display/stream";
 import { z } from "zod";
 import { isLocalRequest } from "@/lib/http/local-request";
@@ -25,7 +26,7 @@ export const dynamic = "force-dynamic";
 const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("reset") }),
   z.object({ action: z.literal("translate_display"), id: z.string().min(1), step: stepSchema, stream: z.boolean().optional() }),
-  z.object({ action: z.literal("start"), count: z.number().int().positive() }),
+  z.object({ action: z.literal("start"), requests: productionRequestsSchema }),
   z.object({
     action: z.enum(["stop", "resume", "remove"]),
     id: z.string().min(1),
@@ -117,7 +118,7 @@ export async function POST(request: Request) {
         break;
       case "start":
         return Response.json({
-          ids: await startProduction(input.count, origin),
+          ids: await startProduction(input.requests, origin),
         });
       case "stop":
         if (input.step) {

@@ -1,3 +1,5 @@
+import { productionRequestsSchema, type ProductionRequest } from "../../domain/start/input";
+import { prepareStartInput } from "../start/prepare";
 import { activeProduct } from "../products/store";
 import { readPersona } from "../persona/store";
 import { assertCompleteProjectReview, type ObservedReview } from "./review/validation";
@@ -115,17 +117,20 @@ export function syncState() {
   return { running: !!shared.productionSync, report: shared.productionRefresh ?? null };
 }
 export async function startProduction(
-  count: number, origin: string,
+  count: number | ProductionRequest[], origin: string,
   services = { refreshMetrics, execute },
 ) {
   if (!process.env.APIFY_API_TOKEN?.trim())
     throw new Error("Apify에 연결되지 않아 제작을 시작할 수 없습니다. APIFY_API_TOKEN을 설정해 주세요.");
   if (shared.productionSync)
     throw new Error("성과를 갱신하고 있습니다. 잠시 후 시작해 주세요.");
-  if (!Number.isInteger(count) || count < 1)
+  if (typeof count === "number" && (!Number.isInteger(count) || count < 1))
     throw new Error("제작 개수를 양의 정수로 입력해 주세요.");
+  const requests = productionRequestsSchema.parse(typeof count === "number"
+    ? Array.from({ length: count }, () => ({ mode: "automatic" })) : count);
   const store = productionStore();
   if (store.hasOpenDrafts()) throw new Error(OPEN_DRAFT_MESSAGE);
+  requests.forEach(request => store.requestSource(request));
   shared.productionSync = true;
   const report: PerformanceRefresh = { started_at: new Date().toISOString(), completed_at: null, state: "running", records: [], error: null };
   shared.productionRefresh = report;
@@ -136,7 +141,7 @@ export async function startProduction(
       publishChange({ kind: "sync", detail: "snapshot" });
     });
     const inputs = store.planningLogs();
-    const ids = store.create(count, inputs);
+    const ids = store.create(requests, inputs);
     report.state = "completed";
     report.completed_at = new Date().toISOString();
     ids.forEach((id) => {
@@ -202,6 +207,8 @@ export async function execute(
       run.toolCalls = [];
       run.imageStartedAt = Date.now();
       run.imageThreadId = null;
+      phase = "source_collection";
+      if (run.step === "analysis") await prepareStartInput(store, id, run.controller.signal);
       phase = "cli";
       const inputs = run.step === "analysis" || run.step === "production" ? store.analysisInputs(id, true) : [];
       const capabilities = stagePolicy(run.step);
