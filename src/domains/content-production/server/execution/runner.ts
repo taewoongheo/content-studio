@@ -35,6 +35,7 @@ type Run = {
   analysisRead: Set<string>;
   sourceImages: boolean;
   sourceProjects: Set<string>;
+  sourceSets: Set<string>;
   externalCompared: boolean;
   toolCalls: ToolAttempt[];
   imageStartedAt: number;
@@ -82,9 +83,9 @@ export function recordReview(
   slides.forEach((s) => reviewed.add(s));
   run.reviews.set(projectId, { revision, slides: reviewed });
 }
-export function recordSourceReview(id: string, projectId?: string) {
+export function recordSourceReview(id: string, projectId?: string, setId?: string) {
   const run = runs.get(id);
-  if (run) { run.sourceImages = true; if (projectId) run.sourceProjects.add(projectId); }
+  if (run) { run.sourceImages = true; if (projectId) run.sourceProjects.add(projectId); if (setId) run.sourceSets.add(setId); }
 }
 export function recordAnalysisRead(id: string, ids: string[]) {
   const run = runs.get(id);
@@ -187,6 +188,7 @@ export async function execute(
     analysisRead: new Set(),
     sourceImages: false,
     sourceProjects: new Set(),
+    sourceSets: new Set(),
     externalCompared: false,
     toolCalls: [],
     imageStartedAt: Date.now(),
@@ -203,20 +205,23 @@ export async function execute(
       run.analysisRead.clear();
       run.sourceImages = false;
       run.sourceProjects.clear();
+      run.sourceSets.clear();
       run.externalCompared = false;
       run.toolCalls = [];
       run.imageStartedAt = Date.now();
       run.imageThreadId = null;
       phase = "source_collection";
-      if (run.step === "analysis") await prepareStartInput(store, id, run.controller.signal);
+      if (run.step === "analysis" && store.get(id).input?.request.mode === "external_url")
+        await prepareStartInput(store, id, run.controller.signal);
       phase = "cli";
       const inputs = run.step === "analysis" || run.step === "production" ? store.analysisInputs(id, true) : [];
-      const capabilities = stagePolicy(run.step);
+      const startInput = store.get(id).input!;
+      const capabilities = stagePolicy(run.step, startInput.request.mode);
       const result = await executor({
         capabilities,
         onThreadStarted: threadId => { run.imageThreadId = threadId; },
         model: PRODUCTION_MODEL,
-        prompt: stagePrompt(id, run.step, inputs, persona, product),
+        prompt: stagePrompt(id, run.step, inputs, persona, product, startInput),
         images: stageImages(run.step),
         schema: resultSchema(run.step),
         origin,
@@ -244,6 +249,10 @@ export async function execute(
         phase = "validation";
         const missingInputs = inputs.filter(row => !run.analysisRead.has(String(row.id))).map(row => row.id);
         if (missingInputs.length) throw new OperationError("ANALYSIS_INPUTS_NOT_READ", "분석용 게시글 조회가 누락됐습니다.", {ids:missingInputs});
+        if (startInput.request.mode === "past_post" && !run.sourceProjects.has(startInput.request.sourceProjectId))
+          throw new OperationError("START_SOURCE_NOT_REVIEWED", "선택한 원본 게시글의 실제 슬라이드를 확인해 주세요.");
+        if (startInput.request.mode === "external_url" && !run.sourceSets.has(startInput.source?.visual_set_id ?? ""))
+          throw new OperationError("START_SOURCE_NOT_REVIEWED", "외부 원본 게시글의 전체 슬라이드를 확인해 주세요.");
         if (!run.externalCompared) throw requiredToolFailure(run.toolCalls, ["production_external_references"], "외부 레퍼런스 조회가 확인되지 않았습니다.");
         phase = "save";
         store.completeAnalysis(id, { ...fields, sources });

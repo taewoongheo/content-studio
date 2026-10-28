@@ -16,7 +16,7 @@ import {
   recordExternalComparison,
   recordAnalysisRead,
 } from "./runner";
-import { cloneTaskProject, deleteTaskProject } from "../projects";
+import { createTaskProject, deleteTaskProject } from "../projects";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import type { runCodex } from "./process";
 const direction = {
@@ -60,7 +60,7 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       }
       assert.equal(store.get(id).analysis.state, "completed");
       const step = store.get(id).task.current_step;
-      const { projectId } = step === "production" ? cloneTaskProject(store, id, source.project_id, "The saved routine layout fits this content.") : { projectId: store.get(id).task.project_id! };
+      const { projectId } = step === "production" ? createTaskProject(store, id, 1) : { projectId: store.get(id).task.project_id! };
       const job = contentJobRegistry.get(projectId);
       if (step === "hook" || step === "visual" || step === "polish") {
         if (step === "hook") recordSourceReview(id);

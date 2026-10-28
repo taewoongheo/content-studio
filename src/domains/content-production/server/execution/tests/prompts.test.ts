@@ -64,3 +64,22 @@ test("every stage shares metadata meanings; only analysis may collect external p
     assert.equal(validate({...output,summary:incomplete}),false);
   }
 });
+
+test("start modes preserve the right subject or format and permit accepted duplicates", () => {
+  const past = stagePrompt("past", "production", [], null, null, {
+    request: { mode: "past_post", sourceProjectId: "selected-source", instructions: "Use chest exercises" },
+    source: { id: "source-log", project_id: "selected-source" },
+  });
+  assert.match(past, /clones ONLY this selected source/);
+  assert.match(past, /Use chest exercises/);
+  const external = stagePrompt("external", "analysis", [], null, null, {
+    request: { mode: "external_url", url: "https:\/\/www.tiktok.com\/@example\/photo\/123", instructions: "" },
+    source: { id: "123", caption: "SOURCE CAPTION", visual_set_id: "source-slides" },
+  });
+  assert.match(external, /Keep the external post's SUBJECT/);
+  assert.match(external, /SOURCE CAPTION/);
+  for (const prompt of [past, external, stagePrompt("auto", "production")]) {
+    assert.match(prompt, /ALL considered alternatives overlap/);
+    assert.match(prompt, /accepted duplicate/);
+  }
+});

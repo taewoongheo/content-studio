@@ -262,6 +262,7 @@ export class ProductionStore {
     const next = productionSteps[productionSteps.findIndex(value => value.id === step) + 1]?.id ?? null;
     if (step !== "production" && !result.review?.trim()) throw new Error("검토 결과를 남겨 주세요.");
     const metadata = readContentMetadata(result.summary);
+    this.assertRequestDirection(detail, metadata);
     if (step === "polish" && contentMetadataFields.some(key => metadata[key] !== detail.log[key]))
       throw new Error("영어 폴리싱에서는 확정한 소재·메시지·포맷을 변경할 수 없습니다.");
     this.db.transaction(() => {
@@ -299,6 +300,12 @@ export class ProductionStore {
     updateTaskTiming(this.db, id, step, false, now);
     publishChange({ task_id: id, step, kind: "saved" });
   }
+  private assertRequestDirection(detail: WorkDetail, direction: Row) {
+    if (detail.input?.request.mode === "past_post" && direction.content_type !== detail.analysis.content_type)
+      throw new Error("과거 게시글 기반 제작에서는 확정한 표현 포맷을 유지해 주세요.");
+    if (detail.input?.request.mode === "external_url" && direction.topic !== detail.analysis.topic)
+      throw new Error("외부 URL 기반 제작에서는 확정한 원본 소재를 유지해 주세요.");
+  }
   changeDirection(
     id: string,
     raw: unknown,
@@ -308,6 +315,7 @@ export class ProductionStore {
     const detail = this.assertActive(id, "production"),
       direction = directionSchema.parse(raw),
       now = this.now();
+    this.assertRequestDirection(detail, direction);
     if (cause === "research" && !reason?.trim())
       throw new Error("추가 조사에 따른 변경 이유가 필요합니다.");
     this.db.transaction(() => {

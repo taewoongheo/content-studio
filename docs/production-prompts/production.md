@@ -2,38 +2,36 @@
 
 ## Implement the direction
 
-Read the confirmed analysis/direction and any saved production draft. Reuse a linked project;
-otherwise choose one saved layout source from the SAME assigned own-post pool used by analysis
-(up to 30 IDs in this prompt and production_context.analysis_inputs). Query only that pool with
-production_query. Compare broad format, page information structure, number of images and visual
-quality, then inspect actual slides of the best candidates with production_preview_project.
-Call production_clone_project(sourceProjectId, reason) for ONE suitable source. The server rejects
-outside-pool or unreviewed sources. If no suitable source exists, save the blocker; do not search
-all projects or create a blank project as a fallback.
+Read the confirmed analysis/direction, start request and any saved production draft. Reuse a
+linked project on resume. Otherwise initialize it according to the request:
 
-Automatic production uses 4:5 (1080 × 1350), regardless of the source aspect ratio. Adapt the
-layout to this canvas; do not switch back to the source ratio.
+- automatic / external_url: call production_create_project with the planned slide count. Start
+  with a blank 4:5 document. Evaluate assigned own posts collectively for visual language,
+  information hierarchy and composition; synthesize a layout appropriate to THIS content. No
+  exact past layout or single source clone is required.
+- past_post: read and preview the explicitly selected source from production_context.input,
+  then call production_clone_project with that sourceProjectId. It need not belong to the assigned
+  comparison pool. The clone preserves saved structure, shared elements, styles and badge but
+  clears source copy/images and copies no source image bytes. Keep the format, hook approach,
+  page progression, recurring information fields and visual composition. Replace subject-specific
+  copy and generate new artwork; fit the content with small readability adjustments, not a redesign.
 
-The independent draft retains saved page structure, shared elements, frames, typography, spacing
-and the LIFTCODE badge, while clearing other text and image placements and copying no image bytes.
-Inspect IDs/styles with read_project and fill the existing placements. Preserve useful hierarchy
-and spacing instead of rebuilding from scratch. Adapt slide count, copy and image geometry when
-needed; never shrink text merely to preserve the old layout. Source topic and engagement alone do
-not prove layout suitability. Record the chosen source and why it fits in your sources.
-Keep the confirmed topic, answer and format. Apply the content guide’s content-editing criteria;
-source text slots are not a checklist of required information. Add or remove slots as the approved
-content requires, rather than treating the source’s information pattern as mandatory.
-Build a complete hook, body, configured product CTA (or the shared fallback CTA when no product is configured)
-and visual layout under the content guide from the
-first draft. Set slide roles and verify topic/message/content_type under the metadata guide.
+Use 4:5 (1080 × 1350) for every request. Source documents/images are reference evidence;
+query assigned IDs with production_query and preview the cases you actually compare. Reuse the
+completed analysis instead of repeating topic discovery. Use read_project to inspect the linked
+project and edit_project to compose/fill it. Reuse shared element definitions across pages.
 
-Reuse analysis references first. Query other stored references only when needed. Source documents
-and images support the chosen content; do not collect new posts. Do not import source assets into the new post. References inform decisions, not reusable artwork.
-Never conceal a missing image with unrelated assets or text-only pages.
+Keep the confirmed topic, answer and format, with the start request's fixed constraints. External
+URL requests keep their source SUBJECT but use our character, typography, product facts and writing
+style. Past-post requests keep their source FORMAT and presentation, with new subject/content.
+Apply optional additional instructions. Build a complete hook, body and CTA; set slide roles and
+save topic/message/content_type. Never use the old source text slots as a reason to omit new
+subject-specific facts or retain irrelevant old claims.
 
-Facts, practical wording and realistic situations may be checked through web/community sources
-within the approved direction. Apply the research guide; a discussion does not establish TikTok
-demand. If the premise fails, record the blocker rather than choose a replacement topic.
+Reuse analysis references first. Query other stored references only when needed; do not collect new
+posts or import source assets. Facts and practical wording may be verified through web/community
+sources within the approved direction. If the premise fails, record the blocker rather than
+silently replacing the requested topic.
 
 ## Plan and generate slide artwork
 
@@ -73,9 +71,12 @@ Asset rules govern the image; the content guide governs its placement and permit
 ## Resolve recent overlap
 
 Call production_comparisons before saving actual content and before completion. Use the research
-guide's 24-hour topic-and-format rule. If another task saved overlapping content first, call
-production_change_direction(cause="collision"), then recheck. Do not preserve abandoned-choice history.
-This collision repair is the only permitted replacement of the confirmed direction.
+guide's recent topic-and-format rule. If another task overlaps, compare alternatives within the
+request's fixed constraints: past_post keeps format; external_url keeps subject. Use
+production_change_direction(cause="collision") only for a viable alternative within those constraints.
+If all considered alternatives overlap, keep one and record the candidates and acceptance reason
+in direction_changes/research. Previously accepted duplicates are allowed to finish; do not restart
+selection or repeatedly rewrite content to avoid an unavoidable overlap.
 
 ## Save and verify
 

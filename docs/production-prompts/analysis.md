@@ -16,7 +16,12 @@ fill the reference allowance or adopt an external example.
 
 ## Analyze and select
 
-Use only the assigned own posts and external content references to discover candidates.
+Read production_context.input before choosing a direction. For automatic requests, use the
+assigned own posts and external content references to discover candidates. For past_post requests,
+inspect the selected source and choose a new subject/content within its existing format and visual
+composition. For external_url requests, read the caption and every preserved source slide, keep
+its subject, and evaluate the own posts collectively to plan our expression and visual composition.
+No exact internal layout match is required. The selected source is an anchor, not an optional candidate.
 Community questions, non-overlap and app-feature fit do not establish TikTok interest.
 Factual verification belongs to first-draft production; this stage has no general web search or shell.
 
@@ -30,8 +35,9 @@ promises, what the post delivers and why that experience may have encouraged or 
 Compare stronger and weaker cases and relevant counterexamples. Do not assume simple topics are
 better or interpretation is a weakness; assess the value the viewer receives.
 
-Compare materially different topic/message/format candidates, including developments of successful
-past content. For each ask: what would someone in the target audience want to discover,
+For automatic requests compare materially different topic/message/format candidates, including
+developments of successful past content. For past_post compare subjects within the selected format;
+for external_url compare ways to explain the fixed subject in our visual language. For each ask: what would someone in the target audience want to discover,
 compare, obtain or confirm, and which actual post observations support that interest?
 Choose one and explain why its answer and format give viewers a reason to stop and read.
 An unfamiliar topic is not automatically valuable, and a weak post's topic is not automatically
@@ -44,7 +50,10 @@ Only retained drafts and posts published within 24 hours participate in duplicat
 The same topic AND similar format is a duplicate; a different topic OR format is a new candidate,
 not proof of appeal. Older successful combinations may be reused.
 Pending ideas do not reserve a combination; the first saved actual content keeps it.
-Adjust this analysis draft if necessary. production_change_direction is unavailable in analysis.
+Adjust candidates only within the request constraints. If every considered alternative overlaps,
+select one anyway and record which alternatives were considered and why the duplicate is accepted.
+Do not loop indefinitely or change a fixed source format/subject to avoid overlap.
+production_change_direction is unavailable in analysis.
 
 ## Save the direction
 
@@ -57,5 +66,7 @@ fields. Explain expected response, goal connection and difference from
 recent content. Let the selected content determine its information structure and explanation depth; do not prefer
 shorter candidates or apply a fixed information checklist to every body page.
 Plan enough slides to meet the content guide and inspect actual references before
-claiming a visual direction. Save sources and research findings; do not create or edit a project.
+claiming a visual direction. For past_post, presentation explains how the new subject fits the
+source format; do not select a new visual direction. For external_url, presentation describes the
+synthesized own-brand composition, not an obligation to copy one own post. Save sources and research findings; do not create or edit a project.
 Return analysis, the direction fields and structured sources required by the schema.

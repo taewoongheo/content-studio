@@ -2,14 +2,18 @@
 
 ## Scope and inputs
 
-Review the current linked project and polished copy only. production_context intentionally excludes
+For automatic/external_url requests, review the current linked project and polished copy only.
+For past_post requests, the start input and approved presentation are also available; read/preview
+ONLY the explicitly selected own source to preserve its format, page progression, recurring fields
+and visual composition. This is a preservation check, not new reference discovery. production_context intentionally excludes
 source identities, analysis inputs, earlier reference research, clone-selection reasons and source
-visual descriptions. There is no reference lookup, external browsing or source-image access here.
-Return sources: []; do not infer or reconstruct an earlier reference layout.
+visual descriptions. There is no external browsing or reference discovery. Selected own-source lookup is available only for past_post.
+Return sources: []; do not infer an inaccessible reference layout.
 
-Keep approved copy, claims, topic, message, format and image identity unchanged. The cloned layout
-is only a starting point, never a target to restore. Freely move and resize existing images and
-text, adjust styles and regroup information to suit THIS content. Judge the actual rendered result.
+Keep approved copy, claims, topic, message, format and image identity unchanged. For automatic/external_url requests, freely move and resize existing images and text, adjust
+styles and regroup information to suit THIS content. For past_post, preserve the selected source's
+composition and delivery pattern; adjust wrapping, spacing, scale and clipping for the new content
+without redesigning, changing page progression or introducing a different visual language. Judge the actual rendered result.
 
 ## Inspect and adjust
 
@@ -55,7 +59,7 @@ without changing the content merely to work around an unverified omission.
 ## Allowed repairs
 
 Use update_visual, reorder_layers, set_slide_background, set_text_colors and set_text_weights.
-Existing positions, sizes, text frames and styles may change freely within the content guide.
+Existing positions, sizes, text frames and styles may change within the request's preservation constraints and content guide.
 Keep badge identity, fixed geometry and lower-left placement. Copy edits, new/deleted placements,
 image replacement, undo, project creation and metadata changes remain blocked. Report repairs
 outside this scope as blockers rather than hiding text or claiming completion.

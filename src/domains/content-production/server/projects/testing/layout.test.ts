@@ -8,11 +8,12 @@ import { makeElementDefinition } from "@/domains/slideshow/editor/elements/facto
 import type { EditorDocument } from "@/domains/slideshow/editor/types";
 import { ProductionStore } from "../../persistence/store";
 import { cloneTaskProject } from "../layout";
+import { createTaskProject } from "../creation";
 import { seedLayoutSource } from "./fixtures";
 
 const direction={analysis:"A routine comparison.",topic:"New content",message:"A new session",content_type:"Routine cards",answer:"Five moves",presentation:"Cards",reason:"Useful",expected_response:"Save",goal_connection:"Follow",difference_from_recent:"Different content",sources:[]};
 
-test("cloning uses only the assigned saved layout, clears old copy/images, preserves styles and source",()=>{
+test("cloning uses only the explicitly selected saved layout, clears old copy/images, preserves styles and source",()=>{
   const db=openLocalDatabase(":memory:"),store=new ProductionStore(db),projects=new ContentProjectStore(db);
   const source=seedLayoutSource(db,"layout-source");
   let cloneId:string|undefined;
@@ -31,9 +32,9 @@ test("cloning uses only the assigned saved layout, clears old copy/images, prese
     const before=projects.get(source.project_id);
     loadContentProject(contentJobRegistry,source.project_id,{projects});
     contentJobRegistry.update(source.project_id,record=>{record.editor.document.elements.find(element=>element.id==="title")!.style.fontSize=999;});
-    const [id]=store.create(1,[source]);store.state(id,"running");store.completeAnalysis(id,direction);store.state(id,"running");
+    const [id]=store.create([{mode:"past_post",sourceProjectId:source.project_id,instructions:""}],[]);store.state(id,"running");store.completeAnalysis(id,direction);store.state(id,"running");
     const outside=seedLayoutSource(db,"unassigned-source");
-    assert.throws(()=>cloneTaskProject(store,id,outside.project_id,"Wrong pool"),{code:"LAYOUT_SOURCE_NOT_ASSIGNED"});
+    assert.throws(()=>cloneTaskProject(store,id,outside.project_id,"Wrong pool"),{code:"LAYOUT_SOURCE_NOT_SELECTED"});
     assert.equal(store.get(id).task.project_id,null);
     const cloned=cloneTaskProject(store,id,source.project_id,"The source has clear hierarchy and enough image space.");cloneId=cloned.projectId;
     const target=projects.get(cloned.projectId)!;
@@ -59,7 +60,7 @@ test("failed clone creation rolls back the draft, DB project and open editor tog
   const db=openLocalDatabase(":memory:"),store=new ProductionStore(db);
   try{
     const source=seedLayoutSource(db,"rollback-layout");
-    const [id]=store.create(1,[source]);store.state(id,"running");store.completeAnalysis(id,direction);store.state(id,"running");
+    const [id]=store.create([{mode:"past_post",sourceProjectId:source.project_id,instructions:""}],[]);store.state(id,"running");store.completeAnalysis(id,direction);store.state(id,"running");
     const before=store.get(id),openBefore=contentJobRegistry.list().map(job=>job.id);
     db.exec("CREATE TRIGGER prevent_layout_link BEFORE UPDATE OF project_id ON content_drafts BEGIN SELECT RAISE(ABORT,'link failed'); END;");
     assert.throws(()=>cloneTaskProject(store,id,source.project_id,"Suitable card structure"),/link failed/);
@@ -68,4 +69,31 @@ test("failed clone creation rolls back the draft, DB project and open editor tog
     assert.equal((db.prepare("SELECT count(*) n FROM content_projects").get() as {n:number}).n,1);
     assert.deepEqual(db.pragma("foreign_key_check"),[]);
   }finally{db.close();}
+});
+
+test("automatic and external requests start blank, link atomically and reuse their project on resume", () => {
+  const db = openLocalDatabase(":memory:"), store = new ProductionStore(db), projects = new ContentProjectStore(db);
+  const created: string[] = [];
+  try {
+    for (const mode of ["automatic", "external_url"] as const) {
+      const request = mode === "automatic" ? { mode, instructions: "" } : { mode, url: "https://www.tiktok.com/@example/photo/123", instructions: "" };
+      const [id] = store.create([request], []);
+      store.state(id, "running"); store.completeAnalysis(id, direction); store.state(id, "running");
+      const result = createTaskProject(store, id, 4); created.push(result.projectId);
+      assert.equal(store.get(id).task.project_id, result.projectId);
+      const document = projects.get(result.projectId)!.document as EditorDocument;
+      assert.equal(document.slides.length, 4);
+      assert.equal(document.aspectRatio, "4:5");
+      assert.ok(document.slides.every(slide => slide.placements.every(placement => !placement.value)));
+      assert.equal(createTaskProject(store, id, 8).projectId, result.projectId);
+    }
+    const [id] = store.create(1, []);
+    store.state(id, "running"); store.completeAnalysis(id, direction); store.state(id, "running");
+    const before = contentJobRegistry.list().length;
+    db.exec("CREATE TRIGGER reject_blank_link BEFORE UPDATE OF project_id ON content_drafts BEGIN SELECT RAISE(ABORT,'blank link failed'); END;");
+    assert.throws(() => createTaskProject(store, id, 4), /blank link failed/);
+    assert.equal(store.get(id).task.project_id, null);
+    assert.equal(contentJobRegistry.list().length, before);
+    assert.equal(projects.list().length, 2);
+  } finally { created.forEach(id => contentJobRegistry.remove(id)); db.close(); }
 });

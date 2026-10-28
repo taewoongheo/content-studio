@@ -25,7 +25,9 @@ export function stageContext(detail: WorkDetail): WorkDetail {
   const content = currentCopy(detail.polish?.content ?? detail.log.content_summary);
   return {
     task: detail.task,
-    analysis: {},
+    ...(detail.input?.request.mode === "past_post" ? { input: detail.input } : {}),
+    analysis: detail.input?.request.mode === "past_post"
+      ? pickFields(detail.analysis, ["presentation", "content_type"]) : {},
     production: null,
     hook: null,
     analysis_inputs: [],
