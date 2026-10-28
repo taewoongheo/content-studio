@@ -119,6 +119,20 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
     assert.equal(store.get(id).task.current_step, "visual");
     assert.equal((store.get(id).log.sources as Array<{ part: string }>)[0].part, "Research summary");
     const projectId = store.get(id).task.project_id!;
+    const savedPlanning = store.get(id).production!;
+    for (const wrongProject of [true, false]) {
+      store.db.prepare("UPDATE content_drafts SET current_step='production',state='stopped' WHERE id=?").run(id);
+      await execute(id, "http://127.0.0.1:3000", async () => ({
+        project_id: wrongProject ? "wrong-project" : projectId,
+        slide_plan: [{ slide_id: "stale-slide", role: "hook", purpose: "Invalid", copy: ["Invalid"], visual: "Invalid" }],
+        content_review: { assessment: "Invalid replacement", issues: [] },
+        summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type }, sources: [],
+        reviewed_slide_ids: ["stale-slide"], reviewed_revision: 0,
+      }));
+      assert.equal(store.get(id).task.state, "failed");
+      assert.deepEqual(store.get(id).production?.slide_plan, savedPlanning.slide_plan);
+      assert.deepEqual(store.get(id).production?.content_review, savedPlanning.content_review);
+    }
     // A quality rejection must preserve the reviewer’s actual reason in diagnostics.
     store.db.prepare("UPDATE content_drafts SET current_step='visual',state='stopped' WHERE id=?").run(id);
     const rejectedReview = "Confirmed clipping on slide-1 at the latest saved revision.";

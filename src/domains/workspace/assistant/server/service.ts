@@ -67,7 +67,7 @@ export function startAssistant(target: AssistantTarget, selection: AssistantSele
 }
 async function execute(session: Session, run: AssistantRun, selection: AssistantSelection, message: string,
   snapshot: ReturnType<typeof assistantSnapshot>, origin: string, executeCli: typeof runCodex) {
-  const timeout = setTimeout(() => run.controller.abort(new Error("AI 실행 시간이 초과됐습니다.")), 20 * 60_000);
+  const timeout = setTimeout(() => run.controller.abort(new DOMException("AI 실행 시간이 초과됐습니다.", "TimeoutError")), 20 * 60_000);
   try {
     const directory = await session.directory;
     const call = (execute: boolean) => executeCli({ model: "gpt-6.1-sol", standalone: true,
@@ -99,8 +99,10 @@ async function execute(session: Session, run: AssistantRun, selection: Assistant
   } catch (error) {
     // Failed/cancelled turns have uncertain context; the next command starts with the saved editor state.
     session.threadId = undefined;
-    session.status = { ...session.status, state: run.controller.signal.aborted ? "stopped" : "failed",
-      phase: "", changed: run.changed, error: run.controller.signal.aborted ? (run.changed ? "중단했습니다. 저장된 변경은 되돌릴 수 있습니다." : "중단했습니다.")
-        : error instanceof Error ? error.message : "AI 실행에 실패했습니다." };
+    const reason = run.controller.signal.reason;
+    const stopped = run.controller.signal.aborted && reason?.name !== "TimeoutError";
+    session.status = { ...session.status, state: stopped ? "stopped" : "failed",
+      phase: "", changed: run.changed, error: stopped ? (run.changed ? "중단했습니다. 저장된 변경은 되돌릴 수 있습니다." : "중단했습니다.")
+        : reason instanceof Error ? reason.message : error instanceof Error ? error.message : "AI 실행에 실패했습니다." };
   } finally { clearTimeout(timeout); if (session.run === run) session.run = undefined; }
 }

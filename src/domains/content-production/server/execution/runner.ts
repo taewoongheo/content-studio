@@ -283,10 +283,6 @@ export async function execute(
       const rawOutput = { ...rest, sources };
       const firstDraft = run.step === "production" ? firstDraftResultSchema.parse(rawOutput) : null;
       const output = firstDraft ?? productionResultSchema.parse(rawOutput);
-      if (firstDraft) {
-        phase = "save";
-        store.save(id, "production", { slide_plan: firstDraft.slide_plan, content_review: firstDraft.content_review });
-      }
       phase = "validation";
       const detail = store.get(id);
       if (detail.task.project_id !== output.project_id)

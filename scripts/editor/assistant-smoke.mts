@@ -18,9 +18,14 @@ export async function verifyEditorAssistant(browser: Browser, origin: string) {
   const idle: AssistantState = { state: "idle", phase: "", text: "", suggestion: "", error: "", changed: false };
   const states = new Map<string, AssistantState>();
   const submitted: Array<Record<string, unknown>> = [];
+  const statusReads = new Map<string, number>();
   await page.route("**/api/editor-assistant*", async route => {
     const req = route.request();
-    if (req.method() === "GET") return route.fulfill({ json: states.get(new URL(req.url()).searchParams.get("tabId")!) ?? idle });
+    if (req.method() === "GET") {
+      const tab = new URL(req.url()).searchParams.get("tabId")!;
+      statusReads.set(tab, (statusReads.get(tab) ?? 0) + 1);
+      return route.fulfill({ json: states.get(tab) ?? idle });
+    }
     const body = req.postDataJSON(); submitted.push(body);
     const state: AssistantState = body.action === "stop" ? { ...idle, state: "stopped" }
       : body.message.includes("어때") ? { ...idle, state: "completed", requestId: body.requestId, text: "제목을 조금 키우면 읽기 좋습니다.", suggestion: "제목을 키워 줘" }
@@ -66,7 +71,9 @@ export async function verifyEditorAssistant(browser: Browser, origin: string) {
       assert.ok(await dialog.getByLabel("AI 편집 명령").isEnabled());
       assert.equal(await dialog.getByLabel("AI 편집 명령").inputValue(), "");
       await dialog.getByLabel("AI 편집 명령").fill("다음 명령 작성 중");
-      await page.waitForTimeout(1200);
+      const readsAtCompletion = statusReads.get(tabId) ?? 0;
+      await page.waitForTimeout(2200);
+      assert.ok((statusReads.get(tabId) ?? 0) <= readsAtCompletion + 1, "completed commands must stop periodic polling");
       assert.equal(await dialog.getByLabel("AI 편집 명령").inputValue(), "다음 명령 작성 중");
       await dialog.getByRole("button", { name: "AI 명령 닫기" }).click();
       // Right click anywhere in the editor toggles the same panel.

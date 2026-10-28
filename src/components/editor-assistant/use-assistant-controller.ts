@@ -23,21 +23,23 @@ export function useAssistantController({ target, selection, beforeStart, onSettl
     let disposed = false;
     let timer: ReturnType<typeof setTimeout>;
     async function poll() {
+      let repeat = running;
       try {
         const version = generation.current;
         const next = await request<AssistantState>({ projectId, tabId, projectType });
         if (disposed || version !== generation.current || submitted.current) return;
+        repeat = next.state === "running";
         setStatus(next);
         if (next.requestId && next.state !== "running" && next.requestId !== settled.current) {
           settled.current = next.requestId;
           await callbacks.current.onSettled();
         }
       } catch (cause) { if (!disposed) setError(cause instanceof Error ? cause.message : "AI 상태 조회 실패"); }
-      finally { if (!disposed) timer = setTimeout(() => void poll(), 1000); }
+      finally { if (!disposed && repeat) timer = setTimeout(() => void poll(), 1000); }
     }
     void poll();
     return () => { disposed = true; clearTimeout(timer); };
-  }, [projectId, tabId, projectType]);
+  }, [projectId, tabId, projectType, running]);
   async function send(text: string) {
     if (!text.trim() || running || submitted.current) return;
     submitted.current = true; generation.current++; setSending(true); setError("");

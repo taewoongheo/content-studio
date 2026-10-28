@@ -65,6 +65,13 @@ test("tab sessions isolate context, group real writes, require visual checks, an
     startAssistant(targets[1], {}, "제목 어떤가?", randomUUID(), "http://127.0.0.1:3000", answer);
     await finished(targets[1]); assert.equal(calls.at(-1)?.thread, undefined);
     assert.equal(contentJobRegistry.get(targets[0].projectId).editor.revision, 2);
+    startAssistant(targets[1], {}, "시간 초과 확인", randomUUID(), "http://127.0.0.1:3000", async input => {
+      authorizeAssistant(input.taskId, `Bearer ${input.token}`).controller.abort(new DOMException("AI 실행 시간이 초과됐습니다.", "TimeoutError"));
+      return { kind: "answer", text: "", suggestion: "" };
+    });
+    const timedOut = await finished(targets[1]);
+    assert.equal(timedOut.state, "failed");
+    assert.match(timedOut.error, /시간이 초과/);
     let signal: AbortSignal | undefined;
     const waiting: typeof runCodex = async input => {
       signal = input.signal;
