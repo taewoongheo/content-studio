@@ -53,7 +53,7 @@ test("polishing can correct copy on every page but cannot alter styles, images o
     { type: "remove_slide", slideId: command.slideId },
   ]) assert.throws(() => assertStageWrite("polish", { commands: [rejected] }, document), /영어 폴리싱/);
   document.slides[1].placements.find(placement => placement.id === "copy")!.value = "LIFTCODE";
-  assert.throws(() => assertStageWrite("polish", { commands: [command] }, document), /영어 폴리싱/);
+  assert.throws(() => assertStageWrite("polish", { commands: [command] }, document), { code: "BADGE_IMMUTABLE" });
 });
 
 
@@ -65,5 +65,27 @@ test("production uses fresh image imports and cannot change the fixed canvas rat
     { code: "PRODUCTION_ASPECT_RATIO_FIXED" });
   assert.doesNotThrow(() => assertStageWrite("production", { commands: [
     { type: "set_aspect_ratio", aspectRatio: "4:5" }, { type: "add_slide" },
+  ] }, document));
+});
+
+
+test("review stages lock split badge backgrounds, labels and shared definitions", () => {
+  const document = createBlankDocument({ structure: "sequential", aspectRatio: "4:5", slideCount: 2 });
+  document.slides[0].role = "hook";
+  document.elements.push(makeElementDefinition({ id: "brand-badge", kind: "rectangle" }),
+    makeElementDefinition({ id: "brand", kind: "text" }), makeElementDefinition({ id: "body", kind: "text" }));
+  for (const slide of document.slides) for (const id of ["brand-badge", "brand", "body"])
+    slide.placements.push({ id, elementId: id, value: id === "brand" ? "LIFTCODE" : "", frameOverride: null, styleOverride: null });
+  for (const step of ["visual", "hook", "polish"] as const) for (const id of ["brand-badge", "brand"]) {
+    for (const command of [
+      { type: "update_visual", scope: "common", elementId: id, frame: { x: 0.04, y: 0.94, width: 0.18, height: 0.046 } },
+      { type: "update_visual", scope: "local", slideId: document.slides[0].id, placementId: id, style: { fontSize: 30 } },
+      { type: "set_text_colors", slideId: document.slides[0].id, placementId: id, textColors: [] },
+      { type: "set_text_weights", slideId: document.slides[0].id, placementId: id, textWeights: [] },
+      { type: "set_slot_value", slideId: document.slides[0].id, placementId: id, value: "Other" },
+    ]) assert.throws(() => assertStageWrite(step, { commands: [command] }, document), { code: "BADGE_IMMUTABLE" });
+  }
+  assert.doesNotThrow(() => assertStageWrite("visual", { commands: [
+    { type: "update_visual", scope: "common", elementId: "body", style: { fontSize: 40 } },
   ] }, document));
 });
