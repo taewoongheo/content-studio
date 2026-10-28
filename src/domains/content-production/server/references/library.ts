@@ -43,11 +43,6 @@ export function describeReference(db: Database.Database, id: string, description
   publishChange({ kind: "library" });
 }
 
-export function toggleReferenceAccount(db: Database.Database, username: string, enabled: boolean) {
-  if (!db.prepare("UPDATE content_reference_accounts SET enabled=? WHERE username=?").run(enabled ? 1 : 0, username).changes)
-    throw new Error("지정 계정을 찾을 수 없습니다.");
-  publishChange({ kind: "library" });
-}
 export function removeReferenceAccount(db: Database.Database, username: string) {
   db.prepare("DELETE FROM content_reference_accounts WHERE username=?").run(username);
   publishChange({ kind: "library" });

@@ -4,7 +4,6 @@ import type { ProductionStep } from "../../domain/contracts";
 import { externalReferences } from "./library";
 import { getReferenceContext, saveReferenceContext } from "./context";
 
-
 const locks = new Map<string, Promise<ExternalContext>>();
 function assertActive(db: Database.Database, id: string, step: ProductionStep) {
   if (!db.prepare("SELECT 1 FROM content_drafts WHERE id=? AND current_step=? AND state='running'").get(id,step))
@@ -37,7 +36,7 @@ export function queryStageReferences(db: Database.Database, id: string, step: Pr
         .filter(post => !used.has(post.id) && (!input.ids?.length || input.ids.includes(String(post.id))));
       return candidates.slice(0,REFERENCE_LIMIT-context.posts.length);
     };
-    const selected = step === "analysis" && context.checked_at ? [] : select();
+    const selected = step === "analysis" ? [] : select();
     context = db.transaction(() => {
       assertActive(db,id,step);
       const now = new Date().toISOString();
@@ -45,7 +44,6 @@ export function queryStageReferences(db: Database.Database, id: string, step: Pr
         const { images_json: images, ...snapshot } = post;
         void images;
         context.posts.push(snapshot);
-
       }
       context.checked_at = now;
       if (!context.posts.length && !context.message) context.message = "No suitable stored examples matched. Refresh spy accounts from the dashboard before starting another batch.";

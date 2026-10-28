@@ -14,7 +14,7 @@ import {
 import {
   productionEvents,
 } from "@/domains/content-production/server/events";
-import { addReferenceAccount, referenceAccounts, externalReferences, toggleReferenceAccount, removeReferenceAccount, setReferenceExcluded } from "@/domains/content-production/server/references/library";
+import { accountIdentity, addReferenceAccount, referenceAccounts, externalReferences, removeReferenceAccount, setReferenceExcluded } from "@/domains/content-production/server/references/library";
 import { refreshSpy, spyStatus } from "@/domains/content-production/server/references/spy/refresh";
 import { readSampling, saveSampling } from "@/domains/content-production/server/settings/sampling";
 import { samplingSchema } from "@/domains/content-production/domain/references/sampling";
@@ -47,7 +47,6 @@ const requestSchema = z.discriminatedUnion("action", [
     url: z.string().url(),
   }),
   z.object({ action: z.literal("reference_account"), account: z.string().min(1) }),
-  z.object({ action: z.literal("toggle_reference_account"), username: z.string(), enabled: z.boolean() }),
   z.object({ action: z.literal("remove_reference_account"), username: z.string() }),
   z.object({ action: z.literal("refresh_spy") }),
   z.object({ action: z.literal("sampling_settings"), settings: samplingSchema }),
@@ -167,9 +166,7 @@ export async function POST(request: Request) {
         );
       case "reference_account":
         addReferenceAccount(store.db,input.account);
-        await refreshSpy(store.db); break;
-      case "toggle_reference_account":
-        toggleReferenceAccount(store.db, input.username, input.enabled); break;
+        await refreshSpy(store.db,undefined,[accountIdentity(input.account).username]); break;
       case "remove_reference_account":
         removeReferenceAccount(store.db, input.username); break;
       case "refresh_spy":
