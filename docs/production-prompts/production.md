@@ -44,7 +44,14 @@ This stage owns detailed slide planning as well as implementation. For each slid
 purpose in the overall answer, copy, the role of its one or two images, subject/pose/equipment and
 camera/composition. Save slide_plan with production_save_draft BEFORE generating images. Use
 actual slide IDs/roles from the linked project and keep the plan in current page order. Each entry
-contains purpose, planned copy and visual explanation. Describe how the image makes the message
+contains purpose, planned copy and visual explanation. While writing the copy, choose the exact
+contiguous phrase that communicates this page's key action, distinction, condition or outcome.
+Record that phrase and why it matters in the existing visual explanation; do not add public copy
+just to create emphasis. Apply the content guide's "페이지별 맥락 강조" rule to EVERY slide,
+including hook, body and CTA: render that one phrase in #ED1C24 using textColors/set_text_colors.
+Do not merely describe the highlight in the plan: apply it to the actual slide text. Keep the
+surrounding text in its role's normal color; do not scatter red ranges or color whole sentences.
+Red artwork, decoration and the badge do not satisfy this text-emphasis requirement. Describe how the image makes the message
 understandable, beyond saying "exercise illustration". Let adjacent pages connect where the
 content needs a sequence; comparison cards or options need not pretend to be sequential steps.
 Do not impose recurring explanation fields on every page or add text to make the plan exhaustive.
@@ -103,11 +110,12 @@ actually used; narrow or remove unsupported wording. Do not audit for missing ex
 add background, caveats or extra text for completeness. A failed central premise remains a blocker
 under the research guide. Do not report completion with a blocked content issue.
 Hook review receives the draft and reasoning for wording choices; English polishing receives the
-approved copy; visual review handles wrapping/spacing. Do not leave substantive claim or logic
+approved copy; visual review handles wrapping/spacing and checks contextual text emphasis. Do not leave substantive claim or logic
 problems for these more narrowly scoped stages to repair.
 
 Save work and the complete current summary. Preview ALL slides at the latest saved revision,
-inspect the actual images and fix issues within this stage. The harness checks revision and
+inspect the actual images and fix issues within this stage. Confirm every page has its planned
+meaningful red text emphasis before handing off. The harness checks revision and
 full-slide preview coverage. Return slide_plan and content_review alongside the complete summary
 and required production result. The plan/review are internal records, not public-facing copy.
 This completes the first draft; hook review, English polishing and visual review follow.

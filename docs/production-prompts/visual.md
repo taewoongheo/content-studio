@@ -18,6 +18,12 @@ without redesigning, changing page progression or introducing a different visual
 
 Preview ALL current slides. Apply docs/content-guidelines.md, including hook/CTA typography,
 image prominence, crops, text hierarchy, readable group spacing and the fixed badge specification.
+Check "페이지별 맥락 강조" on EVERY hook, body and CTA page: the final copy must visibly
+highlight one meaningful contiguous phrase in #ED1C24. Judge its meaning against that page's
+message, not just whether red pixels exist. Red images, decorations and the badge do not count.
+If emphasis is missing, scattered, on an irrelevant phrase or shifted after copy edits, repair
+textColors with set_text_colors while keeping the approved wording unchanged. Select from the
+existing copy; do not add text to satisfy the rule. Do not pass review with missing text emphasis.
 Check the actual visible glyphs and subject, not equal frame coordinates alone. For side-by-side
 poses, assess perceived scale, subject bounds and the meaningful alignment for that comparison;
 identical y values do not establish visual alignment. Newly generated similar poses are allowed.
