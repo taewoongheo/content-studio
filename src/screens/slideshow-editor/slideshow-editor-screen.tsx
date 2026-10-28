@@ -338,8 +338,8 @@ export function SlideshowEditorScreen({ ref, initialViewState, initialJob, onNew
 
   return (
     <EditorAssistant target={{ projectId: job.id, tabId: job.tabId, projectType: "slideshow" }}
-      selection={placementId && placement ? { slideIds: selectedSlideIds, placementIds: visualTargets.filter(target => selectedSlideIds.includes(target.slideId)).map(target => target.placement.id) } : {}}
-      scopeLabel={placementId && placement ? `선택 요소 · ${selectedSlideIds.length}장` : "게시글 전체"}
+      selection={placementId && placement && slide ? { slideIds: [slide.id], placementIds: [placement.id] } : {}}
+      scopeLabel={placementId && placement ? "선택 요소 · 범위 자동" : "게시글 전체 · 범위 자동"}
       beforeStart={async () => (await projectSaveRef.current?.saveAutomatically(true)) ?? false}
       onSettled={async () => { const latest = await getContentJob(job.id); latestRevision.current = latest.editor.revision; }} onBusy={setAssistantBusy}>
     <div data-tab-id={job.tabId} className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground max-lg:h-auto max-lg:min-h-svh max-lg:overflow-visible">

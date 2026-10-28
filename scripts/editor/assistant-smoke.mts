@@ -79,12 +79,12 @@ export async function verifyEditorAssistant(browser: Browser, origin: string) {
       assert.notEqual(color, "#123456");
       await page.getByRole("button", { name: "텍스트 추가", exact: true }).click();
       await page.getByRole("button", { name: "AI 명령 열기" }).click();
-      await dialog.getByText(/선택 요소/).waitFor();
+      await dialog.getByText("AI 편집 · 선택 요소 · 범위 자동", { exact: true }).waitFor();
       await dialog.getByLabel("AI 편집 명령").fill("선택한 요소 어때?");
       await dialog.getByRole("button", { name: "실행", exact: true }).click();
       await dialog.getByText("제목을 조금 키우면 읽기 좋습니다.").waitFor();
       const selection = submitted.at(-1)?.selection as { placementIds?: string[]; layerIds?: string[] };
-      assert.ok(type === "slideshow" ? selection.placementIds?.length : selection.layerIds?.length);
+      assert.equal(type === "slideshow" ? selection.placementIds?.length : selection.layerIds?.length, 1);
       await dialog.getByRole("button", { name: "AI 명령 닫기" }).click();
       await page.setViewportSize({ width: 390, height: 844 });
       await page.getByRole("button", { name: "AI 명령 열기" }).click();

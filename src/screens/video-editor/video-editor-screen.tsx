@@ -78,7 +78,7 @@ export function VideoEditorScreen({ initial, ref, onNewJob }: { initial: VideoSn
   });
   return <EditorAssistant target={{ projectId: initial.id, tabId: initial.tabId, projectType: "video" }}
     selection={() => selected ? { layerIds: [selected], frame: currentFrame() } : { frame: currentFrame() }}
-    scopeLabel={selected ? "선택 요소" : "게시글 전체"} onBusy={setAssistantBusy}
+    scopeLabel={selected ? "선택 요소 · 범위 자동" : "게시글 전체 · 범위 자동"} onBusy={setAssistantBusy}
     beforeStart={async () => { await currentWork.current; return project.flush(); }} onSettled={project.reload}>
   <div aria-busy={working} data-tab-id={initial.tabId} className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground max-lg:h-auto max-lg:min-h-svh max-lg:overflow-visible" onDragOver={e => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }} onDrop={e => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }}>
     <input ref={files} type="file" multiple hidden onChange={e => { const list = Array.from(e.target.files ?? []); e.target.value = ""; void addFiles(list); }} />
