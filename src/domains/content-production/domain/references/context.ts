@@ -2,10 +2,12 @@ import { z } from "zod";
 export const referenceStepSchema = z.enum(["analysis", "production", "hook", "visual", "polish"]);
 export type ReferenceStep = z.infer<typeof referenceStepSchema>;
 export const REFERENCE_LIMIT = 5;
+export const ANALYSIS_REFERENCE_LIMIT = 10;
 export const EXTERNAL_CONTEXT = "External reference comparison";
 export const externalContextSchema = z.object({
   checked_at: z.string(), queries: z.array(z.string()), collection_attempted: z.boolean(),
-  message: z.string(), posts: z.array(z.record(z.string(), z.unknown())).max(REFERENCE_LIMIT),
+  sampling: z.object({internalCandidates:z.number(),externalCandidates:z.number()}).optional(),
+  message: z.string(), posts: z.array(z.record(z.string(), z.unknown())).max(ANALYSIS_REFERENCE_LIMIT),
 });
 export type ExternalContext = z.infer<typeof externalContextSchema>;
 export function readExternalContext(research: unknown): ExternalContext | null {

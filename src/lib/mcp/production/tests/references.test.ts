@@ -13,12 +13,12 @@ test("task MCP exposes bounded external selection and English description persis
   const directory = await mkdtemp(join(tmpdir(), "studio-external-tools-"));
   process.env.CONTENT_STUDIO_DB_PATH = join(directory, "test.sqlite");
   const store = productionStore();
-  const [id] = store.create(1);
-  store.state(id, "running");
   for (let n = 0; n < 6; n++) store.db.prepare(`INSERT INTO content_external_references
     (id,url,account,caption,observed_at,images_json,created_at)
     VALUES(?,?,'example','Arm workout','now','[]','now')`)
     .run(String(n), `https://www.tiktok.com/@example/photo/${n}`);
+  const [id] = store.create(1);
+  store.state(id, "running");
   const observations: Array<{name:string;result?:CallToolResult}> = [];
   const server = createStudioMcpServer("http://127.0.0.1:3000", {
     allowed: new Set(["production_external_references","production_describe_reference","production_save_draft","production_context"]),

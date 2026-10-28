@@ -4,7 +4,7 @@ import type { ProductionStep } from "../../../domain/contracts";
 export const PRODUCTION_MODEL = "gpt-6.1-sol";
 
 const referenceTools = [
-  "production_external_references", "production_describe_reference", "production_read_images",
+  "production_reference_images", "production_external_references", "production_describe_reference", "production_read_images",
 ];
 const commonTools = [
   "production_context", "production_query", "production_comparisons",
@@ -30,8 +30,8 @@ export function stagePolicy(step: ProductionStep, mode: "automatic" | "past_post
   const canResearchCopy = step === "production" || step === "hook";
   return {
     imageGeneration: step === "production",
-    externalCollection: step === "analysis",
-    externalLimit: usesReferences ? REFERENCE_LIMIT : 0,
+    externalCollection: false,
+    externalLimit: step === "analysis" ? 10 : usesReferences ? REFERENCE_LIMIT : 0,
     webSearch: canResearchCopy,
     shell: canResearchCopy,
     tools: new Set([...toolsByStage[step], ...(step === "visual" && mode === "past_post" ? ["production_read_project", "production_preview_project"] : [])]),

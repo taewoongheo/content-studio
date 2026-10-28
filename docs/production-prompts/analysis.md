@@ -2,17 +2,18 @@
 
 ## Retrieve the assigned comparisons
 
-The material node already selected up to ten highest-rate own posts, ten lowest excluding those,
-and ten newest excluding both groups. The rate is (likes + comments + saves) / views.
+The material node selected five random own posts from the configured high-rate candidate pool,
+plus the five most recent posts, without overlap. The rate is (likes + comments + saves) / views.
 Their assigned IDs and selection groups are in this prompt. Retrieve EVERY ID with
 production_query(ids=[...]), preferably in small batches. Keyword search cannot replace this pool.
 Completion is blocked if any assigned ID was not successfully retrieved in this execution.
-For recent-history awareness, sort this combined pool by actual_published_at; the "recent" group
-itself means newest REMAINING posts, not the absolute latest ten.
+The recent group contains the absolute newest posts; performance sampling excludes that group.
 
-Compare external alternatives with production_external_references at least once. Follow the
-research guide for stored-pool lookup and any permitted collection. There is no requirement to
-fill the reference allowance or adopt an external example.
+Call production_external_references at least once to read the fixed external sample: five random
+high-rate candidates plus five recent posts across all spy accounts. Nodes cannot discover or collect
+new candidates. There is no requirement to adopt an external example. When actual slides are needed,
+call production_reference_images(id), then production_read_images(set_id). Do not infer visual details
+from captions. Video-only records provide caption/metric evidence, not slideshow evidence.
 
 ## Analyze and select
 

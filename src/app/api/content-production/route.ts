@@ -15,7 +15,9 @@ import {
   productionEvents,
 } from "@/domains/content-production/server/events";
 import { addReferenceAccount, referenceAccounts, externalReferences, toggleReferenceAccount, removeReferenceAccount, setReferenceExcluded } from "@/domains/content-production/server/references/library";
-import { collectReferenceAccount } from "@/domains/content-production/server/references/collection";
+import { refreshSpy, spyStatus } from "@/domains/content-production/server/references/spy/refresh";
+import { readSampling, saveSampling } from "@/domains/content-production/server/settings/sampling";
+import { samplingSchema } from "@/domains/content-production/domain/references/sampling";
 import { listVisuals } from "@/domains/content-production/server/publication/visuals";
 import { registerPublication } from "@/domains/content-production/server/publication/service";
 import { deleteTaskProject } from "@/domains/content-production/server/projects";
@@ -47,7 +49,8 @@ const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("reference_account"), account: z.string().min(1) }),
   z.object({ action: z.literal("toggle_reference_account"), username: z.string(), enabled: z.boolean() }),
   z.object({ action: z.literal("remove_reference_account"), username: z.string() }),
-  z.object({ action: z.literal("collect_reference_account"), username: z.string() }),
+  z.object({ action: z.literal("refresh_spy") }),
+  z.object({ action: z.literal("sampling_settings"), settings: samplingSchema }),
   z.object({ action: z.literal("exclude_reference"), id: z.string(), excluded: z.boolean() }),
 ]);
 export async function GET(request: Request) {
@@ -80,6 +83,8 @@ export async function GET(request: Request) {
         ? store.get(id)
         : {
             tasks,
+            sampling: readSampling(store.db),
+            spy: spyStatus(store.db),
             publishedPosts: listPublishedPosts(store.db),
             logs: store.logs(params.get("query") ?? ""),
             planningLogs: tasks.length ? store.analysisInputs(tasks[0].id) : store.planningLogs(),
@@ -161,13 +166,16 @@ export async function POST(request: Request) {
           await registerPublication(store.db, input.id, input.url),
         );
       case "reference_account":
-        addReferenceAccount(store.db,input.account); break;
+        addReferenceAccount(store.db,input.account);
+        await refreshSpy(store.db); break;
       case "toggle_reference_account":
         toggleReferenceAccount(store.db, input.username, input.enabled); break;
       case "remove_reference_account":
         removeReferenceAccount(store.db, input.username); break;
-      case "collect_reference_account":
-        return Response.json({collected:await collectReferenceAccount(store.db,input.username,true)});
+      case "refresh_spy":
+        return Response.json(await refreshSpy(store.db));
+      case "sampling_settings":
+        return Response.json(saveSampling(store.db,input.settings));
       case "exclude_reference":
         setReferenceExcluded(store.db,input.id,input.excluded); break;
     }

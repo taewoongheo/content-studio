@@ -1,3 +1,6 @@
+import { refreshSpy } from "../references/spy/refresh";
+import { readSampling } from "../settings/sampling";
+import { readPlanningLogs } from "../persistence/planning/logs";
 import { productionRequestsSchema, type ProductionRequest } from "../../domain/start/input";
 import { prepareStartInput } from "../start/prepare";
 import { activeProduct } from "../products/store";
@@ -119,7 +122,7 @@ export function syncState() {
 }
 export async function startProduction(
   count: number | ProductionRequest[], origin: string,
-  services = { refreshMetrics, execute },
+  services: {refreshMetrics: typeof refreshMetrics;execute: typeof execute;refreshSpy?: typeof refreshSpy} = { refreshMetrics, execute, refreshSpy },
 ) {
   if (!process.env.APIFY_API_TOKEN?.trim())
     throw new Error("Apify에 연결되지 않아 제작을 시작할 수 없습니다. APIFY_API_TOKEN을 설정해 주세요.");
@@ -132,6 +135,7 @@ export async function startProduction(
   const store = productionStore();
   if (store.hasOpenDrafts()) throw new Error(OPEN_DRAFT_MESSAGE);
   requests.forEach(request => store.requestSource(request));
+  const sampling = readSampling(store.db);
   shared.productionSync = true;
   const report: PerformanceRefresh = { started_at: new Date().toISOString(), completed_at: null, state: "running", records: [], error: null };
   shared.productionRefresh = report;
@@ -141,8 +145,9 @@ export async function startProduction(
       report.records = records;
       publishChange({ kind: "sync", detail: "snapshot" });
     });
-    const inputs = store.planningLogs();
-    const ids = store.create(requests, inputs);
+    await (services.refreshSpy ?? refreshSpy)(store.db);
+    const inputs = readPlanningLogs(store.db,"",sampling.internalCandidates);
+    const ids = store.create(requests, inputs, sampling);
     report.state = "completed";
     report.completed_at = new Date().toISOString();
     ids.forEach((id) => {

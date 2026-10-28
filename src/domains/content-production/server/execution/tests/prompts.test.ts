@@ -46,13 +46,13 @@ test("content-stage summaries must be objects, not prose or encoded JSON strings
 });
 
 
-test("every stage shares metadata meanings; only analysis may collect external posts", () => {
+test("every stage shares metadata meanings; no stage may discover external posts", () => {
   for (const {id} of productionSteps) {
     const prompt = stagePrompt("metadata-check",id);
     assert.match(prompt,/docs\/content-metadata\.md/);
     assert.match(prompt,/Analyze EVERY post/);
-    assert.ok(prompt.includes(`"external_collection":${id === "analysis"}`));
-    assert.ok(prompt.includes(`"external_post_limit":${id === "visual" || id === "polish" ? 0 : 5}`));
+    assert.ok(prompt.includes(`"external_collection":${false}`));
+    assert.ok(prompt.includes(`"external_post_limit":${id === "visual" || id === "polish" ? 0 : id === "analysis" ? 10 : 5}`));
     assert.ok(prompt.includes(`"web_search":"${id === "production" || id === "hook" ? "live" : "disabled"}"`));
   }
   for (const step of ["production","hook","visual","polish"] as const) {

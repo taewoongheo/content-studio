@@ -45,7 +45,8 @@ later stages.
 - Own posts: production_query for logs; production_read_project for saved copy/properties;
   production_preview_project for actual saved slides.
 - External posts: production_external_references for the stored pool; production_read_images with
-  visual_set_id for actual slides. After inspection, save descriptive metadata with
+  visual_set_id for actual slides. If images are not yet stored, use production_reference_images(id)
+  for a selected database post, then read the returned set_id. After inspection, save descriptive metadata with
   production_describe_reference under the metadata guide.
 
 External access and collection follow the current capabilities and research guide. Collected posts

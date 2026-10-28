@@ -21,6 +21,6 @@ test("batch inputs freeze IDs and metrics, survive saves/reconnect, and never re
     assert.deepEqual(store.get(ids[0]).analysis.research,[]);
     assert.equal(store.analysisLogs(ids[0],["l"])[0].like_count,10,"assigned metrics, not later live values");
     assert.throws(()=>store.analysisLogs(ids[0],["unassigned"]),/전달된 분석/);
-    assert.deepEqual(store.get(ids[0]).analysis_inputs,[{id:"l",project_id:"p",selection_group:"performance"}]);
+    assert.deepEqual(store.get(ids[0]).analysis_inputs,[{id:"l",project_id:"p",selection_group:"recent"}]);
   } finally {db.close();}
 });

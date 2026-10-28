@@ -28,7 +28,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     "production_query",
     {
       description:
-        "During analysis, retrieve assigned own-post IDs with ids; selection and metrics come from the material node snapshot. Query keywords do not replace that set. Production queries only that SAME assigned pool; query filters its title/topic/message/format and never expands it. In other stages, query published content logs: up to 10 best posts by (likes+comments+saves)/views, 10 lowest excluding the best, then 10 newest remaining, up to 30 unique. query filters eligible topic/name before selection. selection_group identifies performance/low_performance/recent. Missing metrics exclude rate rankings, not recency. Use production_external_references for the shared external library. Unpublished drafts are available through production_comparisons.",
+        "During analysis, retrieve assigned own-post IDs with ids; selection and metrics come from the material node snapshot. Query keywords do not replace that set. Production queries only that SAME assigned pool; query filters its title/topic/message/format and never expands it. In other stages, query the stored published logs by topic, title, message or format. Analysis uses five random posts from its configured high-rate pool plus five recent posts. selection_group identifies performance/recent. Missing metrics exclude rate rankings, not recency. Use production_external_references for the shared external library. Unpublished drafts are available through production_comparisons.",
       inputSchema: z.object({
         kind: z.literal("logs"),
         query: z.string().default(""),
@@ -49,7 +49,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
         if (!input.ids) throw new Error("분석 단계에서는 전달받은 게시글 ID 목록으로 조회해 주세요.");
         return json({items:store.analysisLogs(taskId,input.ids)});
       }
-      return json({items:store.planningLogs(input.query).filter(row => !input.ids || input.ids.includes(String(row.id)))});
+      return json({items:store.logs(input.query,true).filter(row => !input.ids || input.ids.includes(String(row.id))).slice(0,30)});
     }),
   );
   registerTool(

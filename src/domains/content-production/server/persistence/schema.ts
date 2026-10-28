@@ -7,6 +7,7 @@ const progress = `research_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(rese
   completed_actions_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(completed_actions_json)),
   remaining_actions_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(remaining_actions_json)), error_json TEXT CHECK(error_json IS NULL OR json_valid(error_json))`;
 export const PRODUCTION_SCHEMA = `
+CREATE TABLE IF NOT EXISTS content_production_settings (id INTEGER PRIMARY KEY CHECK(id=1), document_json TEXT NOT NULL CHECK(json_valid(document_json)));
 CREATE TABLE IF NOT EXISTS content_products (
  id TEXT PRIMARY KEY, document_json TEXT NOT NULL CHECK(json_valid(document_json)),
  revision INTEGER NOT NULL CHECK(revision>0), active INTEGER NOT NULL DEFAULT 0 CHECK(active IN (0,1)),

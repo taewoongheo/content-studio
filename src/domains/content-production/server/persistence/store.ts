@@ -1,3 +1,7 @@
+import { readSampling } from "../settings/sampling";
+import { sampleReferences } from "../../domain/references/sampling";
+import { externalReferences } from "../references/library";
+import { externalRecord } from "../../domain/references/context";
 import { START_INPUT, readStartInput, startInputRecord } from "../start/context";
 import { productionRequestSchema, type ProductionRequest, type PreparedSource } from "../../domain/start/input";
 import type { ProductionFailure } from "../../domain/diagnostics";
@@ -102,7 +106,8 @@ export class ProductionStore {
       external: { analysis: decoded.external, production: production ? stage(production).external : null, ...Object.fromEntries(reviews.map(({step,value}) => [step,value?.external ?? null])) },
     };
   }
-  create(requests: number | ProductionRequest[], inputs = this.planningLogs()) {
+  create(requests: number | ProductionRequest[], inputs = this.planningLogs(), sampling = readSampling(this.db)) {
+    const external = externalRecord({checked_at:this.now(),queries:[],collection_attempted:false,message:"Assigned external references for this batch.",sampling,posts:sampleReferences(externalReferences(this.db),sampling.externalCandidates,"published_at")});
     const entries = typeof requests === "number"
       ? Array.from({ length: requests }, () => productionRequestSchema.parse({ mode: "automatic" }))
       : requests.map(request => productionRequestSchema.parse(request));
@@ -127,7 +132,7 @@ export class ProductionStore {
           .prepare(
             "INSERT INTO content_analysis_drafts(draft_id,created_at,updated_at,research_json) VALUES(?,?,?,?)",
           )
-          .run(id, now, now, JSON.stringify([analysisInputRecord(inputs), startInputRecord({ request, ...(sources[index] ? { source: sources[index] } : {}) })]));
+          .run(id, now, now, JSON.stringify([external, analysisInputRecord(inputs), startInputRecord({ request, ...(sources[index] ? { source: sources[index] } : {}) })]));
         ids.push(id);
       }
     })();
@@ -367,9 +372,9 @@ export class ProductionStore {
     return (
       this.db
         .prepare(
-          `SELECT l.*,COALESCE(l.project_id,d.project_id) AS project_id,p.name FROM content_creation_logs l LEFT JOIN content_drafts d ON d.log_id=l.id LEFT JOIN content_projects p ON p.id=COALESCE(l.project_id,d.project_id) WHERE (l.project_id IS NOT NULL OR EXISTS(SELECT 1 FROM content_drafts d WHERE d.log_id=l.id)) ${publishedOnly ? "AND l.post_url IS NOT NULL" : ""} AND (COALESCE(l.topic,'') LIKE ? OR COALESCE(p.name,'') LIKE ?) ORDER BY l.created_at DESC`,
+          `SELECT l.*,COALESCE(l.project_id,d.project_id) AS project_id,p.name FROM content_creation_logs l LEFT JOIN content_drafts d ON d.log_id=l.id LEFT JOIN content_projects p ON p.id=COALESCE(l.project_id,d.project_id) WHERE (l.project_id IS NOT NULL OR EXISTS(SELECT 1 FROM content_drafts d WHERE d.log_id=l.id)) ${publishedOnly ? "AND l.post_url IS NOT NULL" : ""} AND (COALESCE(l.topic,'') LIKE ? OR COALESCE(p.name,'') LIKE ? OR COALESCE(l.message,'') LIKE ? OR COALESCE(l.content_type,'') LIKE ?) ORDER BY l.created_at DESC`,
         )
-        .all(`%${query}%`, `%${query}%`) as Row[]
+        .all(...Array(4).fill(`%${query}%`)) as Row[]
     ).map(decode);
   }
   comparisons() {
