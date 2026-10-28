@@ -67,7 +67,9 @@ export function SlideCanvas({
   onSelectBackground,
   onFrameChange,
   onDropImage,
+  onLoadSettled,
 }: {
+  onLoadSettled?: () => void;
   document: EditorDocument;
   slide: EditorSlide;
   jobId: string;
@@ -260,6 +262,7 @@ export function SlideCanvas({
       onDrop={dropImageOnCanvas}
     >
       <SlideArtwork
+        onLoadSettled={onLoadSettled}
         document={document}
         slide={slide}
         jobId={jobId}

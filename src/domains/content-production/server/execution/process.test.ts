@@ -56,6 +56,14 @@ if (args[0] === "mcp") {
       assert.equal(values.includes("features.shell_tool=false"),step !== "hook");
       assert.equal(values.includes("features.unified_exec=false"),step !== "hook");
     }
+    await runCodex({ prompt: "Analyze attached slide text", schema: {}, origin: "", taskId: "", token: "", standalone: true,
+      images: ["/tmp/persona-slide.webp"], signal: new AbortController().signal, onActivity() {} });
+    const personaArgs: string[] = JSON.parse(await readFile(argsPath, "utf8"));
+    assert.ok(personaArgs.includes("--skip-git-repo-check"));
+    assert.ok(personaArgs.includes("/tmp/persona-slide.webp"));
+    assert.ok(personaArgs.includes("features.shell_tool=false"));
+    assert.ok(personaArgs.includes("mcp_servers.other.enabled=false"));
+    assert.equal(personaArgs.some(value => value.startsWith("mcp_servers.production.")), false);
     await runCodex({ prompt: "Translate data only", schema: {}, origin: "", taskId: "", token: "", displayOnly: true, signal: new AbortController().signal, onActivity() {} });
     const displayArgs: string[] = JSON.parse(await readFile(argsPath, "utf8"));
     assert.equal(displayArgs.includes("--image"), false);

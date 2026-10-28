@@ -11,6 +11,7 @@ import { ContentProductionScreen } from "@/screens/content-production/content-pr
 import { SlideshowEditorScreen, type SlideshowEditorViewState, type SlideshowEditorWorkspaceHandle } from "@/screens/slideshow-editor/slideshow-editor-screen";
 import { createContentJob } from "@/domains/slideshow/client/editor/api";
 import { loadContentProject } from "@/domains/slideshow/client/projects-api";
+import { editorLoadPriority } from "@/domains/workspace/client/editor-load-priority";
 import { useOpenTabs } from "./hooks/use-open-tabs";
 import { useWorkspaceOperation } from "./hooks/use-workspace-operation";
 import { useTabLifecycle } from "./hooks/use-tab-lifecycle";
@@ -37,8 +38,17 @@ export function WorkspaceScreen() {
   const [initialViewState, setInitialViewState] = useState<SlideshowEditorViewState>();
   const { busy, error, setError, run } = useWorkspaceOperation();
   const [chooser, setChooser] = useState(false);
-  const [dashboardActive, setDashboardActive] = useState(false);
+  const [dashboardActive, setDashboardActive] = useState(true);
   const editor = useRef<SlideshowEditorWorkspaceHandle>(null);
+  const pendingEditorLoad = useRef<{ projectId: string; release: () => void } | null>(null);
+  useEffect(() => () => pendingEditorLoad.current?.release(), []);
+  useEffect(() => {
+    const pending = pendingEditorLoad.current;
+    if (pending && pending.projectId !== job?.id) {
+      pending.release();
+      pendingEditorLoad.current = null;
+    }
+  }, [job?.id]);
   const views = useRef(new Map<string, SlideshowEditorViewState>());
   const current = useRef(job);
   useEffect(() => { current.current = job; }, [job]);
@@ -68,21 +78,43 @@ export function WorkspaceScreen() {
     if (current.current) views.current.set(current.current.tabId, editor.current.getViewState());
   }
 
+  function editorLoadSettled(projectId: string) {
+    if (pendingEditorLoad.current?.projectId !== projectId) return;
+    pendingEditorLoad.current.release();
+    pendingEditorLoad.current = null;
+  }
   async function showProject(projectId: string, replace = false) {
-    setDashboardActive(false);
-    const known = tabs?.find(t => t.projectId === projectId);
-    const isVideo = known ? known.projectType === "video" : (await listVideoProjects()).some(p => p.id === projectId);
-    if (isVideo) { const next = await openVideoProject(projectId); currentVideo.current = next; setVideo(next); current.current = null; setJob(null); setChooser(false); updateUrl(next.id, replace, "video"); return; }
-    const next = await loadContentProject(projectId);
-    currentVideo.current = null; setVideo(null);
-    current.current = next; setJob(next); setInitialViewState(views.current.get(next.tabId)); setChooser(false); updateUrl(next.id, replace);
+    const release = editorLoadPriority.begin();
+    try {
+      setDashboardActive(false);
+      const known = tabs?.find(t => t.projectId === projectId);
+      const isVideo = known ? known.projectType === "video" : (await listVideoProjects()).some(p => p.id === projectId);
+      if (isVideo) {
+        const next = await openVideoProject(projectId);
+        currentVideo.current = next; setVideo(next); current.current = null; setJob(null);
+        setChooser(false); updateUrl(next.id, replace, "video");
+        pendingEditorLoad.current?.release(); pendingEditorLoad.current = null;
+        release();
+        return;
+      }
+      const next = await loadContentProject(projectId);
+      pendingEditorLoad.current?.release();
+      pendingEditorLoad.current = { projectId, release };
+      currentVideo.current = null; setVideo(null);
+      current.current = next; setJob(next); setInitialViewState(views.current.get(next.tabId));
+      setChooser(false); updateUrl(next.id, replace);
+    } catch (error) { release(); throw error; }
   }
   async function select(projectId: string) {
     if (job?.id === projectId || video?.id === projectId) { setChooser(false); return; }
-    await run(async () => { await prepareSwitch(); await showProject(projectId); });
+    await run(async () => {
+      const release = editorLoadPriority.begin();
+      try { await prepareSwitch(); await showProject(projectId); }
+      finally { release(); }
+    });
   }
   function dashboard(showDashboard = false) {
-    void run(async () => { await prepareSwitch(); setDashboardActive(showDashboard); currentVideo.current = null; setVideo(null); current.current = null; setJob(null); updateUrl(null); });
+    void run(async () => { await prepareSwitch(); pendingEditorLoad.current?.release(); pendingEditorLoad.current = null; setDashboardActive(showDashboard); currentVideo.current = null; setVideo(null); current.current = null; setJob(null); updateUrl(null); });
   }
   const handleWorkspaceShortcut = useEffectEvent((event: KeyboardEvent) => {
     const shortcut = workspaceShortcut(event);
@@ -171,7 +203,7 @@ export function WorkspaceScreen() {
       <div className={video || job || dashboardActive ? "hidden" : "h-full"}><ContentProductionScreen onOpen={select} /></div>
       {dashboardActive && !video && !job && <DashboardContent onNew={() => setChooser(true)} onOpen={select} />}
       {video ? <VideoEditorScreen key={video.tabId} ref={videoEditor} initial={video} onNewJob={() => dashboard()} /> : job ? <SlideshowEditorScreen key={job.tabId} ref={editor} initialJob={job}
-        initialViewState={initialViewState} onNewJob={() => dashboard()} />
+        onLoadSettled={() => editorLoadSettled(job.id)} initialViewState={initialViewState} onNewJob={() => dashboard()} />
         : null}
     </div>
     {lifecycle.closing && <CloseTabDialog tab={lifecycle.closing} busy={busy} error={error} onCancel={lifecycle.cancelClose} onDecision={lifecycle.decideClose} />}

@@ -20,7 +20,8 @@ Use only the assigned own posts and external content references to discover cand
 Community questions, non-overlap and app-feature fit do not establish TikTok interest.
 Factual verification belongs to first-draft production; this stage has no general web search or shell.
 
-Apply the research guide's grouped comparisons across exercise subjects. Keep these findings distinct:
+Apply the research guide's grouped comparisons across subjects for the active product's target audience,
+or the audience in liftcode.md when no product is configured. Keep these findings distinct:
 - Format/value: which answers and broad information structures attracted a response.
 - Delivery: how actual hook wording, copy and visual treatment conveyed that value.
 
@@ -30,7 +31,7 @@ Compare stronger and weaker cases and relevant counterexamples. Do not assume si
 better or interpretation is a weakness; assess the value the viewer receives.
 
 Compare materially different topic/message/format candidates, including developments of successful
-past content. For each ask: what would someone already viewing fitness content want to discover,
+past content. For each ask: what would someone in the target audience want to discover,
 compare, obtain or confirm, and which actual post observations support that interest?
 Choose one and explain why its answer and format give viewers a reason to stop and read.
 An unfamiliar topic is not automatically valuable, and a weak post's topic is not automatically

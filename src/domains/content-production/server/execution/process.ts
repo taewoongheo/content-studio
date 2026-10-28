@@ -19,9 +19,11 @@ export async function runCodex(input: {
   signal: AbortSignal;
   onActivity: (message: string) => void;
   displayOnly?: boolean;
+  standalone?: boolean;
   onThreadStarted?: (id: string) => void;
   onToolActivity?: (event: {callId:string;name:string;input:unknown;result?:CallToolResult}) => void;
 }) {
+  const isolated = input.displayOnly || input.standalone;
   const directory = await mkdtemp(join(tmpdir(), "content-production-")),
     schema = join(directory, "output-schema.json"),
     output = join(directory, "result.json");
@@ -60,7 +62,8 @@ export async function runCodex(input: {
           "-c",
           !input.displayOnly && input.capabilities?.webSearch ? 'web_search="live"' : 'web_search="disabled"',
           ...(!input.capabilities?.shell || input.displayOnly ? ["-c", "features.shell_tool=false", "-c", "features.unified_exec=false"] : []),
-          ...(input.displayOnly ? ["--skip-git-repo-check", "-c", 'model_reasoning_effort="low"'] : []),
+          ...(isolated ? ["--skip-git-repo-check"] : []),
+          ...(input.displayOnly ? ["-c", 'model_reasoning_effort="low"'] : []),
           "--sandbox",
           "read-only",
           "--output-schema",
@@ -68,7 +71,7 @@ export async function runCodex(input: {
           "--output-last-message",
           output,
           ...disableServers,
-          ...(!input.displayOnly ? [
+          ...(!isolated ? [
             "-c", `mcp_servers.production.url=${JSON.stringify(`${input.origin}/api/content-production/agent/${input.taskId}`)}`,
             "-c", 'mcp_servers.production.bearer_token_env_var="CONTENT_PRODUCTION_RUN_TOKEN"',
             "-c", "mcp_servers.production.enabled=true",
@@ -76,7 +79,7 @@ export async function runCodex(input: {
           "-",
         ],
         {
-          cwd: input.displayOnly ? directory : process.cwd(),
+          cwd: isolated ? directory : process.cwd(),
           env: { ...process.env, CONTENT_PRODUCTION_RUN_TOKEN: input.token },
           stdio: ["pipe", "pipe", "pipe"],
           shell: false,
