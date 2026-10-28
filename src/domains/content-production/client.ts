@@ -3,6 +3,7 @@ import { createTranslationQueue } from "./client/translation-queue";
 import type { PerformanceRefresh } from "./domain/performance";
 import type { ProductionStep, Row, WorkDetail, WorkItem } from "./domain/contracts";
 export interface ProductionSnapshot {
+  publishedPosts: import("./domain/published-posts").PublishedPost[];
   tasks: WorkItem[];
   logs: Row[];
   planningLogs: Row[];

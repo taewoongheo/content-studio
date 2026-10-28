@@ -7,11 +7,16 @@ export function CenterInitialStart() {
   const centered = useRef(false);
   const { setCenter, viewportInitialized } = useReactFlow();
   const size = useStore(state => state.nodeLookup.get("start")?.measured);
+  const width = useStore(state => state.width);
+  const height = useStore(state => state.height);
+  const domNode = useStore(state => state.domNode);
   useEffect(() => {
-    if (centered.current || !viewportInitialized || !size?.width || !size.height) return;
+    // The canvas mounts behind the dashboard. Wait for its first visible dimensions.
+    if (centered.current || !viewportInitialized || !size?.width || !size.height
+      || !width || !height || !domNode?.clientWidth || !domNode.clientHeight) return;
     centered.current = true;
     void setCenter(size.width / 2, size.height / 2, { zoom: 1 });
-  }, [viewportInitialized, size?.width, size?.height, setCenter]);
+  }, [viewportInitialized, size?.width, size?.height, width, height, domNode, setCenter]);
   return null;
 }
 

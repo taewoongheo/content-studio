@@ -1,3 +1,4 @@
+import { listPublishedPosts } from "@/domains/content-production/server/publication/list";
 import { productionRequestsSchema } from "@/domains/content-production/domain/start/input";
 import { streamDisplayTranslation } from "@/domains/content-production/server/display/stream";
 import { z } from "zod";
@@ -79,6 +80,7 @@ export async function GET(request: Request) {
         ? store.get(id)
         : {
             tasks,
+            publishedPosts: listPublishedPosts(store.db),
             logs: store.logs(params.get("query") ?? ""),
             planningLogs: tasks.length ? store.analysisInputs(tasks[0].id) : store.planningLogs(),
             externalReferences: externalReferences(store.db, "", "", true),

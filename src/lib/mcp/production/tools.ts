@@ -192,7 +192,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     "production_clone_project",
     {
       description:
-        "Production only, for past-post requests. Inspect and clone the explicitly selected saved source from production_context.input. It may be outside the assigned comparison pool. Preserve its format and visual language while changing the subject and content. Preserves frames, styles, shared elements, slide roles and badge; clears source text and all images, copies no source asset bytes. Change wording, create fresh images, adapt page count and layout. Records the source and reason. Reuses an existing linked project on resume without overwriting it.",
+        "Production only, for past-post requests. Inspect and clone the explicitly selected saved source from production_context.input. It may be outside the assigned comparison pool. Preserve its format and visual language while changing the subject and content. Preserves frames, styles, shared elements, slide roles and badge; clears source text and all images, copies no source asset bytes. Change subject-specific wording and create fresh images while preserving the source format, page progression and visual composition. Records the source and reason. Reuses an existing linked project on resume without overwriting it.",
       inputSchema: z.object({
         sourceProjectId: z.string().min(1),
         reason: z.string().trim().min(1),

@@ -8,15 +8,16 @@ export async function prepareStartInput(store: ProductionStore, id: string, sign
   client: Pick<ApifyTikTokClient, "posts"> = new ApifyTikTokClient(), capture = collectVisuals) {
   const input = store.assertActive(id, "analysis").input!;
   if (input.request.mode !== "external_url" || input.source?.visual_set_id) return;
+  const url = input.request.url;
   publishChange({ task_id: id, step: "analysis", kind: "state", detail: "외부 게시글 수집 중" });
-  const [post] = await client.posts([input.request.url], signal);
+  const [post] = await client.posts([url], signal);
   if (!post?.images.length) throw new Error("외부 게시글의 슬라이드쇼 이미지를 가져오지 못했습니다.");
   const slides = await capture(post.images, signal);
   signal.throwIfAborted();
   if (slides.length !== post.images.length) throw new Error("외부 게시글의 전체 슬라이드 이미지를 확보하지 못했습니다.");
   store.assertActive(id, "analysis");
   store.db.transaction(() => {
-    const setId = saveVisuals(store.db, { kind: "reference", url: input.request.mode === "external_url" ? input.request.url : "", slides });
+    const setId = saveVisuals(store.db, { kind: "reference", url, slides });
     store.savePreparedSource(id, { id: post.id, url: post.url, caption: post.text,
       visual_set_id: setId, slide_count: slides.length });
   })();

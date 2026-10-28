@@ -5,9 +5,8 @@
 For automatic/external_url requests, review the current linked project and polished copy only.
 For past_post requests, the start input and approved presentation are also available; read/preview
 ONLY the explicitly selected own source to preserve its format, page progression, recurring fields
-and visual composition. This is a preservation check, not new reference discovery. production_context intentionally excludes
-source identities, analysis inputs, earlier reference research, clone-selection reasons and source
-visual descriptions. There is no external browsing or reference discovery. Selected own-source lookup is available only for past_post.
+and visual composition. This is a preservation check, not new reference discovery. production_context excludes the comparison pool and unrelated reference research. Only past_post
+receives its selected source identity and approved presentation. There is no external browsing or reference discovery. Selected own-source lookup is available only for past_post.
 Return sources: []; do not infer an inaccessible reference layout.
 
 Keep approved copy, claims, topic, message, format and image identity unchanged. For automatic/external_url requests, freely move and resize existing images and text, adjust
