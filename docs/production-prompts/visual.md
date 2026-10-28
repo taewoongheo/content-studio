@@ -27,6 +27,10 @@ For vertically adjacent elements in one reading flow, apply the percentage gaps 
 full slide height, not differences between element y coordinates. Preserve the same gap for the
 same relationship across pages; do not impose it on independently anchored or side-by-side elements.
 
+Apply "콘텐츠 묶음의 세로 중앙 배치" in docs/content-guidelines.md after establishing the
+internal gaps. Review the position of the whole content group separately from its internal
+alignment; preserve the fixed badge and the group’s internal spacing when repositioning it.
+
 Balance spacing across the whole composition: text, visible illustration subjects, equipment,
 shapes and the badge. Group related information while keeping readable separation between actual
 visible contours and glyphs. Transparent image padding is usable space, but does not itself establish
