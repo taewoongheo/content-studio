@@ -21,6 +21,11 @@ query assigned IDs with production_query and preview the cases you actually comp
 completed analysis instead of repeating topic discovery. Use read_project to inspect the linked
 project and edit_project to compose/fill it. Reuse shared element definitions across pages.
 
+Use analysis.reasoning to understand the evidence and tradeoffs behind the choice. The direction's
+answer is the substantive commitment, presentation is the working progression and image approach,
+and reason explains the choice. Turn them into a content-specific slide plan; do not redo candidate
+selection or mechanically transfer every observation into public copy.
+
 Keep the confirmed topic, answer and format, with the start request's fixed constraints. External
 URL requests keep their source SUBJECT but use our character, typography, product facts and writing
 style. Past-post requests keep their source FORMAT and presentation, with new subject/content.
@@ -36,8 +41,15 @@ silently replacing the requested topic.
 ## Plan and generate slide artwork
 
 This stage owns detailed slide planning as well as implementation. For each slide, decide the
-copy, the role of its one or two images, subject/pose/equipment and camera/composition. Save this
-plan in the production draft content before generating. Give each image a distinct information
+purpose in the overall answer, copy, the role of its one or two images, subject/pose/equipment and
+camera/composition. Save slide_plan with production_save_draft BEFORE generating images. Use
+actual slide IDs/roles from the linked project and keep the plan in current page order. Each entry
+contains purpose, planned copy and visual explanation. Describe how the image makes the message
+understandable, beyond saying "exercise illustration". Let adjacent pages connect where the
+content needs a sequence; comparison cards or options need not pretend to be sequential steps.
+Do not impose recurring explanation fields on every page or add text to make the plan exhaustive.
+On resume, read the saved plan and retain completed work. Revise affected plan entries when the
+content changes and return the current plan for all final slides. Give each image a distinct information
 purpose. Do not reuse one image across placements or rename a previous image. Newly generated
 images may have similar poses or compositions; similarity is not a duplicate and must not be rejected.
 
@@ -80,7 +92,22 @@ selection or repeatedly rewrite content to avoid an unavoidable overlap.
 
 ## Save and verify
 
+Before completion, review the actual draft's content, not just its rendering. Save content_review:
+- assessment: judge unnecessary repetition, logical jumps, claims/numbers against the evidence
+  actually checked, whether the body fulfils the hook promise, and whether images explain the intended content.
+- issues: record only actual problems, their slide/location, concrete correction or blocker, and
+  status (resolved or blocked). Use [] when there are no actual problems. Do not invent corrections.
+
+Correct real problems within this stage before handing off. Verify facts only for claims/numbers
+actually used; narrow or remove unsupported wording. Do not audit for missing explanations or
+add background, caveats or extra text for completeness. A failed central premise remains a blocker
+under the research guide. Do not report completion with a blocked content issue.
+Hook review receives the draft and reasoning for wording choices; English polishing receives the
+approved copy; visual review handles wrapping/spacing. Do not leave substantive claim or logic
+problems for these more narrowly scoped stages to repair.
+
 Save work and the complete current summary. Preview ALL slides at the latest saved revision,
 inspect the actual images and fix issues within this stage. The harness checks revision and
-full-slide preview coverage. Return the required production result.
+full-slide preview coverage. Return slide_plan and content_review alongside the complete summary
+and required production result. The plan/review are internal records, not public-facing copy.
 This completes the first draft; hook review, English polishing and visual review follow.

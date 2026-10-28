@@ -17,7 +17,7 @@ test("production MCP separates comparison reads, selected-source cloning and bla
  process.env.CONTENT_STUDIO_DB_PATH=join(directory,"test.sqlite");
  const store=productionStore(),source=seedLayoutSource(store.db,"assigned"),outside=seedLayoutSource(store.db,"outside");
  const [id]=store.create([{mode:"past_post",sourceProjectId:source.project_id,instructions:""}],[source]);store.state(id,"running");
- store.completeAnalysis(id,{analysis:"Observed",topic:"New topic",message:"New message",content_type:"Routine",answer:"A session",presentation:"Cards",reason:"Useful",expected_response:"Save",goal_connection:"Follow",difference_from_recent:"Different",sources:[]});store.state(id,"running");
+ store.completeAnalysis(id,{analysis: "Observed", reasoning: { observations: [], interpretations: [], candidates: [] },topic:"New topic",message:"New message",content_type:"Routine",answer:"A session",presentation:"Cards",reason:"Useful",expected_response:"Save",goal_connection:"Follow",difference_from_recent:"Different",sources:[]});store.state(id,"running");
  const server=createStudioMcpServer("http://127.0.0.1:3000",{allowed:stagePolicy("production").tools,before(){}},id);
  const client=new Client({name:"layout-test",version:"1"});const [a,b]=InMemoryTransport.createLinkedPair();
  let projectId:string|undefined;

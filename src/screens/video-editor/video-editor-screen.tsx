@@ -15,6 +15,7 @@ import { VideoTimeline } from "./components/timeline/video-timeline";
 import { VideoHeader } from "./components/projects/video-header";
 import { VideoLayers } from "./components/layers/video-layers";
 import { VideoControls } from "./components/playback/video-controls";
+import { EditorAssistant } from "@/components/editor-assistant/editor-assistant";
 import { VideoInspector } from "./components/inspector";
 export type VideoEditorWorkspaceHandle = { flushPending: () => Promise<boolean>; sync: (revision: number, name: string) => Promise<void> };
 export function VideoEditorScreen({ initial, ref, onNewJob }: { initial: VideoSnapshot; ref?: Ref<VideoEditorWorkspaceHandle>; onNewJob: () => void }) {
@@ -59,7 +60,8 @@ export function VideoEditorScreen({ initial, ref, onNewJob }: { initial: VideoSn
     try { await promise; } catch (e) { project.setError(e instanceof Error ? e.message : "작업에 실패했습니다."); }
     finally { currentWork.current = null; setWorking(false); }
   }
-  const disabled = working || project.historyBusy;
+  const [assistantBusy, setAssistantBusy] = useState(false);
+  const disabled = working || project.historyBusy || assistantBusy;
   useVideoShortcuts({
     disabled,
     selectedLayer,
@@ -74,7 +76,11 @@ export function VideoEditorScreen({ initial, ref, onNewJob }: { initial: VideoSn
     },
     onTogglePlayback: () => player.current?.toggle(),
   });
-  return <div aria-busy={working} data-tab-id={initial.tabId} className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground max-lg:h-auto max-lg:min-h-svh max-lg:overflow-visible" onDragOver={e => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }} onDrop={e => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }}>
+  return <EditorAssistant target={{ projectId: initial.id, tabId: initial.tabId, projectType: "video" }}
+    selection={() => selected ? { layerIds: [selected], frame: currentFrame() } : { frame: currentFrame() }}
+    scopeLabel={selected ? "선택 요소 · 범위 자동" : "게시글 전체 · 범위 자동"} onBusy={setAssistantBusy}
+    beforeStart={async () => { await currentWork.current; return project.flush(); }} onSettled={project.reload}>
+  <div aria-busy={working} data-tab-id={initial.tabId} className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground max-lg:h-auto max-lg:min-h-svh max-lg:overflow-visible" onDragOver={e => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }} onDrop={e => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }}>
     <input ref={files} type="file" multiple hidden onChange={e => { const list = Array.from(e.target.files ?? []); e.target.value = ""; void addFiles(list); }} />
     <VideoHeader id={initial.id} name={project.snapshot.name} document={doc} disabled={disabled} dirty={project.dirty} saving={project.saving} working={working} rendering={rendering}
       canUndo={project.snapshot.canUndo || project.dirty} canRedo={project.snapshot.canRedo} onBack={onNewJob} onChange={change} onSave={() => void project.flush()}
@@ -107,5 +113,5 @@ export function VideoEditorScreen({ initial, ref, onNewJob }: { initial: VideoSn
         <VideoTimeline document={doc} player={player} initialFrame={initialFrame} selected={selected} onSelect={selectLayer} onSeek={seek} onChange={updateLayer} />
       </section>
     </main>
-  </div>;
+  </div></EditorAssistant>;
 }

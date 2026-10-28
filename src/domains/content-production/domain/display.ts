@@ -1,7 +1,7 @@
 import type { Row } from "./contracts";
 
 export const displayFields = [
-  "analysis", "topic", "content_type", "message", "answer", "presentation",
+  "analysis", "reasoning", "slide_plan", "content_review", "topic", "content_type", "message", "answer", "presentation",
   "reason", "expected_response", "goal_connection", "difference_from_recent",
   "research", "sources", "content", "completed_actions", "remaining_actions",
   "direction_changes", "review",

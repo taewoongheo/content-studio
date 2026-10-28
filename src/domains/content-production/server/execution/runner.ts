@@ -5,7 +5,7 @@ import { productionRequestsSchema, type ProductionRequest } from "../../domain/s
 import { prepareStartInput } from "../start/prepare";
 import { activeProduct } from "../products/store";
 import { readPersona } from "../persona/store";
-import { assertCompleteProjectReview, type ObservedReview } from "./review/validation";
+import { assertCompleteProjectReview, assertCurrentSlidePlan, type ObservedReview } from "./review/validation";
 import type { ToolAttempt } from "../../domain/diagnostics";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { OperationError } from "@/lib/errors/operation";
@@ -25,6 +25,7 @@ import { stagePolicy, PRODUCTION_MODEL } from "./policy/stages";
 import { resultSchema, stageImages, stagePrompt } from "./prompts";
 import {
   productionResultSchema,
+  firstDraftResultSchema,
   sourceSchema,
   type ProductionStep,
 } from "../../domain/contracts";
@@ -279,15 +280,16 @@ export async function execute(
           throw requiredToolFailure(run.toolCalls, ["production_preview_project", "production_read_images"], "참고 게시글의 실제 이미지 확인이 필요합니다.");
       }
       phase = "output";
-      const output = productionResultSchema.parse({
-        ...rest,
-        sources,
-      });
+      const rawOutput = { ...rest, sources };
+      const firstDraft = run.step === "production" ? firstDraftResultSchema.parse(rawOutput) : null;
+      const output = firstDraft ?? productionResultSchema.parse(rawOutput);
       phase = "validation";
       const detail = store.get(id);
       if (detail.task.project_id !== output.project_id)
         throw new OperationError("PROJECT_RESULT_MISMATCH", "연결된 프로젝트와 결과가 다릅니다.");
       await loadContentProject(contentJobRegistry, output.project_id);
+      if (firstDraft)
+        assertCurrentSlidePlan(contentJobRegistry.getRecord(output.project_id), firstDraft.slide_plan);
       assertCompleteProjectReview(
         contentJobRegistry.getRecord(output.project_id), output,
         run.reviews.get(output.project_id), run.toolCalls,

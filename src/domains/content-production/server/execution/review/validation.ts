@@ -4,6 +4,16 @@ import { PRODUCTION_ASPECT_RATIO } from "../../../domain/contracts";
 import type { ToolAttempt } from "../../../domain/diagnostics";
 import { assertUniqueProjectImages } from "../../images/unique";
 import { requiredToolFailure } from "../diagnostics/failure";
+import type { z } from "zod";
+import type { slidePlanSchema } from "../../../domain/planning/contracts";
+
+/** The plan must describe the linked draft, not stale pages from an earlier attempt. */
+export function assertCurrentSlidePlan(project: ContentJobRecord, plan: z.infer<typeof slidePlanSchema>) {
+  const slides = project.editor.document.slides;
+  if (slides.length !== plan.length || slides.some((slide, index) =>
+    plan[index].slide_id !== slide.id || plan[index].role !== slide.role))
+    throw new OperationError("SLIDE_PLAN_MISMATCH", "장별 제작 계획을 현재 슬라이드의 순서·역할에 맞춰 주세요.");
+}
 
 export interface ObservedReview {
   revision: number;

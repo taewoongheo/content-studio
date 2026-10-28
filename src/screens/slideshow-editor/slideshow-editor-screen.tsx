@@ -24,6 +24,7 @@ import { SlideTabs } from "./components/slides/slide-tabs";
 import { ElementLayers } from "./components/layers/element-layers";
 import { createClipboardQueue, copyElement, pasteElement, type ElementClipboard } from "./components/clipboard/element-clipboard";
 import { useEditorShortcuts } from "./components/shortcuts/use-editor-shortcuts";
+import { EditorAssistant } from "@/components/editor-assistant/editor-assistant";
 import { ProjectDeleteButton } from "@/components/projects/project-delete-button";
 
 async function readImageAspectRatio(file: File) {
@@ -85,7 +86,8 @@ export function SlideshowEditorScreen({ ref, initialViewState, initialJob, onNew
     ? ensureSharedBackground(structuredClone(job.editor.document)) : null, [job.editor.document]);
   const { slide, placement, element, appliedSlides, scopeSlides, visualTargets, scopeKey, selectedSlideIds } =
     resolveEditorSelection(document, slideId, placementId, scopeSelection);
-  const disabled = submitting;
+  const [assistantBusy, setAssistantBusy] = useState(false);
+  const disabled = submitting || assistantBusy;
   const issue = clientError || imageError || job.saveError;
   const imageRatioKey = element?.kind === "image" ? element.id : "";
   const imageAspectRatioLocked = Boolean(imageRatioKey) && !unlockedImageRatios.has(imageRatioKey);
@@ -112,7 +114,7 @@ export function SlideshowEditorScreen({ ref, initialViewState, initialJob, onNew
 
   useImperativeHandle(ref, () => ({
     flushPending: async () => (await projectSaveRef.current?.saveAutomatically(true)) ?? false,
-    getViewState: () => ({ slideId: slide?.id ?? slideId, placementId: placement?.id ?? null,
+    getViewState: () => ({ slideId: slide?.id ?? slideId, placementId,
       scopeSelection, showGuides, showOverflow, unlockedImageRatios: [...unlockedImageRatios] }),
   }));
 
@@ -335,6 +337,11 @@ export function SlideshowEditorScreen({ ref, initialViewState, initialJob, onNew
   }
 
   return (
+    <EditorAssistant target={{ projectId: job.id, tabId: job.tabId, projectType: "slideshow" }}
+      selection={placementId && placement && slide ? { slideIds: [slide.id], placementIds: [placement.id] } : {}}
+      scopeLabel={placementId && placement ? "선택 요소 · 범위 자동" : "게시글 전체 · 범위 자동"}
+      beforeStart={async () => (await projectSaveRef.current?.saveAutomatically(true)) ?? false}
+      onSettled={async () => { const latest = await getContentJob(job.id); latestRevision.current = latest.editor.revision; }} onBusy={setAssistantBusy}>
     <div data-tab-id={job.tabId} className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground max-lg:h-auto max-lg:min-h-svh max-lg:overflow-visible">
       <header className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-3 border-b px-3 py-1.5 sm:px-4">
         <div className="flex min-w-0 items-center gap-3">
@@ -452,7 +459,8 @@ export function SlideshowEditorScreen({ ref, initialViewState, initialJob, onNew
 
           <section className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-background lg:col-start-2 lg:row-start-1 max-lg:order-1 max-lg:min-h-[620px] max-lg:border-b" aria-label="슬라이드 편집 영역">
 
-            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted/20 p-5 sm:p-6">
+            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted/20 p-5 sm:p-6"
+              onClick={event => { if (event.target === event.currentTarget) { setPlacementId(null); setScopeSelection(null); } }}>
               <SlideCanvas key={slide.id} onLoadSettled={onLoadSettled} document={document} slide={slide} jobId={job.id}
                 selectedPlacementId={placement?.id ?? null} disabled={disabled} showGuides={showGuides} showOverflow={showOverflow}
                 selectionAppliesToAll={appliedSlides.length > 1 && appliedSlides.every((item) => selectedSlideIds.includes(item.slideId))}
@@ -491,7 +499,7 @@ export function SlideshowEditorScreen({ ref, initialViewState, initialJob, onNew
                 </div>
               </div>
               <SlideTabs document={document} selectedSlideId={slide.id} disabled={disabled}
-                onSelect={(id) => { setSlideId(id); setPlacementId(null); }} onCommand={saveCommands} />
+                onSelect={(id) => { setSlideId(id); setPlacementId(null); setScopeSelection(null); }} onCommand={saveCommands} />
             </nav>
 
           </section>
@@ -499,5 +507,6 @@ export function SlideshowEditorScreen({ ref, initialViewState, initialJob, onNew
         </main>
       ) : null}
     </div>
+    </EditorAssistant>
   );
 }

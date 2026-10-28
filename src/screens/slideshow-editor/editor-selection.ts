@@ -1,6 +1,6 @@
 import type { EditorDocument } from "@/domains/slideshow/editor/types";
 import { BACKGROUND_ELEMENT_ID } from "@/domains/slideshow/editor/document";
-import { defaultPlacement, selectVisualSlides } from "./components/element-scope";
+import { selectVisualSlides } from "./components/element-scope";
 import { slideLabel } from "./components/slides/slide-navigation";
 
 export { roleLabels } from "./components/slides/slide-navigation";
@@ -12,7 +12,7 @@ export function resolveEditorSelection(
   scopeSelection: { key: string; slideIds: string[] } | null,
 ) {
   const slide = document?.slides.find((item) => item.id === requestedSlideId) ?? document?.slides[0];
-  const placement = slide?.placements.find((item) => item.id === requestedPlacementId) ?? (slide ? defaultPlacement(slide) : null);
+  const placement = slide?.placements.find((item) => item.id === requestedPlacementId) ?? null;
   const element = document?.elements.find((item) => item.id === placement?.elementId) ?? null;
   const appliedSlides = element ? document?.slides.flatMap((item, index) => item.placements.some((placed) => placed.elementId === element.id)
     ? [{ slideId: item.id, label: slideLabel(item, index) }] : []) ?? [] : [];

@@ -1,6 +1,7 @@
 import type { ExternalContext, ReferenceStep } from "./references/context";
 import { z } from "zod";
 import { contentMetadataSchema } from "@/domains/content-metadata/schema";
+import { analysisReasoningSchema, firstDraftPlanningSchema, slidePlanSchema, contentReviewSchema } from "./planning/contracts";
 
 export const PRODUCTION_ASPECT_RATIO = "4:5";
 
@@ -52,18 +53,21 @@ export const reviewDraftPatchSchema = z.object({
 }).strict();
 export const analysisPatchSchema = directionSchema
   .partial()
-  .extend({ analysis: z.string().optional(), ...progress })
+  .extend({ analysis: z.string().optional(), reasoning: analysisReasoningSchema.optional(), ...progress })
   .strict();
 export const productionPatchSchema = z
   .object({
     content: z.record(z.string(), z.unknown()).optional(),
     direction_changes: z.string().optional(),
+    slide_plan: slidePlanSchema.optional(),
+    content_review: contentReviewSchema.optional(),
     ...progress,
   })
   .strict();
 export const analysisResultSchema = directionSchema
   .extend({
     analysis: z.string().trim().min(1),
+    reasoning: analysisReasoningSchema,
     sources: z.array(sourceSchema),
   })
   .strict();
@@ -76,6 +80,7 @@ export const productionResultSchema = z
     reviewed_revision: z.number().int().nonnegative(),
   })
   .strict();
+export const firstDraftResultSchema = productionResultSchema.extend(firstDraftPlanningSchema.shape);
 export type Row = Record<string, unknown>;
 export interface WorkItem extends Row {
   id: string;

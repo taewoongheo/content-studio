@@ -23,7 +23,7 @@ import { renameProject } from "@/domains/slideshow/projects/lifecycle/management
 import { notifyProjectsChanged } from "@/domains/workspace/server/project-events";
 import { json, guarded, annotations } from "../protocol/result";
 
-export function registerProjectTools(server: McpServer, origin: string, validateProject?: ProjectWriteValidator) {
+export function registerProjectTools(server: McpServer, origin: string, validateProject?: ProjectWriteValidator, historyGroup?: string) {
   registerTool(server, "create_project", {
     description: "Create and save a slideshow without a template. Read docs/content-metadata.md before saving topic/message/content_type. Metadata must come from user or production planning. Follow docs/content-guidelines.md, reference actual past post images and review all slides. Returns the open editor identity.",
     inputSchema: setContentMetadataSchema.omit({projectId:true}).extend({name:z.string().min(1).max(120),slideCount:z.number().int().min(1).max(20).default(6),requestId:requestIdSchema}), annotations:annotations(false),deduplicate:true,
@@ -82,7 +82,7 @@ export function registerProjectTools(server: McpServer, origin: string, validate
     inputSchema: editSchema, annotations: annotations(false),
   }, (raw) => guarded(async () => {
     const { projectId, commands, expectedRevision, expectedTabId, includeDocument } = raw as { projectId: string; commands: Array<EditorCommand | LocalImageCommand>; expectedRevision: number; expectedTabId: string; includeDocument?: boolean };
-    const job = await new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase(), validateProject).edit(projectId, commands, expectedRevision, expectedTabId);
+    const job = await new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase(), validateProject, historyGroup).edit(projectId, commands, expectedRevision, expectedTabId);
     return json({ ...(includeDocument === false ? summarizeSlideshow(job) : job), warnings: job.warnings ?? [], url: `${origin}/?job=${encodeURIComponent(job.id)}` });
   }));
   registerTool(server, "undo_project", {

@@ -65,7 +65,7 @@ test("URL preparation preserves every slide, reuses success on resume and never 
 
 test("collision repair cannot change a fixed source format or external subject", () => {
   const db = openLocalDatabase(":memory:"), store = new ProductionStore(db);
-  const direction = { analysis: "Planned", topic: "Chest routine", content_type: "One exercise per page", message: "A full session", answer: "Three exercises", presentation: "Same cards", reason: "Useful", expected_response: "Save", goal_connection: "Follow", difference_from_recent: "New subject", sources: [] };
+  const direction = { analysis: "Planned", reasoning: { observations: [], interpretations: [], candidates: [] }, topic: "Chest routine", content_type: "One exercise per page", message: "A full session", answer: "Three exercises", presentation: "Same cards", reason: "Useful", expected_response: "Save", goal_connection: "Follow", difference_from_recent: "New subject", sources: [] };
   try {
     const source = seedLayoutSource(db);
     const [past, external] = store.create([
@@ -73,7 +73,7 @@ test("collision repair cannot change a fixed source format or external subject",
       { mode: "external_url", url, instructions: "" },
     ], []);
     for (const id of [past, external]) { store.state(id, "running"); store.completeAnalysis(id, direction); store.state(id, "running"); }
-    const change = Object.fromEntries(Object.entries(direction).filter(([key]) => !["analysis", "sources"].includes(key)));
+    const change = Object.fromEntries(Object.entries(direction).filter(([key]) => !["analysis", "reasoning", "sources"].includes(key)));
     assert.throws(() => store.changeDirection(past, { ...change, content_type: "Tier list" }, "collision"), /포맷을 유지/);
     assert.throws(() => store.changeDirection(external, { ...change, topic: "Back routine" }, "collision"), /원본 소재를 유지/);
     assert.doesNotThrow(() => store.changeDirection(past, { ...change, topic: "Leg routine" }, "collision"));

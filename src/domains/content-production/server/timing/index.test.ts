@@ -34,12 +34,12 @@ test("draft transitions close the previous stage, protect timing snapshots and r
     assert.equal(store.get(id).timing?.analysis?.length, 1);
     store.get(id).timing!.analysis![0].started_at = "mutated client snapshot";
     assert.notEqual(store.get(id).timing!.analysis![0].started_at, "mutated client snapshot");
-    store.save(id, "analysis", { analysis: "Progress" });
+    store.save(id, "analysis", { analysis: "Progress", reasoning: { observations: [], interpretations: [], candidates: [] } });
     assert.equal(store.get(id).timing!.analysis![0].ended_at, null);
     store.state(id, "failed", "Retry required");
     assert.ok(store.get(id).timing!.analysis![0].ended_at);
     store.state(id, "running");
-    store.completeAnalysis(id, { analysis: "Comparison", topic: "Arms", message: "A session", content_type: "Routine",
+    store.completeAnalysis(id, { analysis: "Comparison", reasoning: { observations: [], interpretations: [], candidates: [] }, topic: "Arms", message: "A session", content_type: "Routine",
       answer: "Three moves", presentation: "Cards", reason: "Useful", expected_response: "Save",
       goal_connection: "Follow", difference_from_recent: "New answer", sources: [] });
     assert.equal(store.get(id).timing!.analysis!.length, 2);

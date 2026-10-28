@@ -28,6 +28,11 @@ CREATE TABLE IF NOT EXISTS content_creation_logs (
 );
 CREATE INDEX IF NOT EXISTS content_logs_published_idx ON content_creation_logs(actual_published_at);
 CREATE INDEX IF NOT EXISTS content_logs_created_idx ON content_creation_logs(created_at);
+CREATE TABLE IF NOT EXISTS content_stage_documents (
+ log_id TEXT NOT NULL REFERENCES content_creation_logs(id) ON DELETE CASCADE,
+ step TEXT NOT NULL CHECK(step IN ('analysis','production')),
+ document_json TEXT NOT NULL CHECK(json_valid(document_json)), PRIMARY KEY(log_id,step)
+);
 CREATE TABLE IF NOT EXISTS content_drafts (
  id TEXT PRIMARY KEY, log_id TEXT UNIQUE NOT NULL REFERENCES content_creation_logs(id),
  project_id TEXT UNIQUE REFERENCES content_projects(id) ON DELETE SET NULL,

@@ -12,7 +12,7 @@ test("reset removes drafts/projects/assets, cancels late output and preserves fo
   const directory = await mkdtemp(join(tmpdir(), "production-reset-"));
   process.env.CONTENT_STUDIO_DB_PATH = join(directory, "test.sqlite");
   const store = productionStore();
-  const direction = { analysis: "A practical plan.", topic: "arms", content_type: "routine", message: "train",
+  const direction = { analysis: "A practical plan.", reasoning: { observations: [], interpretations: [], candidates: [] }, topic: "arms", content_type: "routine", message: "train",
     answer: "3 sets", presentation: "cards", reason: "useful", expected_response: "save",
     goal_connection: "install", difference_from_recent: "new", sources: [] };
   try {

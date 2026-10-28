@@ -30,6 +30,8 @@ import { publishChange } from "../events";
 import { ANALYSIS_INPUTS, analysisInputRecord, readAnalysisInputs } from "./planning/input";
 import { readPlanningLogs } from "./planning/logs";
 import { readTaskTiming, updateTaskTiming, removeTaskTiming } from "../timing";
+import { readStageDocument, saveStageDocument } from "./planning/documents";
+import { firstDraftPlanningSchema } from "../../domain/planning/contracts";
 
 const directionKeys = Object.keys(directionSchema.shape) as Array<
   keyof Direction
@@ -101,7 +103,9 @@ export class ProductionStore {
       input: readStartInput(JSON.parse(String(analysis.research_json))),
       analysis_inputs: (readAnalysisInputs(JSON.parse(String(analysis.research_json))) ?? []).map(({id,project_id,selection_group}) => ({id,project_id,selection_group})),
       timing: readTaskTiming(this.db, id),
-      task, analysis: decoded.data, production: production ? stage(production).data : null, log: decode(log),
+      task, analysis: { ...decoded.data, ...readStageDocument(this.db, task.log_id, "analysis") },
+      production: production ? { ...stage(production).data, ...readStageDocument(this.db, task.log_id, "production") } : null,
+      log: decode(log),
       ...Object.fromEntries(reviews.map(({step,value}) => [step,value?.data ?? null])),
       external: { analysis: decoded.external, production: production ? stage(production).external : null, ...Object.fromEntries(reviews.map(({step,value}) => [step,value?.external ?? null])) },
     };
@@ -189,7 +193,7 @@ export class ProductionStore {
     });
   }
   save(id: string, step: ProductionStep, raw: unknown) {
-    this.assertActive(id, step);
+    const detail = this.assertActive(id, step);
     const patch = (
       step === "analysis" ? analysisPatchSchema : step === "production" ? productionPatchSchema : reviewDraftPatchSchema
     ).parse(raw);
@@ -202,10 +206,15 @@ export class ProductionStore {
       const existing = JSON.parse(String(row.research_json)) as Array<z.infer<typeof researchSchema>>;
       patch.research = [...existing.filter(item => [EXTERNAL_CONTEXT, ANALYSIS_INPUTS, START_INPUT].includes(item.question)), ...patch.research];
     }
-    const values: Row = { updated_at: this.now() };
-    for (const [key, value] of Object.entries(patch))
+    const values: Row = { updated_at: this.now() }, document: Row = {};
+    for (const [key, value] of Object.entries(patch)) {
+      if (["reasoning", "slide_plan", "content_review"].includes(key)) {
+        document[key] = value;
+        continue;
+      }
       values[typeof value === "object" ? `${key}_json` : key] =
         typeof value === "object" ? JSON.stringify(value) : value;
+    }
     if (
       step === "production" &&
       "content" in patch &&
@@ -216,6 +225,7 @@ export class ProductionStore {
       if (!previous?.draft_saved_at) values.draft_saved_at = this.now();
     }
     this.db.transaction(() => {
+      saveStageDocument(this.db, detail.task.log_id, step, document);
       this.update(`content_${step}_drafts`, "draft_id", id, values);
       this.update("content_drafts", "id", id, {
         updated_at: values.updated_at,
@@ -229,6 +239,7 @@ export class ProductionStore {
       result = analysisResultSchema.parse(raw),
       now = this.now();
     this.db.transaction(() => {
+      saveStageDocument(this.db, detail.task.log_id, "analysis", { reasoning: result.reasoning });
       const values: Row = {
         analysis: result.analysis,
         sources_json: JSON.stringify(result.sources),
@@ -258,12 +269,17 @@ export class ProductionStore {
   }
   completeProduction(
     id: string,
-    result: { project_id: string; summary: Row; sources: unknown[]; review?: string },
+    result: { project_id: string; summary: Row; sources: unknown[]; review?: string; slide_plan?: unknown; content_review?: unknown },
   ) {
     const step = this.get(id).task.current_step;
     if (step === "analysis") throw new Error("분석 단계는 제작 완료로 저장할 수 없습니다.");
     const detail = this.assertActive(id, step),
       now = this.now();
+    const planning = step === "production" ? firstDraftPlanningSchema.parse({
+      slide_plan: result.slide_plan, content_review: result.content_review,
+    }) : null;
+    if (planning?.content_review.issues.some(issue => issue.status === "blocked"))
+      throw new Error("초안의 내용 검토에서 확인한 문제를 해결해 주세요.");
     const next = productionSteps[productionSteps.findIndex(value => value.id === step) + 1]?.id ?? null;
     if (step !== "production" && !result.review?.trim()) throw new Error("검토 결과를 남겨 주세요.");
     const metadata = readContentMetadata(result.summary);
@@ -271,6 +287,7 @@ export class ProductionStore {
     if (step === "polish" && contentMetadataFields.some(key => metadata[key] !== detail.log[key]))
       throw new Error("영어 폴리싱에서는 확정한 소재·메시지·포맷을 변경할 수 없습니다.");
     this.db.transaction(() => {
+      if (planning) saveStageDocument(this.db, detail.task.log_id, step, planning);
       if (detail.task.project_id !== result.project_id)
         throw new Error("이 작업의 프로젝트만 완료할 수 있습니다.");
       new ContentProjectStore(this.db).updateMetadata(result.project_id, metadata);
@@ -325,6 +342,7 @@ export class ProductionStore {
       throw new Error("추가 조사에 따른 변경 이유가 필요합니다.");
     this.db.transaction(() => {
       if (cause === "collision") {
+        this.db.prepare("DELETE FROM content_stage_documents WHERE log_id=? AND step='production'").run(detail.task.log_id);
         this.update("content_analysis_drafts", "draft_id", id, {
           ...direction,
           updated_at: now,

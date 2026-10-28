@@ -1,3 +1,4 @@
+import { verifyEditorAssistant } from "./editor/assistant-smoke.mjs";
 import { verifyStageReports } from "./production/report-smoke.mjs";
 import { verifySpy } from "./production/spy-smoke.mjs";
 import { verifyProductionStart } from "./production/start-inputs-smoke.mjs";
@@ -399,6 +400,7 @@ try {
     page.on("request", request => {
       if (request.method() === "POST" && request.url().endsWith(`/api/content-jobs/${colorClone.id}`)) editRequests++;
     });
+    await page.getByRole("button", { name: "Color title Element 선택 및 레이어 순서 이동", exact: true }).click();
     await page.getByLabel("내용", { exact: true }).fill("FAST SWITCH");
     await page.getByLabel("내용", { exact: true }).press("Meta+[");
     await page.waitForURL(url => url.searchParams.get("job") === colorProject.id);
@@ -650,6 +652,7 @@ try {
 
     console.log("PASS autosave status and live project-list refresh");
     console.log("PASS shared memory, clone independence, open/list, undo, revision conflict and cross-origin rejection");
+    await verifyEditorAssistant(browser, origin);
   } catch (error) {
     const pages = browser.contexts().flatMap(context => context.pages());
     for (const [index, failedPage] of pages.entries()) {

@@ -38,7 +38,7 @@ if (args[0] === "mcp") {
     assert.equal(toolEvents[1].result?.isError,true);
     const args: string[] = JSON.parse(await readFile(argsPath, "utf8"));
     assert.deepEqual(args.flatMap((value, index) => value === "--image" ? [args[index + 1]] : []), ["/tmp/turnaround.png", "/tmp/face.png", "/tmp/example.png"]);
-    assert.equal(args[args.indexOf("--sandbox") + 1], "read-only");
+    assert.ok(args.includes('sandbox_mode="read-only"'));
     const overrides = args.flatMap((value, index) => value === "-c" ? [args[index + 1]] : []);
     assert.ok(overrides.includes('web_search="live"'));
     assert.ok(overrides.includes("features.image_generation=true"));

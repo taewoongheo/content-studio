@@ -33,7 +33,7 @@ else {
     const ids = store.create(2);
     for (const id of ids) {
       store.state(id, "running");
-      store.completeAnalysis(id, { analysis: "An actionable plan for readers.", topic: "Build muscle", content_type: "routine", message: "Train consistently",
+      store.completeAnalysis(id, { analysis: "An actionable plan for readers.", reasoning: { observations: [], interpretations: [], candidates: [] }, topic: "Build muscle", content_type: "routine", message: "Train consistently",
         answer: "Use progressive training", presentation: "cards", reason: "useful", expected_response: "save", goal_connection: "install", difference_from_recent: "new", sources: [] });
     }
     const before = ids.map(id => store.get(id));

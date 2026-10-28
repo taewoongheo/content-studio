@@ -11,7 +11,7 @@ import { cloneTaskProject } from "../layout";
 import { createTaskProject } from "../creation";
 import { seedLayoutSource } from "./fixtures";
 
-const direction={analysis:"A routine comparison.",topic:"New content",message:"A new session",content_type:"Routine cards",answer:"Five moves",presentation:"Cards",reason:"Useful",expected_response:"Save",goal_connection:"Follow",difference_from_recent:"Different content",sources:[]};
+const direction={analysis: "A routine comparison.", reasoning: { observations: [], interpretations: [], candidates: [] },topic:"New content",message:"A new session",content_type:"Routine cards",answer:"Five moves",presentation:"Cards",reason:"Useful",expected_response:"Save",goal_connection:"Follow",difference_from_recent:"Different content",sources:[]};
 
 test("cloning uses only the explicitly selected saved layout, clears old copy/images, preserves styles and source",()=>{
   const db=openLocalDatabase(":memory:"),store=new ProductionStore(db),projects=new ContentProjectStore(db);

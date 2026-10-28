@@ -1,10 +1,4 @@
-import { BACKGROUND_ELEMENT_ID } from "@/domains/slideshow/editor/document";
-import type { EditorCommand, EditorSlide, PlacedElement } from "@/domains/slideshow/editor/types";
-
-export function defaultPlacement(slide: EditorSlide): PlacedElement | null {
-  return slide.placements.find((placement) => placement.elementId !== BACKGROUND_ELEMENT_ID) ??
-    slide.placements.find((placement) => placement.elementId === BACKGROUND_ELEMENT_ID) ?? null;
-}
+import type { EditorCommand, PlacedElement } from "@/domains/slideshow/editor/types";
 
 export type ScopeChoice = "current" | "all" | { slideId: string; checked: boolean };
 

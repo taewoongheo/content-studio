@@ -7,17 +7,26 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { stagePolicy } from "./policy/stages";
 import type { ProductionStep, Row } from "../../domain/contracts";
-const directionKeys = [
-  "topic",
-  "content_type",
-  "message",
-  "answer",
-  "presentation",
-  "reason",
-  "expected_response",
-  "goal_connection",
-  "difference_from_recent",
-];
+import { z } from "zod";
+import { analysisReasoningSchema, firstDraftPlanningSchema } from "../../domain/planning/contracts";
+
+function jsonShape(schema: z.ZodType) {
+  const { $schema: dialect, ...shape } = z.toJSONSchema(schema, { target: "draft-7" });
+  void dialect;
+  return shape;
+}
+const directionFields = {
+  topic: "The selected subject within the start request's constraints.",
+  content_type: "The selected information format under the metadata guide.",
+  message: "The concise central message.",
+  answer: "The substantive answer the viewer receives; the production commitment, beyond a topic label or promise.",
+  presentation: "A content-specific working plan: explanation progression and what images contribute. Production refines it into slides.",
+  reason: "Why this direction won, connected to the recorded case observations and candidate tradeoffs.",
+  expected_response: "The intended viewer response and plausible reason, without presenting a forecast as observed performance.",
+  goal_connection: "How this content serves the active product's actual goal.",
+  difference_from_recent: "The useful distinction from recent content, beyond mere novelty.",
+  analysis: "A concise synthesis of the comparison and resulting choice. Detailed observations, interpretations and candidates belong in reasoning.",
+};
 const stringField = { type: "string" };
 const sourcesField = {
   type: "array",
@@ -68,11 +77,16 @@ export function resultSchema(step: ProductionStep) {
   const properties =
     step === "analysis"
       ? {
-          ...Object.fromEntries([...directionKeys, "analysis"].map(key => [key, stringField])),
+          ...Object.fromEntries(Object.entries(directionFields).map(([key, description]) => [key, { ...stringField, description }])),
+          reasoning: jsonShape(analysisReasoningSchema),
           sources: sourcesField,
         }
       : {
           ...(step !== "production" ? { review: stringField, review_passed: { type: "boolean" } } : {}),
+          ...(step === "production" ? {
+            slide_plan: jsonShape(firstDraftPlanningSchema.shape.slide_plan),
+            content_review: jsonShape(firstDraftPlanningSchema.shape.content_review),
+          } : {}),
           project_id: stringField,
           summary: summaryField,
           sources: sourcesField,
