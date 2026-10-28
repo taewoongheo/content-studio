@@ -46,6 +46,13 @@ immediately restyle the element or conclude that the renderer is broken. Read th
 check layer order and visible bounds, then use preview_slide for that slide alone at full resolution
 at the SAME saved revision. Inspect each affected slide separately and compare with the thumbnail.
 A single ambiguous image observation is not enough to establish a rendering defect.
+Before declaring a small element missing, call preview_slide with a region around its saved bounds
+and surrounding space. For the lower-left badge, use region {x:0,y:0.90,width:0.35,height:0.10}.
+This enlarges pixels from the SAME full-slide PNG, not a reconstruction from the document.
+Whole-slide image interpretation can miss small edge details even when their pixels are present.
+If the region shows the element, withdraw the omission claim. A region preview supplements, but
+never replaces, the required whole-slide review. Do not repeat whole-slide previews as the only
+confirmation of a small-element omission.
 
 If the independent full-resolution preview shows the expected element, do not keep the earlier
 missing-element claim as an unresolved blocker. Continue the review against the current verified

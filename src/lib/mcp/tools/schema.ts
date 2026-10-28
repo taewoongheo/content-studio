@@ -16,7 +16,12 @@ export const readProjectSchema = projectSchema.extend({
   outline: z.boolean().default(false), includeAssets: z.boolean().default(true),
 });
 export const undoSchema = projectSchema.extend({ expectedTabId: z.string().min(1), expectedRevision: z.number().int().nonnegative() });
-export const previewSchema = projectSchema.extend({ slideId: z.string().min(1) });
+export const previewSchema = projectSchema.extend({ slideId: z.string().min(1),
+  region: z.object({ x: z.number().min(0).lt(1), y: z.number().min(0).lt(1),
+    width: z.number().gt(0).max(1), height: z.number().gt(0).max(1) })
+    .refine(value => value.x + value.width <= 1 && value.y + value.height <= 1,
+      "Region must fit inside the slide").optional(),
+});
 export const cloneSchema = z.strictObject({
   requestId: requestIdSchema,
   name: z.string().trim().min(1).max(120).optional(),

@@ -85,7 +85,7 @@ export async function POST(
           if (item.type !== "text") continue;
           try {
             const meta = JSON.parse(item.text);
-            if (meta.projectId && typeof meta.revision === "number")
+            if (meta.projectId && typeof meta.revision === "number" && !meta.region)
               recordReview(
                 taskId,
                 meta.projectId,

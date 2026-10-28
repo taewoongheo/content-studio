@@ -12,6 +12,7 @@ import { getLocalDatabase } from "@/lib/local-db/database";
 import { cloneSchema, editSchema, previewSchema, projectSchema, readProjectSchema, undoSchema, setContentMetadataSchema } from "./schema";
 import type { LocalImageCommand } from "@/domains/slideshow/server/local-images";
 import { SlideshowProjectWrites, type ProjectWriteValidator } from "@/domains/slideshow/server/project-writes";
+import { previewRegion } from "@/domains/slideshow/server/rendering/inspection/region";
 import { previewSlides } from "@/domains/slideshow/server/rendering/preview";
 import { captureSlideshowRender } from "@/domains/slideshow/server/rendering/input";
 import { exportSlideshow } from "@/domains/slideshow/server/rendering/export";
@@ -89,13 +90,14 @@ export function registerProjectTools(server: McpServer, origin: string, validate
     inputSchema: undoSchema, annotations: annotations(false),
   }, ({ projectId, expectedRevision, expectedTabId }) => guarded(() => json({ ...new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase(), validateProject).undo(projectId, expectedRevision, expectedTabId) })));
   registerTool(server, "preview_slide", {
-    description: "See one slide as a PNG rendered by the same renderer as the editor/export. Uses a snapshot and returns its revision. Does not save the project.",
+    description: "See one slide as a PNG rendered by the same renderer as the editor/export. Uses a snapshot and returns its revision. Optional region {x,y,width,height} uses 0–1 slide coordinates to crop and enlarge the actual PNG for checking small text or badges; a region does not count as full-slide review. Does not save the project.",
     inputSchema: previewSchema, annotations: annotations(true),
-  }, ({ projectId, slideId }) => guarded(async () => {
+  }, ({ projectId, slideId, region }) => guarded(async () => {
     const input = captureSlideshowRender(contentJobRegistry, projectId, [slideId]);
-    const data = (await previewSlides(origin, input.job, [slideId], { images: input.images }))[0].bytes.toString("base64");
+    const bytes = (await previewSlides(origin, input.job, [slideId], { images: input.images }))[0].bytes;
+    const data = (region ? await previewRegion(bytes, region) : bytes).toString("base64");
     return { content: [{ type: "image", mimeType: "image/png", data },
-      { type: "text", text: JSON.stringify({ projectId, slideId, revision: input.job.editor.revision }) }] };
+      { type: "text", text: JSON.stringify({ projectId, slideId, revision: input.job.editor.revision, ...(region ? { region } : {}) }) }] };
   }));
   registerTool(server, "preview_slides", {
     description: "Review several slides in ONE call with a reused renderer and revision cache. Omit slideIds to review all slides; IDs preserve requested order. Width defaults to 540px (64-1920, capped at original width). Returns PNG images with slide IDs and captured revision. Does not edit, save or navigate the UI.",
