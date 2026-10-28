@@ -12,6 +12,7 @@ export function createStudioMcpServer(
   policy?: ToolPolicy,
   taskId?: string,
   validateProject?: ProjectWriteValidator,
+  historyGroup?: string,
 ) {
   const server = new McpServer(
     { name: "content-studio", version: "0.1.0" },
@@ -23,8 +24,8 @@ export function createStudioMcpServer(
   if (policy) setToolPolicy(server, policy);
   registerProductionTools(server, taskId, origin, validateProject);
   registerRenderJobTools(server);
-  registerProjectTools(server, origin, validateProject);
-  registerVideoTools(server, origin);
+  registerProjectTools(server, origin, validateProject, historyGroup);
+  registerVideoTools(server, origin, historyGroup);
   registerResearchTools(server);
   return server;
 }

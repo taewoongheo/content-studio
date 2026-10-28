@@ -14,7 +14,7 @@ export class EditorService {
         { projectId: id, expectedRevision: expected, actualRevision: job.editor.revision, tabId: job.tabId }, "read_latest");
     return job;
   }
-  applyCommands(id: string, commands: unknown, revision: number, addedAssets: EditorImage[] = []) {
+  applyCommands(id: string, commands: unknown, revision: number, addedAssets: EditorImage[] = [], historyGroup?: string) {
     const job = this.requireRevision(id, revision);
     const checked = validateEditorCommands({ commands });
     if (!checked.ok) throw new OperationError("INVALID_INPUT", checked.errors.join(" "), { issues: checked.issues });
@@ -33,7 +33,9 @@ export class EditorService {
       throw new ContentJobError("INVALID_OUTPUT", error instanceof Error ? error.message : "편집 내용을 확인해 주세요.");
     }
     return this.registry.update(id, (current) => {
-      current.editorHistory.push(structuredClone(current.editor.document));
+      if (!historyGroup || current.historyGroup?.id !== historyGroup || current.historyGroup.revision !== revision)
+        current.editorHistory.push(structuredClone(current.editor.document));
+      current.historyGroup = historyGroup ? { id: historyGroup, revision: revision + 1 } : undefined;
       if (current.editorHistory.length > EDITOR_HISTORY_LIMIT)
         current.editorHistory.splice(0, current.editorHistory.length - EDITOR_HISTORY_LIMIT);
       current.editor.document = next;
@@ -52,6 +54,7 @@ export class EditorService {
     const job = this.requireRevision(id, revision);
     if (!job.editorHistory.length) throw new ContentJobError("INVALID_STAGE", "되돌릴 수정이 없습니다.");
     return this.registry.update(id, (current) => {
+      current.historyGroup = undefined;
       current.editor.document = current.editorHistory.pop()!;
       current.warnings = inspectSharedElements(current.editor.document);
       current.slideCount = current.editor.document.slides.length;

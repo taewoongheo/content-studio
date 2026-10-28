@@ -22,6 +22,7 @@ export class SlideshowProjectWrites {
     private readonly registry: ContentJobRegistry,
     private readonly database: Database.Database,
     private readonly validate?: ProjectWriteValidator,
+    private readonly historyGroup?: string,
   ) {
     this.stores = { projects: new ContentProjectStore(database) };
   }
@@ -93,6 +94,7 @@ export class SlideshowProjectWrites {
       commands,
       expectedRevision,
       (apply) => this.commit(apply),
+      this.historyGroup,
     );
   }
   undo(projectId: string, expectedRevision: number, expectedTabId?: string) {

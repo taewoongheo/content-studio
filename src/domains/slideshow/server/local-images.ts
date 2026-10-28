@@ -37,13 +37,13 @@ export async function readLocalImage(localPath: string) {
 /** Prepare files first; roll back project images if the command batch fails. */
 export async function editWithLocalImages(registry: ContentJobRegistry, database: Database.Database,
   projectId: string, commands: Array<EditorCommand | LocalImageCommand>, revision: number,
-  commit: (apply: () => ContentJobSnapshot) => ContentJobSnapshot = (apply) => apply()) {
+  commit: (apply: () => ContentJobSnapshot) => ContentJobSnapshot = (apply) => apply(), historyGroup?: string) {
   const job = registry.get(projectId);
   if (job.editor.revision !== revision)
     throw new OperationError("REVISION_CONFLICT", "편집 문서가 변경되었습니다. 다시 읽어 주세요.",
       { projectId, expectedRevision: revision, actualRevision: job.editor.revision, tabId: job.tabId }, "read_latest");
   if (!commands.some((command) => command.type === "set_local_image"))
-    return commit(() => new EditorService(registry).applyCommands(projectId, commands, revision));
+    return commit(() => new EditorService(registry).applyCommands(projectId, commands, revision, [], historyGroup));
   const prepared = new Map<string, Awaited<ReturnType<typeof readLocalImage>>>();
   for (const [index, command] of commands.entries()) {
     if (command.type !== "set_local_image") continue;
@@ -75,6 +75,6 @@ export async function editWithLocalImages(registry: ContentJobRegistry, database
       try { probe = applyEditorCommands(probe, [command]); }
       catch (error) { throw commandFailure(index, original, error); }
     }
-    return new EditorService(registry).applyCommands(projectId, resolved, revision, [...imported.values()]);
+    return new EditorService(registry).applyCommands(projectId, resolved, revision, [...imported.values()], historyGroup);
   })());
 }
