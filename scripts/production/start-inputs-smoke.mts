@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import sharp from "sharp";
 import type { Browser } from "playwright";
 import type { PublishedPost } from "../../src/domains/content-production/domain/published-posts";
 import type { ProductionRequest } from "../../src/domains/content-production/domain/start/input";
@@ -8,6 +9,28 @@ export async function verifyProductionStart(browser: Browser, origin: string, po
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   const browserErrors: string[] = [];
   page.on("pageerror", error => browserErrors.push(error.message));
+  const sourceDocument = await page.request.get(`${origin}/api/content-projects/${post.id}/preview`).then(response => response.json());
+  const previewStyle = {color:"#111111",backgroundColor:"transparent",fontSize:64,lineHeight:1.2,fontWeight:700,textAlign:"center",borderRadius:0,fontFamily:"inter",imageFit:"contain"};
+  sourceDocument.elements.push({id:"source-cover",name:"Cover",kind:"image",role:"Cover artwork",frame:{x:0.1,y:0.2,width:0.8,height:0.6},style:previewStyle});
+  sourceDocument.slides[0].backgroundColor="#E8F1FB";
+  sourceDocument.slides[0].placements.push({id:"source-cover-1",elementId:"source-cover",value:"source-picker-cover",frameOverride:null,styleOverride:null});
+  sourceDocument.slides[1].placements.push({id:"source-cover-2",elementId:"source-cover",value:"source-picker-body",frameOverride:null,styleOverride:null});
+  const artwork = await sharp({create:{width:200,height:250,channels:3,background:"#00AA77"}}).png().toBuffer();
+  const assetReads:string[]=[];
+  await page.route("**/api/content-projects/*/assets/source-picker-*",route=>{
+    assetReads.push(route.request().url());return route.fulfill({contentType:"image/png",body:artwork});
+  });
+  const fixtureDocument = structuredClone(sourceDocument);
+  const imageElements = new Set(fixtureDocument.elements.filter((element: {id:string;kind:string}) => element.kind === "image").map((element: {id:string}) => element.id));
+  fixtureDocument.slides.forEach((slide: {placements:Array<{elementId:string;value:string}>}) => slide.placements.forEach(placement => {if(imageElements.has(placement.elementId))placement.value="";}));
+  const posts = [post,...Array.from({length:25},(_,index)=>({...post,id:`source-picker-${index}`,name:`페이지 확인 ${index}`,topic:`주제 ${index}`}))];
+  const documentReads = new Map<string,number>();
+  let selecting = false;
+  await page.route("**/api/content-projects/*/preview",async route=>{
+    const id = new URL(route.request().url()).pathname.split("/")[3];
+    if (selecting) documentReads.set(id,(documentReads.get(id)??0)+1);
+    return route.fulfill({json:id.startsWith("source-picker-")?fixtureDocument:sourceDocument});
+  });
   let submitted: ProductionRequest[] | undefined, attempts = 0;
   await page.route("**/api/content-production", async route => {
     const request = route.request();
@@ -15,7 +38,7 @@ export async function verifyProductionStart(browser: Browser, origin: string, po
     if (request.method() === "GET") {
       const response = await route.fetch();
       const snapshot = await response.json();
-      return route.fulfill({ json: { ...snapshot, publishedPosts: [post], configured: { apify: true } } });
+      return route.fulfill({ json: { ...snapshot, publishedPosts: posts, configured: { apify: true } } });
     }
     const input = request.postDataJSON();
     if (input.action !== "start") return route.continue();
@@ -33,10 +56,26 @@ export async function verifyProductionStart(browser: Browser, origin: string, po
     await page.getByLabel("추가 지침", { exact: false }).fill("덤벨만 사용");
     await page.getByRole("dialog").getByRole("button", { name: "수정", exact: true }).click();
     await add.click();
+    selecting = true;
     await page.getByRole("radio", { name: "과거 게시글", exact: true }).check();
-    await page.getByLabel("원본 게시글", { exact: true }).selectOption(post.id);
+    const list = page.getByRole("radiogroup",{name:"원본 게시글",exact:true});
+    assert.equal(await list.getByRole("radio").count(),8,"mount only the first page of source cards");
+    await list.evaluate(element=>{element.scrollTop=element.scrollHeight;});
+    await page.waitForFunction(()=>document.querySelector('[role="radiogroup"]')!.querySelectorAll('input[type="radio"]').length>8);
+    await page.getByLabel("과거 게시글 검색",{exact:true}).fill("페이지 확인 24");
+    await page.getByRole("radio",{name:"페이지 확인 24",exact:true}).waitFor();
+    assert.equal(await list.getByRole("radio").count(),1,"search includes posts beyond the mounted page");
+    await page.getByLabel("과거 게시글 검색",{exact:true}).fill("");
+    await list.evaluate(element=>{element.scrollTop=0;});
+    await page.waitForFunction(()=>document.querySelector<HTMLCanvasElement>('[role="radiogroup"] canvas')?.width===200);
+    assert.ok(assetReads.some(url=>url.includes("source-picker-cover")&&Number(new URL(url).searchParams.get("width"))<=200),"cover uses a small image derivative");
+    assert.ok(!assetReads.some(url=>url.includes("source-picker-body")),"unselected posts never load body-slide images");
+    await page.getByRole("dialog").getByText(post.name, { exact: true }).click();
+    assert.equal(await page.getByRole("dialog").getByRole("radio", { name: post.name, exact: true }).isChecked(),true);
     await page.getByRole("region", { name: `${post.name} 슬라이드 미리보기`, exact: true }).waitFor();
     await page.getByRole("img", { name: "1번 슬라이드", exact: true }).waitFor();
+    assert.equal(documentReads.get(post.id),1,"cover and expanded preview share one saved document request");
+    if (process.env.CONTENT_STUDIO_SMOKE_SCREENSHOT_DIR) await page.screenshot({path:`${process.env.CONTENT_STUDIO_SMOKE_SCREENSHOT_DIR}/source-picker.png`});
     await page.getByRole("dialog").getByRole("button", { name: "추가", exact: true }).click();
     await add.click();
     await page.getByRole("radio", { name: "외부 URL", exact: true }).check();
@@ -68,6 +107,6 @@ export async function verifyProductionStart(browser: Browser, origin: string, po
       { mode: "automatic", instructions: "" },
     ]);
     assert.deepEqual(browserErrors, []);
-    console.log("PASS start modal modes, saved preview, optional instructions, edit/delete, narrow viewport and failed-start recovery");
+    console.log("PASS infinite source cards, full-list search, shared document read, start modal modes, saved preview, optional instructions, edit/delete, narrow viewport and failed-start recovery");
   } finally { await page.close(); }
 }
