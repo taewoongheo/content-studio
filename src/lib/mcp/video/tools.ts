@@ -15,7 +15,7 @@ import { editVideoProject } from "@/domains/video/server/writes";
 import { settingsSchema } from "@/domains/video/editing/schema";
 import { videoReadSchema, videoEditSchema, videoPreviewSchema, videoProjectSchema, videoRevisionSchema } from "./schema";
 
-export function registerVideoTools(server: McpServer, origin: string, historyGroup?: string) {
+export function registerVideoTools(server: McpServer, origin: string, historyGroup?: string, beforeCommit?: () => void) {
   const describe = (snapshot: VideoSnapshot) => ({ ...snapshot, url: `${origin}/?job=${encodeURIComponent(snapshot.id)}` });
   const summary = (snapshot: VideoSnapshot) => ({ projectId: snapshot.id, tabId: snapshot.tabId, name: snapshot.name, revision: snapshot.revision,
     duration: videoDuration(snapshot.document), fps: snapshot.document.fps, canUndo: snapshot.canUndo, canRedo: snapshot.canRedo,
@@ -49,7 +49,7 @@ export function registerVideoTools(server: McpServer, origin: string, historyGro
     description: "Apply ordered video commands atomically, save before success, and create one undo step. Require latest expectedTabId/revision. Any failed command rolls back document, revision, history and newly imported bytes. set_document changes resolution/background/minimum duration and rescales real-time timing when fps changes. add_layer: text/shape need only kind; all properties can be supplied, IDs optional. update_layer exposes EVERY kind-specific property (text/font/weight/italic/alignment/lineHeight/padding/colors/background/radius/fade; shapes/fill/stroke; position/size/rotation/opacity; assetId/fit/crop; start/duration/source trim/volume/loop/sequence flags/order/anchor). Wrong-kind properties are rejected. To replace a source file use replace_media. import_media reads an absolute local video/audio/image path <=200MB, probes actual metadata, copies bytes; default sequence videos append after ALL layers, overlay videos/images/audio start at frame 0 unless from is supplied. Specify layerId to refer to imports later in the same batch. Use move_layer/trim_layer for UI-equivalent timeline gestures; deltaFrames is relative. split_layer splits non-looping videos. reorder_layers requires ALL layer IDs back-to-front; reorder_sequence requires ALL connected-video IDs in playback order. Selection, guides and ratio-lock are editor view state, not content. Default response is a compact resulting layer summary; includeDocument=true returns full document.",
     inputSchema: videoEditSchema, annotations: annotations(false),
   }, ({ projectId, expectedTabId, expectedRevision, commands, includeDocument }) => guarded(async () => {
-    const snapshot = await editVideoProject(projectId, expectedTabId, expectedRevision, commands, undefined, historyGroup);
+    const snapshot = await editVideoProject(projectId, expectedTabId, expectedRevision, commands, undefined, historyGroup, beforeCommit);
     return json(includeDocument ? describe(snapshot) : summary(snapshot));
   }));
   for (const redo of [false, true]) registerTool(server, redo ? "redo_video_project" : "undo_video_project", {
