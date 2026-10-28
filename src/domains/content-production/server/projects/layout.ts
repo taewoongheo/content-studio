@@ -1,6 +1,6 @@
 import { PRODUCTION_ASPECT_RATIO } from "../../domain/contracts";
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
-import { validateEditorDocument } from "@/domains/slideshow/editor/document";
+import { ensureSharedBackground, validateEditorDocument } from "@/domains/slideshow/editor/document";
 import type { EditorDocument } from "@/domains/slideshow/editor/types";
 import { OperationError } from "@/lib/errors/operation";
 import type { ProductionStore } from "../persistence/store";
@@ -8,7 +8,8 @@ import { saveTaskProject } from "./creation";
 
 /** Preserve saved geometry and styling while removing source copy and image references. */
 function layoutDocument(savedDocument: EditorDocument): EditorDocument {
-  const document = structuredClone(savedDocument);
+  // Match saved-project opening: normalize retired fonts and legacy style defaults first.
+  const document = ensureSharedBackground(structuredClone(savedDocument));
   const errors = validateEditorDocument(document);
   if (errors.length) {
     throw new OperationError("LAYOUT_SOURCE_INVALID", "원본 게시글의 슬라이드 구조가 올바르지 않습니다.", { errors });
