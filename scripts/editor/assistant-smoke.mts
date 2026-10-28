@@ -86,6 +86,17 @@ export async function verifyEditorAssistant(browser: Browser, origin: string) {
       const selection = submitted.at(-1)?.selection as { placementIds?: string[]; layerIds?: string[] };
       assert.equal(type === "slideshow" ? selection.placementIds?.length : selection.layerIds?.length, 1);
       await dialog.getByRole("button", { name: "AI 명령 닫기" }).click();
+      if (type === "slideshow") {
+        await page.locator('div[aria-label$="슬라이드 미리보기"]').locator("..").click({ position: { x: 4, y: 4 } });
+        assert.equal(await page.getByRole("complementary", { name: "선택 항목 편집" }).innerText(), "");
+        await page.getByRole("button", { name: "텍스트 추가", exact: true }).click();
+        await page.getByRole("button", { name: "장 복제", exact: true }).click();
+        await page.getByRole("button", { name: /2장.*선택 및 순서 이동/ }).waitFor();
+        await page.getByRole("button", { name: "슬라이드 배경 선택", exact: true }).click({ position: { x: 5, y: 5 } });
+        await page.getByRole("button", { name: /1장.*선택 및 순서 이동/ }).click();
+        assert.equal(await page.getByRole("complementary", { name: "선택 항목 편집" }).innerText(), "");
+        assert.equal(await page.getByRole("button", { name: "슬라이드 배경 선택", exact: true }).getAttribute("aria-pressed"), "false");
+      }
       await page.setViewportSize({ width: 390, height: 844 });
       await page.getByRole("button", { name: "AI 명령 열기" }).click();
       const box = await dialog.boundingBox();

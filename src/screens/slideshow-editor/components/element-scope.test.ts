@@ -1,20 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { defaultPlacement, removalCommandsForScope, selectVisualSlides, visualScopeLabel } from "./element-scope";
-import { BACKGROUND_ELEMENT_ID, BACKGROUND_PLACEMENT_ID } from "@/domains/slideshow/editor/document";
-import type { EditorSlide } from "@/domains/slideshow/editor/types";
+import { removalCommandsForScope, selectVisualSlides, visualScopeLabel } from "./element-scope";
 
 const available = ["slide-2", "slide-3", "slide-4"];
-
-test("페이지를 열면 첫 일반 Element를 고르고 없으면 배경을 고른다", () => {
-  const background = { id: BACKGROUND_PLACEMENT_ID, elementId: BACKGROUND_ELEMENT_ID,
-    value: "", frameOverride: null, styleOverride: null };
-  const title = { ...background, id: "title-placement", elementId: "title" };
-  const slide: EditorSlide = { id: "slide-1", role: "hook", backgroundColor: "#FFFFFF",
-    placements: [background, title] };
-  assert.equal(defaultPlacement(slide)?.id, title.id);
-  assert.equal(defaultPlacement({ ...slide, placements: [background] })?.id, BACKGROUND_PLACEMENT_ID);
-});
 
 test("현재 장은 적용 범위에서 해제할 수 없다", () => {
   assert.deepEqual(selectVisualSlides("slide-3", available, ["slide-3"], { slideId: "slide-3", checked: false }), ["slide-3"]);
