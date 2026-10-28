@@ -10,13 +10,13 @@ export const transcriptSchema = z.object({
   }).strict()).min(1).max(10),
 }).strict();
 export type Transcript = z.infer<typeof transcriptSchema>;
+export type PersonaEvidence = Array<Transcript["posts"][number] & Pick<PostInput, "caption" | "selection_group" | "published_at">>;
 export type PostInput = { caption: string; slides: number; first_image: number; last_image: number; selection_group: string; published_at: string | null; view_count: number | null };
 
 export function validateTranscript(transcript: Transcript, mapping: Pick<PostInput, "slides">[]) {
   if (transcript.posts.length !== mapping.length) throw new Error("문구 추출에서 게시물이 누락되었습니다.");
   transcript.posts.forEach((post, i) => {
     if (post.index !== i + 1 || post.slides.length !== mapping[i].slides) throw new Error("문구 추출에서 슬라이드 순서 또는 장수가 일치하지 않습니다.");
-
   });
   if (!transcript.posts.some(p => p.slides.some(s => !s.unreadable && s.text.trim()))) throw new Error("분석할 수 있는 슬라이드 문구가 없습니다.");
 }

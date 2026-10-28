@@ -1,5 +1,6 @@
 import { productPrompt, type Product } from "../../domain/product";
-import { personaPrompt, type Persona } from "../../domain/persona/model";
+import type { Persona } from "../../domain/persona/model";
+import { personaPrompt } from "../../domain/persona/prompt";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { stagePolicy } from "./policy/stages";
