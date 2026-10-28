@@ -70,12 +70,15 @@ without changing the content merely to work around an unverified omission.
 
 Use update_visual, reorder_layers, set_slide_background, set_text_colors and set_text_weights.
 Existing positions, sizes, text frames and styles may change within the request's preservation constraints and content guide.
-The badge background and label are immutable. Their exact two-element specification is in
-"LIFTCODE 뱃지 — 불변 사양" in docs/content-guidelines.md. Never change either element's frame,
-font, color, background, radius, rotation or text, including through shared/common style changes.
-Move surrounding content to resolve crowding. Do not move the badge down to make room.
-If an earlier draft does not match the fixed specification, report it for production-stage repair;
-do not reinterpret or replace the canonical specification during visual review. Copy edits, new/deleted placements,
+The approved badge specification is immutable, not a malformed draft's current badge.
+Its exact two-element specification is in "LIFTCODE 뱃지 — 불변 사양" in docs/content-guidelines.md.
+If a badge is missing or differs from that specification (including a combined text/background,
+wrong frame/style, local overrides or layer order), call production_repair_badge with the latest
+expectedRevision and expectedTabId. It restores the exact approved shared background and label
+on all slides through the normal saved, undoable edit path. Do not reject a draft just because
+its badge needs this repair. Re-read the document and preview ALL slides at the new revision.
+Arbitrary badge edits remain blocked. Move surrounding content to resolve crowding; never move
+the badge away from its approved position. Except for this canonical repair, copy edits, new/deleted placements,
 image replacement, undo, project creation and metadata changes remain blocked. Report repairs
 outside this scope as blockers rather than hiding text or claiming completion.
 

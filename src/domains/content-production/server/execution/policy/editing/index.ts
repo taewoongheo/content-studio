@@ -1,3 +1,4 @@
+import { badgeElementIds } from "./badge/repair";
 import { PRODUCTION_ASPECT_RATIO, type ProductionStep } from "../../../../domain/contracts";
 import { OperationError } from "@/lib/errors/operation";
 import type { EditorDocument } from "@/domains/slideshow/editor/types";
@@ -14,17 +15,13 @@ export function assertStageWrite(step: ProductionStep, input: unknown, document:
   }
   if (step !== "hook" && step !== "visual" && step !== "polish") return;
   if (!Array.isArray(commands)) throw new Error("검토 단계는 편집 명령 배열이 필요합니다.");
-  // Protect both split badges (background + label) and legacy single-text badges.
-  const badgeElements = new Set(document.elements.filter(element =>
-    /badge|뱃지|배지/i.test(`${element.id} ${element.name} ${element.role}`)).map(element => element.id));
-  for (const slide of document.slides) for (const placement of slide.placements)
-    if (placement.value.trim().toUpperCase() === "LIFTCODE") badgeElements.add(placement.elementId);
+  const badgeElements = badgeElementIds(document);
   for (const command of commands) {
     const target = command.scope === "common" ? command.elementId : document.slides
       .find(slide => slide.id === command.slideId)?.placements
       .find(placement => placement.id === command.placementId)?.elementId;
     if (typeof target === "string" && badgeElements.has(target))
-      throw new OperationError("BADGE_IMMUTABLE", "검토 단계에서는 고정 배지의 위치·크기·서체·색상·문구를 수정할 수 없습니다. 주변 콘텐츠를 조정해 주세요.");
+      throw new OperationError("BADGE_IMMUTABLE", "검토 단계에서는 고정 배지의 위치·크기·서체·색상·문구를 수정할 수 없습니다. 시각 검증에서 잘못된 배지는 production_repair_badge로 고정 사양으로 복구하고, 겹치는 주변 콘텐츠를 조정해 주세요.");
     if (step === "visual") {
       if (!["update_visual", "reorder_layers", "set_slide_background", "set_text_colors", "set_text_weights"].includes(String(command.type)))
         throw new Error("시각 검증에서는 문구·이미지를 유지하고 배치와 스타일만 수정할 수 있습니다.");

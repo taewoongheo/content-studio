@@ -21,7 +21,7 @@ const toolsByStage: Record<ProductionStep, readonly string[]> = {
   production: [...commonTools, ...referenceTools, ...editorReadTools, ...editorWriteTools],
   hook: [...commonTools, ...referenceTools, ...editorReadTools, "edit_project"],
   polish: [...commonTools, ...editorReadTools, "edit_project"],
-  visual: ["production_context", "production_save_draft", ...editorReadTools, "edit_project"],
+  visual: ["production_repair_badge", "production_context", "production_save_draft", ...editorReadTools, "edit_project"],
 };
 
 /** Tool availability and native CLI capabilities are separate enforcement boundaries. */

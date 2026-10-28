@@ -5,6 +5,7 @@ import { stagePolicy } from "./stages";
 test("stage tools, native web and shell follow the same explicit capability policy", () => {
   for (const step of ["analysis","production","hook","visual","polish"] as const) {
     const policy=stagePolicy(step);
+    assert.equal(policy.tools.has("production_repair_badge"), step === "visual");
     assert.equal(policy.imageGeneration,step === "production");
     assert.equal(policy.tools.has("production_use_generated_image"),step === "production");
     assert.equal(policy.tools.has("production_import_image"),false);

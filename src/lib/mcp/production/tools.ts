@@ -1,3 +1,5 @@
+import { badgeRepairCommands } from "@/domains/content-production/server/execution/policy/editing/badge/repair";
+import { SlideshowProjectWrites } from "@/domains/slideshow/server/project-writes";
 import { stageContext } from "@/domains/content-production/server/execution/policy/context";
 import type { ProjectWriteValidator } from "@/domains/slideshow/server/project-writes";
 import { join } from "node:path";
@@ -91,6 +93,24 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
   );
   if (!taskId) return;
   registerExternalReferenceTools(server, taskId);
+  registerTool(server, "production_repair_badge", {
+    description: "Visual review only. Restore all slides to the exact approved two-element LIFTCODE badge specification. Repairs legacy, missing, misplaced or locally overridden badges. Preserves other content; saves as one undoable edit. Re-read and preview ALL slides at the new revision after repair. No custom badge styles accepted.",
+    inputSchema: z.object({ expectedRevision: z.number().int().nonnegative(), expectedTabId: z.string().min(1) }),
+    annotations: annotations(false),
+  }, input => guarded(async () => {
+    const store = productionStore();
+    const detail = store.assertActive(taskId, "visual");
+    const projectId = detail.task.project_id;
+    if (!projectId) throw new Error("연결된 프로젝트가 없습니다.");
+    const document = contentJobRegistry.get(projectId).editor.document;
+    const writes = new SlideshowProjectWrites(contentJobRegistry, store.db, project => {
+      const active = store.assertActive(taskId, "visual");
+      if (active.task.project_id !== project.id) throw new Error("연결된 프로젝트가 변경되었습니다.");
+      validateProject?.(project);
+    });
+    const result = await writes.edit(projectId, badgeRepairCommands(document), input.expectedRevision, input.expectedTabId);
+    return json({ projectId, revision: result.editor.revision, tabId: result.tabId, warnings: result.warnings });
+  }));
   registerTool(
     server,
     "production_use_generated_image",
