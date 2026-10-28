@@ -400,6 +400,7 @@ try {
     page.on("request", request => {
       if (request.method() === "POST" && request.url().endsWith(`/api/content-jobs/${colorClone.id}`)) editRequests++;
     });
+    await page.getByRole("button", { name: "Color title Element 선택 및 레이어 순서 이동", exact: true }).click();
     await page.getByLabel("내용", { exact: true }).fill("FAST SWITCH");
     await page.getByLabel("내용", { exact: true }).press("Meta+[");
     await page.waitForURL(url => url.searchParams.get("job") === colorProject.id);
