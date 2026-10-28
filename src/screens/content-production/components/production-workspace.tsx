@@ -8,7 +8,7 @@ import dynamic from "next/dynamic";
 import { X, History } from "lucide-react";
 import { getOpenDrafts } from "@/domains/content-production/domain/start-policy";
 import { useNodeDetails } from "../hooks/use-node-details";
-import { useDetailTranslationPrefetch } from "../hooks/display/use-detail-translation-prefetch";
+import { useDetailReportPrefetch } from "../hooks/display/use-detail-report-prefetch";
 import { useProductionControls } from "../hooks/use-production-controls";
 import { StepDetails } from "./step-details";
 import { PublishDialog } from "./publication/publish-dialog";
@@ -30,7 +30,7 @@ export function ProductionWorkspace({ runtime, readWork, onOpen }: {
   const openDraftIds = new Set(data ? getOpenDrafts(data.tasks).map(task => task.id) : []);
   const blockedByDraft = openDraftIds.size > 0;
   const details = useNodeDetails(data?.tasks, readWork);
-  useDetailTranslationPrefetch(details);
+  useDetailReportPrefetch(details);
   const [panel, setPanel] = useState<"library" | "performance" | null>(null);
   const [selected, setSelected] = useState<{ id: string; step: ProductionStep | "project" } | null>(null);
   const [publishTaskId, setPublishTaskId] = useState<string | null>(null);

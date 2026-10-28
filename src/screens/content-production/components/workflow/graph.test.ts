@@ -77,3 +77,11 @@ test("completed stages and the final post retain durations without runtime telem
   assert.ok(updated?.type === "stage");
   assert.deepEqual(updated.data.intervals, precise);
 });
+
+test("canvas summaries never display internal identifiers or raw CLI activity types",()=>{
+ const current=task(1,{state:"running"});const rows=details([current]);
+ rows[current.id].analysis.answer="Useful comparison 12345678-1234-1234-1234-123456789012 https://example.com/internal";
+ const graph=buildWorkflowGraph([current],rows,{}, {[current.id]:"mcp_tool_call"},false);
+ const node=graph.nodes.find(node=>node.id===`${current.id}:analysis`)!;
+ assert.ok(node.type==='stage');assert.match(node.data.outputText,/Useful comparison/);assert.doesNotMatch(node.data.outputText,/12345678|https:/);assert.equal(node.data.activity,"제작 내용 확인 중");
+});

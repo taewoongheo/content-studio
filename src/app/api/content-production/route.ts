@@ -1,3 +1,6 @@
+import { reportSourceKey } from "@/domains/content-production/domain/report/model";
+import { buildReportInput } from "@/domains/content-production/server/display/report/input";
+import { readStageReport } from "@/domains/content-production/server/display/report/service";
 import { listPublishedPosts } from "@/domains/content-production/server/publication/list";
 import { productionRequestsSchema } from "@/domains/content-production/domain/start/input";
 import { streamDisplayTranslation } from "@/domains/content-production/server/display/stream";
@@ -27,6 +30,7 @@ import { translateDisplay } from "@/domains/content-production/server/display/tr
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const requestSchema = z.discriminatedUnion("action", [
+  z.object({action:z.literal("stage_report"),id:z.string().min(1),step:stepSchema,sourceKey:z.string().max(2000000)}),
   z.object({ action: z.literal("reset") }),
   z.object({ action: z.literal("translate_display"), id: z.string().min(1), step: stepSchema, stream: z.boolean().optional() }),
   z.object({ action: z.literal("start"), requests: productionRequestsSchema }),
@@ -112,6 +116,12 @@ export async function POST(request: Request) {
       `${new URL(request.url).protocol}//${request.headers.get("host")}`,
     ).origin;
     switch (input.action) {
+      case "stage_report": {
+        const detail=store.get(input.id),sourceKey=reportSourceKey(detail,input.step);
+        if(!sourceKey||sourceKey!==input.sourceKey)return Response.json({error:"단계 내용이 갱신되었습니다. 다시 확인해 주세요."},{status:409});
+        const report=await readStageReport(buildReportInput(detail,input.step,store.analysisInputs(input.id)),request.signal);
+        return Response.json({sourceKey,report},{headers:{"Cache-Control":"no-store"}});
+      }
       case "translate_display": {
         const detail = store.get(input.id);
         const context = detail[input.step];

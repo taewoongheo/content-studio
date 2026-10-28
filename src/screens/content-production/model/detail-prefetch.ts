@@ -1,10 +1,10 @@
 import type { ProductionStep } from "@/domains/content-production/domain/contracts";
-import type { requestDisplayTranslation } from "@/domains/content-production/client";
+type PrefetchRequest=(id:string,step:ProductionStep,source:string,signal?:AbortSignal)=>Promise<unknown>;
 
 type Item = {id: string; step: ProductionStep; source: string};
 type Job = {source: string; controller: AbortController};
-/** Keeps background viewers alive when detail panels close; the server shares sentence work. */
-export function createDetailPrefetch(request: typeof requestDisplayTranslation) {
+/** Keeps background viewers alive when detail panels close; the server shares report work. */
+export function createDetailPrefetch(request: PrefetchRequest) {
   const active = new Map<string,Job>(), finished = new Map<string,string>();
   return {
     update(items: Item[]) {
@@ -17,7 +17,7 @@ export function createDetailPrefetch(request: typeof requestDisplayTranslation) 
         if (active.get(key)?.source === item.source || finished.get(key) === item.source) continue;
         const job = {source:item.source,controller:new AbortController()};
         active.set(key,job);
-        void request(item.id,item.step,item.source,job.controller.signal,()=>{}).then(()=>{
+        void request(item.id,item.step,item.source,job.controller.signal).then(()=>{
           if (active.get(key) === job) finished.set(key,item.source);
         }).catch(()=>{
           // The detail panel offers retry; don't loop background failures on unrelated saves.
