@@ -1,3 +1,4 @@
+import { verifyEditorAssistant } from "./editor/assistant-smoke.mjs";
 import { verifyStageReports } from "./production/report-smoke.mjs";
 import { verifySpy } from "./production/spy-smoke.mjs";
 import { verifyProductionStart } from "./production/start-inputs-smoke.mjs";
@@ -650,6 +651,7 @@ try {
 
     console.log("PASS autosave status and live project-list refresh");
     console.log("PASS shared memory, clone independence, open/list, undo, revision conflict and cross-origin rejection");
+    await verifyEditorAssistant(browser, origin);
   } catch (error) {
     const pages = browser.contexts().flatMap(context => context.pages());
     for (const [index, failedPage] of pages.entries()) {
