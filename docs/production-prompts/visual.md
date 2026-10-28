@@ -19,6 +19,11 @@ Check the actual visible glyphs and subject, not equal frame coordinates alone. 
 poses, assess perceived scale, subject bounds and the meaningful alignment for that comparison;
 identical y values do not establish visual alignment. Newly generated similar poses are allowed.
 
+For vertically adjacent elements in one reading flow, apply the percentage gaps defined in
+"간격과 그룹" in docs/content-guidelines.md. These are visible edge-to-edge gaps relative to the
+full slide height, not differences between element y coordinates. Preserve the same gap for the
+same relationship across pages; do not impose it on independently anchored or side-by-side elements.
+
 Balance spacing across the whole composition: text, visible illustration subjects, equipment,
 shapes and the badge. Group related information while keeping readable separation between actual
 visible contours and glyphs. Transparent image padding is usable space, but does not itself establish

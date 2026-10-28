@@ -1,3 +1,5 @@
+import { activeProduct } from "../products/store";
+import { readPersona } from "../persona/store";
 import { assertCompleteProjectReview, type ObservedReview } from "./review/validation";
 import type { ToolAttempt } from "../../domain/diagnostics";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
@@ -171,6 +173,7 @@ export async function execute(
     detail = store.get(id);
   if (detail.task.state === "finished")
     throw new Error("제작이 끝난 작업입니다.");
+  const persona = readPersona(store.db), product = activeProduct(store.db);
   const run: Run = {
     controller: new AbortController(),
     token: randomUUID(),
@@ -206,7 +209,7 @@ export async function execute(
         capabilities,
         onThreadStarted: threadId => { run.imageThreadId = threadId; },
         model: PRODUCTION_MODEL,
-        prompt: stagePrompt(id, run.step, inputs),
+        prompt: stagePrompt(id, run.step, inputs, persona, product),
         images: stageImages(run.step),
         schema: resultSchema(run.step),
         origin,

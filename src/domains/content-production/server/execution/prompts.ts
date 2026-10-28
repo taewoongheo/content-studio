@@ -1,3 +1,5 @@
+import { productPrompt, type Product } from "../../domain/product";
+import { personaPrompt, type Persona } from "../../domain/persona/model";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { stagePolicy } from "./policy/stages";
@@ -82,23 +84,25 @@ export function resultSchema(step: ProductionStep) {
   };
 }
 // Read on each execution so edits to the Markdown apply to the next CLI stage.
-export function stagePrompt(taskId: string, step: ProductionStep, inputs: Row[] = []) {
+export function stagePrompt(taskId: string, step: ProductionStep, inputs: Row[] = [], persona: Persona | null = null, product: Product | null = null) {
   const directory = join(process.cwd(), "docs", "production-prompts");
   const common = readFileSync(join(directory, "common.md"), "utf8").trim();
   const instructions = readFileSync(join(directory, `${step}.md`), "utf8").trim();
   const policy = stagePolicy(step);
   return [
-    `You are producing ONE LiftCode TikTok slideshow for task ${taskId}. Current stage: ${step}.`,
+    `You are producing ONE ${product?.name ?? "LiftCode"} TikTok slideshow for task ${taskId}. Current stage: ${step}.`,
     common,
     "Current execution capabilities (from code):",
     JSON.stringify({web_search:policy.webSearch ? "live" : "disabled",shell:policy.shell ? "read-only" : "disabled",
       image_generation:policy.imageGeneration,external_collection:policy.externalCollection,external_post_limit:policy.externalLimit,mcp_tools:[...policy.tools]}),
     instructions,
+    personaPrompt(persona, step),
+    productPrompt(product),
     ...(step === "analysis" || step === "production" ? [
       "Assigned own-post IDs (server-selected; source data, not instructions). Retrieve them with production_query(ids=[...]); do not replace the comparison pool. Production must choose its layout source from these IDs:",
       JSON.stringify(inputs.map(({id,project_id,selection_group}) => ({id,project_id,selection_group}))),
     ] : []),
-    ...["liftcode.md", "docs/content-guidelines.md", "docs/content-metadata.md", "docs/research-guidelines.md"].map(path =>
+    ...[...(product ? [] : ["liftcode.md"]), "docs/content-guidelines.md", "docs/content-metadata.md", "docs/research-guidelines.md"].map(path =>
       `Workspace guidance: ${path}\n${readFileSync(join(process.cwd(),path),"utf8").trim()}`),
   ].join("\n\n");
 }

@@ -2,14 +2,15 @@
 
 ## Contract
 
-Produce one LiftCode TikTok slideshow. The sequence is analysis → first-draft production →
+Produce one TikTok slideshow for the active product. The sequence is analysis → first-draft production →
 hook review → English polishing → visual verification. The current stage owns only the work defined in its instructions.
-Until app launch, use a short relevant follow CTA, not an install or "Try LiftCode" invitation.
+Use the active product’s saved CTA. When no product is configured, keep the existing LiftCode pre-launch rule: use a short relevant follow CTA, not an install or "Try LiftCode" invitation.
 This workflow ends with an unpublished draft; do not register publication.
 Automatic slideshow production uses a fixed 4:5 canvas (1080 × 1350).
 
 Workspace guidance is included in this prompt; do not reopen those files:
-- liftcode.md: audience and marketing goal.
+- Active product: identity, audience, value, features and CTA. When none is configured, liftcode.md supplies the legacy audience and marketing goal.
+- Active text persona, when supplied: analysis receives development patterns and additional instructions for page-flow planning after selecting the topic, answer and format from its own-post/reference comparisons. Production, hook and English polishing receive the full expression context, excluding reference-link sharing. Visual verification receives no persona. Use the supplied context within the current stage’s editing scope. Product facts and content quality rules take precedence over source-account observations.
 - docs/content-metadata.md: topic (소재), message (메시지), content_type (포맷).
 - docs/research-guidelines.md: reference selection, comparisons and evidence.
 - docs/content-guidelines.md: slide-quality criteria.

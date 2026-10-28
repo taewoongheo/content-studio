@@ -1,4 +1,6 @@
 "use client";
+import { ProductsPage } from "./components/products/products-page";
+import { PersonaPage } from "./components/persona/persona-page";
 import { useState } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -47,7 +49,8 @@ export function DashboardContent({
           <TabsContent value="published" className="data-[hidden]:hidden">
             <PublishedContentPage />
           </TabsContent>
-
+          <TabsContent keepMounted value="products" className="data-[hidden]:hidden"><ProductsPage /></TabsContent>
+          <TabsContent keepMounted value="persona" className="data-[hidden]:hidden"><PersonaPage /></TabsContent>
         </main>
       </SidebarProvider>
     </Tabs>
