@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ScanSearch,
   UserRound,
   Package,
   CalendarDays,
@@ -74,6 +75,7 @@ export function StudioSidebar({
             <span>게시 콘텐츠</span>
           </SidebarMenuButton>
 
+          <SidebarMenuButton className="h-11" isActive={activeTab === "spy"} render={<TabsTrigger value="spy" className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent" />}><ScanSearch aria-hidden="true" /><span>외부 레퍼런스 스파이</span></SidebarMenuButton>
           <SidebarMenuButton className="h-11" isActive={activeTab === "persona"} render={<TabsTrigger value="persona" className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent" />}><UserRound aria-hidden="true" /><span>페르소나</span></SidebarMenuButton>
           <SidebarMenuButton className="h-11" isActive={activeTab === "products"} render={<TabsTrigger value="products" className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent" />}><Package aria-hidden="true" /><span>제품 관리</span></SidebarMenuButton>
         </TabsList>

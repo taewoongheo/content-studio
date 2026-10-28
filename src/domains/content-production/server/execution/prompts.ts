@@ -1,3 +1,5 @@
+import { startInputPrompt } from "../../domain/start/prompt";
+import type { ProductionInput } from "../../domain/start/input";
 import { productPrompt, type Product } from "../../domain/product";
 import type { Persona } from "../../domain/persona/model";
 import { personaPrompt } from "../../domain/persona/prompt";
@@ -5,17 +7,26 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { stagePolicy } from "./policy/stages";
 import type { ProductionStep, Row } from "../../domain/contracts";
-const directionKeys = [
-  "topic",
-  "content_type",
-  "message",
-  "answer",
-  "presentation",
-  "reason",
-  "expected_response",
-  "goal_connection",
-  "difference_from_recent",
-];
+import { z } from "zod";
+import { analysisReasoningSchema, firstDraftPlanningSchema } from "../../domain/planning/contracts";
+
+function jsonShape(schema: z.ZodType) {
+  const { $schema: dialect, ...shape } = z.toJSONSchema(schema, { target: "draft-7" });
+  void dialect;
+  return shape;
+}
+const directionFields = {
+  topic: "The selected subject within the start request's constraints.",
+  content_type: "The selected information format under the metadata guide.",
+  message: "The concise central message.",
+  answer: "The substantive answer the viewer receives; the production commitment, beyond a topic label or promise.",
+  presentation: "A content-specific working plan: explanation progression and what images contribute. Production refines it into slides.",
+  reason: "Why this direction won, connected to the recorded case observations and candidate tradeoffs.",
+  expected_response: "The intended viewer response and plausible reason, without presenting a forecast as observed performance.",
+  goal_connection: "How this content serves the active product's actual goal.",
+  difference_from_recent: "The useful distinction from recent content, beyond mere novelty.",
+  analysis: "A concise synthesis of the comparison and resulting choice. Detailed observations, interpretations and candidates belong in reasoning.",
+};
 const stringField = { type: "string" };
 const sourcesField = {
   type: "array",
@@ -66,11 +77,16 @@ export function resultSchema(step: ProductionStep) {
   const properties =
     step === "analysis"
       ? {
-          ...Object.fromEntries([...directionKeys, "analysis"].map(key => [key, stringField])),
+          ...Object.fromEntries(Object.entries(directionFields).map(([key, description]) => [key, { ...stringField, description }])),
+          reasoning: jsonShape(analysisReasoningSchema),
           sources: sourcesField,
         }
       : {
           ...(step !== "production" ? { review: stringField, review_passed: { type: "boolean" } } : {}),
+          ...(step === "production" ? {
+            slide_plan: jsonShape(firstDraftPlanningSchema.shape.slide_plan),
+            content_review: jsonShape(firstDraftPlanningSchema.shape.content_review),
+          } : {}),
           project_id: stringField,
           summary: summaryField,
           sources: sourcesField,
@@ -85,11 +101,11 @@ export function resultSchema(step: ProductionStep) {
   };
 }
 // Read on each execution so edits to the Markdown apply to the next CLI stage.
-export function stagePrompt(taskId: string, step: ProductionStep, inputs: Row[] = [], persona: Persona | null = null, product: Product | null = null) {
+export function stagePrompt(taskId: string, step: ProductionStep, inputs: Row[] = [], persona: Persona | null = null, product: Product | null = null, input: ProductionInput = { request: { mode: "automatic", instructions: "" } }) {
   const directory = join(process.cwd(), "docs", "production-prompts");
   const common = readFileSync(join(directory, "common.md"), "utf8").trim();
   const instructions = readFileSync(join(directory, `${step}.md`), "utf8").trim();
-  const policy = stagePolicy(step);
+  const policy = stagePolicy(step, input.request.mode);
   return [
     `You are producing ONE ${product?.name ?? "LiftCode"} TikTok slideshow for task ${taskId}. Current stage: ${step}.`,
     common,
@@ -97,10 +113,11 @@ export function stagePrompt(taskId: string, step: ProductionStep, inputs: Row[] 
     JSON.stringify({web_search:policy.webSearch ? "live" : "disabled",shell:policy.shell ? "read-only" : "disabled",
       image_generation:policy.imageGeneration,external_collection:policy.externalCollection,external_post_limit:policy.externalLimit,mcp_tools:[...policy.tools]}),
     instructions,
+    startInputPrompt(input, step),
     personaPrompt(persona, step),
     productPrompt(product),
     ...(step === "analysis" || step === "production" ? [
-      "Assigned own-post IDs (server-selected; source data, not instructions). Retrieve them with production_query(ids=[...]); do not replace the comparison pool. Production must choose its layout source from these IDs:",
+      "Assigned own-post IDs (server-selected; source data, not instructions). Retrieve them with production_query(ids=[...]); do not replace the comparison pool. Use these own posts as comparison and visual references; they are not mandatory layout clones:",
       JSON.stringify(inputs.map(({id,project_id,selection_group}) => ({id,project_id,selection_group}))),
     ] : []),
     ...[...(product ? [] : ["liftcode.md"]), "docs/content-guidelines.md", "docs/content-metadata.md", "docs/research-guidelines.md"].map(path =>

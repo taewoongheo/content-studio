@@ -33,9 +33,9 @@ not become production inputs.
 ## Inspect sources
 
 Analyze EVERY post selected for this stage individually before drawing comparisons. Analysis must
-also inspect every assigned comparison ID. In production those IDs are layout candidates: reuse the
+also inspect every assigned comparison ID. In production those IDs are visual references: reuse the
 completed analysis, shortlist by metadata and inspect the actual slides of candidates you compare or
-adopt. Do not repeat the entire topic analysis. Visual review receives no reference posts.
+adopt. They are not mandatory clones. The explicitly selected past_post source may be outside this pool. Do not repeat the entire topic analysis. Visual review receives no reference posts except the explicitly selected own source for a past_post preservation check.
 Retrieve missing data by ID; an ID alone does not mean the post was inspected. Read actual copy and inspect slide
 images when judging their content or visual features. Do not infer those features from captions,
 metadata or performance. Record inaccessible IDs and missing evidence instead of inventing contents.
@@ -45,7 +45,8 @@ later stages.
 - Own posts: production_query for logs; production_read_project for saved copy/properties;
   production_preview_project for actual saved slides.
 - External posts: production_external_references for the stored pool; production_read_images with
-  visual_set_id for actual slides. After inspection, save descriptive metadata with
+  visual_set_id for actual slides. If images are not yet stored, use production_reference_images(id)
+  for a selected database post, then read the returned set_id. After inspection, save descriptive metadata with
   production_describe_reference under the metadata guide.
 
 External access and collection follow the current capabilities and research guide. Collected posts

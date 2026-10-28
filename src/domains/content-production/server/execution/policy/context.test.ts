@@ -15,3 +15,17 @@ test("visual context keeps current wording but strips references and copied layo
   assert.equal(visible.task.project_id,"project");
   assert.equal(stageContext({...detail,task:{...detail.task,current_step:"production"}}).analysis.analysis,reference);
 });
+
+test("past-post visual review receives only its selected source and approved presentation", () => {
+  const detail: WorkDetail = {
+    task: { id: "t", log_id: "l", current_step: "visual", state: "running", project_id: "p", topic: "Chest", content_type: "Routine", created_at: "now", updated_at: "now" },
+    input: { request: { mode: "past_post", sourceProjectId: "selected", instructions: "" }, source: { id: "log-selected", project_id: "selected" } },
+    analysis: { presentation: "Keep one exercise per page", research: ["private research"] },
+    production: null, log: {}, analysis_inputs: [{ id: "unrelated" }],
+  };
+  const result = stageContext(detail);
+  assert.equal(result.input?.source?.project_id, "selected");
+  assert.equal(result.analysis.presentation, "Keep one exercise per page");
+  assert.ok(!JSON.stringify(result).includes("unrelated"));
+  assert.ok(!JSON.stringify(result).includes("private research"));
+});

@@ -3,6 +3,9 @@ import { createTranslationQueue } from "./client/translation-queue";
 import type { PerformanceRefresh } from "./domain/performance";
 import type { ProductionStep, Row, WorkDetail, WorkItem } from "./domain/contracts";
 export interface ProductionSnapshot {
+  sampling: import("./domain/references/sampling").SamplingSettings;
+  spy: {running:boolean;accounts:Record<string,{state:string;count:number;error?:string}>};
+  publishedPosts: import("./domain/published-posts").PublishedPost[];
   tasks: WorkItem[];
   logs: Row[];
   planningLogs: Row[];

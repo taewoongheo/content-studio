@@ -18,10 +18,11 @@ export type ContentJobRecord = ContentJobInput & {
   editor: { revision: number; document: EditorDocument };
   initialState: { name?: string; document: EditorDocument; outputLanguage: string };
   editorHistory: EditorDocument[];
+  historyGroup?: { id: string; revision: number };
   assets: EditorAsset[];
   imageData: Record<string, Uint8Array>;
   createdAt: string;
   updatedAt: string;
 };
-export type ContentJobSnapshot = Omit<ContentJobRecord, "editorHistory" | "initialState" | "imageData">;
+export type ContentJobSnapshot = Omit<ContentJobRecord, "editorHistory" | "initialState" | "imageData" | "historyGroup">;
 

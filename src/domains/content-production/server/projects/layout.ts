@@ -1,31 +1,15 @@
 import { PRODUCTION_ASPECT_RATIO } from "../../domain/contracts";
-import { readContentMetadata } from "@/domains/content-metadata/schema";
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
-import { createContentProject, saveContentProject } from "@/domains/slideshow/projects/service";
-import { validateEditorDocument } from "@/domains/slideshow/editor/document";
+import { ensureSharedBackground, validateEditorDocument } from "@/domains/slideshow/editor/document";
 import type { EditorDocument } from "@/domains/slideshow/editor/types";
-import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import { OperationError } from "@/lib/errors/operation";
-import { ProductionStore } from "../persistence/store";
-import { publishChange } from "../events";
-
-function assignedLayoutSource(store: ProductionStore, taskId: string, projectId: string) {
-  const source = store.analysisInputs(taskId).find(row => row.project_id === projectId);
-  if (!source) {
-    throw new OperationError("LAYOUT_SOURCE_NOT_ASSIGNED", "이번 분석에 전달된 내부 게시글 안에서 복제 대상을 선택해 주세요.");
-  }
-  const published = store.db.prepare(
-    "SELECT 1 FROM content_creation_logs WHERE id=? AND project_id=? AND post_url IS NOT NULL",
-  ).get(source.id, projectId);
-  if (!published) {
-    throw new OperationError("LAYOUT_SOURCE_NOT_PUBLISHED", "현재 게시된 내부 콘텐츠만 배치 원본으로 사용할 수 있습니다.");
-  }
-  return source;
-}
+import type { ProductionStore } from "../persistence/store";
+import { saveTaskProject } from "./creation";
 
 /** Preserve saved geometry and styling while removing source copy and image references. */
 function layoutDocument(savedDocument: EditorDocument): EditorDocument {
-  const document = structuredClone(savedDocument);
+  // Match saved-project opening: normalize retired fonts and legacy style defaults first.
+  const document = ensureSharedBackground(structuredClone(savedDocument));
   const errors = validateEditorDocument(document);
   if (errors.length) {
     throw new OperationError("LAYOUT_SOURCE_INVALID", "원본 게시글의 슬라이드 구조가 올바르지 않습니다.", { errors });
@@ -46,45 +30,17 @@ function layoutDocument(savedDocument: EditorDocument): EditorDocument {
   return document;
 }
 
-/** Copy saved visual structure, not unsaved source edits, old copy or source image assets. */
+/** A past-post request always uses the explicitly selected saved source. */
 export function cloneTaskProject(store: ProductionStore, taskId: string, sourceProjectId: string, reason: string) {
   const detail = store.assertActive(taskId, "production");
   if (detail.task.project_id) return { projectId: detail.task.project_id, reused: true };
-  const selectionReason = reason.trim();
-  if (!selectionReason) throw new Error("배치를 선택한 이유가 필요합니다.");
-
-  const source = assignedLayoutSource(store, taskId, sourceProjectId);
-  const projects = new ContentProjectStore(store.db);
-  const saved = projects.getContent(sourceProjectId);
+  const input = detail.input;
+  if (input?.request.mode !== "past_post" || input.request.sourceProjectId !== sourceProjectId)
+    throw new OperationError("LAYOUT_SOURCE_NOT_SELECTED", "과거 게시글 기반 제작에서 선택한 원본만 복제할 수 있습니다.");
+  if (!reason.trim()) throw new Error("배치를 선택한 이유가 필요합니다.");
+  const saved = new ContentProjectStore(store.db).getContent(sourceProjectId);
   if (!saved) throw new OperationError("LAYOUT_SOURCE_MISSING", "원본 게시글을 찾을 수 없습니다.");
-  const document = layoutDocument(saved.document as EditorDocument);
-  const metadata = readContentMetadata(detail.log);
-  const sourceRecord = {
-    kind: "log", id: String(source.id),
-    part: "Saved layout structure, typography and spacing", used_for: selectionReason,
-  };
-
-  return contentJobRegistry.transaction(() => store.db.transaction(() => {
-    const now = new Date().toISOString();
-    const job = createContentProject(contentJobRegistry, {
-      name: metadata.topic,
-      structure: document.structure,
-      aspectRatio: document.aspectRatio,
-      slideCount: document.slides.length,
-      outputLanguage: "English",
-    }, { projects });
-    contentJobRegistry.update(job.id, record => { record.editor.document = document; });
-    saveContentProject(contentJobRegistry, job.id, metadata.topic, { projects });
-    projects.updateMetadata(job.id, metadata);
-
-    store.db.prepare("UPDATE content_drafts SET project_id=?,updated_at=? WHERE id=?")
-      .run(job.id, now, taskId);
-    store.db.prepare("UPDATE content_production_drafts SET sources_json=?,updated_at=? WHERE draft_id=?")
-      .run(JSON.stringify([...(detail.production?.sources as unknown[] ?? []), sourceRecord]), now, taskId);
-    store.db.prepare("UPDATE content_creation_logs SET sources_json=?,updated_at=? WHERE id=?")
-      .run(JSON.stringify([...(detail.log.sources as unknown[]), sourceRecord]), now, detail.task.log_id);
-
-    contentJobRegistry.afterCommit(() => publishChange({ task_id: taskId, step: "production", kind: "saved" }));
-    return { projectId: job.id, sourceProjectId, reused: false };
-  })());
+  const source = { kind: "log", id: input.source!.id,
+    part: "Selected source format, page structure, typography and spacing", used_for: reason.trim() };
+  return { ...saveTaskProject(store, taskId, layoutDocument(saved.document as EditorDocument), source), sourceProjectId };
 }

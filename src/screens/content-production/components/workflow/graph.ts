@@ -1,3 +1,4 @@
+import { cleanCanvasText } from "@/domains/content-production/domain/report/model";
 import { stageExecutionIntervals, taskExecutionIntervals } from "@/domains/content-production/domain/timing";
 import type { PerformanceRefresh } from "@/domains/content-production/domain/performance";
 import { MarkerType, type Edge } from "@xyflow/react";
@@ -12,7 +13,8 @@ export function instanceColor(id: string) {
   if (!colors.has(id)) colors.set(id, palette[colors.size % palette.length]);
   return colors.get(id)!;
 }
-const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
+const text = cleanCanvasText;
+const progressLabels:Record<string,string>={mcp_tool_call:"제작 내용 확인 중",reasoning:"방향 검토 중",agent_message:"결과 정리 중",image_generation_call:"이미지 제작 중",web_search_call:"필요한 내용 확인 중"};
 const record = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const count = (value: unknown) => Array.isArray(value) ? value.length : 0;
 export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, WorkDetail>, writes: Record<string, number>, activity: Record<string, string>, syncing: boolean, report?: PerformanceRefresh | null, planningCount = 0) {
@@ -30,7 +32,7 @@ export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, Wo
     if (task.state === "pending" && task.current_step === "analysis" && !writes[`${task.id}:analysis`]) return;
     const color = instanceColor(task.id), detail = details[task.id], analysis = detail?.analysis ?? {};
     const content = record(detail?.visual?.content ?? detail?.polish?.content ?? detail?.hook?.content ?? detail?.production?.content ?? detail?.log.content_summary);
-    const topic = text(analysis.topic) || task.topic || "소재 분석 중";
+    const topic = text(analysis.topic) || text(task.topic) || "소재 분석 중";
     const answer = text(analysis.answer) || text(detail?.log.answer) || text(analysis.message);
     const currentIndex = productionSteps.findIndex(value => value.id === task.current_step);
     const completed = task.state === "finished";
@@ -40,14 +42,14 @@ export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, Wo
       if (stage === "result" && (!completed || task.current_step !== "visual" || !task.project_id)) continue;
       const state = stage === "result" ? "completed" : getStepState(task, stage);
       const stepWrites = writes[`${task.id}:${stage === "result" ? "visual" : stage}`] ?? 0;
-      const facts = stage === "analysis" ? [text(analysis.content_type) || task.content_type, count(analysis.sources) ? `참고 자료 ${count(analysis.sources)}개` : null] : [count(content.slides) ? `${count(content.slides)}장` : null, text(analysis.content_type) || task.content_type];
+      const facts = stage === "analysis" ? [text(analysis.content_type) || text(task.content_type), count(analysis.sources) ? `참고 자료 ${count(analysis.sources)}개` : null] : [count(content.slides) ? `${count(content.slides)}장` : null, text(analysis.content_type) || text(task.content_type)];
       const id = `${task.id}:${stage}`;
       nodes.push({ id, type: "stage", position: { x: 760 + stageIndex * 380, y: index * 320 }, data: {
         intervals: stage === "result" ? taskExecutionIntervals(detail) : stageExecutionIntervals(detail, stage),
         title: stage === "result" ? "완성 포스트" : productionSteps.find(value => value.id === stage)!.label, stage,
         outputTitle: stage === "hook" ? text(detail?.hook?.content && record(detail.hook.content).hook) || text(content.hook) || topic : stage === "production" ? text(content.hook) || topic : topic,
         outputText: stage === "analysis" ? answer : stage === "hook" || stage === "visual" || stage === "polish" ? text(detail?.[stage]?.review) : "", facts: facts.filter((fact): fact is string => !!fact),
-        activity: state === "running" ? activity[task.id] || "진행 중" : state === "failed" ? "오류 확인" : state === "stopped" ? "중단됨" : "",
+        activity: state === "running" ? progressLabels[activity[task.id]] || "진행 중" : state === "failed" ? "오류 확인" : state === "stopped" ? "중단됨" : "",
         color, state, write: stage === "result" ? 0 : stepWrites, kind: `콘텐츠 ${String(index + 1).padStart(2, "0")}`,
       } });
       edges.push({ id: `${previous}-${id}`, source: previous, target: id, type: previous === "sync" ? "branch" : "straight", animated: state === "running", markerEnd: { type: MarkerType.ArrowClosed, color }, style: { stroke: color, strokeWidth: 2.5 } });

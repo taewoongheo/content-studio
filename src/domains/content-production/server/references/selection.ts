@@ -1,10 +1,8 @@
-import { stagePolicy } from "../execution/policy/stages";
 import type Database from "better-sqlite3";
 import { REFERENCE_LIMIT, type ExternalContext } from "../../domain/references/context";
 import type { ProductionStep } from "../../domain/contracts";
 import { externalReferences } from "./library";
 import { getReferenceContext, saveReferenceContext } from "./context";
-import { collectReferenceAccount } from "./collection";
 
 const locks = new Map<string, Promise<ExternalContext>>();
 function assertActive(db: Database.Database, id: string, step: ProductionStep) {
@@ -18,7 +16,7 @@ export function referenceImagesAllowed(db: Database.Database, id: string, step: 
 }
 export function queryStageReferences(db: Database.Database, id: string, step: ProductionStep, input: {
   query: string; content_type: string; collect: boolean; ids?: string[];
-}, collector = collectReferenceAccount): Promise<ExternalContext> {
+}): Promise<ExternalContext> {
   const key = `${db.name}:${id}:${step}`;
   const previous = locks.get(key);
   const work = (previous ? previous.catch(() => undefined) : Promise.resolve()).then(run);
@@ -29,7 +27,7 @@ export function queryStageReferences(db: Database.Database, id: string, step: Pr
     assertActive(db,id,step);
     if (step === "polish") throw new Error("영어 폴리싱은 외부 레퍼런스를 사용하지 않습니다.");
     if (step === "visual") throw new Error("시각 검증은 내부·외부 레퍼런스를 사용하지 않습니다. 현재 프로젝트만 확인해 주세요.");
-    if (input.collect && !stagePolicy(step).externalCollection) throw new Error("새 외부 레퍼런스 수집은 분석 및 제작 방향 단계에서만 가능합니다. 기존 자료를 조회해 주세요.");
+    if (input.collect) throw new Error("노드에서는 새 외부 레퍼런스를 수집하지 않습니다. 스파이 대시보드에서 갱신해 주세요.");
     let context = getReferenceContext(db,id,step) ?? empty("");
     if (!context.queries.includes(input.query)) context.queries.push(input.query);
     const select = () => {
@@ -38,16 +36,7 @@ export function queryStageReferences(db: Database.Database, id: string, step: Pr
         .filter(post => !used.has(post.id) && (!input.ids?.length || input.ids.includes(String(post.id))));
       return candidates.slice(0,REFERENCE_LIMIT-context.posts.length);
     };
-    let selected = select();
-    if (input.collect && selected.length < REFERENCE_LIMIT-context.posts.length && !context.collection_attempted) {
-      const account = db.prepare("SELECT username FROM content_reference_accounts WHERE enabled=1 ORDER BY last_fetched_at IS NULL DESC,last_fetched_at,username LIMIT 1").get() as {username:string} | undefined;
-      context.collection_attempted = !!account;
-      context.message = account ? `Additional candidates requested from @${account.username}.` : "No designated accounts are configured. Add accounts in the external reference library.";
-      saveReferenceContext(db,id,step,context); // Charge allowance survives retries and restarts.
-      if (account) await collector(db,account.username);
-      assertActive(db,id,step);
-      selected = select();
-    }
+    const selected = step === "analysis" ? [] : select();
     context = db.transaction(() => {
       assertActive(db,id,step);
       const now = new Date().toISOString();
@@ -55,10 +44,9 @@ export function queryStageReferences(db: Database.Database, id: string, step: Pr
         const { images_json: images, ...snapshot } = post;
         void images;
         context.posts.push(snapshot);
-        db.prepare("UPDATE content_external_references SET last_selected_at=? WHERE id=? AND excluded=0").run(now,post.id);
       }
       context.checked_at = now;
-      if (!context.posts.length && !context.message) context.message = "No suitable stored examples matched. Request collection only if more candidates are needed.";
+      if (!context.posts.length && !context.message) context.message = "No suitable stored examples matched. Refresh spy accounts from the dashboard before starting another batch.";
       saveReferenceContext(db,id,step,context);
       return context;
     })();

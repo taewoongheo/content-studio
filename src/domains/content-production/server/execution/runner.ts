@@ -1,6 +1,11 @@
+import { refreshSpy } from "../references/spy/refresh";
+import { readSampling } from "../settings/sampling";
+import { readPlanningLogs } from "../persistence/planning/logs";
+import { productionRequestsSchema, type ProductionRequest } from "../../domain/start/input";
+import { prepareStartInput } from "../start/prepare";
 import { activeProduct } from "../products/store";
 import { readPersona } from "../persona/store";
-import { assertCompleteProjectReview, type ObservedReview } from "./review/validation";
+import { assertCompleteProjectReview, assertCurrentSlidePlan, type ObservedReview } from "./review/validation";
 import type { ToolAttempt } from "../../domain/diagnostics";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { OperationError } from "@/lib/errors/operation";
@@ -20,6 +25,7 @@ import { stagePolicy, PRODUCTION_MODEL } from "./policy/stages";
 import { resultSchema, stageImages, stagePrompt } from "./prompts";
 import {
   productionResultSchema,
+  firstDraftResultSchema,
   sourceSchema,
   type ProductionStep,
 } from "../../domain/contracts";
@@ -33,6 +39,7 @@ type Run = {
   analysisRead: Set<string>;
   sourceImages: boolean;
   sourceProjects: Set<string>;
+  sourceSets: Set<string>;
   externalCompared: boolean;
   toolCalls: ToolAttempt[];
   imageStartedAt: number;
@@ -80,9 +87,9 @@ export function recordReview(
   slides.forEach((s) => reviewed.add(s));
   run.reviews.set(projectId, { revision, slides: reviewed });
 }
-export function recordSourceReview(id: string, projectId?: string) {
+export function recordSourceReview(id: string, projectId?: string, setId?: string) {
   const run = runs.get(id);
-  if (run) { run.sourceImages = true; if (projectId) run.sourceProjects.add(projectId); }
+  if (run) { run.sourceImages = true; if (projectId) run.sourceProjects.add(projectId); if (setId) run.sourceSets.add(setId); }
 }
 export function recordAnalysisRead(id: string, ids: string[]) {
   const run = runs.get(id);
@@ -115,17 +122,21 @@ export function syncState() {
   return { running: !!shared.productionSync, report: shared.productionRefresh ?? null };
 }
 export async function startProduction(
-  count: number, origin: string,
-  services = { refreshMetrics, execute },
+  count: number | ProductionRequest[], origin: string,
+  services: {refreshMetrics: typeof refreshMetrics;execute: typeof execute;refreshSpy?: typeof refreshSpy} = { refreshMetrics, execute, refreshSpy },
 ) {
   if (!process.env.APIFY_API_TOKEN?.trim())
     throw new Error("Apify에 연결되지 않아 제작을 시작할 수 없습니다. APIFY_API_TOKEN을 설정해 주세요.");
   if (shared.productionSync)
     throw new Error("성과를 갱신하고 있습니다. 잠시 후 시작해 주세요.");
-  if (!Number.isInteger(count) || count < 1)
+  if (typeof count === "number" && (!Number.isInteger(count) || count < 1))
     throw new Error("제작 개수를 양의 정수로 입력해 주세요.");
+  const requests = productionRequestsSchema.parse(typeof count === "number"
+    ? Array.from({ length: count }, () => ({ mode: "automatic" })) : count);
   const store = productionStore();
   if (store.hasOpenDrafts()) throw new Error(OPEN_DRAFT_MESSAGE);
+  requests.forEach(request => store.requestSource(request));
+  const sampling = readSampling(store.db);
   shared.productionSync = true;
   const report: PerformanceRefresh = { started_at: new Date().toISOString(), completed_at: null, state: "running", records: [], error: null };
   shared.productionRefresh = report;
@@ -135,8 +146,9 @@ export async function startProduction(
       report.records = records;
       publishChange({ kind: "sync", detail: "snapshot" });
     });
-    const inputs = store.planningLogs();
-    const ids = store.create(count, inputs);
+    await (services.refreshSpy ?? refreshSpy)(store.db);
+    const inputs = readPlanningLogs(store.db,"",sampling.internalCandidates);
+    const ids = store.create(requests, inputs, sampling);
     report.state = "completed";
     report.completed_at = new Date().toISOString();
     ids.forEach((id) => {
@@ -182,6 +194,7 @@ export async function execute(
     analysisRead: new Set(),
     sourceImages: false,
     sourceProjects: new Set(),
+    sourceSets: new Set(),
     externalCompared: false,
     toolCalls: [],
     imageStartedAt: Date.now(),
@@ -198,18 +211,23 @@ export async function execute(
       run.analysisRead.clear();
       run.sourceImages = false;
       run.sourceProjects.clear();
+      run.sourceSets.clear();
       run.externalCompared = false;
       run.toolCalls = [];
       run.imageStartedAt = Date.now();
       run.imageThreadId = null;
+      phase = "source_collection";
+      if (run.step === "analysis" && store.get(id).input?.request.mode === "external_url")
+        await prepareStartInput(store, id, run.controller.signal);
       phase = "cli";
       const inputs = run.step === "analysis" || run.step === "production" ? store.analysisInputs(id, true) : [];
-      const capabilities = stagePolicy(run.step);
+      const startInput = store.get(id).input!;
+      const capabilities = stagePolicy(run.step, startInput.request.mode);
       const result = await executor({
         capabilities,
         onThreadStarted: threadId => { run.imageThreadId = threadId; },
         model: PRODUCTION_MODEL,
-        prompt: stagePrompt(id, run.step, inputs, persona, product),
+        prompt: stagePrompt(id, run.step, inputs, persona, product, startInput),
         images: stageImages(run.step),
         schema: resultSchema(run.step),
         origin,
@@ -237,6 +255,10 @@ export async function execute(
         phase = "validation";
         const missingInputs = inputs.filter(row => !run.analysisRead.has(String(row.id))).map(row => row.id);
         if (missingInputs.length) throw new OperationError("ANALYSIS_INPUTS_NOT_READ", "분석용 게시글 조회가 누락됐습니다.", {ids:missingInputs});
+        if (startInput.request.mode === "past_post" && !run.sourceProjects.has(startInput.request.sourceProjectId))
+          throw new OperationError("START_SOURCE_NOT_REVIEWED", "선택한 원본 게시글의 실제 슬라이드를 확인해 주세요.");
+        if (startInput.request.mode === "external_url" && !run.sourceSets.has(startInput.source?.visual_set_id ?? ""))
+          throw new OperationError("START_SOURCE_NOT_REVIEWED", "외부 원본 게시글의 전체 슬라이드를 확인해 주세요.");
         if (!run.externalCompared) throw requiredToolFailure(run.toolCalls, ["production_external_references"], "외부 레퍼런스 조회가 확인되지 않았습니다.");
         phase = "save";
         store.completeAnalysis(id, { ...fields, sources });
@@ -258,15 +280,16 @@ export async function execute(
           throw requiredToolFailure(run.toolCalls, ["production_preview_project", "production_read_images"], "참고 게시글의 실제 이미지 확인이 필요합니다.");
       }
       phase = "output";
-      const output = productionResultSchema.parse({
-        ...rest,
-        sources,
-      });
+      const rawOutput = { ...rest, sources };
+      const firstDraft = run.step === "production" ? firstDraftResultSchema.parse(rawOutput) : null;
+      const output = firstDraft ?? productionResultSchema.parse(rawOutput);
       phase = "validation";
       const detail = store.get(id);
       if (detail.task.project_id !== output.project_id)
         throw new OperationError("PROJECT_RESULT_MISMATCH", "연결된 프로젝트와 결과가 다릅니다.");
       await loadContentProject(contentJobRegistry, output.project_id);
+      if (firstDraft)
+        assertCurrentSlidePlan(contentJobRegistry.getRecord(output.project_id), firstDraft.slide_plan);
       assertCompleteProjectReview(
         contentJobRegistry.getRecord(output.project_id), output,
         run.reviews.get(output.project_id), run.toolCalls,

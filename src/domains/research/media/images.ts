@@ -2,11 +2,11 @@ import sharp from "sharp";
 import { isMediaUrl } from "@/domains/research/domain/source";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-export async function readSourceImage(raw: string) {
+export async function readSourceImage(raw: string, signal?: AbortSignal) {
   let url = raw;
   for (let redirects = 0; redirects <= 3; redirects++) {
     if (!isMediaUrl(url)) throw new Error("The image URL is not a supported platform media host.");
-    const response = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(15_000) });
+    const response = await fetch(url, { redirect: "manual", signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15_000)]) : AbortSignal.timeout(15_000) });
     if (response.status >= 300 && response.status < 400) {
       await response.body?.cancel();
       const location = response.headers.get("location");

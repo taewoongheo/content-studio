@@ -22,11 +22,11 @@ export function externalReferences(db: Database.Database, query = "", type = "",
   const rows = db.prepare(`SELECT r.*,
     CASE WHEN view_count>0 AND like_count IS NOT NULL AND comment_count IS NOT NULL AND save_count IS NOT NULL
       THEN 1.0*(like_count+comment_count+save_count)/view_count END AS engagement_rate,
-    COALESCE(v.slide_count,0) AS slide_count
+    COALESCE(v.slide_count,json_array_length(r.images_json)) AS slide_count
     FROM content_external_references r LEFT JOIN content_visual_sets v ON v.id=r.visual_set_id
     WHERE (? OR r.excluded=0) AND (r.caption LIKE ? OR r.title LIKE ? OR r.topic LIKE ? OR r.message LIKE ? OR r.content_type LIKE ?)
       AND (?='' OR r.content_type LIKE ? OR r.content_type='')
-    ORDER BY r.last_selected_at IS NULL DESC,r.last_selected_at,engagement_rate DESC,r.published_at DESC,r.id`)
+    ORDER BY engagement_rate DESC,r.published_at DESC,r.id`)
     .all(includeExcluded ? 1 : 0, ...Array(5).fill(`%${query}%`), type, `%${type}%`) as Row[];
   return rows.map(({images_json: images,...post}) => { void images; return post; });
 }
@@ -43,11 +43,6 @@ export function describeReference(db: Database.Database, id: string, description
   publishChange({ kind: "library" });
 }
 
-export function toggleReferenceAccount(db: Database.Database, username: string, enabled: boolean) {
-  if (!db.prepare("UPDATE content_reference_accounts SET enabled=? WHERE username=?").run(enabled ? 1 : 0, username).changes)
-    throw new Error("지정 계정을 찾을 수 없습니다.");
-  publishChange({ kind: "library" });
-}
 export function removeReferenceAccount(db: Database.Database, username: string) {
   db.prepare("DELETE FROM content_reference_accounts WHERE username=?").run(username);
   publishChange({ kind: "library" });

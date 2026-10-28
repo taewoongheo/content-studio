@@ -1,10 +1,10 @@
+import { resolveTikTokPostUrl } from "@/domains/research/server/apify/post-url";
 import { recentKoreanDate, type PerformanceRecord } from "../../domain/performance";
 export { recentKoreanDate } from "../../domain/performance";
 import { notifyProjectsChanged } from "@/domains/workspace/server/project-events";
 import type Database from "better-sqlite3";
 import {
   ApifyTikTokClient,
-  normalizeTikTokUrl,
   type ApifyPost,
 } from "@/domains/research/server/apify/client";
 import { collectVisuals, saveVisuals } from "./visuals";
@@ -65,7 +65,7 @@ export function registerPublication(
   return promise;
 }
 async function registerPost(db: Database.Database, logId: string, raw: string) {
-  const { url } = normalizeTikTokUrl(raw);
+  const { url } = await resolveTikTokPostUrl(raw);
   const log = db
     .prepare("SELECT * FROM content_creation_logs WHERE id=?")
     .get(logId) as Row | undefined;

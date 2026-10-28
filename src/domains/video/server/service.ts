@@ -6,7 +6,7 @@ import { notifyProjectsChanged } from "@/domains/workspace/server/project-events
 import { VideoStore } from "@/domains/video/server/persistence/store";
 import { newVideoDocument, videoDocumentSchema, type VideoDocument, type VideoSnapshot } from "@/domains/video/domain/model";
 
-type Session = Omit<VideoSnapshot, "canUndo" | "canRedo" | "assets"> & { undo: VideoDocument[]; redo: VideoDocument[] };
+type Session = Omit<VideoSnapshot, "canUndo" | "canRedo" | "assets"> & { undo: VideoDocument[]; redo: VideoDocument[]; historyGroup?: {id: string; revision: number} };
 const state = globalThis as typeof globalThis & { videoSessions?: Map<string, Session>; videoTabListeners?: Set<() => void> };
 const sessions = state.videoSessions ??= new Map();
 const listeners = state.videoTabListeners ??= new Set();
@@ -50,7 +50,7 @@ export function checkVideoRevision(id: string, tabId: string, revision: number) 
   requireSession(id, tabId, revision);
 }
 /** Commit bytes and document together before changing session revision or history. */
-export function commitVideoEdit(id: string, tabId: unknown, revision: unknown, edit: (doc: VideoDocument, store: VideoStore) => VideoDocument) {
+export function commitVideoEdit(id: string, tabId: unknown, revision: unknown, edit: (doc: VideoDocument, store: VideoStore) => VideoDocument, historyGroup?: string) {
   const s = requireSession(id, tabId, revision);
   const store = videoStore();
   const document = getLocalDatabase().transaction(() => {
@@ -58,7 +58,9 @@ export function commitVideoEdit(id: string, tabId: unknown, revision: unknown, e
     store.save(id, s.name, next, s.revision + 1);
     return next;
   })();
-  s.undo.push(s.document); if (s.undo.length > 100) s.undo.shift();
+  if (!historyGroup || s.historyGroup?.id !== historyGroup || s.historyGroup.revision !== s.revision) s.undo.push(s.document);
+  s.historyGroup = historyGroup ? { id: historyGroup, revision: s.revision + 1 } : undefined;
+  if (s.undo.length > 100) s.undo.shift();
   s.redo = []; s.document = document; s.revision++;
   notify(); notifyProjectsChanged(); return snapshot(s);
 }
@@ -71,6 +73,7 @@ export function historyVideo(id: string, tabId: unknown, revision: unknown, redo
   const document = from.at(-1);
   if (document) {
     videoStore().save(id, s.name, document, s.revision + 1);
+    s.historyGroup = undefined;
     from.pop(); to.push(s.document); s.document = document; s.revision++;
     notify(); notifyProjectsChanged();
   }

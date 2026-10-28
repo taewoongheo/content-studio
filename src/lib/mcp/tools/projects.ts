@@ -12,6 +12,7 @@ import { getLocalDatabase } from "@/lib/local-db/database";
 import { cloneSchema, editSchema, previewSchema, projectSchema, readProjectSchema, undoSchema, setContentMetadataSchema } from "./schema";
 import type { LocalImageCommand } from "@/domains/slideshow/server/local-images";
 import { SlideshowProjectWrites, type ProjectWriteValidator } from "@/domains/slideshow/server/project-writes";
+import { previewRegion } from "@/domains/slideshow/server/rendering/inspection/region";
 import { previewSlides } from "@/domains/slideshow/server/rendering/preview";
 import { captureSlideshowRender } from "@/domains/slideshow/server/rendering/input";
 import { exportSlideshow } from "@/domains/slideshow/server/rendering/export";
@@ -22,7 +23,7 @@ import { renameProject } from "@/domains/slideshow/projects/lifecycle/management
 import { notifyProjectsChanged } from "@/domains/workspace/server/project-events";
 import { json, guarded, annotations } from "../protocol/result";
 
-export function registerProjectTools(server: McpServer, origin: string, validateProject?: ProjectWriteValidator) {
+export function registerProjectTools(server: McpServer, origin: string, validateProject?: ProjectWriteValidator, historyGroup?: string) {
   registerTool(server, "create_project", {
     description: "Create and save a slideshow without a template. Read docs/content-metadata.md before saving topic/message/content_type. Metadata must come from user or production planning. Follow docs/content-guidelines.md, reference actual past post images and review all slides. Returns the open editor identity.",
     inputSchema: setContentMetadataSchema.omit({projectId:true}).extend({name:z.string().min(1).max(120),slideCount:z.number().int().min(1).max(20).default(6),requestId:requestIdSchema}), annotations:annotations(false),deduplicate:true,
@@ -81,7 +82,7 @@ export function registerProjectTools(server: McpServer, origin: string, validate
     inputSchema: editSchema, annotations: annotations(false),
   }, (raw) => guarded(async () => {
     const { projectId, commands, expectedRevision, expectedTabId, includeDocument } = raw as { projectId: string; commands: Array<EditorCommand | LocalImageCommand>; expectedRevision: number; expectedTabId: string; includeDocument?: boolean };
-    const job = await new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase(), validateProject).edit(projectId, commands, expectedRevision, expectedTabId);
+    const job = await new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase(), validateProject, historyGroup).edit(projectId, commands, expectedRevision, expectedTabId);
     return json({ ...(includeDocument === false ? summarizeSlideshow(job) : job), warnings: job.warnings ?? [], url: `${origin}/?job=${encodeURIComponent(job.id)}` });
   }));
   registerTool(server, "undo_project", {
@@ -89,13 +90,14 @@ export function registerProjectTools(server: McpServer, origin: string, validate
     inputSchema: undoSchema, annotations: annotations(false),
   }, ({ projectId, expectedRevision, expectedTabId }) => guarded(() => json({ ...new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase(), validateProject).undo(projectId, expectedRevision, expectedTabId) })));
   registerTool(server, "preview_slide", {
-    description: "See one slide as a PNG rendered by the same renderer as the editor/export. Uses a snapshot and returns its revision. Does not save the project.",
+    description: "See one slide as a PNG rendered by the same renderer as the editor/export. Uses a snapshot and returns its revision. Optional region {x,y,width,height} uses 0–1 slide coordinates to crop and enlarge the actual PNG for checking small text or badges; a region does not count as full-slide review. Does not save the project.",
     inputSchema: previewSchema, annotations: annotations(true),
-  }, ({ projectId, slideId }) => guarded(async () => {
+  }, ({ projectId, slideId, region }) => guarded(async () => {
     const input = captureSlideshowRender(contentJobRegistry, projectId, [slideId]);
-    const data = (await previewSlides(origin, input.job, [slideId], { images: input.images }))[0].bytes.toString("base64");
+    const bytes = (await previewSlides(origin, input.job, [slideId], { images: input.images }))[0].bytes;
+    const data = (region ? await previewRegion(bytes, region) : bytes).toString("base64");
     return { content: [{ type: "image", mimeType: "image/png", data },
-      { type: "text", text: JSON.stringify({ projectId, slideId, revision: input.job.editor.revision }) }] };
+      { type: "text", text: JSON.stringify({ projectId, slideId, revision: input.job.editor.revision, ...(region ? { region } : {}) }) }] };
   }));
   registerTool(server, "preview_slides", {
     description: "Review several slides in ONE call with a reused renderer and revision cache. Omit slideIds to review all slides; IDs preserve requested order. Width defaults to 540px (64-1920, capped at original width). Returns PNG images with slide IDs and captured revision. Does not edit, save or navigate the UI.",

@@ -1,3 +1,4 @@
+import { assertSourceProjectAccess } from "@/domains/content-production/server/execution/policy/sources/access";
 import { assertUniqueProjectImages } from "@/domains/content-production/server/images/unique";
 import { stagePolicy, editorReadTools, editorWriteTools as writeTools } from "@/domains/content-production/server/execution/policy/stages";
 import { REFERENCE_LIMIT } from "@/domains/content-production/domain/references/context";
@@ -32,21 +33,21 @@ export async function POST(
   }
   const run = authorizeRun(taskId, request.headers.get("authorization"));
   const step = run.step;
+  const startInput = productionStore().get(taskId).input!;
   const origin = new URL(
     `${new URL(request.url).protocol}//${request.headers.get("host")}`,
   ).origin;
   const server = createStudioMcpServer(
     origin,
     {
-      allowed: stagePolicy(step).tools,
+      allowed: stagePolicy(step, startInput.request.mode).tools,
       observe(event) { if (run.step === step) recordToolCall(taskId, event); },
       before(name, input) {
         const active = authorizeRun(taskId, request.headers.get("authorization"));
         if (active.step !== step) throw new OperationError("RUN_STAGE_CHANGED", "실행 단계가 변경되었습니다.");
-        if ((step === "analysis" || step === "production") && ["production_preview_project", "production_read_project"].includes(name)) {
+        if (["production_preview_project", "production_read_project"].includes(name)) {
           const projectId = (input as {projectId:string}).projectId;
-          if (!productionStore().analysisInputs(taskId).some(row => row.project_id === projectId))
-            throw new OperationError("ANALYSIS_SOURCE_NOT_ASSIGNED", "분석 자료 노드가 전달한 내부 게시글만 확인할 수 있습니다.");
+          assertSourceProjectAccess(productionStore(), taskId, step, projectId);
         }
         if (name === "production_clone_project") {
           const sourceProjectId = (input as {sourceProjectId:string}).sourceProjectId;
@@ -55,7 +56,7 @@ export async function POST(
         }
         if (name === "production_read_images") {
           const setId = (input as {set_id:string}).set_id;
-          if (!referenceImagesAllowed(productionStore().db,taskId,step,setId))
+          if (setId !== startInput.source?.visual_set_id && !referenceImagesAllowed(productionStore().db,taskId,step,setId))
             throw new Error(`먼저 이번 단계의 외부 레퍼런스로 조회해 주세요. 단계별 한도는 ${REFERENCE_LIMIT}개입니다.`);
         }
         if ((writeTools.includes(name) || editorReadTools.includes(name)) && !name.startsWith("production_")) {
@@ -73,7 +74,8 @@ export async function POST(
           recordAnalysisRead(taskId, (result.structuredContent.items as Array<{id:string}>).map(row => row.id));
         if (!result.isError && name === "production_external_references") recordExternalComparison(taskId);
         if (!result.isError && result.content?.some(item => item.type === "image") && (name === "production_preview_project" || name === "production_read_images"))
-          recordSourceReview(taskId, name === "production_preview_project" ? (input as {projectId:string}).projectId : undefined);
+          recordSourceReview(taskId, name === "production_preview_project" ? (input as {projectId:string}).projectId : undefined,
+            name === "production_read_images" ? (input as {set_id:string}).set_id : undefined);
         if (
           result.isError ||
           !(name === "preview_slide" || name === "preview_slides")
@@ -83,7 +85,7 @@ export async function POST(
           if (item.type !== "text") continue;
           try {
             const meta = JSON.parse(item.text);
-            if (meta.projectId && typeof meta.revision === "number")
+            if (meta.projectId && typeof meta.revision === "number" && !meta.region)
               recordReview(
                 taskId,
                 meta.projectId,

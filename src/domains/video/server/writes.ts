@@ -7,7 +7,7 @@ import { readLocalVideoMedia, readLocalVideoMediaBatch, type LocalVideoMedia } f
 import { videoCommandsSchema, type VideoCommand } from "@/domains/video/editing/schema";
 
 export async function editVideoProject(projectId: string, tabId: string, revision: number, input: VideoCommand[],
-  readMedia?: typeof readLocalVideoMedia): Promise<VideoSnapshot> {
+  readMedia?: typeof readLocalVideoMedia, historyGroup?: string, beforeCommit?: () => void): Promise<VideoSnapshot> {
   const commands = videoCommandsSchema.parse(input);
   checkVideoRevision(projectId, tabId, revision);
   const paths = [...new Set(commands.flatMap(command => command.type === "import_media" || command.type === "replace_media" ? [command.localPath] : []))];
@@ -27,6 +27,7 @@ export async function editVideoProject(projectId: string, tabId: string, revisio
     throw cause;
   }
   // Metadata reads are asynchronous: recheck inside the commit before registering any bytes.
+  beforeCommit?.();
   const original = readVideo(projectId);
   return commitVideoEdit(projectId, tabId, revision, (document, store) => {
     const assets = new Map<string, string>();
@@ -67,5 +68,5 @@ export async function editVideoProject(projectId: string, tabId: string, revisio
       }
     }
     return document;
-  });
+  }, historyGroup);
 }

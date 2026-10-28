@@ -1,3 +1,7 @@
+import { verifyEditorAssistant } from "./editor/assistant-smoke.mjs";
+import { verifyStageReports } from "./production/report-smoke.mjs";
+import { verifySpy } from "./production/spy-smoke.mjs";
+import { verifyProductionStart } from "./production/start-inputs-smoke.mjs";
 import assert from "node:assert/strict";
 import Database from "better-sqlite3";
 import { spawn } from "node:child_process";
@@ -107,22 +111,31 @@ try {
 
   const browser = await chromium.launch();
   try {
+    await verifySpy(browser,origin);
+    await verifyStageReports(browser,origin);
     const listPage = await browser.newPage();
     await listPage.goto(origin);
     await listPage.getByRole("button", { name: "제작 캔버스", exact: true }).waitFor();
-    assert.equal(await listPage.locator("#production-count").inputValue(), "1");
+    assert.equal(await listPage.locator("#production-count").count(), 0);
     assert.equal(await listPage.getByText("템플릿 프로젝트", { exact: true }).count(), 0);
     assert.equal(await listPage.getByText("제작 모델", { exact: true }).count(), 0);
     assert.equal(await listPage.locator("#production-model").count(), 0);
     await listPage.getByRole("button", { name: "대시보드", exact: true }).click();
     await listPage.getByRole("heading", { name: "게시 콘텐츠", exact: true }).waitFor();
     await listPage.getByRole("button", { name: "제작 캔버스", exact: true }).click();
+    await listPage.getByRole("button", { name: "제작 요청 추가", exact: true }).waitFor();
     await listPage.getByRole("button", { name: "시작 노드로 이동", exact: true }).waitFor();
     await listPage.getByRole("button", { name: "제작 기록·레퍼런스", exact: true }).click();
     const recordPanel = await listPage.getByRole("region", { name: "기록과 레퍼런스", exact: true }).boundingBox();
     assert.ok(recordPanel && recordPanel.width <= 560 && recordPanel.x > 256, "records open beside the canvas");
     await listPage.getByRole("button", { name: "캔버스로 돌아가기", exact: true }).click();
-    console.log("PASS fixed production/dashboard tabs, default count, right records panel and fixed production model");
+    console.log("PASS fixed production/dashboard tabs, start request button, right records panel and fixed production model");
+
+    await verifyProductionStart(browser, origin, {
+      id: created.id, name: "MCP smoke", title: "MCP smoke", aspectRatio: "4:5", slideCount: 6,
+      outputLanguage: "English", topic: "", message: "", content_type: "", createdAt: "now", updatedAt: "now",
+      publishedAt: "2026-10-28T00:00:00.000Z", publishedOn: "2026-10-28", postUrl: "https://www.tiktok.com/@example/photo/123",
+    });
 
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
     page.on("pageerror", error => console.error("Browser error", error.message));
@@ -387,6 +400,7 @@ try {
     page.on("request", request => {
       if (request.method() === "POST" && request.url().endsWith(`/api/content-jobs/${colorClone.id}`)) editRequests++;
     });
+    await page.getByRole("button", { name: "Color title Element 선택 및 레이어 순서 이동", exact: true }).click();
     await page.getByLabel("내용", { exact: true }).fill("FAST SWITCH");
     await page.getByLabel("내용", { exact: true }).press("Meta+[");
     await page.waitForURL(url => url.searchParams.get("job") === colorProject.id);
@@ -638,6 +652,7 @@ try {
 
     console.log("PASS autosave status and live project-list refresh");
     console.log("PASS shared memory, clone independence, open/list, undo, revision conflict and cross-origin rejection");
+    await verifyEditorAssistant(browser, origin);
   } catch (error) {
     const pages = browser.contexts().flatMap(context => context.pages());
     for (const [index, failedPage] of pages.entries()) {

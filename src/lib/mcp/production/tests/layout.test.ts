@@ -12,12 +12,12 @@ import {stagePolicy} from "@/domains/content-production/server/execution/policy/
 import {seedLayoutSource} from "@/domains/content-production/server/projects/testing/fixtures";
 import {contentJobRegistry} from "@/domains/slideshow/workflow/service";
 
-test("production MCP queries and layout cloning stay within the original analysis pool",async()=>{
+test("production MCP separates comparison reads, selected-source cloning and blank creation",async()=>{
  const directory=await mkdtemp(join(tmpdir(),"production-layout-tools-"));
  process.env.CONTENT_STUDIO_DB_PATH=join(directory,"test.sqlite");
  const store=productionStore(),source=seedLayoutSource(store.db,"assigned"),outside=seedLayoutSource(store.db,"outside");
- const [id]=store.create(1,[source]);store.state(id,"running");
- store.completeAnalysis(id,{analysis:"Observed",topic:"New topic",message:"New message",content_type:"Routine",answer:"A session",presentation:"Cards",reason:"Useful",expected_response:"Save",goal_connection:"Follow",difference_from_recent:"Different",sources:[]});store.state(id,"running");
+ const [id]=store.create([{mode:"past_post",sourceProjectId:source.project_id,instructions:""}],[source]);store.state(id,"running");
+ store.completeAnalysis(id,{analysis: "Observed", reasoning: { observations: [], interpretations: [], candidates: [] },topic:"New topic",message:"New message",content_type:"Routine",answer:"A session",presentation:"Cards",reason:"Useful",expected_response:"Save",goal_connection:"Follow",difference_from_recent:"Different",sources:[]});store.state(id,"running");
  const server=createStudioMcpServer("http://127.0.0.1:3000",{allowed:stagePolicy("production").tools,before(){}},id);
  const client=new Client({name:"layout-test",version:"1"});const [a,b]=InMemoryTransport.createLinkedPair();
  let projectId:string|undefined;
@@ -25,11 +25,12 @@ test("production MCP queries and layout cloning stay within the original analysi
  try{
   await server.connect(b);await client.connect(a);
   const tools=(await client.listTools()).tools.map(tool=>tool.name);
-  assert.ok(tools.includes("production_clone_project"));assert.ok(!tools.includes("production_create_project"));assert.ok(!tools.includes("clone_project"));
+  assert.ok(tools.includes("production_clone_project"));assert.ok(tools.includes("production_create_project"));assert.ok(!tools.includes("clone_project"));
   const pool=await call("production_query",{kind:"logs"});
   assert.deepEqual((pool.structuredContent!.items as Array<{id:string}>).map(row=>row.id),[source.id]);
   assert.equal((await call("production_query",{kind:"logs",ids:[outside.id]})).isError,true);
   assert.equal((await call("production_clone_project",{sourceProjectId:outside.project_id,reason:"Outside pool"})).isError,true);
+  assert.equal((await call("production_create_project",{slideCount:6})).isError,true);
   const result=await call("production_clone_project",{sourceProjectId:source.project_id,reason:"The same broad routine format fits."});
   assert.ok(!result.isError);projectId=String(result.structuredContent!.projectId);
   assert.equal(store.get(id).task.project_id,projectId);

@@ -1,3 +1,5 @@
+import { badgeRepairCommands } from "@/domains/content-production/server/execution/policy/editing/badge/repair";
+import { SlideshowProjectWrites } from "@/domains/slideshow/server/project-writes";
 import { stageContext } from "@/domains/content-production/server/execution/policy/context";
 import type { ProjectWriteValidator } from "@/domains/slideshow/server/project-writes";
 import { join } from "node:path";
@@ -19,7 +21,7 @@ import {
   reviewDraftPatchSchema,
   directionSchema,
 } from "@/domains/content-production/domain/contracts";
-import { cloneTaskProject } from "@/domains/content-production/server/projects";
+import { cloneTaskProject, createTaskProject } from "@/domains/content-production/server/projects";
 
 export function registerProductionTools(server: McpServer, taskId?: string, origin = "http://127.0.0.1:3000", validateProject?: ProjectWriteValidator) {
   registerSourceTools(server, origin);
@@ -28,7 +30,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     "production_query",
     {
       description:
-        "During analysis, retrieve assigned own-post IDs with ids; selection and metrics come from the material node snapshot. Query keywords do not replace that set. Production queries only that SAME assigned pool; query filters its title/topic/message/format and never expands it. In other stages, query published content logs: up to 10 best posts by (likes+comments+saves)/views, 10 lowest excluding the best, then 10 newest remaining, up to 30 unique. query filters eligible topic/name before selection. selection_group identifies performance/low_performance/recent. Missing metrics exclude rate rankings, not recency. Use production_external_references for the shared external library. Unpublished drafts are available through production_comparisons.",
+        "During analysis, retrieve assigned own-post IDs with ids; selection and metrics come from the material node snapshot. Query keywords do not replace that set. Production queries only that SAME assigned pool; query filters its title/topic/message/format and never expands it. In other stages, query the stored published logs by topic, title, message or format. Analysis uses five random posts from its configured high-rate pool plus five recent posts. selection_group identifies performance/recent. Missing metrics exclude rate rankings, not recency. Use production_external_references for the shared external library. Unpublished drafts are available through production_comparisons.",
       inputSchema: z.object({
         kind: z.literal("logs"),
         query: z.string().default(""),
@@ -49,7 +51,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
         if (!input.ids) throw new Error("분석 단계에서는 전달받은 게시글 ID 목록으로 조회해 주세요.");
         return json({items:store.analysisLogs(taskId,input.ids)});
       }
-      return json({items:store.planningLogs(input.query).filter(row => !input.ids || input.ids.includes(String(row.id)))});
+      return json({items:store.logs(input.query,true).filter(row => !input.ids || input.ids.includes(String(row.id))).slice(0,30)});
     }),
   );
   registerTool(
@@ -91,6 +93,24 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
   );
   if (!taskId) return;
   registerExternalReferenceTools(server, taskId);
+  registerTool(server, "production_repair_badge", {
+    description: "Visual review only. Restore all slides to the exact approved two-element LIFTCODE badge specification. Repairs legacy, missing, misplaced or locally overridden badges. Preserves other content; saves as one undoable edit. Re-read and preview ALL slides at the new revision after repair. No custom badge styles accepted.",
+    inputSchema: z.object({ expectedRevision: z.number().int().nonnegative(), expectedTabId: z.string().min(1) }),
+    annotations: annotations(false),
+  }, input => guarded(async () => {
+    const store = productionStore();
+    const detail = store.assertActive(taskId, "visual");
+    const projectId = detail.task.project_id;
+    if (!projectId) throw new Error("연결된 프로젝트가 없습니다.");
+    const document = contentJobRegistry.get(projectId).editor.document;
+    const writes = new SlideshowProjectWrites(contentJobRegistry, store.db, project => {
+      const active = store.assertActive(taskId, "visual");
+      if (active.task.project_id !== project.id) throw new Error("연결된 프로젝트가 변경되었습니다.");
+      validateProject?.(project);
+    });
+    const result = await writes.edit(projectId, badgeRepairCommands(document), input.expectedRevision, input.expectedTabId);
+    return json({ projectId, revision: result.editor.revision, tabId: result.tabId, warnings: result.warnings });
+  }));
   registerTool(
     server,
     "production_use_generated_image",
@@ -134,7 +154,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     "production_comparisons",
     {
       description:
-        "Inspect other retained drafts and posts published within the last 24h. First actual saved content keeps its topic/type; later overlapping content changes. Pending ideas do not reserve topics.",
+        "Inspect other retained drafts and posts published within the last 24h. Compare candidates within the request constraints. If all considered candidates overlap, allow one duplicate and record the candidates and reason in the draft; never change a fixed source topic or format just to avoid overlap. Pending ideas do not reserve topics.",
       inputSchema: z.object({}),
       annotations: annotations(true),
     },
@@ -145,7 +165,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     "production_save_draft",
     {
       description:
-        "Persist current-stage progress only. Analysis draft: analysis/direction plus research/sources/actions. Production draft: content/direction_changes plus research/sources/actions. Hook/visual/polish drafts: review/content plus research/sources/actions, each stored separately. Saving actual content sets draft_saved_at. Saves trigger UI pulse after DB commit.",
+        "Persist current-stage progress only. Analysis: analysis/direction, structured reasoning (observations/interpretations/candidates), research/sources/actions. Production: slide_plan before image generation, content_review of actual content, content/direction_changes, research/sources/actions. Hook/visual/polish: review/content, research/sources/actions. Structured planning is retained separately from current content across saves/resume. Saving actual content sets draft_saved_at. Saves trigger UI pulse after DB commit.",
       inputSchema: z.object({
         patch: z.union([analysisPatchSchema, productionPatchSchema, reviewDraftPatchSchema]),
       }),
@@ -163,7 +183,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     "production_change_direction",
     {
       description:
-        "During production only, resolve a recent collision by replacing the conflicting direction, without abandoned-choice history. Research does not authorize a replacement topic; record a blocker if the confirmed premise fails.",
+        "During production only, resolve a recent collision within the request constraints. Preserve the format for past-post requests and the topic for external URLs. If all considered alternatives overlap, keep the direction and record why the duplicate is accepted instead of calling this tool repeatedly.",
       inputSchema: z.object({
         direction: directionSchema,
         cause: z.literal("collision"),
@@ -182,12 +202,17 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
         return json({ saved: true });
       }),
   );
+  registerTool(server, "production_create_project", {
+    description: "Production only. Create a blank 4:5 project for automatic or external-URL production. Compose a new layout using the assigned own posts collectively as references; copying a single post is not required. Reuses the task's linked project on resume. Past-post requests must use production_clone_project instead.",
+    inputSchema: z.object({ slideCount: z.number().int().min(1).max(20).default(6) }),
+    annotations: annotations(false),
+  }, input => guarded(() => json(createTaskProject(productionStore(), taskId, input.slideCount))));
   registerTool(
     server,
     "production_clone_project",
     {
       description:
-        "Production only. Choose ONE saved published project from this task’s assigned analysis_inputs (up to 30), inspect its actual slides, then copy its layout as an independent draft. Select by broad format, information structure, image count and visual quality; matching topic or performance alone is insufficient. Preserves frames, styles, shared elements, slide roles and badge; clears source text and all images, copies no source asset bytes. Change wording, create fresh images, adapt page count and layout. Records the source and reason. Reuses an existing linked project on resume without overwriting it.",
+        "Production only, for past-post requests. Inspect and clone the explicitly selected saved source from production_context.input. It may be outside the assigned comparison pool. Preserve its format and visual language while changing the subject and content. Preserves frames, styles, shared elements, slide roles and badge; clears source text and all images, copies no source asset bytes. Change subject-specific wording and create fresh images while preserving the source format, page progression and visual composition. Records the source and reason. Reuses an existing linked project on resume without overwriting it.",
       inputSchema: z.object({
         sourceProjectId: z.string().min(1),
         reason: z.string().trim().min(1),

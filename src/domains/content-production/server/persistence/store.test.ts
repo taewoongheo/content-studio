@@ -19,10 +19,10 @@ test("language detection does not reject authored drafts; output structure remai
   try {
     const [id] = store.create(1);
     store.state(id, "running");
-    store.save(id, "analysis", { analysis: "분석 메모" });
+    store.save(id, "analysis", { analysis: "분석 메모", reasoning: { observations: [], interpretations: [], candidates: [] } });
     assert.equal(store.get(id).analysis.analysis, "분석 메모");
-    assert.throws(() => store.completeAnalysis(id, { analysis: "No required direction fields" }));
-    store.completeAnalysis(id, { ...direction, analysis: "분석 메모", sources: [] });
+    assert.throws(() => store.completeAnalysis(id, { analysis: "No required direction fields", reasoning: { observations: [], interpretations: [], candidates: [] } }));
+    store.completeAnalysis(id, { ...direction, analysis: "분석 메모", reasoning: { observations: [], interpretations: [], candidates: [] }, sources: [] });
     store.state(id, "running");
     const content = { slides: [{ visual: "Fixed bottom-left LIFTCODE badge", copy: ["3 sets of 8 reps", "설명"] }] };
     store.save(id, "production", { content, research: [{ question:"Question",source:"https://example.com",finding:"조사 기록",judgment:"참고" }] });
@@ -43,7 +43,7 @@ test("단계 출력 검사·분리 저장·재개·취소 후 쓰기 거부", ()
     store.state(id, "running");
     assert.throws(() => store.save(id, "production", {}), /현재 실행 단계/);
     store.save(id, "analysis", {
-      analysis: "partial",
+      analysis: "partial", reasoning: { observations: [], interpretations: [], candidates: [] },
       research: [{ question: "q", source: "url", finding: "f", judgment: "j" }],
     });
     assert.throws(() => store.completeAnalysis(id, {}));
@@ -52,7 +52,7 @@ test("단계 출력 검사·분리 저장·재개·취소 후 쓰기 거부", ()
     store.state(id, "running");
     store.completeAnalysis(id, {
       ...direction,
-      analysis: "observation",
+      analysis: "observation", reasoning: { observations: [], interpretations: [], candidates: [] },
       sources: [],
     });
     assert.equal(store.get(id).analysis.state, "completed");
@@ -177,14 +177,14 @@ test("검토 draft는 분리 저장하고 훅 통과 후 시각 검증까지 끝
   try {
     const [id] = store.create(1);
     store.state(id, "running");
-    store.completeAnalysis(id, { ...direction, analysis: "A clear starting plan.", sources: [] });
+    store.completeAnalysis(id, { ...direction, analysis: "A clear starting plan.", reasoning: { observations: [], interpretations: [], candidates: [] }, sources: [] });
     store.state(id, "running");
     db.prepare("INSERT INTO content_projects(id,name,aspect_ratio,slide_count,output_language,document_json,created_at,updated_at) VALUES('review-project','Review','4:5',1,'English','{}','now','now')").run();
     db.prepare("UPDATE content_drafts SET project_id='review-project' WHERE id=?").run(id);
     const beforeInvalidMetadata = store.get(id);
     assert.throws(() => store.completeProduction(id, {project_id:"review-project",summary:{topic:"arms",message:"Train with three sets"},sources:[]}));
     assert.deepEqual(store.get(id),beforeInvalidMetadata,"missing format must not advance or overwrite the draft");
-    store.completeProduction(id, { project_id: "review-project", summary: { topic: "arms", message: "Train with three sets", content_type: "Routine cards", hook: "Start with three sets", slides: [{visual:"Fixed bottom-left LIFTCODE badge"}] }, sources: [] });
+    store.completeProduction(id, { slide_plan: [{ slide_id: "slide", role: "body", purpose: "Give a starting prescription", copy: ["Three sets"], visual: "Demonstrate the exercise" }], content_review: { assessment: "Claims and hook match the body.", issues: [] }, project_id: "review-project", summary: { topic: "arms", message: "Train with three sets", content_type: "Routine cards", hook: "Start with three sets", slides: [{visual:"Fixed bottom-left LIFTCODE badge"}] }, sources: [] });
     const storedMetadata = db.prepare("SELECT topic,message,content_type FROM content_projects WHERE id='review-project'").get();
     assert.deepEqual(storedMetadata,{topic:"arms",message:"Train with three sets",content_type:"Routine cards"});
     assert.equal(store.get(id).log.content_type,"Routine cards");

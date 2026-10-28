@@ -4,14 +4,25 @@ import { Panel, useReactFlow, useStore } from "@xyflow/react";
 import { LocateFixed, Square, RotateCcw } from "lucide-react";
 
 export function CenterInitialStart() {
-  const centered = useRef(false);
-  const { setCenter, viewportInitialized } = useReactFlow();
+  const previousHeight = useRef<number | null>(null);
+  const { setCenter, getViewport, setViewport, viewportInitialized } = useReactFlow();
   const size = useStore(state => state.nodeLookup.get("start")?.measured);
+  const width = useStore(state => state.width);
+  const height = useStore(state => state.height);
+  const domNode = useStore(state => state.domNode);
   useEffect(() => {
-    if (centered.current || !viewportInitialized || !size?.width || !size.height) return;
-    centered.current = true;
-    void setCenter(size.width / 2, size.height / 2, { zoom: 1 });
-  }, [viewportInitialized, size?.width, size?.height, setCenter]);
+    // The canvas mounts behind the dashboard. Wait for its first visible dimensions.
+    if (!viewportInitialized || !size?.width || !size.height
+      || !width || !height || !domNode?.clientWidth || !domNode.clientHeight) return;
+    if (previousHeight.current === null) {
+      void setCenter(size.width / 2, size.height / 2, { zoom: 1 });
+    } else if (previousHeight.current !== size.height) {
+      // Keep the node's visual center stable as requests/settings expand its height.
+      const viewport = getViewport();
+      void setViewport({...viewport,y:viewport.y-(size.height-previousHeight.current)*viewport.zoom/2});
+    }
+    previousHeight.current = size.height;
+  }, [viewportInitialized, size?.width, size?.height, width, height, domNode, setCenter, getViewport, setViewport]);
   return null;
 }
 

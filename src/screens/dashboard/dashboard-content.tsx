@@ -1,4 +1,5 @@
 "use client";
+import { SpyPage } from "./components/spy/spy-page";
 import { ProductsPage } from "./components/products/products-page";
 import { PersonaPage } from "./components/persona/persona-page";
 import { useState } from "react";
@@ -49,6 +50,7 @@ export function DashboardContent({
           <TabsContent value="published" className="data-[hidden]:hidden">
             <PublishedContentPage />
           </TabsContent>
+          <TabsContent value="spy" className="data-[hidden]:hidden"><SpyPage /></TabsContent>
           <TabsContent keepMounted value="products" className="data-[hidden]:hidden"><ProductsPage /></TabsContent>
           <TabsContent keepMounted value="persona" className="data-[hidden]:hidden"><PersonaPage /></TabsContent>
         </main>

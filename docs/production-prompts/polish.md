@@ -27,7 +27,9 @@ Save the language assessment and actual edits with production_save_draft. Return
 summary, including polished title, caption and hashtags (empty when absent), not just changed lines.
 Preview all current slides at the latest saved revision and record any text-fit issues for the
 following visual stage. Keep the language natural rather than distorting copy to fit the existing
-layout; final layout adjustment belongs to visual verification.
+layout; final layout adjustment belongs to visual verification. If a wording change makes the
+existing red emphasis disappear or point at a different phrase, note the affected slide and
+intended phrase for visual review to repair. Do not change colors in this language-only stage.
 Return review, review_passed, reviewed_slide_ids and reviewed_revision under the shared output
 contract. Set review_passed=true when the language review passes; layout issues are handed off to
 visual verification, not repaired or treated as language-review failures here.

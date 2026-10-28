@@ -2,19 +2,28 @@
 
 ## Scope and inputs
 
-Review the current linked project and polished copy only. production_context intentionally excludes
-source identities, analysis inputs, earlier reference research, clone-selection reasons and source
-visual descriptions. There is no reference lookup, external browsing or source-image access here.
-Return sources: []; do not infer or reconstruct an earlier reference layout.
+For automatic/external_url requests, review the current linked project and polished copy only.
+For past_post requests, the start input and approved presentation are also available; read/preview
+ONLY the explicitly selected own source to preserve its format, page progression, recurring fields
+and visual composition. This is a preservation check, not new reference discovery. production_context excludes the comparison pool and unrelated reference research. Only past_post
+receives its selected source identity and approved presentation. There is no external browsing or reference discovery. Selected own-source lookup is available only for past_post.
+Return sources: []; do not infer an inaccessible reference layout.
 
-Keep approved copy, claims, topic, message, format and image identity unchanged. The cloned layout
-is only a starting point, never a target to restore. Freely move and resize existing images and
-text, adjust styles and regroup information to suit THIS content. Judge the actual rendered result.
+Keep approved copy, claims, topic, message, format and image identity unchanged. For automatic/external_url requests, freely move and resize existing images and text, adjust
+styles and regroup information to suit THIS content. For past_post, preserve the selected source's
+composition and delivery pattern; adjust wrapping, spacing, scale and clipping for the new content
+without redesigning, changing page progression or introducing a different visual language. Judge the actual rendered result.
 
 ## Inspect and adjust
 
 Preview ALL current slides. Apply docs/content-guidelines.md, including hook/CTA typography,
 image prominence, crops, text hierarchy, readable group spacing and the fixed badge specification.
+Check "페이지별 맥락 강조" on EVERY hook, body and CTA page: the final copy must visibly
+highlight one meaningful contiguous phrase in #ED1C24. Judge its meaning against that page's
+message, not just whether red pixels exist. Red images, decorations and the badge do not count.
+If emphasis is missing, scattered, on an irrelevant phrase or shifted after copy edits, repair
+textColors with set_text_colors while keeping the approved wording unchanged. Select from the
+existing copy; do not add text to satisfy the rule. Do not pass review with missing text emphasis.
 Check the actual visible glyphs and subject, not equal frame coordinates alone. For side-by-side
 poses, assess perceived scale, subject bounds and the meaningful alignment for that comparison;
 identical y values do not establish visual alignment. Newly generated similar poses are allowed.
@@ -23,6 +32,10 @@ For vertically adjacent elements in one reading flow, apply the percentage gaps 
 "간격과 그룹" in docs/content-guidelines.md. These are visible edge-to-edge gaps relative to the
 full slide height, not differences between element y coordinates. Preserve the same gap for the
 same relationship across pages; do not impose it on independently anchored or side-by-side elements.
+
+Apply "콘텐츠 묶음의 세로 중앙 배치" in docs/content-guidelines.md after establishing the
+internal gaps. Review the position of the whole content group separately from its internal
+alignment; preserve the fixed badge and the group’s internal spacing when repositioning it.
 
 Balance spacing across the whole composition: text, visible illustration subjects, equipment,
 shapes and the badge. Group related information while keeping readable separation between actual
@@ -43,6 +56,13 @@ immediately restyle the element or conclude that the renderer is broken. Read th
 check layer order and visible bounds, then use preview_slide for that slide alone at full resolution
 at the SAME saved revision. Inspect each affected slide separately and compare with the thumbnail.
 A single ambiguous image observation is not enough to establish a rendering defect.
+Before declaring a small element missing, call preview_slide with a region around its saved bounds
+and surrounding space. For the lower-left badge, use region {x:0,y:0.90,width:0.35,height:0.10}.
+This enlarges pixels from the SAME full-slide PNG, not a reconstruction from the document.
+Whole-slide image interpretation can miss small edge details even when their pixels are present.
+If the region shows the element, withdraw the omission claim. A region preview supplements, but
+never replaces, the required whole-slide review. Do not repeat whole-slide previews as the only
+confirmation of a small-element omission.
 
 If the independent full-resolution preview shows the expected element, do not keep the earlier
 missing-element claim as an unresolved blocker. Continue the review against the current verified
@@ -55,8 +75,16 @@ without changing the content merely to work around an unverified omission.
 ## Allowed repairs
 
 Use update_visual, reorder_layers, set_slide_background, set_text_colors and set_text_weights.
-Existing positions, sizes, text frames and styles may change freely within the content guide.
-Keep badge identity, fixed geometry and lower-left placement. Copy edits, new/deleted placements,
+Existing positions, sizes, text frames and styles may change within the request's preservation constraints and content guide.
+The approved badge specification is immutable, not a malformed draft's current badge.
+Its exact two-element specification is in "LIFTCODE 뱃지 — 불변 사양" in docs/content-guidelines.md.
+If a badge is missing or differs from that specification (including a combined text/background,
+wrong frame/style, local overrides or layer order), call production_repair_badge with the latest
+expectedRevision and expectedTabId. It restores the exact approved shared background and label
+on all slides through the normal saved, undoable edit path. Do not reject a draft just because
+its badge needs this repair. Re-read the document and preview ALL slides at the new revision.
+Arbitrary badge edits remain blocked. Move surrounding content to resolve crowding; never move
+the badge away from its approved position. Except for this canonical repair, copy edits, new/deleted placements,
 image replacement, undo, project creation and metadata changes remain blocked. Report repairs
 outside this scope as blockers rather than hiding text or claiming completion.
 

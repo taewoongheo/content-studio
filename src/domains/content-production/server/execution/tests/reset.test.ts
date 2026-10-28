@@ -5,14 +5,14 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { productionStore, execute, resetProduction } from "../runner";
-import { cloneTaskProject } from "../../projects";
+import { createTaskProject } from "../../projects";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 
 test("reset removes drafts/projects/assets, cancels late output and preserves formal content/references", async () => {
   const directory = await mkdtemp(join(tmpdir(), "production-reset-"));
   process.env.CONTENT_STUDIO_DB_PATH = join(directory, "test.sqlite");
   const store = productionStore();
-  const direction = { analysis: "A practical plan.", topic: "arms", content_type: "routine", message: "train",
+  const direction = { analysis: "A practical plan.", reasoning: { observations: [], interpretations: [], candidates: [] }, topic: "arms", content_type: "routine", message: "train",
     answer: "3 sets", presentation: "cards", reason: "useful", expected_response: "save",
     goal_connection: "install", difference_from_recent: "new", sources: [] };
   try {
@@ -22,7 +22,7 @@ test("reset removes drafts/projects/assets, cancels late output and preserves fo
       store.state(id, "running");
       store.completeAnalysis(id, direction);
       store.state(id, "running");
-      const { projectId } = cloneTaskProject(store, id, source.project_id,"A suitable saved routine structure.");
+      const { projectId } = createTaskProject(store, id, 1);
       store.db.prepare("INSERT INTO content_project_assets(project_id,asset_id,name,mime_type,byte_size,data) VALUES(?,'image','Image','image/png',1,?)")
         .run(projectId, Buffer.from([1]));
       return projectId;

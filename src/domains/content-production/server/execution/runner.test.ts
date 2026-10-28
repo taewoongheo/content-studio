@@ -16,11 +16,12 @@ import {
   recordExternalComparison,
   recordAnalysisRead,
 } from "./runner";
-import { cloneTaskProject, deleteTaskProject } from "../projects";
+import { createTaskProject, deleteTaskProject } from "../projects";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import type { runCodex } from "./process";
 const direction = {
   analysis: "Observed",
+  reasoning: { observations: [], interpretations: [], candidates: [] },
   topic: "arms",
   content_type: "routine",
   message: "train",
@@ -60,7 +61,7 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       }
       assert.equal(store.get(id).analysis.state, "completed");
       const step = store.get(id).task.current_step;
-      const { projectId } = step === "production" ? cloneTaskProject(store, id, source.project_id, "The saved routine layout fits this content.") : { projectId: store.get(id).task.project_id! };
+      const { projectId } = step === "production" ? createTaskProject(store, id, 1) : { projectId: store.get(id).task.project_id! };
       const job = contentJobRegistry.get(projectId);
       if (step === "hook" || step === "visual" || step === "polish") {
         if (step === "hook") recordSourceReview(id);
@@ -101,6 +102,8 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       );
       return {
         project_id: projectId,
+        slide_plan: final.editor.document.slides.map(slide => ({ slide_id: slide.id, role: slide.role, purpose: "Give a starting prescription", copy: ["3 SETS TO START"], visual: "Demonstrate the exercise" })),
+        content_review: { assessment: "The prescription is supported and the hook matches the body.", issues: [] },
         summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "test" },
         sources: [],
         reviewed_slide_ids: job.editor.document.slides.map((s) => s.id),
@@ -116,6 +119,20 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
     assert.equal(store.get(id).task.current_step, "visual");
     assert.equal((store.get(id).log.sources as Array<{ part: string }>)[0].part, "Research summary");
     const projectId = store.get(id).task.project_id!;
+    const savedPlanning = store.get(id).production!;
+    for (const wrongProject of [true, false]) {
+      store.db.prepare("UPDATE content_drafts SET current_step='production',state='stopped' WHERE id=?").run(id);
+      await execute(id, "http://127.0.0.1:3000", async () => ({
+        project_id: wrongProject ? "wrong-project" : projectId,
+        slide_plan: [{ slide_id: "stale-slide", role: "hook", purpose: "Invalid", copy: ["Invalid"], visual: "Invalid" }],
+        content_review: { assessment: "Invalid replacement", issues: [] },
+        summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type }, sources: [],
+        reviewed_slide_ids: ["stale-slide"], reviewed_revision: 0,
+      }));
+      assert.equal(store.get(id).task.state, "failed");
+      assert.deepEqual(store.get(id).production?.slide_plan, savedPlanning.slide_plan);
+      assert.deepEqual(store.get(id).production?.content_review, savedPlanning.content_review);
+    }
     // A quality rejection must preserve the reviewer’s actual reason in diagnostics.
     store.db.prepare("UPDATE content_drafts SET current_step='visual',state='stopped' WHERE id=?").run(id);
     const rejectedReview = "Confirmed clipping on slide-1 at the latest saved revision.";
