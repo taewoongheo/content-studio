@@ -61,7 +61,7 @@ export function startAssistant(target: AssistantTarget, selection: AssistantSele
   }
   const run: AssistantRun = { id: randomUUID(), token: randomUUID(), controller: new AbortController(), phase: "inspect", target, slides: new Set(), changed: false };
   session.run = run;
-  session.status = { ...idle(), requestId, state: "running", phase: "명령 확인 중" };
+  session.status = { ...idle(), requestId, command: message, state: "running", phase: "명령 확인 중" };
   void execute(session, run, selection, message, snapshot, origin, executeCli);
   return session.status;
 }

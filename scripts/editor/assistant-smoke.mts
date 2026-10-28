@@ -24,7 +24,7 @@ export async function verifyEditorAssistant(browser: Browser, origin: string) {
     const body = req.postDataJSON(); submitted.push(body);
     const state: AssistantState = body.action === "stop" ? { ...idle, state: "stopped" }
       : body.message.includes("어때") ? { ...idle, state: "completed", requestId: body.requestId, text: "제목을 조금 키우면 읽기 좋습니다.", suggestion: "제목을 키워 줘" }
-        : { ...idle, state: "running", requestId: body.requestId, phase: "수정·시각 확인 중" };
+        : { ...idle, state: "running", requestId: body.requestId, command: body.message, phase: "수정·시각 확인 중" };
     states.set(body.tabId, state); return route.fulfill({ json: state });
   });
   try {
@@ -45,6 +45,9 @@ export async function verifyEditorAssistant(browser: Browser, origin: string) {
       await dialog.getByRole("button", { name: "제안 적용" }).click();
       await dialog.getByRole("button", { name: "중단", exact: true }).waitFor();
       assert.equal(submitted.at(-1)?.message, "제목을 키워 줘");
+      assert.equal(await dialog.getByLabel("AI 편집 명령").inputValue(), "제목을 키워 줘");
+      assert.ok(await dialog.getByLabel("AI 편집 명령").isDisabled());
+      await dialog.getByRole("status").getByText("작업 중", { exact: true }).waitFor();
       await dialog.getByRole("button", { name: "AI 명령 닫기" }).click();
       assert.equal(states.get(tabId)?.state, "running", "closing the panel must not stop a command");
       // An actual existing edit endpoint represents the AI tool write, preserving undo.
@@ -60,6 +63,8 @@ export async function verifyEditorAssistant(browser: Browser, origin: string) {
       states.set(tabId, { ...states.get(tabId)!, state: "completed", phase: "완료", changed: true });
       await page.getByRole("button", { name: "AI 명령 열기" }).click();
       await dialog.getByText("완료", { exact: true }).waitFor();
+      assert.ok(await dialog.getByLabel("AI 편집 명령").isEnabled());
+      assert.equal(await dialog.getByLabel("AI 편집 명령").inputValue(), "제목을 키워 줘");
       await dialog.getByRole("button", { name: "AI 명령 닫기" }).click();
       // Right click anywhere in the editor toggles the same panel.
       await page.locator(`[data-tab-id="${tabId}"]`).click({ button: "right", position: { x: 12, y: 12 } });
