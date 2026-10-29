@@ -4,7 +4,7 @@ export type Buttons = Array<Array<{text:string;callback_data?:string;url?:string
 export class TelegramClient {
   constructor(private readonly token: string) {}
   async call<T>(method: string, body: object): Promise<T> {
-    const result = await new Promise<{ok:boolean;result:T;error_code?:number}>((resolve,reject)=> {
+    const result = await new Promise<{ok:boolean;result:T;error_code?:number;description?:string}>((resolve,reject)=> {
       const fail=()=>reject(new Error("텔레그램 연결 실패. 자동 재연결합니다."));
       const req=request(`https://api.telegram.org/bot${this.token}/${method}`,{
         method:"POST",family:4,headers:{"Content-Type":"application/json"},
@@ -25,7 +25,10 @@ export class TelegramClient {
       req.on("error",fail);
       req.end(JSON.stringify(body));
     });
-    if (!result.ok) throw new Error(`텔레그램 요청 실패 (${result.error_code ?? "unknown"})`);
+    if (!result.ok) {
+      const reason=(result.description ?? "사유 없음").replaceAll(this.token,"[redacted]");
+      throw new Error(`텔레그램 요청 실패 (${result.error_code ?? "unknown"}): ${reason}`);
+    }
     return result.result;
   }
   async send(chat: string, text: string, buttons?: Buttons) {
