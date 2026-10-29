@@ -13,6 +13,7 @@ const tiktokUrl = z.string().trim().transform((value, context) => {
 export const productionRequestSchema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("automatic"), instructions }),
   z.object({ mode: z.literal("past_post"), sourceProjectId: z.string().min(1), instructions }),
+  z.object({ mode: z.literal("spy_reference"), referenceId: z.string().min(1), instructions }),
   z.object({ mode: z.literal("external_url"), url: tiktokUrl, instructions }),
 ]);
 export const productionRequestsSchema = z.array(productionRequestSchema).min(1);
@@ -31,5 +32,9 @@ export interface ProductionInput {
   source?: PreparedSource;
 }
 export const productionModeLabels: Record<ProductionRequest["mode"], string> = {
-  automatic: "자동 생성", past_post: "과거 게시글", external_url: "외부 URL",
+  spy_reference: "레퍼런스 · 스파이 게시글", automatic: "자동 생성", past_post: "레퍼런스 · 내 게시글", external_url: "외부 URL",
 };
+
+export function preservesSourceFormat(mode: ProductionRequest["mode"]) {
+  return mode === "past_post" || mode === "spy_reference";
+}

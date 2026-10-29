@@ -38,7 +38,11 @@ export async function verifyProductionStart(browser: Browser, origin: string, po
     if (request.method() === "GET") {
       const response = await route.fetch();
       const snapshot = await response.json();
-      return route.fulfill({ json: { ...snapshot, publishedPosts: posts, configured: { apify: true } } });
+      return route.fulfill({ json: { ...snapshot, publishedPosts: posts,
+        externalReferences: [{ id: "spy-pick", account: "example", title: "Spy routine format", caption: "Back exercises", url: "https://www.tiktok.com/@example/photo/456", slide_count: 12, visual_set_id: "spy-preview", excluded: 0 },
+          ...Array.from({ length: 25 }, (_, i) => ({ id: `spy-list-${i}`, account: "example", title: `Spy list ${i}`, caption: "Routine", url: `https://www.tiktok.com/@example/photo/${1000+i}`, slide_count: 3, excluded: 0 })),
+          { id: "spy-excluded", account: "example", title: "Excluded reference", url: "https://www.tiktok.com/@example/photo/789", slide_count: 3, excluded: 1 }],
+        referenceAccounts: [{ username: "example", enabled: 1 }], configured: { apify: true } } });
     }
     const input = request.postDataJSON();
     if (input.action !== "start") return route.continue();
@@ -46,6 +50,7 @@ export async function verifyProductionStart(browser: Browser, origin: string, po
     attempts++;
     return route.fulfill(attempts === 1 ? { status: 400, json: { error: "Fixture start failed" } } : { json: { ids: [] } });
   });
+  await page.route("**/api/content-production?image=spy-preview*", route => route.fulfill({ contentType: "image/png", body: artwork }));
   try {
     await page.goto(origin);
     await page.getByRole("button", { name: "제작 캔버스", exact: true }).click();
@@ -57,7 +62,8 @@ export async function verifyProductionStart(browser: Browser, origin: string, po
     await page.getByRole("dialog").getByRole("button", { name: "수정", exact: true }).click();
     await add.click();
     selecting = true;
-    await page.getByRole("radio", { name: "과거 게시글", exact: true }).check();
+    await page.getByRole("radio", { name: "레퍼런스 기반", exact: true }).check();
+    await page.getByRole("radio", { name: "내 게시글", exact: true }).check();
     const list = page.getByRole("radiogroup",{name:"원본 게시글",exact:true});
     const initialCount = await list.getByRole("radio").count();
     assert.ok(initialCount>=8&&initialCount<posts.length,"mount only a page of text entries");
@@ -114,16 +120,51 @@ export async function verifyProductionStart(browser: Browser, origin: string, po
     await add.click();
     await page.getByRole("dialog").getByRole("button", { name: "추가", exact: true }).click();
     if (process.env.CONTENT_STUDIO_SMOKE_SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.CONTENT_STUDIO_SMOKE_SCREENSHOT_DIR}/start-requests.png` });
-    const start = page.getByRole("button", { name: "3개 제작 시작", exact: true });
+    await add.click();
+    await page.getByRole("radio", { name: "레퍼런스 기반", exact: true }).check();
+    await page.getByRole("radio", { name: "스파이 게시글", exact: true }).check();
+    const spyList = page.getByRole("radiogroup", { name: "레퍼런스 원본 게시글", exact: true });
+    const spyCount = await spyList.getByRole("radio").count();
+    assert.ok(spyCount < 26);
+    await spyList.evaluate(element => { element.scrollTop = element.scrollHeight; });
+    await page.waitForFunction(count => document.querySelector('[role="radiogroup"]')!.querySelectorAll('input[type="radio"]').length > count, spyCount);
+    await page.getByLabel("레퍼런스 게시글 검색", { exact: true }).fill("Spy routine format");
+    assert.equal(await spyList.locator("img").count(), 0);
+    await page.getByRole("dialog").getByText("Spy routine format", { exact: true }).click();
+    await page.getByRole("img", { name: "레퍼런스 1번 슬라이드", exact: true }).waitFor();
+    const strip = page.getByRole("region", { name: "스파이 게시글 슬라이드 미리보기", exact: true });
+    assert.equal(await page.getByRole("button", { name: "다음 레퍼런스 이미지", exact: true }).count(), 0);
+    await strip.evaluate(element => { element.scrollLeft = element.scrollWidth; });
+    assert.ok(await strip.evaluate(element => element.scrollLeft > 0), "reference images browse by horizontal scroll");
+    await page.getByRole("radio", { name: "내 게시글", exact: true }).check();
+    await page.getByRole("radio", { name: "스파이 게시글", exact: true }).check();
+    assert.equal(await page.getByRole("radio", { name: "Spy routine format", exact: true }).isChecked(), true);
+    assert.equal(await page.getByRole("radio", { name: "Excluded reference", exact: true }).count(), 0);
+    await page.getByLabel("추가 지침", { exact: false }).fill("가슴 운동으로");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForFunction(() => {
+      const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+      const rect = dialog.getBoundingClientRect();
+      return rect.width <= window.innerWidth && rect.height <= window.innerHeight && dialog.scrollHeight <= dialog.clientHeight + 1;
+    });
+    const referenceBox = await page.getByRole("dialog").boundingBox();
+    assert.ok(referenceBox && referenceBox.height <= 844 && referenceBox.width <= 390);
+    await page.getByRole("dialog").getByRole("button", { name: "추가", exact: true }).click();
+    await page.getByRole("button", { name: "4번 요청 수정", exact: true }).click();
+    assert.equal(await page.getByRole("radio", { name: "Spy routine format", exact: true }).isChecked(), true);
+    await page.getByRole("dialog").getByRole("button", { name: "수정", exact: true }).click();
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    const start = page.getByRole("button", { name: "4개 제작 시작", exact: true });
     await start.click();
     await page.getByRole("alert").filter({ hasText: "Fixture start failed" }).waitFor();
-    assert.equal(await page.getByRole("list", { name: "제작 요청 목록" }).getByRole("listitem").count(), 3, "failed start preserves requests");
+    assert.equal(await page.getByRole("list", { name: "제작 요청 목록" }).getByRole("listitem").count(), 4, "failed start preserves requests");
     await start.click();
     await page.getByRole("list", { name: "제작 요청 목록" }).waitFor({ state: "detached" });
     assert.deepEqual(submitted, [
       { mode: "past_post", sourceProjectId: post.id, instructions: "" },
       { mode: "external_url", url: "https://www.tiktok.com/@example/photo/123", instructions: "초보자 대상" },
       { mode: "automatic", instructions: "" },
+      { mode: "spy_reference", referenceId: "spy-pick", instructions: "가슴 운동으로" },
     ]);
     assert.deepEqual(browserErrors, []);
     console.log("PASS text-only infinite source list, selection-only images, fixed dialog at four viewport sizes, full-list search, start modal modes, saved preview, optional instructions, edit/delete, narrow viewport and failed-start recovery");

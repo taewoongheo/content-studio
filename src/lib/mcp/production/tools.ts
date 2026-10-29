@@ -203,7 +203,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
       }),
   );
   registerTool(server, "production_create_project", {
-    description: "Production only. Create a blank 4:5 project for automatic or external-URL production. Compose a new layout using the assigned own posts collectively as references; copying a single post is not required. Reuses the task's linked project on resume. Past-post requests must use production_clone_project instead.",
+    description: "Production only. Create a blank 4:5 project for automatic, external-URL or spy-reference production. For spy_reference reconstruct the selected external composition with new copy/artwork; do not substitute an own-post layout. Compose a new layout using the assigned own posts collectively as references; copying a single post is not required. Reuses the task's linked project on resume. Past-post requests must use production_clone_project instead.",
     inputSchema: z.object({ slideCount: z.number().int().min(1).max(20).default(6) }),
     annotations: annotations(false),
   }, input => guarded(() => json(createTaskProject(productionStore(), taskId, input.slideCount))));

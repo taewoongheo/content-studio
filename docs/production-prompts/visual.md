@@ -5,12 +5,15 @@
 For automatic/external_url requests, review the current linked project and polished copy only.
 For past_post requests, the start input and approved presentation are also available; read/preview
 ONLY the explicitly selected own source to preserve its format, page progression, recurring fields
-and visual composition. This is a preservation check, not new reference discovery. production_context excludes the comparison pool and unrelated reference research. Only past_post
-receives its selected source identity and approved presentation. There is no external browsing or reference discovery. Selected own-source lookup is available only for past_post.
-Return sources: []; do not infer an inaccessible reference layout.
+and visual composition. This is a preservation check, not new reference discovery. production_context excludes the comparison pool and unrelated reference research. Format-preserving requests receive their selected source identity and approved presentation. There is no external browsing or reference discovery. Selected own-source lookup is available only for past_post.
+For spy_reference requests, production_context.input contains the selected source caption and
+visual_set_id. Read ALL its preserved slides using production_read_images to compare format,
+page progression, recurring fields and composition. This is the only permitted external source;
+no new reference discovery, image fetching or unrelated image sets. Fixed content-guide rules
+still take precedence over source branding. Return sources: []; do not infer an inaccessible reference layout.
 
 Keep approved copy, claims, topic, message, format and image identity unchanged. For automatic/external_url requests, freely move and resize existing images and text, adjust
-styles and regroup information to suit THIS content. For past_post, preserve the selected source's
+styles and regroup information to suit THIS content. For past_post and spy_reference, preserve the selected source's
 composition and delivery pattern; adjust wrapping, spacing, scale and clipping for the new content
 without redesigning, changing page progression or introducing a different visual language. Judge the actual rendered result.
 

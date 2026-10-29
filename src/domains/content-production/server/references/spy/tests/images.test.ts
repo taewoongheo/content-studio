@@ -29,3 +29,47 @@ test("expired image links refresh only the selected post; failed capture never s
   assert.ok((db.prepare('SELECT image_error FROM content_external_references').get() as {image_error:string}).image_error);
  }finally{db.close();}
 });
+
+test("cancelling one consumer detaches promptly without cancelling another consumer's capture", async () => {
+  const db = fixture();
+  let complete!: (value: Array<{data:Buffer;width:number;height:number}>) => void;
+  let sharedSignal!: AbortSignal;
+  const capture = (_urls: string[], signal?: AbortSignal) => {
+    sharedSignal = signal!;
+    return new Promise<Array<{data:Buffer;width:number;height:number}>>(resolve => { complete = resolve; });
+  };
+  const client = { posts: async () => { throw Error("unexpected actor call"); } };
+  const first = new AbortController(), second = new AbortController();
+  try {
+    const a = ensureReferenceImages(db, "123", client, capture, first.signal);
+    const b = ensureReferenceImages(db, "123", client, capture, second.signal);
+    first.abort();
+    await assert.rejects(a, { name: "AbortError" });
+    assert.equal(sharedSignal.aborted, false);
+    complete([0,1].map(() => ({data:Buffer.from("image"),width:540,height:675})));
+    const set = await b;
+    assert.ok(set);
+    assert.equal(await ensureReferenceImages(db, "123", client, capture), set);
+  } finally { db.close(); }
+});
+
+test("last consumer cancellation aborts actor work, saves no error, and allows a fresh retry", async () => {
+  const db = fixture(), controller = new AbortController();
+  let actorStarted!: () => void;
+  const started = new Promise<void>(resolve => { actorStarted = resolve; });
+  let actorSignal!: AbortSignal;
+  const client = { posts: async (_urls: string[], signal?: AbortSignal) => {
+    actorSignal = signal!; actorStarted();
+    return new Promise<never>((_resolve, reject) => signal!.addEventListener("abort", () => reject(signal!.reason), {once:true}));
+  } };
+  try {
+    const work = ensureReferenceImages(db, "123", client, async () => { throw Error("expired image"); }, controller.signal);
+    await started;
+    controller.abort();
+    await assert.rejects(work, { name: "AbortError" });
+    assert.equal(actorSignal.aborted, true);
+    const set = await ensureReferenceImages(db, "123", client, async urls => urls.map(() => ({data:Buffer.from("image"),width:540,height:675})));
+    assert.ok(set);
+    assert.equal((db.prepare("SELECT image_error FROM content_external_references").get() as {image_error:unknown}).image_error, null);
+  } finally { db.close(); }
+});
