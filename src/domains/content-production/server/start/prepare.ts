@@ -12,7 +12,7 @@ export async function prepareStartInput(store: ProductionStore, id: string, sign
   if (input.request.mode === "spy_reference") {
     // Reuse the library image cache; selecting a post never collects the entire account.
     const source = store.requestSource(input.request)!;
-    const setId = await ensureReferenceImages(store.db, input.request.referenceId, client, capture);
+    const setId = await ensureReferenceImages(store.db, input.request.referenceId, client, capture, signal);
     signal.throwIfAborted();
     store.assertActive(id, "analysis");
     store.requestSource(input.request);

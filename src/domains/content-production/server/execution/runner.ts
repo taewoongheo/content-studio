@@ -87,9 +87,9 @@ export function recordReview(
   slides.forEach((s) => reviewed.add(s));
   run.reviews.set(projectId, { revision, slides: reviewed });
 }
-export function recordSourceReview(id: string, projectId?: string, setId?: string) {
+export function recordSourceReview(id: string, projectId?: string, setId?: string, indexes?: number[]) {
   const run = runs.get(id);
-  if (run) { run.sourceImages = true; if (projectId) run.sourceProjects.add(projectId); if (setId) run.sourceSets.add(setId); }
+  if (run) { run.sourceImages = true; if (projectId) run.sourceProjects.add(projectId); if (setId && indexes === undefined) run.sourceSets.add(setId); }
 }
 export function recordAnalysisRead(id: string, ids: string[]) {
   const run = runs.get(id);

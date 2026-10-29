@@ -77,7 +77,8 @@ export async function POST(
         if (!result.isError && name === "production_external_references") recordExternalComparison(taskId);
         if (!result.isError && result.content?.some(item => item.type === "image") && (name === "production_preview_project" || name === "production_read_images"))
           recordSourceReview(taskId, name === "production_preview_project" ? (input as {projectId:string}).projectId : undefined,
-            name === "production_read_images" ? (input as {set_id:string}).set_id : undefined);
+            name === "production_read_images" ? (input as {set_id:string}).set_id : undefined,
+            name === "production_read_images" ? (input as {indexes?:number[]}).indexes : undefined);
         if (
           result.isError ||
           !(name === "preview_slide" || name === "preview_slides")
