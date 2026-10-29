@@ -1,6 +1,5 @@
+import { savePerformance } from "../performance/collection";
 import { resolveTikTokPostUrl } from "@/domains/research/server/apify/post-url";
-import { recentKoreanDate, type PerformanceRecord } from "../../domain/performance";
-export { recentKoreanDate } from "../../domain/performance";
 import { notifyProjectsChanged } from "@/domains/workspace/server/project-events";
 import type Database from "better-sqlite3";
 import {
@@ -26,30 +25,6 @@ export function updateMetrics(
   db.prepare(
     `UPDATE content_creation_logs SET ${metricsKeys.map((k) => `${k}=?`).join(",")},observed_at=?,updated_at=? WHERE id=?`,
   ).run(...metricsKeys.map((k) => post[k]), now, now, id);
-}
-export async function refreshMetrics(
-  db: Database.Database,
-  signal?: AbortSignal,
-  client = new ApifyTikTokClient(),
-  onSnapshot?: (records: PerformanceRecord[]) => void,
-) {
-  const read = () => db.prepare(
-    "SELECT l.id AS log_id,l.project_id,COALESCE(p.name,l.topic,'콘텐츠') AS name,l.post_url,l.actual_published_at,l.observed_at,l.view_count,l.like_count,l.save_count,l.comment_count,l.share_count FROM content_creation_logs l LEFT JOIN content_projects p ON p.id=l.project_id WHERE l.post_url IS NOT NULL AND l.actual_published_at IS NOT NULL ORDER BY l.actual_published_at DESC",
-  ).all() as PerformanceRecord[];
-  const targets = read().filter(record => recentKoreanDate(record.actual_published_at));
-  onSnapshot?.(targets);
-  if (!targets.length) return 0;
-  const posts = await client.posts(
-    targets.map((r) => r.post_url),
-    signal,
-  );
-  signal?.throwIfAborted();
-  db.transaction(() =>
-    targets.forEach((target, i) => updateMetrics(db, target.log_id, posts[i])),
-  )();
-  const ids = new Set(targets.map(record => record.log_id));
-  onSnapshot?.(read().filter(record => ids.has(record.log_id)));
-  return targets.length;
 }
 const registrations = new Map<string, Promise<unknown>>();
 export function registerPublication(
@@ -131,6 +106,7 @@ export function finalizePublication(
       "UPDATE content_creation_logs SET project_id=?,content_summary_json=?,platform='tiktok',post_url=?,actual_published_at=?,completed_at=?,updated_at=? WHERE id=?",
     ).run(projectId, JSON.stringify(summary), url, post.published_at, now, now, logId);
     updateMetrics(db, logId, post);
+    savePerformance(db, logId, post);
     if (draft) db.prepare("DELETE FROM content_drafts WHERE id=?").run(draft.id);
   })();
 }

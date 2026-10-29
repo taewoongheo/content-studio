@@ -26,6 +26,12 @@ CREATE TABLE IF NOT EXISTS content_creation_logs (
  comment_count INTEGER, save_count INTEGER, share_count INTEGER, observed_at TEXT, completed_at TEXT,
  created_at TEXT NOT NULL, updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS content_performance (
+ log_id TEXT NOT NULL REFERENCES content_creation_logs(id) ON DELETE CASCADE,
+ stage TEXT NOT NULL CHECK(stage IN ('early','middle','late')),
+ view_count INTEGER, like_count INTEGER, comment_count INTEGER, save_count INTEGER, share_count INTEGER,
+ PRIMARY KEY(log_id,stage)
+);
 CREATE INDEX IF NOT EXISTS content_logs_published_idx ON content_creation_logs(actual_published_at);
 CREATE INDEX IF NOT EXISTS content_logs_created_idx ON content_creation_logs(created_at);
 CREATE TABLE IF NOT EXISTS content_stage_documents (

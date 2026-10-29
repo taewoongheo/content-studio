@@ -2,43 +2,10 @@ import { listFormalContent } from "./list";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { openLocalDatabase } from "@/lib/local-db/database";
-import { refreshMetrics, recentKoreanDate, finalizePublication } from "./service";
+import { finalizePublication } from "./service";
 import { ProductionStore } from "../persistence/store";
-import { ApifyTikTokClient, parseApifyItem } from "@/domains/research/server/apify/client";
+import { parseApifyItem } from "@/domains/research/server/apify/client";
 import { saveVisuals } from "./visuals";
-test("한국 날짜 수집 범위와 실패 시 기존 성과 보존", async () => {
-  assert.equal(
-    recentKoreanDate("2026-10-18T15:00:00Z", new Date("2026-10-22T02:00:00Z")),
-    true,
-  );
-  assert.equal(
-    recentKoreanDate("2026-10-18T14:59:00Z", new Date("2026-10-22T02:00:00Z")),
-    false,
-  );
-  const db = openLocalDatabase(":memory:"),
-    store = new ProductionStore(db);
-  try {
-    const [id] = store.create(1),
-      log = store.get(id).task.log_id;
-    db.prepare(
-      "UPDATE content_creation_logs SET actual_published_at=?,post_url=?,view_count=42 WHERE id=?",
-    ).run(new Date().toISOString(), "https://www.tiktok.com/@a/photo/123", log);
-    const broken = new ApifyTikTokClient(
-      "key",
-      async () => new Response(null, { status: 503 }),
-    );
-    await assert.rejects(() => refreshMetrics(db, undefined, broken));
-    assert.equal(store.get(id).log.view_count, 42);
-    const valid = new ApifyTikTokClient("key", async () =>
-      Response.json([{ id: "123", playCount: 80 }]),
-    );
-    await refreshMetrics(db, undefined, valid);
-    assert.equal(store.get(id).log.view_count, 80);
-    assert.equal(store.get(id).log.like_count, null);
-  } finally {
-    db.close();
-  }
-});
 test("시각 자료 묶음과 모든 장은 함께 저장되고 재시도는 중복 생성하지 않는다", () => {
   const db = openLocalDatabase(":memory:");
   try {
@@ -122,20 +89,3 @@ test("수집 중 삭제된 작업은 게시 처리로 되살아나지 않는다"
   } finally {db.close();}
 });
 
-test("성과 갱신 스냅샷은 실제 대상·저장 수치를 표시하고 누락된 지표를 0으로 바꾸지 않는다", async () => {
-  const db=openLocalDatabase(":memory:"),store=new ProductionStore(db);
-  try {
-    const [id]=store.create(1),logId=store.get(id).task.log_id;
-    db.prepare("UPDATE content_creation_logs SET topic='Test post',post_url=?,actual_published_at=?,view_count=10 WHERE id=?")
-      .run("https://www.tiktok.com/@a/photo/123",new Date().toISOString(),logId);
-    const snapshots: Array<Array<{log_id:string;view_count:number|null;like_count:number|null}>>=[];
-    const client=new ApifyTikTokClient("test-key",async()=>Response.json([{id:"123",playCount:99,diggCount:0}]));
-    assert.equal(await refreshMetrics(db,undefined,client,rows=>snapshots.push(rows)),1);
-    assert.equal(snapshots.length,2);
-    assert.equal(snapshots[0][0].log_id,logId);
-    assert.equal(snapshots[0][0].view_count,10);
-    assert.equal(snapshots[1][0].view_count,99);
-    assert.equal(snapshots[1][0].like_count,0);
-    assert.equal(store.get(id).log.save_count,null);
-  }finally{db.close();}
-});
