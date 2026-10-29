@@ -24,7 +24,7 @@ export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, Wo
     nodes.push({ id: "sync", type: "stage", position: { x: 380, y: 0 }, data: {
       intervals: report ? [{ started_at: report.started_at, ended_at: report.completed_at }] : [],
       title: "분석 자료", stage: "sync", state: syncing ? "running" : report?.state === "failed" ? "failed" : report?.state === "completed" || tasks.some(task => task.state !== "pending") ? "completed" : "pending", color: "#475569", write: 0, kind: "",
-      outputTitle: "분석 참고 게시글", outputText: syncing ? "최신 반응을 가져오고 있어요" : "조회 · 좋아요 · 저장 · 댓글 · 공유", facts: [`${planningCount}개 게시글`], activity: syncing ? "성과 조회 중" : report?.state === "failed" ? "수집 실패" : "",
+      outputTitle: "분석 참고 게시글", outputText: syncing ? "저장된 성과와 참고 자료를 준비하고 있어요" : "조회 · 좋아요 · 저장 · 댓글 · 공유", facts: [`${planningCount}개 게시글`], activity: syncing ? "자료 준비 중" : report?.state === "failed" ? "수집 실패" : "",
     } });
     edges.push({ id: "start-sync", source: "start", target: "sync", type: "straight", animated: syncing, markerEnd: { type: MarkerType.ArrowClosed, color: "#475569" }, style: { stroke: "#475569", strokeWidth: 2.5 } });
   }
