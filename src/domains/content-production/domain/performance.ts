@@ -7,9 +7,6 @@ export type PerformanceRefresh = {
   started_at: string; completed_at: string | null; state: "running" | "completed" | "failed";
   records: PerformanceRecord[]; error: string | null;
 };
-export function recentKoreanDate(iso: string, now = new Date()) {
-  const day = (date: Date) => new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit",
-  }).format(date);
-  return day(new Date(iso)) >= day(new Date(now.getTime() - 3 * 86400000)) && day(new Date(iso)) <= day(now);
-}
+export type StagePerformance = Record<typeof metricKeys[number], number | null> & {
+  stage: "early" | "middle" | "late";
+};
