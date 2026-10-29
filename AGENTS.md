@@ -372,7 +372,7 @@ pnpm test:mcp --production
 - BotFather에서 `/newbot`으로 전용 봇을 만들고 해당 봇에 `/start`를 보낸다. 수신기를 켜기 전에 `node --env-file=.env.local --import tsx scripts/telegram-setup.mts`로 봇 이름과 최근 `/start` 발신자 ID를 확인한다. 본인 ID를 설정한 뒤 서버를 재시작한다. 기본 앱 주소는 `http://127.0.0.1:3000`이며 다른 포트는 `CONTENT_STUDIO_TELEGRAM_ORIGIN`으로 지정한다.
 - `/create [추가요청]`은 자동 생성, `/create URL [추가요청]`은 등록된 내 게시글·외부 레퍼런스를 먼저 찾고 없으면 외부 URL 방식으로 실행한다. 추가요청은 기존 `instructions` 하나에 전달한다. URL은 앱과 같은 TikTok 전체 게시물 URL만 지원한다.
 - `/posts [검색어]`, `/refs [검색어]`는 최대 5개와 선택 버튼을 반환한다. 버튼 선택 뒤 추가요청을 입력하거나 추가요청 없이 시작할 수 있다. 선택은 24시간 유효하다. `/status`(연결 확인), `/job`(작업별 번호·상태 목록), `/stop [작업번호]`, `/resume 작업번호`, `/reset`을 지원한다. 목록은 `job 1 - 중단` 형식이다. 재개는 기존 단계 실행기를 사용하며 중단·실패 상태만 허용한다. 초기화는 기존 앱의 전체 제작 초기화와 동일하며 저장된 게시글·설정의 삭제 기능이 아니다. 결과는 현재 텍스트 요약으로 제공한다.
-- `server/telegram`은 프로토콜·통신을 담당하고 기존 제작 서비스를 호출한다. 별도 웹 공개 엔드포인트나 셸 실행은 없다. long polling 수신 위치·선택·작업 연결·알림 여부는 `content_telegram_state`에 저장한다. 빌드와 `CONTENT_STUDIO_DISABLE_COLLECTION=1` 검증 환경에서는 연결하지 않는다.
+- `server/telegram`은 프로토콜·통신을 담당하고 `commands`에서 제작 요청·자료 조회·작업 관리와 알림을 구분해 기존 제작 서비스를 호출한다. 별도 웹 공개 엔드포인트나 셸 실행은 없다. long polling 수신 위치·선택·작업 연결·알림 여부는 `content_telegram_state`에 저장한다. 빌드와 `CONTENT_STUDIO_DISABLE_COLLECTION=1` 검증 환경에서는 연결하지 않는다.
 - 수신 위치는 실행 전에 저장해 같은 메시지를 자동 재실행하지 않는다. 접수 도중 서버가 종료되면 `/job`으로 생성 여부를 확인한 뒤 필요할 때 다시 요청한다. 미전송 종료 알림은 재시도하며 전송 직후 서버 종료 시 중복 알림이 가능하다. 서버 재시작이 제작 자체를 자동 재개하지는 않는다.
 
 - 제작 작업 번호는 `content_draft_numbers`의 AUTOINCREMENT 정수이며 UUID와 매핑한다. 모든 신규 draft에 트리거로 부여하고 기존 draft는 스키마 적용 시 생성 순서로 한 번 부여한다. 완료 draft도 정리 전까지 번호를 유지하며 삭제된 번호는 재사용하지 않는다. 게시글·프로젝트 UUID는 유지한다.

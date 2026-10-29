@@ -6,7 +6,7 @@ import { PRODUCTION_SCHEMA } from "../../persistence/schema";
 import { draftId, draftNumber } from "../../persistence/draft-numbers";
 import { TelegramStore } from "../store";
 import { TelegramClient } from "../client";
-import { TelegramHandler } from "../handler";
+import { TelegramHandler } from "../commands/handler";
 
 test("draft numbers persist, survive completion, backfill old drafts and never reuse deleted numbers",()=> {
   const db=openLocalDatabase(":memory:"),store=new ProductionStore(db);

@@ -4,7 +4,7 @@ import { openLocalDatabase } from "@/lib/local-db/database";
 import { ProductionStore } from "../../persistence/store";
 import { TelegramStore } from "../store";
 import { TelegramClient, type Buttons } from "../client";
-import { TelegramHandler } from "../handler";
+import { TelegramHandler } from "../commands/handler";
 import type { ProductionRequest } from "../../../domain/start/input";
 class FakeClient extends TelegramClient {
   sent:Array<{text:string;buttons?:Buttons}>=[];

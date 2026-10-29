@@ -2,7 +2,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { getLocalDatabase } from "@/lib/local-db/database";
 import { TelegramClient } from "./client";
 import { TelegramStore } from "./store";
-import { TelegramHandler } from "./handler";
+import { TelegramHandler } from "./commands/handler";
 import type { TelegramUpdate } from "./protocol";
 
 const shared=globalThis as typeof globalThis & {telegramStarted?:boolean};
@@ -13,7 +13,11 @@ export function startTelegram() {
     console.error("텔레그램 비활성: TELEGRAM_BOT_TOKEN과 TELEGRAM_ALLOWED_USER_ID를 설정해 주세요.");return;
   }
   const origin=process.env.CONTENT_STUDIO_TELEGRAM_ORIGIN ?? "http://127.0.0.1:3000";
-  const url=new URL(origin);
+  let url: URL;
+  try { url=new URL(origin); }
+  catch {
+    console.error("CONTENT_STUDIO_TELEGRAM_ORIGIN은 http://127.0.0.1:포트 형식이어야 합니다.");return;
+  }
   if(url.protocol!=="http:" || url.hostname!=="127.0.0.1" || url.username || url.password || url.pathname!=="/" || url.search || url.hash) {
     console.error("CONTENT_STUDIO_TELEGRAM_ORIGIN은 http://127.0.0.1:포트 형식이어야 합니다.");return;
   }
