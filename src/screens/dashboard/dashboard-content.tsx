@@ -7,7 +7,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { StudioSidebar } from "./components/studio-sidebar";
 import { AllContentPage } from "./components/content/all-content-page";
-import { PublishedContentPage } from "./components/published/published-content-page";
+
 
 export function DashboardContent({
   onNew,
@@ -16,7 +16,7 @@ export function DashboardContent({
   onNew: () => void;
   onOpen: (id: string) => Promise<void>;
 }) {
-  const [tab, setTab] = useState("published");
+  const [tab, setTab] = useState("all");
   return (
     <Tabs
       orientation="vertical"
@@ -46,9 +46,6 @@ export function DashboardContent({
         >
           <TabsContent value="all" className="data-[hidden]:hidden">
             <AllContentPage onOpen={onOpen} />
-          </TabsContent>
-          <TabsContent value="published" className="data-[hidden]:hidden">
-            <PublishedContentPage />
           </TabsContent>
           <TabsContent value="spy" className="data-[hidden]:hidden"><SpyPage /></TabsContent>
           <TabsContent keepMounted value="products" className="data-[hidden]:hidden"><ProductsPage /></TabsContent>

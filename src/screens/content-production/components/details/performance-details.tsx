@@ -31,9 +31,9 @@ export function PerformanceDetails({ report, logs, details, onClose }: {
       <button className="production-button" aria-label="성과 상세 닫기" onClick={onClose}><X size={16} /></button>
     </header>
     <p className="mt-3 text-xs text-muted-foreground">{report
-      ? report.state === "running" ? "게시글 성과 갱신 중 · 아래 수치는 마지막 저장값입니다."
+      ? report.state === "running" ? "분석 자료 준비 중 · 아래 수치는 마지막 저장값입니다."
         : report.state === "failed" ? "갱신 실패 · 이전 저장값을 유지합니다."
-        : `최근 게시글 ${report.records.length}개 갱신 완료 · ${time(report.completed_at)}`
+        : `분석 자료 준비 완료 · ${time(report.completed_at)}`
       : "저장된 최신 성과"}</p>
     {report?.error && <p role="alert" className="mt-3 text-sm text-destructive">{report.error}</p>}
     <p className="mt-2 text-xs leading-5 text-muted-foreground">성과 후보 중 무작위 5개와 최근 5개를 중복 없이 보여줍니다. 반응률은 (좋아요 + 댓글 + 저장) ÷ 조회 수로 계산합니다.</p>
@@ -46,7 +46,7 @@ export function PerformanceDetails({ report, logs, details, onClose }: {
           <dt className="text-xs text-muted-foreground">{labels[key]}</dt>
           <dd className="mt-1 text-base font-semibold">{typeof row[key] === "number" ? numbers.format(row[key]) : "미제공"}</dd>
         </div>)}</dl>
-        <p className="mt-3 text-xs text-muted-foreground">관측 {time(row.observed_at)}{refreshedIds.has(String(row.id)) ? " · 이번 갱신 대상" : ""}</p>
+        <p className="mt-3 text-xs text-muted-foreground">관측 {time(row.observed_at)}{refreshedIds.has(String(row.id)) ? "" : ""}</p>
         {selected.get(String(row.id))?.map((entry,index) => <div key={index} className="mt-3 border-t pt-3 text-xs leading-5">
           <p className="font-medium">{entry.name}에서 참고</p><p className="text-muted-foreground">{entry.reason}</p>
         </div>)}

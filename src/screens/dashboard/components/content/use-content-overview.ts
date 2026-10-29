@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
-import type { PublishedPost } from "@/domains/content-production/domain/published-posts";
-import { listPublishedPosts } from "../../api";
+import type { ContentOverview } from "@/domains/content-production/domain/published-posts";
+import { listContentOverview } from "../../api";
 
-export function usePublishedPosts() {
-  const [posts, setPosts] = useState<PublishedPost[]>([]);
+export function useContentOverview() {
+  const [overview, setOverview] = useState<ContentOverview>({projects:[],posts:[]});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -18,8 +18,8 @@ export function usePublishedPosts() {
       try {
         while (active && requested) {
           requested = false;
-          const items = await listPublishedPosts();
-          if (active) { setPosts(items); setError(""); }
+          const items = await listContentOverview();
+          if (active) { setOverview(items); setError(""); }
         }
       } catch (cause) {
         if (active) setError(cause instanceof Error ? cause.message : "게시 기록을 불러오지 못했습니다.");
@@ -36,5 +36,5 @@ export function usePublishedPosts() {
     void refresh();
     return () => { active = false; events.close(); window.removeEventListener("focus", onFocus); };
   }, []);
-  return { posts, loading, error };
+  return { ...overview, loading, error };
 }

@@ -7,9 +7,17 @@ export type PerformanceRefresh = {
   started_at: string; completed_at: string | null; state: "running" | "completed" | "failed";
   records: PerformanceRecord[]; error: string | null;
 };
-export function recentKoreanDate(iso: string, now = new Date()) {
-  const day = (date: Date) => new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit",
-  }).format(date);
-  return day(new Date(iso)) >= day(new Date(now.getTime() - 3 * 86400000)) && day(new Date(iso)) <= day(now);
+export type StagePerformance = Record<typeof metricKeys[number], number | null> & {
+  stage: "early" | "middle" | "late";
+};
+
+export const performanceStages = [
+  { stage: "early", minDays: 1, label: "초기 · 1–3일" },
+  { stage: "middle", minDays: 3, label: "중기 · 3–7일" },
+  { stage: "late", minDays: 7, label: "후기 · 7일 이후" },
+] as const;
+
+export function performanceStage(publishedAt: string, now = Date.now()): StagePerformance["stage"] | null {
+  const days = (now - Date.parse(publishedAt)) / 86400000;
+  return performanceStages.findLast(stage => days >= stage.minDays)?.stage ?? null;
 }

@@ -4,7 +4,6 @@ import {
   ScanSearch,
   UserRound,
   Package,
-  CalendarDays,
   Files,
   Plus,
 } from "lucide-react";
@@ -59,20 +58,6 @@ export function StudioSidebar({
           >
             <Files aria-hidden="true" />
             <span>모든 콘텐츠</span>
-          </SidebarMenuButton>
-
-          <SidebarMenuButton
-            className="h-11"
-            isActive={activeTab === "published"}
-            render={
-              <TabsTrigger
-                value="published"
-                className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent"
-              />
-            }
-          >
-            <CalendarDays aria-hidden="true" />
-            <span>게시 콘텐츠</span>
           </SidebarMenuButton>
 
           <SidebarMenuButton className="h-11" isActive={activeTab === "spy"} render={<TabsTrigger value="spy" className="!h-11 !flex-none justify-start px-3 !shadow-none data-active:!bg-accent" />}><ScanSearch aria-hidden="true" /><span>외부 레퍼런스 스파이</span></SidebarMenuButton>

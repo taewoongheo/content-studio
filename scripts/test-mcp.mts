@@ -36,7 +36,7 @@ if (isolatedTsconfig) await writeFile(isolatedTsconfig, await readFile("tsconfig
 let serverLog = "";
 function startApp() {
   const child = spawn("pnpm", [production ? "start" : "dev", "--port", String(port)], {
-    env: { ...process.env, CONTENT_STUDIO_DIST_DIR: distDir,
+    env: { ...process.env, CONTENT_STUDIO_DISABLE_COLLECTION: "1", CONTENT_STUDIO_DIST_DIR: distDir,
       ...(isolatedTsconfig ? { CONTENT_STUDIO_TSCONFIG_PATH: isolatedTsconfig } : {}),
       CONTENT_STUDIO_DB_PATH: join(directory, "test.sqlite") },
     stdio: ["ignore", "pipe", "pipe"], detached: true,
@@ -114,6 +114,15 @@ try {
     await verifySpy(browser,origin);
     await verifyStageReports(browser,origin);
     const listPage = await browser.newPage();
+    await listPage.route("**/api/published-content?all=true", async route => {
+      const response = await route.fetch();
+      const data = await response.json();
+      const project = data.projects.find((item: {id:string}) => item.id === id);
+      const publishedOn = new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Seoul"}).format(new Date());
+      data.posts = [{...project,title:project.name,publishedAt:new Date().toISOString(),publishedOn,
+        postUrl:"https://www.tiktok.com/@fixture/photo/123",performance:[{stage:"early",view_count:12345,like_count:0,comment_count:2,save_count:null,share_count:8}]}];
+      await route.fulfill({json:data});
+    });
     await listPage.goto(origin);
     await listPage.getByRole("button", { name: "제작 캔버스", exact: true }).waitFor();
     assert.equal(await listPage.locator("#production-count").count(), 0);
@@ -121,7 +130,14 @@ try {
     assert.equal(await listPage.getByText("제작 모델", { exact: true }).count(), 0);
     assert.equal(await listPage.locator("#production-model").count(), 0);
     await listPage.getByRole("button", { name: "대시보드", exact: true }).click();
-    await listPage.getByRole("heading", { name: "게시 콘텐츠", exact: true }).waitFor();
+    await listPage.getByRole("heading", { name: "모든 콘텐츠", exact: true }).waitFor();
+    await listPage.getByRole("table").first().waitFor();
+    assert.ok(await listPage.getByText("12,345",{exact:true}).count());
+    assert.ok(await listPage.getByText("미제공",{exact:true}).count());
+    assert.equal(await listPage.getByRole("tab",{name:"게시 콘텐츠",exact:true}).count(),0);
+    await listPage.screenshot({path:"/tmp/content-dashboard.png",fullPage:true});
+    await listPage.unroute("**/api/published-content?all=true");
+    console.log("PASS unified content calendar and stage performance with zero, unavailable and uncollected values");
     await listPage.getByRole("button", { name: "제작 캔버스", exact: true }).click();
     await listPage.getByRole("button", { name: "제작 요청 추가", exact: true }).waitFor();
     await listPage.getByRole("button", { name: "시작 노드로 이동", exact: true }).waitFor();

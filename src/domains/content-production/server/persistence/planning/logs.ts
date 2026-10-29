@@ -1,5 +1,6 @@
 import type Database from "better-sqlite3";
 import type { Row } from "../../../domain/contracts";
+import { metricKeys, performanceStages, type StagePerformance } from "../../../domain/performance";
 
 import { sampleReferences } from "../../../domain/references/sampling";
 import { readSampling } from "../../settings/sampling";
@@ -12,5 +13,17 @@ export function readPlanningLogs(db: Database.Database, query: string, candidate
     WHERE l.post_url IS NOT NULL AND l.actual_published_at IS NOT NULL
     AND (COALESCE(l.topic,'') LIKE ? OR p.name LIKE ? OR COALESCE(l.message,'') LIKE ? OR COALESCE(l.content_type,'') LIKE ?)
   `).all(...Array(4).fill(`%${query}%`)) as Row[];
-  return sampleReferences(rows,candidates,"actual_published_at");
+  const selected = sampleReferences(rows,candidates,"actual_published_at");
+  if (!selected.length) return selected;
+  const records = db.prepare(`SELECT log_id, stage, ${metricKeys.join(", ")}
+    FROM content_performance WHERE log_id IN (${selected.map(() => "?").join(",")})`)
+    .all(...selected.map(row => String(row.id))) as Array<StagePerformance & { log_id: string }>;
+  return selected.map(row => ({
+    ...row,
+    performance: performanceStages.flatMap(({stage}) => {
+      const record = records.find(record => record.log_id === row.id && record.stage === stage);
+      if (!record) return [];
+      return [{ stage: record.stage, ...Object.fromEntries(metricKeys.map(key => [key, record[key]])) }];
+    }),
+  }));
 }

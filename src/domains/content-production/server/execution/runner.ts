@@ -19,7 +19,6 @@ import { randomUUID } from "node:crypto";
 import { getLocalDatabase } from "@/lib/local-db/database";
 import { ProductionStore } from "../persistence/store";
 import { publishChange } from "../events";
-import { refreshMetrics } from "../publication/service";
 import { runCodex } from "./process";
 import { stagePolicy, PRODUCTION_MODEL } from "./policy/stages";
 import { resultSchema, stageImages, stagePrompt } from "./prompts";
@@ -123,12 +122,12 @@ export function syncState() {
 }
 export async function startProduction(
   count: number | ProductionRequest[], origin: string,
-  services: {refreshMetrics: typeof refreshMetrics;execute: typeof execute;refreshSpy?: typeof refreshSpy} = { refreshMetrics, execute, refreshSpy },
+  services: {execute: typeof execute;refreshSpy?: typeof refreshSpy} = { execute, refreshSpy },
 ) {
   if (!process.env.APIFY_API_TOKEN?.trim())
     throw new Error("Apify에 연결되지 않아 제작을 시작할 수 없습니다. APIFY_API_TOKEN을 설정해 주세요.");
   if (shared.productionSync)
-    throw new Error("성과를 갱신하고 있습니다. 잠시 후 시작해 주세요.");
+    throw new Error("분석 자료를 준비하고 있습니다. 잠시 후 시작해 주세요.");
   if (typeof count === "number" && (!Number.isInteger(count) || count < 1))
     throw new Error("제작 개수를 양의 정수로 입력해 주세요.");
   const requests = productionRequestsSchema.parse(typeof count === "number"
@@ -142,10 +141,6 @@ export async function startProduction(
   shared.productionRefresh = report;
   publishChange({ kind: "sync", detail: "running" });
   try {
-    await services.refreshMetrics(store.db, undefined, undefined, records => {
-      report.records = records;
-      publishChange({ kind: "sync", detail: "snapshot" });
-    });
     await (services.refreshSpy ?? refreshSpy)(store.db);
     const inputs = readPlanningLogs(store.db,"",sampling.internalCandidates);
     const ids = store.create(requests, inputs, sampling);
