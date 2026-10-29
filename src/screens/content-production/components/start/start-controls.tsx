@@ -4,16 +4,18 @@ import { Pencil, Play, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { productionModeLabels, type ProductionRequest } from "@/domains/content-production/domain/start/input";
 import { OPEN_DRAFT_MESSAGE } from "@/domains/content-production/domain/start-policy";
 import type { PublishedPost } from "@/domains/content-production/domain/published-posts";
+import type { Row } from "@/domains/content-production/domain/contracts";
 import { RequestDialog } from "./request-dialog";
 
 type Entry = { id: string; request: ProductionRequest };
-function requestTitle(request: ProductionRequest, posts: PublishedPost[]) {
+function requestTitle(request: ProductionRequest, posts: PublishedPost[], references: Row[]) {
   if (request.mode === "past_post") return posts.find(post => post.id === request.sourceProjectId)?.name ?? "선택한 게시글";
+  if (request.mode === "spy_reference") { const source = references.find(post => post.id === request.referenceId); return String(source?.title || source?.caption || "선택한 레퍼런스"); }
   if (request.mode === "external_url") return request.url;
   return "자동으로 주제 선정";
 }
-export function StartControls({ posts, busy, blockedByDraft, configured, syncing, error, onStart, onReload }: {
-  posts: PublishedPost[]; busy: boolean; blockedByDraft: boolean; configured: boolean | undefined; syncing: boolean;
+export function StartControls({ posts, references, busy, blockedByDraft, configured, syncing, error, onStart, onReload }: {
+  posts: PublishedPost[]; references: Row[]; busy: boolean; blockedByDraft: boolean; configured: boolean | undefined; syncing: boolean;
   error: string; onStart: (requests: ProductionRequest[]) => Promise<unknown>; onReload: () => void;
 }) {
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -32,7 +34,7 @@ export function StartControls({ posts, busy, blockedByDraft, configured, syncing
   return <div className="space-y-3">
     {!!entries.length && <ol className="max-h-64 space-y-2 overflow-y-auto" aria-label="제작 요청 목록">
       {entries.map(({ id, request }, index) => {
-        const title = requestTitle(request, posts);
+        const title = requestTitle(request, posts, references);
         return <li key={id} className="rounded-lg border p-3">
           <div className="flex items-center justify-between gap-2"><span className="text-xs font-medium">{index + 1}. {productionModeLabels[request.mode]}</span>
             <div className="flex gap-1"><button type="button" className="production-button !p-1.5" aria-label={`${index + 1}번 요청 수정`} disabled={disabled} onClick={() => setEditing(id)}><Pencil size={13} /></button>
@@ -53,7 +55,7 @@ export function StartControls({ posts, busy, blockedByDraft, configured, syncing
     {blockedByDraft && <p className="text-xs leading-5 text-muted-foreground">{OPEN_DRAFT_MESSAGE}</p>}
     {(startError || error) && <p role="alert" className="text-xs text-destructive">{startError || error}</p>}
     {configured === false && <p role="alert" className="text-xs text-destructive">Apify 연결 설정이 필요합니다.</p>}
-    {editing && <RequestDialog key={editing} initial={selected?.request} posts={posts} onClose={() => setEditing(null)} onSave={request => {
+    {editing && <RequestDialog key={editing} initial={selected?.request} posts={posts} references={references} onClose={() => setEditing(null)} onSave={request => {
       setEntries(current => selected ? current.map(entry => entry.id === selected.id ? { ...entry, request } : entry) : [...current, { id: crypto.randomUUID(), request }]);
       setEditing(null);
     }} />}

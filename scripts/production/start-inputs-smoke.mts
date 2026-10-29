@@ -38,7 +38,10 @@ export async function verifyProductionStart(browser: Browser, origin: string, po
     if (request.method() === "GET") {
       const response = await route.fetch();
       const snapshot = await response.json();
-      return route.fulfill({ json: { ...snapshot, publishedPosts: posts, configured: { apify: true } } });
+      return route.fulfill({ json: { ...snapshot, publishedPosts: posts,
+        externalReferences: [{ id: "spy-pick", account: "example", title: "Spy routine format", caption: "Back exercises", url: "https://www.tiktok.com/@example/photo/456", slide_count: 4, excluded: 0 },
+          { id: "spy-excluded", account: "example", title: "Excluded reference", url: "https://www.tiktok.com/@example/photo/789", slide_count: 3, excluded: 1 }],
+        referenceAccounts: [{ username: "example", enabled: 1 }], configured: { apify: true } } });
     }
     const input = request.postDataJSON();
     if (input.action !== "start") return route.continue();
@@ -114,16 +117,35 @@ export async function verifyProductionStart(browser: Browser, origin: string, po
     await add.click();
     await page.getByRole("dialog").getByRole("button", { name: "추가", exact: true }).click();
     if (process.env.CONTENT_STUDIO_SMOKE_SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.CONTENT_STUDIO_SMOKE_SCREENSHOT_DIR}/start-requests.png` });
-    const start = page.getByRole("button", { name: "3개 제작 시작", exact: true });
+    await add.click();
+    await page.getByRole("radio", { name: "레퍼런스 기반", exact: true }).check();
+    await page.getByRole("dialog").getByText("Spy routine format", { exact: true }).click();
+    assert.equal(await page.getByRole("radio", { name: "Excluded reference", exact: true }).count(), 0);
+    await page.getByLabel("추가 지침", { exact: false }).fill("가슴 운동으로");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForFunction(() => {
+      const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+      const rect = dialog.getBoundingClientRect();
+      return rect.width <= window.innerWidth && rect.height <= window.innerHeight && dialog.scrollHeight <= dialog.clientHeight + 1;
+    });
+    const referenceBox = await page.getByRole("dialog").boundingBox();
+    assert.ok(referenceBox && referenceBox.height <= 844 && referenceBox.width <= 390);
+    await page.getByRole("dialog").getByRole("button", { name: "추가", exact: true }).click();
+    await page.getByRole("button", { name: "4번 요청 수정", exact: true }).click();
+    assert.equal(await page.getByRole("radio", { name: "Spy routine format", exact: true }).isChecked(), true);
+    await page.getByRole("dialog").getByRole("button", { name: "수정", exact: true }).click();
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    const start = page.getByRole("button", { name: "4개 제작 시작", exact: true });
     await start.click();
     await page.getByRole("alert").filter({ hasText: "Fixture start failed" }).waitFor();
-    assert.equal(await page.getByRole("list", { name: "제작 요청 목록" }).getByRole("listitem").count(), 3, "failed start preserves requests");
+    assert.equal(await page.getByRole("list", { name: "제작 요청 목록" }).getByRole("listitem").count(), 4, "failed start preserves requests");
     await start.click();
     await page.getByRole("list", { name: "제작 요청 목록" }).waitFor({ state: "detached" });
     assert.deepEqual(submitted, [
       { mode: "past_post", sourceProjectId: post.id, instructions: "" },
       { mode: "external_url", url: "https://www.tiktok.com/@example/photo/123", instructions: "초보자 대상" },
       { mode: "automatic", instructions: "" },
+      { mode: "spy_reference", referenceId: "spy-pick", instructions: "가슴 운동으로" },
     ]);
     assert.deepEqual(browserErrors, []);
     console.log("PASS text-only infinite source list, selection-only images, fixed dialog at four viewport sizes, full-list search, start modal modes, saved preview, optional instructions, edit/delete, narrow viewport and failed-start recovery");

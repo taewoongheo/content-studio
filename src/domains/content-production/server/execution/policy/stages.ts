@@ -1,3 +1,4 @@
+import type { ProductionRequest } from "../../../domain/start/input";
 import { REFERENCE_LIMIT } from "../../../domain/references/context";
 import type { ProductionStep } from "../../../domain/contracts";
 
@@ -25,7 +26,7 @@ const toolsByStage: Record<ProductionStep, readonly string[]> = {
 };
 
 /** Tool availability and native CLI capabilities are separate enforcement boundaries. */
-export function stagePolicy(step: ProductionStep, mode: "automatic" | "past_post" | "external_url" = "automatic") {
+export function stagePolicy(step: ProductionStep, mode: ProductionRequest["mode"] = "automatic") {
   const usesReferences = step === "analysis" || step === "production" || step === "hook";
   const canResearchCopy = step === "production" || step === "hook";
   return {
@@ -34,6 +35,6 @@ export function stagePolicy(step: ProductionStep, mode: "automatic" | "past_post
     externalLimit: step === "analysis" ? 10 : usesReferences ? REFERENCE_LIMIT : 0,
     webSearch: canResearchCopy,
     shell: canResearchCopy,
-    tools: new Set([...toolsByStage[step], ...(step === "visual" && mode === "past_post" ? ["production_read_project", "production_preview_project"] : [])]),
+    tools: new Set([...toolsByStage[step], ...(step === "visual" && mode === "past_post" ? ["production_read_project", "production_preview_project"] : []), ...(step === "visual" && mode === "spy_reference" ? ["production_read_images"] : [])]),
   };
 }

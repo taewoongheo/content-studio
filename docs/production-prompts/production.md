@@ -16,6 +16,12 @@ linked project on resume. Otherwise initialize it according to the request:
   page progression, recurring information fields and visual composition. Replace subject-specific
   copy and generate new artwork; fit the content with small readability adjustments, not a redesign.
 
+- spy_reference: read the selected source caption and ALL preserved slides via production_read_images.
+  Use production_create_project to start blank, then reconstruct its format, page progression,
+  recurring fields and visual composition with editable elements. No native source document exists
+  to clone. Use new copy and artwork for the approved NEW subject. Apply our fixed content-guide
+  typography, colors, badge and character requirements; never import source assets or branding.
+
 Use 4:5 (1080 × 1350) for every request. Source documents/images are reference evidence;
 query assigned IDs with production_query and preview the cases you actually compare. Reuse the
 completed analysis instead of repeating topic discovery. Use read_project to inspect the linked
@@ -28,7 +34,7 @@ selection or mechanically transfer every observation into public copy.
 
 Keep the confirmed topic, answer and format, with the start request's fixed constraints. External
 URL requests keep their source SUBJECT but use our character, typography, product facts and writing
-style. Past-post requests keep their source FORMAT and presentation, with new subject/content.
+style. Past-post and spy-reference requests keep their source FORMAT and presentation, with new subject/content.
 Apply optional additional instructions. Build a complete hook, body and CTA; set slide roles and
 save topic/message/content_type. Never use the old source text slots as a reason to omit new
 subject-specific facts or retain irrelevant old claims.

@@ -144,6 +144,13 @@ export class ProductionStore {
     return ids;
   }
   requestSource(request: ProductionRequest): PreparedSource | undefined {
+    if (request.mode === "spy_reference") {
+      const source = this.row(`SELECT r.id,r.url,r.caption,r.title FROM content_external_references r
+        JOIN content_reference_accounts a ON a.username=r.account
+        WHERE r.id=? AND r.excluded=0 AND a.enabled=1`, request.referenceId);
+      if (!source) throw new Error("선택한 스파이 게시글을 사용할 수 없습니다. 계정 또는 게시글의 제외 상태를 확인해 주세요.");
+      return { id: String(source.id), url: String(source.url), caption: String(source.caption), name: String(source.title || source.caption || "선택한 레퍼런스") };
+    }
     if (request.mode !== "past_post") return;
     const source = this.row("SELECT l.id,l.project_id,p.name FROM content_creation_logs l JOIN content_projects p ON p.id=l.project_id WHERE l.project_id=? AND l.post_url IS NOT NULL", request.sourceProjectId);
     if (!source) throw new Error("선택한 과거 게시글의 저장본을 찾을 수 없습니다.");
@@ -323,7 +330,7 @@ export class ProductionStore {
     publishChange({ task_id: id, step, kind: "saved" });
   }
   private assertRequestDirection(detail: WorkDetail, direction: Row) {
-    if (detail.input?.request.mode === "past_post" && direction.content_type !== detail.analysis.content_type)
+    if ((detail.input?.request.mode === "past_post" || detail.input?.request.mode === "spy_reference") && direction.content_type !== detail.analysis.content_type)
       throw new Error("과거 게시글 기반 제작에서는 확정한 표현 포맷을 유지해 주세요.");
     if (detail.input?.request.mode === "external_url" && direction.topic !== detail.analysis.topic)
       throw new Error("외부 URL 기반 제작에서는 확정한 원본 소재를 유지해 주세요.");

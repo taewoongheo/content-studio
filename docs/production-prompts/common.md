@@ -35,7 +35,7 @@ not become production inputs.
 Analyze EVERY post selected for this stage individually before drawing comparisons. Analysis must
 also inspect every assigned comparison ID. In production those IDs are visual references: reuse the
 completed analysis, shortlist by metadata and inspect the actual slides of candidates you compare or
-adopt. They are not mandatory clones. The explicitly selected past_post source may be outside this pool. Do not repeat the entire topic analysis. Visual review receives no reference posts except the explicitly selected own source for a past_post preservation check.
+adopt. They are not mandatory clones. The explicitly selected past_post source may be outside this pool. Do not repeat the entire topic analysis. Visual review receives no reference posts except the explicitly selected own source for past_post or preserved selected spy source for spy_reference composition checks.
 Retrieve missing data by ID; an ID alone does not mean the post was inspected. Read actual copy and inspect slide
 images when judging their content or visual features. Do not infer those features from captions,
 metadata or performance. Record inaccessible IDs and missing evidence instead of inventing contents.

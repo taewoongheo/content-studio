@@ -56,6 +56,8 @@ export async function POST(
         }
         if (name === "production_read_images") {
           const setId = (input as {set_id:string}).set_id;
+          if (step === "visual" && (startInput.request.mode !== "spy_reference" || setId !== startInput.source?.visual_set_id))
+            throw new Error("시각 검수에서는 선택한 레퍼런스 원본만 확인할 수 있습니다.");
           if (setId !== startInput.source?.visual_set_id && !referenceImagesAllowed(productionStore().db,taskId,step,setId))
             throw new Error(`먼저 이번 단계의 외부 레퍼런스로 조회해 주세요. 단계별 한도는 ${REFERENCE_LIMIT}개입니다.`);
         }

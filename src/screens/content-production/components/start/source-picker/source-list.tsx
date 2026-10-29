@@ -4,7 +4,7 @@ import type { PublishedPost } from "@/domains/content-production/domain/publishe
 
 const PAGE_SIZE = 8;
 export function SourceList({ posts, value, onChange }: {
-  posts: PublishedPost[]; value: string; onChange: (id: string) => void;
+  posts: Pick<PublishedPost, "id" | "name" | "topic" | "content_type" | "updatedAt" | "publishedOn" | "slideCount">[]; value: string; onChange: (id: string) => void;
 }) {
   const [count, setCount] = useState(PAGE_SIZE);
   const root = useRef<HTMLDivElement>(null), sentinel = useRef<HTMLDivElement>(null);

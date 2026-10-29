@@ -31,5 +31,5 @@ Preview ALL current slides at the latest saved revision and inspect the results.
 Return the complete updated summary and required review fields. Set review_passed=true only when
 the hook meets the content guide and scope; otherwise identify the blocker.
 
-For past_post requests, preserve the selected source's hook approach and visual composition.
+For past_post and spy_reference requests, preserve the selected source's hook approach and visual composition.
 Improve wording within that approach; do not introduce a different delivery pattern.

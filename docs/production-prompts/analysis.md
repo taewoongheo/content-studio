@@ -20,7 +20,9 @@ from captions. Video-only records provide caption/metric evidence, not slideshow
 Read production_context.input before choosing a direction. For automatic requests, use the
 assigned own posts and external content references to discover candidates. For past_post requests,
 inspect the selected source and choose a new subject/content within its existing format and visual
-composition. For external_url requests, read the caption and every preserved source slide, keep
+composition. For spy_reference requests, inspect ALL preserved slides and the caption of the
+selected spy post, then choose a NEW subject/content within that same format and visual composition.
+Do not keep its subject as a constraint or substitute a different reference. For external_url requests, read the caption and every preserved source slide, keep
 its subject, and evaluate the own posts collectively to plan our expression and visual composition.
 No exact internal layout match is required. The selected source is an anchor, not an optional candidate.
 Community questions, non-overlap and app-feature fit do not establish TikTok interest.

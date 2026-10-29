@@ -217,7 +217,7 @@ export async function execute(
       run.imageStartedAt = Date.now();
       run.imageThreadId = null;
       phase = "source_collection";
-      if (run.step === "analysis" && store.get(id).input?.request.mode === "external_url")
+      if (run.step === "analysis" && ["external_url", "spy_reference"].includes(store.get(id).input!.request.mode))
         await prepareStartInput(store, id, run.controller.signal);
       phase = "cli";
       const inputs = run.step === "analysis" || run.step === "production" ? store.analysisInputs(id, true) : [];
@@ -257,13 +257,16 @@ export async function execute(
         if (missingInputs.length) throw new OperationError("ANALYSIS_INPUTS_NOT_READ", "분석용 게시글 조회가 누락됐습니다.", {ids:missingInputs});
         if (startInput.request.mode === "past_post" && !run.sourceProjects.has(startInput.request.sourceProjectId))
           throw new OperationError("START_SOURCE_NOT_REVIEWED", "선택한 원본 게시글의 실제 슬라이드를 확인해 주세요.");
-        if (startInput.request.mode === "external_url" && !run.sourceSets.has(startInput.source?.visual_set_id ?? ""))
+        if ((startInput.request.mode === "external_url" || startInput.request.mode === "spy_reference") && !run.sourceSets.has(startInput.source?.visual_set_id ?? ""))
           throw new OperationError("START_SOURCE_NOT_REVIEWED", "외부 원본 게시글의 전체 슬라이드를 확인해 주세요.");
         if (!run.externalCompared) throw requiredToolFailure(run.toolCalls, ["production_external_references"], "외부 레퍼런스 조회가 확인되지 않았습니다.");
         phase = "save";
         store.completeAnalysis(id, { ...fields, sources });
         continue;
       }
+      if (startInput.request.mode === "spy_reference" && (run.step === "production" || run.step === "visual") &&
+          !run.sourceSets.has(startInput.source?.visual_set_id ?? ""))
+        throw new OperationError("START_SOURCE_NOT_REVIEWED", "선택한 레퍼런스의 실제 슬라이드를 확인해 주세요.");
       const { review: reviewText, review_passed, ...rest } = fields;
       if (run.step !== "production") {
         z.object({review:z.string(),review_passed:z.boolean()}).parse(fields);

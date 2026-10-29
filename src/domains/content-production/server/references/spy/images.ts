@@ -2,7 +2,7 @@ import type Database from "better-sqlite3";
 import { ApifyTikTokClient } from "@/domains/research/server/apify/client";
 import { collectVisuals, saveVisuals } from "../../publication/visuals";
 const pending = new Map<string,Promise<string>>();
-export function ensureReferenceImages(db: Database.Database,id:string,client = new ApifyTikTokClient(),capture=collectVisuals) {
+export function ensureReferenceImages(db: Database.Database,id:string,client: Pick<ApifyTikTokClient, "posts"> = new ApifyTikTokClient(),capture=collectVisuals) {
   const key=`${db.name}:${id}`;
   if (pending.has(key)) return pending.get(key)!;
   const work=run();pending.set(key,work);

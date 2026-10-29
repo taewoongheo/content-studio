@@ -1,3 +1,4 @@
+import { preservesSourceFormat } from "../../../domain/start/input";
 import type { Row, WorkDetail } from "../../../domain/contracts";
 
 const CONTENT_FIELDS = ["title", "topic", "message", "content_type", "hook", "caption", "hashtags"];
@@ -25,8 +26,8 @@ export function stageContext(detail: WorkDetail): WorkDetail {
   const content = currentCopy(detail.polish?.content ?? detail.log.content_summary);
   return {
     task: detail.task,
-    ...(detail.input?.request.mode === "past_post" ? { input: detail.input } : {}),
-    analysis: detail.input?.request.mode === "past_post"
+    ...(detail.input && preservesSourceFormat(detail.input.request.mode) ? { input: detail.input } : {}),
+    analysis: detail.input && preservesSourceFormat(detail.input.request.mode)
       ? pickFields(detail.analysis, ["presentation", "content_type"]) : {},
     production: null,
     hook: null,
