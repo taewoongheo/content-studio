@@ -9,6 +9,18 @@ production_query(ids=[...]), preferably in small batches. Keyword search cannot 
 Completion is blocked if any assigned ID was not successfully retrieved in this execution.
 The recent group contains the absolute newest posts; performance sampling excludes that group.
 
+Own posts include a frozen `performance` array of collected stage metrics: `early` (1 to under
+3 days), `middle` (3 to under 7 days), and `late` (7 days onward). Selection still uses the existing
+latest-rate pool; interpret performance using these stage records:
+- Compare metrics only between matching stages. Do not judge an early result against another
+  post's late result or treat an early result as its final outcome.
+- When multiple stages exist, use their observed changes as additional evidence. Do not infer
+  missing stages, exact day-1/day-3/day-7 results, or daily growth speed; collection times vary
+  within each stage, especially late records.
+- If the array is empty or absent, use the post's subject, format and expression as context and
+  check overlap through the existing tool. Do not use its latest metrics as evidence of success
+  or failure. Missing metrics are not zero.
+
 Call production_external_references at least once to read the fixed external sample: five random
 high-rate candidates plus five recent posts across all spy accounts. Nodes cannot discover or collect
 new candidates. There is no requirement to adopt an external example. When actual slides are needed,
