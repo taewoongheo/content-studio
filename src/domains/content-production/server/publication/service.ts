@@ -1,4 +1,4 @@
-import { savePerformance } from "../performance/collection";
+import { savePerformance, updateLatestPerformance } from "../performance/store";
 import { resolveTikTokPostUrl } from "@/domains/research/server/apify/post-url";
 import { notifyProjectsChanged } from "@/domains/workspace/server/project-events";
 import type Database from "better-sqlite3";
@@ -9,23 +9,6 @@ import {
 import { collectVisuals, saveVisuals } from "./visuals";
 import { publishChange } from "../events";
 import type { Row } from "../../domain/contracts";
-const metricsKeys = [
-  "view_count",
-  "like_count",
-  "comment_count",
-  "save_count",
-  "share_count",
-] as const;
-export function updateMetrics(
-  db: Database.Database,
-  id: string,
-  post: ApifyPost,
-) {
-  const now = new Date().toISOString();
-  db.prepare(
-    `UPDATE content_creation_logs SET ${metricsKeys.map((k) => `${k}=?`).join(",")},observed_at=?,updated_at=? WHERE id=?`,
-  ).run(...metricsKeys.map((k) => post[k]), now, now, id);
-}
 const registrations = new Map<string, Promise<unknown>>();
 export function registerPublication(
   db: Database.Database,
@@ -105,7 +88,7 @@ export function finalizePublication(
     db.prepare(
       "UPDATE content_creation_logs SET project_id=?,content_summary_json=?,platform='tiktok',post_url=?,actual_published_at=?,completed_at=?,updated_at=? WHERE id=?",
     ).run(projectId, JSON.stringify(summary), url, post.published_at, now, now, logId);
-    updateMetrics(db, logId, post);
+    updateLatestPerformance(db, logId, post);
     savePerformance(db, logId, post);
     if (draft) db.prepare("DELETE FROM content_drafts WHERE id=?").run(draft.id);
   })();

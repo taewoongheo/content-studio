@@ -8,3 +8,8 @@ export type PublishedPost = SavedProjectSummary & {
   publishedOn: string;
   postUrl: string;
 };
+
+export type ContentOverview = {
+  projects: SavedProjectSummary[];
+  posts: PublishedPost[];
+};

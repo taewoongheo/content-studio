@@ -1,5 +1,7 @@
 import { getLocalDatabase } from "@/lib/local-db/database";
-import { backfillPerformance, collectPerformance } from "./collection";
+import { collectPerformance } from "./collection";
+import { backfillPerformance } from "./store";
+import { notifyProjectsChanged } from "@/domains/workspace/server/project-events";
 
 /** Only the single server process owns the timer and in-flight guard. */
 const shared = globalThis as typeof globalThis & { performanceTimer?: ReturnType<typeof setInterval> };
@@ -18,7 +20,6 @@ export function startPerformanceCollection() {
   const tick = serializedCollection(async () => {
     const db = getLocalDatabase();
     if (backfillPerformance(db)) {
-      const { notifyProjectsChanged } = await import("@/domains/workspace/server/project-events");
       notifyProjectsChanged();
     }
     if (process.env.APIFY_API_TOKEN?.trim()) await collectPerformance(db);

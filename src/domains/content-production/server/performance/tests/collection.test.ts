@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { openLocalDatabase } from "@/lib/local-db/database";
-import { backfillPerformance, collectPerformance, performanceStage } from "./collection";
+import { collectPerformance } from "../collection";
+import { backfillPerformance } from "../store";
+import { performanceStage } from "../../../domain/performance";
 import { parseApifyItem } from "@/domains/research/server/apify/client";
 const start = "2026-10-01T00:00:00Z", base = Date.parse(start);
 test("elapsed boundaries select only the current stage", () => {

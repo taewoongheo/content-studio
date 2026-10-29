@@ -1,13 +1,13 @@
 import type Database from "better-sqlite3";
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
-import type { PublishedPost } from "../../domain/published-posts";
+import type { ContentOverview, PublishedPost } from "../../domain/published-posts";
 
 const dateFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit",
 });
 
-export function listPublishedPosts(db: Database.Database): PublishedPost[] {
-  const projects = new Map(new ContentProjectStore(db).list().map(project => [project.id, project]));
+export function listPublishedPosts(db: Database.Database, summaries = new ContentProjectStore(db).list()): PublishedPost[] {
+  const projects = new Map(summaries.map(project => [project.id, project]));
   const performance = new Map<string, NonNullable<PublishedPost["performance"]>>();
   for (const row of db.prepare("SELECT * FROM content_performance").all() as Array<NonNullable<PublishedPost["performance"]>[number] & {log_id:string}>) {
     const {log_id, ...metrics} = row;
@@ -28,8 +28,13 @@ export function listPublishedPosts(db: Database.Database): PublishedPost[] {
 }
 
 
-export function listFormalContent(db: Database.Database) {
+export function listFormalContent(db: Database.Database, summaries = new ContentProjectStore(db).list()) {
   const drafts = new Set((db.prepare("SELECT project_id FROM content_drafts WHERE project_id IS NOT NULL")
     .all() as {project_id: string}[]).map(row => row.project_id));
-  return new ContentProjectStore(db).list().filter(project => !drafts.has(project.id));
+  return summaries.filter(project => !drafts.has(project.id));
+}
+
+export function listContentOverview(db: Database.Database): ContentOverview {
+  const summaries = new ContentProjectStore(db).list();
+  return { projects: listFormalContent(db,summaries), posts: listPublishedPosts(db,summaries) };
 }

@@ -10,3 +10,14 @@ export type PerformanceRefresh = {
 export type StagePerformance = Record<typeof metricKeys[number], number | null> & {
   stage: "early" | "middle" | "late";
 };
+
+export const performanceStages = [
+  { stage: "early", minDays: 1, label: "초기 · 1–3일" },
+  { stage: "middle", minDays: 3, label: "중기 · 3–7일" },
+  { stage: "late", minDays: 7, label: "후기 · 7일 이후" },
+] as const;
+
+export function performanceStage(publishedAt: string, now = Date.now()): StagePerformance["stage"] | null {
+  const days = (now - Date.parse(publishedAt)) / 86400000;
+  return performanceStages.findLast(stage => days >= stage.minDays)?.stage ?? null;
+}
