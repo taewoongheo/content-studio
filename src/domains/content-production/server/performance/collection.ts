@@ -13,6 +13,18 @@ export function savePerformance(db: Database.Database, id: string, post: ApifyPo
   db.prepare(`INSERT OR IGNORE INTO content_performance(log_id,stage,view_count,like_count,comment_count,save_count,share_count)
     VALUES(?,?,?,?,?,?,?)`).run(id,stage,post.view_count,post.like_count,post.comment_count,post.save_count,post.share_count);
 }
+/** Reuse existing observations according to their age when actually collected. */
+export function backfillPerformance(db: Database.Database) {
+  return db.prepare(`INSERT OR IGNORE INTO content_performance
+    (log_id,stage,view_count,like_count,comment_count,save_count,share_count)
+    SELECT id,CASE WHEN julianday(observed_at)-julianday(actual_published_at)>=7 THEN 'late'
+      WHEN julianday(observed_at)-julianday(actual_published_at)>=3 THEN 'middle' ELSE 'early' END,
+      view_count,like_count,comment_count,save_count,share_count
+    FROM content_creation_logs WHERE post_url IS NOT NULL
+      AND julianday(observed_at)-julianday(actual_published_at)>=1
+      AND (view_count IS NOT NULL OR like_count IS NOT NULL OR comment_count IS NOT NULL OR save_count IS NOT NULL OR share_count IS NOT NULL)`)
+    .run().changes;
+}
 export async function collectPerformance(db: Database.Database, client: {posts:(urls:string[]) => Promise<ApifyPost[]>} = new ApifyTikTokClient(), now = Date.now()) {
   const logs = db.prepare("SELECT id,post_url,actual_published_at FROM content_creation_logs WHERE post_url IS NOT NULL AND actual_published_at IS NOT NULL").all() as {id:string;post_url:string;actual_published_at:string}[];
   for (const log of logs) {

@@ -1,5 +1,5 @@
 import { getLocalDatabase } from "@/lib/local-db/database";
-import { collectPerformance } from "./collection";
+import { backfillPerformance, collectPerformance } from "./collection";
 
 /** Only the single server process owns the timer and in-flight guard. */
 const shared = globalThis as typeof globalThis & { performanceTimer?: ReturnType<typeof setInterval> };
@@ -16,7 +16,12 @@ export function serializedCollection(collect: () => Promise<void>, onError: (err
 export function startPerformanceCollection() {
   if (shared.performanceTimer) return;
   const tick = serializedCollection(async () => {
-    if (process.env.APIFY_API_TOKEN?.trim()) await collectPerformance(getLocalDatabase());
+    const db = getLocalDatabase();
+    if (backfillPerformance(db)) {
+      const { notifyProjectsChanged } = await import("@/domains/workspace/server/project-events");
+      notifyProjectsChanged();
+    }
+    if (process.env.APIFY_API_TOKEN?.trim()) await collectPerformance(db);
   }, error => console.error("성과 수집 파이프라인 실패",error));
   shared.performanceTimer = setInterval(() => void tick(),300000);
   shared.performanceTimer.unref();
