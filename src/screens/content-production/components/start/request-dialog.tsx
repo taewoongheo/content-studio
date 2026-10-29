@@ -1,11 +1,21 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { productionModeLabels, productionRequestSchema, type ProductionRequest } from "@/domains/content-production/domain/start/input";
+import { preservesSourceFormat, productionRequestSchema, type ProductionRequest } from "@/domains/content-production/domain/start/input";
 import type { PublishedPost } from "@/domains/content-production/domain/published-posts";
 import type { Row } from "@/domains/content-production/domain/contracts";
 import { ReferencePicker } from "./source-picker/reference-picker";
 import { SourcePicker } from "./source-picker";
+
+const startModes = [
+  { value: "automatic", label: "자동 생성" },
+  { value: "reference", label: "레퍼런스 기반" },
+  { value: "external_url", label: "외부 URL" },
+] as const;
+const referenceModes = [
+  { value: "past_post", label: "내 게시글" },
+  { value: "spy_reference", label: "스파이 게시글" },
+] as const;
 
 const descriptions: Record<ProductionRequest["mode"], string> = {
   spy_reference: "선택한 스파이 게시글의 구성과 표현 방식을 유지하고 새로운 주제로 만듭니다.",
@@ -17,6 +27,9 @@ export function RequestDialog({ initial, posts, references, onClose, onSave }: {
   initial?: ProductionRequest; posts: PublishedPost[]; references: Row[]; onClose: () => void; onSave: (request: ProductionRequest) => void;
 }) {
   const [mode, setMode] = useState<ProductionRequest["mode"]>(initial?.mode ?? "automatic");
+  const [referenceMode, setReferenceMode] = useState<"past_post" | "spy_reference">(initial?.mode === "spy_reference" ? "spy_reference" : "past_post");
+  const isReference = preservesSourceFormat(mode);
+  const startMode = isReference ? "reference" : mode;
   const [sourceProjectId, setSource] = useState(initial?.mode === "past_post" ? initial.sourceProjectId : "");
   const [referenceId, setReference] = useState(initial?.mode === "spy_reference" ? initial.referenceId : "");
   const [url, setUrl] = useState(initial?.mode === "external_url" ? initial.url : "");
@@ -33,18 +46,24 @@ export function RequestDialog({ initial, posts, references, onClose, onSave }: {
     onSave(parsed.data);
   }
   return <Dialog open onOpenChange={open => { if (!open) onClose(); }}>
-    <DialogContent className={`flex max-h-[calc(100dvh-2rem)] flex-col gap-2 overflow-hidden p-3 sm:max-w-2xl [@media(max-height:450px)]:gap-1 [@media(max-height:450px)]:p-2 ${mode === "past_post" || mode === "spy_reference" ? "h-[min(850px,calc(100dvh-2rem))]" : ""}`}>
+    <DialogContent className={`flex max-h-[calc(100dvh-2rem)] flex-col gap-2 overflow-hidden p-3 sm:max-w-2xl [@media(max-height:450px)]:gap-1 [@media(max-height:450px)]:p-2 ${isReference ? "h-[min(850px,calc(100dvh-2rem))]" : ""}`}>
       <DialogHeader className="shrink-0 gap-1"><DialogTitle>{initial ? "제작 요청 수정" : "제작 요청 추가"}</DialogTitle>
         <DialogDescription className="[@media(max-height:650px)]:hidden">시작 방식을 선택하고 필요한 지침을 입력하세요.</DialogDescription></DialogHeader>
       <form className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 [@media(max-height:450px)]:gap-1" onSubmit={submit}>
-        <div className="shrink-0 space-y-2">
-        <fieldset className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="shrink-0 space-y-2 [@media(max-height:450px)]:flex [@media(max-height:450px)]:gap-2 [@media(max-height:450px)]:space-y-0">
+        <fieldset className="grid min-w-0 flex-1 grid-cols-3 gap-2 [@media(max-height:450px)]:flex-[1.3]">
           <legend className="sr-only">생성 방식</legend>
-          {(Object.keys(productionModeLabels) as ProductionRequest["mode"][]).map(value =>
-            <label key={value} className={`min-w-0 cursor-pointer rounded-lg border p-2 ${mode === value ? "border-foreground bg-muted" : "hover:bg-muted/50"}`}>
-              <span className="flex items-center gap-2 whitespace-nowrap text-xs font-medium sm:text-sm"><input type="radio" aria-label={productionModeLabels[value]} name="production-mode" value={value} checked={mode === value} onChange={() => { setMode(value); setError(""); }} />{productionModeLabels[value]}</span>
+          {startModes.map(({ value, label }) =>
+            <label key={value} className={`min-w-0 cursor-pointer rounded-lg border p-2 ${startMode === value ? "border-foreground bg-muted" : "hover:bg-muted/50"}`}>
+              <span className="flex items-center gap-2 whitespace-nowrap text-xs font-medium sm:text-sm"><input type="radio" aria-label={label} name="production-mode" value={value} checked={startMode === value} onChange={() => { setMode(value === "reference" ? referenceMode : value); setError(""); }} />{label}</span>
             </label>)}
         </fieldset>
+        {isReference && <fieldset className="flex min-w-0 flex-1 gap-1 rounded-lg bg-muted p-1">
+          <legend className="sr-only">레퍼런스 출처</legend>
+          {referenceModes.map(({ value, label }) => <label key={value} className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md px-2 py-1.5 text-xs ${mode === value ? "bg-background font-medium shadow-sm" : "text-muted-foreground"}`}>
+            <input type="radio" name="reference-mode" aria-label={label} checked={mode === value} onChange={() => { setReferenceMode(value); setMode(value); setError(""); }} />{label}
+          </label>)}
+        </fieldset>}
         <p className="text-xs leading-5 text-muted-foreground [@media(max-height:650px)]:hidden">{descriptions[mode]}</p>
         </div>
         {mode === "past_post" && <SourcePicker posts={posts} value={sourceProjectId} onChange={value => { setSource(value); setError(""); }} />}
@@ -56,7 +75,7 @@ export function RequestDialog({ initial, posts, references, onClose, onSave }: {
         </div>}
         <div className="shrink-0 space-y-1">
           <label htmlFor="production-instructions" className="block text-xs font-medium">추가 지침 <span className="font-normal text-muted-foreground">선택</span></label>
-          <textarea id="production-instructions" className="production-field h-[clamp(40px,8dvh,72px)] min-h-0 resize-none" value={instructions} onChange={event => { setInstructions(event.target.value); setError(""); }} maxLength={10000} placeholder={mode === "past_post" ? "예: 가슴 운동으로 바꾸고 덤벨만 사용해 줘" : "예: 홈트 초보자를 대상으로 만들어 줘"} />
+          <textarea id="production-instructions" className="production-field h-[clamp(40px,8dvh,72px)] min-h-0 resize-none" value={instructions} onChange={event => { setInstructions(event.target.value); setError(""); }} maxLength={10000} placeholder={isReference ? "예: 가슴 운동으로 바꾸고 덤벨만 사용해 줘" : "예: 홈트 초보자를 대상으로 만들어 줘"} />
         </div>
         {error && <p role="alert" className="shrink-0 text-xs text-destructive">{error}</p>}
         <div className="flex shrink-0 justify-end gap-2"><button type="button" className="production-button" onClick={onClose}>취소</button>

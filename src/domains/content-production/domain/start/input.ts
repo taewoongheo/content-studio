@@ -32,7 +32,7 @@ export interface ProductionInput {
   source?: PreparedSource;
 }
 export const productionModeLabels: Record<ProductionRequest["mode"], string> = {
-  spy_reference: "레퍼런스 기반", automatic: "자동 생성", past_post: "과거 게시글", external_url: "외부 URL",
+  spy_reference: "레퍼런스 · 스파이 게시글", automatic: "자동 생성", past_post: "레퍼런스 · 내 게시글", external_url: "외부 URL",
 };
 
 export function preservesSourceFormat(mode: ProductionRequest["mode"]) {
