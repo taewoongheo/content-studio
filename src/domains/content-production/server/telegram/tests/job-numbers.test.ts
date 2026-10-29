@@ -50,6 +50,10 @@ test("status is connection-only; job lists concise statuses and cancels only the
     await send("/stop 2");assert.deepEqual(stopped,[b]);
     await send("/stop 999");assert.deepEqual(stopped,[b]);
     assert.match(messages.at(-1)!,/찾을 수 없습니다/);
+    store.state(b,"finished");
+    await send("/stop 2");assert.deepEqual(stopped,[b]);
+    assert.equal(store.get(b).task.state,"finished");
+    assert.match(messages.at(-1)!,/완료된 작업은 중단/);
   } finally {db.close();}
 });
 

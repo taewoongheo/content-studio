@@ -30,7 +30,10 @@ export class TelegramJobs {
   }
 
   stop(number: string) {
-    this.services.stop(draftId(this.services.store().db, number));
+    const store = this.services.store();
+    const id = draftId(store.db, number);
+    if (store.get(id).task.state === "finished") throw new Error("완료된 작업은 중단할 수 없습니다.");
+    this.services.stop(id);
   }
 
   async resume(number: string) {

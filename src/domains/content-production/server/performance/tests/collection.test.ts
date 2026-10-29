@@ -21,7 +21,13 @@ test("missed stages stay empty, successful stages survive restarts and failures 
     assert.equal(calls,1);
     assert.deepEqual(db.prepare("SELECT stage,view_count,like_count,save_count FROM content_performance").all(),[{stage:"middle",view_count:100,like_count:0,save_count:null}]);
     const original = console.error; console.error = () => {};
-    try { await collectPerformance(db,{posts:async()=>{throw new Error("offline");}},base+200*3600000); }
+    let failedCalls=0;
+    const failing={posts:async()=>{failedCalls++;throw new Error("offline");}};
+    try {
+      await collectPerformance(db,failing,base+200*3600000);
+      await collectPerformance(db,failing,base+200.5*3600000);
+      assert.equal(failedCalls,1,"do not start another paid run during cooldown");
+    }
     finally { console.error = original; }
     assert.equal(db.prepare("SELECT * FROM content_performance").all().length,1);
     await collectPerformance(db,client,base+201*3600000);

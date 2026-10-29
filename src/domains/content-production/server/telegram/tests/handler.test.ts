@@ -66,3 +66,42 @@ test("posts and refs search expose valid source choices and start the selected r
     assert.deepEqual(requests,[{mode:"spy_reference",referenceId:"ref",instructions:""}]);
   } finally {db.close();}
 });
+
+test("failed receipt and error responses can retry without losing source selection", async () => {
+  const db=openLocalDatabase(":memory:"),store=new ProductionStore(db),state=new TelegramStore(db,"retry:1"),client=new FakeClient();
+  let starts=0;
+  const handler=new TelegramHandler(client,state,"1","http://127.0.0.1:3000",{
+    store:()=>store,start:async input=>{starts++;assert.ok(Array.isArray(input));return store.create(input);},stop:()=>{},
+  });
+  const selected=state.choice({mode:"automatic",instructions:""});
+  state.set("pending",{id:selected,request:{mode:"automatic",instructions:""}});
+  const update={update_id:10,message:{text:"덤벨만",from:{id:1},chat:{id:1,type:"private"}}};
+  const send=client.send.bind(client);
+  try {
+    client.send=async()=>{throw new Error("network");};
+    await assert.rejects(handler.handle(update));
+    assert.equal(state.get("offset"),undefined);
+    assert.ok(state.get("pending"));assert.equal(starts,0);
+    client.send=send;
+    await handler.handle(update);
+    await new Promise(resolve=>setImmediate(resolve));
+    await handler.handle(update);
+    assert.equal(starts,1);assert.equal(state.get("offset"),11);
+  } finally {db.close();}
+});
+
+test("a stop is never replayed when its response and error response fail",async()=> {
+  const db=openLocalDatabase(":memory:"),store=new ProductionStore(db),state=new TelegramStore(db,"stop:1"),client=new FakeClient();
+  store.create(1);
+  let stops=0;
+  const handler=new TelegramHandler(client,state,"1","http://127.0.0.1:3000",{
+    store:()=>store,start:async()=>[],stop:()=>{stops++;},
+  });
+  const update={update_id:1,message:{text:"/stop 1",from:{id:1},chat:{id:1,type:"private"}}};
+  try {
+    client.send=async()=>{throw new Error("network");};
+    await assert.rejects(handler.handle(update));
+    await handler.handle(update);
+    assert.equal(stops,1);assert.equal(state.get("offset"),2);
+  } finally {db.close();}
+});
