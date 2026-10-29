@@ -3,7 +3,7 @@ import type { Row } from "../../../../domain/contracts";
 export const ANALYSIS_INPUTS = "Assigned own-post comparison inputs";
 const snapshotFields = ["id", "project_id", "name", "topic", "message", "content_type", "post_url",
   "actual_published_at", "observed_at", "view_count", "like_count", "comment_count", "save_count",
-  "share_count", "engagement_rate", "selection_group"];
+  "share_count", "engagement_rate", "selection_group", "performance"];
 
 /** Keep metadata and metrics, never recursively copy past drafts or their input snapshots. */
 export function analysisInputRecord(rows: Row[]) {

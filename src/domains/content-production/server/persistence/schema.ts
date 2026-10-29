@@ -32,6 +32,10 @@ CREATE TABLE IF NOT EXISTS content_performance (
  view_count INTEGER, like_count INTEGER, comment_count INTEGER, save_count INTEGER, share_count INTEGER,
  PRIMARY KEY(log_id,stage)
 );
+CREATE TABLE IF NOT EXISTS content_telegram_state (
+ bot TEXT NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL CHECK(json_valid(value)),
+ PRIMARY KEY(bot,key)
+);
 CREATE INDEX IF NOT EXISTS content_logs_published_idx ON content_creation_logs(actual_published_at);
 CREATE INDEX IF NOT EXISTS content_logs_created_idx ON content_creation_logs(created_at);
 CREATE TABLE IF NOT EXISTS content_stage_documents (
@@ -46,6 +50,16 @@ CREATE TABLE IF NOT EXISTS content_drafts (
  state TEXT NOT NULL CHECK(state IN ('pending','running','stopped','failed','finished')),
  created_at TEXT NOT NULL, updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS content_draft_numbers (
+ number INTEGER PRIMARY KEY AUTOINCREMENT,
+ draft_id TEXT NOT NULL UNIQUE REFERENCES content_drafts(id) ON DELETE CASCADE
+);
+INSERT INTO content_draft_numbers(draft_id)
+ SELECT id FROM content_drafts WHERE NOT EXISTS (
+  SELECT 1 FROM content_draft_numbers n WHERE n.draft_id=content_drafts.id
+ ) ORDER BY created_at,id;
+CREATE TRIGGER IF NOT EXISTS content_drafts_assign_number AFTER INSERT ON content_drafts
+ BEGIN INSERT INTO content_draft_numbers(draft_id) VALUES(NEW.id); END;
 CREATE TABLE IF NOT EXISTS content_analysis_drafts (
  draft_id TEXT PRIMARY KEY REFERENCES content_drafts(id) ON DELETE CASCADE,
  state TEXT NOT NULL DEFAULT 'pending', analysis TEXT, ${direction}, ${progress},
