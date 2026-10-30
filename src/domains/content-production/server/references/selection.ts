@@ -32,7 +32,7 @@ export function queryStageReferences(db: Database.Database, id: string, step: Pr
       const used = new Set(context.posts.map(post => post.id));
       const candidates = externalReferences(db,input.query,input.content_type)
         .filter(post => !used.has(post.id) && (!input.ids?.length || input.ids.includes(String(post.id))));
-      return candidates.slice(0,REFERENCE_LIMIT-context.posts.length);
+      return candidates.slice(0,Math.max(0,REFERENCE_LIMIT-context.posts.length));
     };
     const selected = select();
     context = db.transaction(() => {

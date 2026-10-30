@@ -13,7 +13,7 @@ test("all nodes can repair copy, geometry, assets and inspect their saved result
       assert.equal(policy.externalCollection, false);
       assert.equal(policy.tools.has("production_external_references"), mode === "external_url" || mode === "spy_reference");
       assert.equal(policy.tools.has("production_comparisons"), mode === "automatic");
-      assert.equal(policy.tools.has("production_change_direction"), mode === "automatic");
+      assert.equal(policy.tools.has("production_change_direction"), mode === "automatic" && ["analysis", "production"].includes(step));
       assert.equal(policy.tools.has("create_project"), false);
     }
   }

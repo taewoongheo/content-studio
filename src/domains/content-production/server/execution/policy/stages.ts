@@ -18,13 +18,13 @@ export const editorWriteTools = [
 ];
 
 /** Every node can repair the linked project; request mode controls source selection. */
-export function stagePolicy(_step: ProductionStep, mode: ProductionRequest["mode"] = "automatic") {
+export function stagePolicy(step: ProductionStep, mode: ProductionRequest["mode"] = "automatic") {
   const external = mode === "external_url" || mode === "spy_reference";
   const tools = new Set([...commonTools, ...editorReadTools, ...editorWriteTools,
     "production_repair_badge", "production_read_images"]);
   if (external) for (const tool of referenceTools) tools.add(tool);
   if (mode === "automatic") tools.add("production_comparisons");
-  if (mode !== "automatic") tools.delete("production_change_direction");
+  if (mode !== "automatic" || !["analysis", "production"].includes(step)) tools.delete("production_change_direction");
   return { imageGeneration: true, externalCollection: false,
     externalLimit: external ? REFERENCE_LIMIT : 0, webSearch: true, shell: true, tools };
 }

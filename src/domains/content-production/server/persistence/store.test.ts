@@ -235,3 +235,21 @@ test("log metadata edits update the project atomically and reject incomplete rep
     assert.equal((db.prepare("SELECT content_type FROM content_creation_logs WHERE id='l'").get() as {content_type:string}).content_type,"A tier chart with ranked rows");
   } finally {db.close();}
 });
+
+
+test("collision reselection accepts an unconfirmed format and preserves later-stage state on rejection", () => {
+  const db=openLocalDatabase(":memory:"), store=new ProductionStore(db);
+  try {
+    const [id]=store.create(1);
+    store.state(id,"running");
+    store.changeDirection(id,direction,"collision");
+    assert.equal(store.get(id).analysis.content_type,direction.content_type);
+    assert.throws(()=>store.changeDirection(id,{...direction,content_type:"Other"},"collision"));
+    for (const step of ["hook","polish","visual"]) {
+      db.prepare("UPDATE content_drafts SET current_step=? WHERE id=?").run(step,id);
+      const before=store.get(id);
+      assert.throws(()=>store.changeDirection(id,{...direction,topic:"Other"},"collision"),/중복 재선정/);
+      assert.deepEqual(store.get(id),before);
+    }
+  } finally {db.close();}
+});

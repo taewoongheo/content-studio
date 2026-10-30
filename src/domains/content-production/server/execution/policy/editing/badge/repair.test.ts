@@ -23,6 +23,18 @@ test("badge repair restores the selected brand and placement without inventing a
     assert.deepEqual(repaired.editor.document,source);
     assert.equal(repaired.savedRevision,repaired.editor.revision);
     assert.deepEqual(badgeRepairCommands(repaired.editor.document,source),[]);
+    const changed=structuredClone(source);
+    const image=makeElementDefinition({id:"art",kind:"image"});
+    source.elements.push(image); changed.elements.push(image);
+    source.slides[0].placements.unshift({id:"old-image",elementId:"art",value:"",frameOverride:null,styleOverride:null});
+    changed.slides[0].placements.unshift({id:"new-image",elementId:"art",value:"",frameOverride:null,styleOverride:null});
+    changed.slides.push({...structuredClone(changed.slides[0]),id:"added-slide"});
+    assert.deepEqual(badgeRepairCommands(changed,source),[]);
+    changed.slides[0].placements.find(p=>p.elementId === "brand")!.value="DAMAGED";
+    // Apply the repair through the real command/write boundary, then ensure it is idempotent.
+    const added=await writes.edit(project.id,[{type:"add_slide",afterSlideId:slideId,sourceSlideId:slideId,newSlideId:"added-slide",copyContent:true}],repaired.editor.revision,project.tabId);
+    const fixed=await writes.edit(project.id,badgeRepairCommands(added.editor.document,source),added.editor.revision,project.tabId);
+    assert.deepEqual(badgeRepairCommands(fixed.editor.document,source),[]);
     const noBadge=structuredClone(source);noBadge.elements=noBadge.elements.filter(e=>e.id!=="brand");
     assert.deepEqual(badgeRepairCommands(source,noBadge),[]);
   } finally {db.close();}

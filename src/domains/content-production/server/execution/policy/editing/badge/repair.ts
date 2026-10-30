@@ -13,12 +13,19 @@ export function badgeRepairCommands(document: EditorDocument, source: EditorDocu
   const matches = [...ids].every(id => JSON.stringify(document.elements.find(element => element.id === id)) === JSON.stringify(source.elements.find(element => element.id === id))) &&
     document.slides.every(slide => {
       const original = source.slides.find(original => original.id === slide.id);
-      return original && placements(slide.placements) === placements(original.placements) &&
-        slide.placements.filter(p => ids.has(p.elementId) || document.elements.find(e => e.id === p.elementId)?.kind === "image").map(p => p.id).join() ===
-        original.placements.filter(p => ids.has(p.elementId) || source.elements.find(e => e.id === p.elementId)?.kind === "image").map(p => p.id).join();
+      if (!original) return true;
+      const sharedImages = new Set(slide.placements.filter(p =>
+        document.elements.find(e => e.id === p.elementId)?.kind === "image" &&
+        original.placements.some(other => other.id === p.id && source.elements.find(e => e.id === other.elementId)?.kind === "image")
+      ).map(p => p.id));
+      return placements(slide.placements) === placements(original.placements) &&
+        slide.placements.filter(p => ids.has(p.elementId) || sharedImages.has(p.id)).map(p => p.id).join() ===
+        original.placements.filter(p => ids.has(p.elementId) || sharedImages.has(p.id)).map(p => p.id).join();
     });
   if (matches) return [];
   const commands: EditorCommand[] = [];
+  const sourceSlides = new Set(source.slides.map(slide => slide.id));
+
   for (const slide of document.slides) for (const placement of slide.placements)
     if (ids.has(placement.elementId)) commands.push({type:"remove_placement",slideId:slide.id,placementId:placement.id});
   for (const id of ids) {
@@ -26,8 +33,8 @@ export function badgeRepairCommands(document: EditorDocument, source: EditorDocu
     commands.push({type:"add_element",element:structuredClone(source.elements.find(element => element.id === id)!)});
   }
   for (const slide of document.slides) {
-    const original = source.slides.find(original => original.id === slide.id);
-    if (!original) throw new Error("원본 슬라이드를 찾을 수 없습니다.");
+    const original = source.slides.find(original => original.id === slide.id) ?? slide;
+    if (!sourceSlides.has(slide.id) && !slide.placements.some(p => ids.has(p.elementId))) continue;
     for (const placement of original.placements.filter(placement => ids.has(placement.elementId))) {
       commands.push({type:"place_element",slideId:slide.id,elementId:placement.elementId,placementId:placement.id},
         {type:"set_slot_value",slideId:slide.id,placementId:placement.id,value:placement.value,
