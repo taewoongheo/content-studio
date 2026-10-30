@@ -330,9 +330,9 @@ export class ProductionStore {
     publishChange({ task_id: id, step, kind: "saved" });
   }
   private assertRequestDirection(detail: WorkDetail, direction: Row) {
-    if ((detail.input?.request.mode === "past_post" || detail.input?.request.mode === "spy_reference") && direction.content_type !== detail.analysis.content_type)
-      throw new Error("과거 게시글 기반 제작에서는 확정한 표현 포맷을 유지해 주세요.");
-    if (detail.input?.request.mode === "external_url" && direction.topic !== detail.analysis.topic)
+    if (["automatic", "past_post"].includes(detail.input?.request.mode ?? "") && direction.content_type !== detail.analysis.content_type)
+      throw new Error("내부 원본 기반 제작에서는 확정한 표현 포맷을 유지해 주세요.");
+    if (["external_url", "spy_reference"].includes(detail.input?.request.mode ?? "") && direction.topic !== detail.analysis.topic)
       throw new Error("외부 URL 기반 제작에서는 확정한 원본 소재를 유지해 주세요.");
   }
   changeDirection(
@@ -344,6 +344,7 @@ export class ProductionStore {
     const detail = this.assertActive(id, "production"),
       direction = directionSchema.parse(raw),
       now = this.now();
+    if (cause === "collision" && detail.input?.request.mode !== "automatic") throw new Error("지정 제작에는 중복 검사를 적용하지 않습니다.");
     this.assertRequestDirection(detail, direction);
     if (cause === "research" && !reason?.trim())
       throw new Error("추가 조사에 따른 변경 이유가 필요합니다.");

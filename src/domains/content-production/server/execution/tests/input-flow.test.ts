@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { productionStore, execute, recordAnalysisRead, recordExternalComparison } from "../runner";
+import { productionStore, execute, recordAnalysisRead, recordSourceReview } from "../runner";
 import type { runCodex } from "../process";
 
 const direction={analysis:"Compare observed post performance.",reasoning:{observations:[{source:"assigned-log",observation:"The comparison makes exercise choices visible."}],interpretations:[],candidates:[]},topic:"Arms",content_type:"Comparison",message:"Choose an exercise",answer:"Compare available options",presentation:"Comparison cards",reason:"Observed interest",expected_response:"Save",goal_connection:"Relevant audience",difference_from_recent:"Another choice",sources:[]};
@@ -20,7 +20,6 @@ test("analysis cannot finish without all assigned reads; input IDs and disabled 
       assert.equal(input.capabilities?.shell,false);
       assert.match(input.prompt,/assigned-log/);
       assert.ok(!input.prompt.includes("Unique private post label"),"initial prompt carries IDs, not full post content");
-      recordExternalComparison(id);
       return direction;
     };
     await execute(id,"http://127.0.0.1:3000",missing);
@@ -34,8 +33,8 @@ test("analysis cannot finish without all assigned reads; input IDs and disabled 
       }
       const rows=store.analysisLogs(id,["assigned-log"]);
       recordAnalysisRead(id,rows.map(row=>String(row.id)));
-      recordExternalComparison(id);
-      return direction;
+      recordSourceReview(id,"p");
+      return {...direction,sources:[{kind:"log",id:"assigned-log",clone_project_id:"p",part:"Layout",used_for:"Clone"}]};
     };
     await execute(id,"http://127.0.0.1:3000",complete);
     assert.equal(store.get(id).analysis.state,"completed");

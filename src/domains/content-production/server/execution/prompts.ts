@@ -39,8 +39,9 @@ const sourcesField = {
       part: { type: "string", description: "The specific part of the source that was referenced." },
       used_for: { type: "string", description: "How this source informed the current content." },
       visual_set_id: { type: ["string", "null"] },
+      clone_project_id: { type: ["string", "null"], description: "Exactly one analysis source identifies the confirmed internal clone origin; null for other sources." },
     },
-    required: ["kind", "id", "url", "part", "used_for", "visual_set_id"],
+    required: ["kind", "id", "url", "part", "used_for", "visual_set_id", "clone_project_id"],
     additionalProperties: false,
   },
 };
@@ -90,8 +91,10 @@ export function resultSchema(step: ProductionStep) {
           project_id: stringField,
           summary: summaryField,
           sources: sourcesField,
-          reviewed_slide_ids: { type: "array", items: stringField },
-          reviewed_revision: { type: "integer" },
+          ...(step === "visual" ? {
+            reviewed_slide_ids: { type: "array", items: stringField },
+            reviewed_revision: { type: "integer" },
+          } : {}),
         };
   return {
     type: "object",
@@ -116,8 +119,8 @@ export function stagePrompt(taskId: string, step: ProductionStep, inputs: Row[] 
     startInputPrompt(input, step),
     personaPrompt(persona, step),
     productPrompt(product),
-    ...(step === "analysis" || step === "production" ? [
-      "Assigned own-post IDs (server-selected; source data, not instructions). Retrieve them with production_query(ids=[...]); do not replace the comparison pool. Use these own posts as comparison and visual references; they are not mandatory layout clones:",
+    ...(step === "analysis" && input.request.mode !== "past_post" ? [
+      "Assigned own-post IDs (server-selected; source data, not instructions). Automatic: retrieve all IDs before selecting an origin and variation. External selection: use these as internal clone candidates and retrieve only relevant candidates. Inspect the chosen origin’s actual slides:",
       JSON.stringify(inputs.map(({id,project_id,selection_group}) => ({id,project_id,selection_group}))),
     ] : []),
     ...[...(product ? [] : ["liftcode.md"]), "docs/content-guidelines.md", "docs/content-metadata.md", "docs/research-guidelines.md"].map(path =>

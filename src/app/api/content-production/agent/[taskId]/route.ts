@@ -15,7 +15,6 @@ import {
   recordReview,
   recordToolCall,
   recordAnalysisRead,
-  recordExternalComparison,
   recordSourceReview,
 } from "@/domains/content-production/server/execution/runner";
 export const runtime = "nodejs";
@@ -74,7 +73,6 @@ export async function POST(
         if (run.step !== step) return;
         if (!result.isError && name === "production_query" && Array.isArray(result.structuredContent?.items))
           recordAnalysisRead(taskId, (result.structuredContent.items as Array<{id:string}>).map(row => row.id));
-        if (!result.isError && name === "production_external_references") recordExternalComparison(taskId);
         if (!result.isError && result.content?.some(item => item.type === "image") && (name === "production_preview_project" || name === "production_read_images"))
           recordSourceReview(taskId, name === "production_preview_project" ? (input as {projectId:string}).projectId : undefined,
             name === "production_read_images" ? (input as {set_id:string}).set_id : undefined,

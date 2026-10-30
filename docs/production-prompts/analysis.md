@@ -4,9 +4,10 @@
 
 The material node selected five random own posts from the configured high-rate candidate pool,
 plus the five most recent posts, without overlap. The rate is (likes + comments + saves) / views.
-Their assigned IDs and selection groups are in this prompt. Retrieve EVERY ID with
+For automatic requests, assigned IDs and selection groups are in this prompt. Retrieve EVERY ID with
 production_query(ids=[...]), preferably in small batches. Keyword search cannot replace this pool.
-Completion is blocked if any assigned ID was not successfully retrieved in this execution.
+Automatic completion requires all assigned IDs. For past_post inspect only the selected origin;
+for external requests retrieve relevant internal layout candidates, not the entire pool.
 The recent group contains the absolute newest posts; performance sampling excludes that group.
 
 Own posts include a frozen `performance` array of collected stage metrics: `early` (1 to under
@@ -21,46 +22,32 @@ latest-rate pool; interpret performance using these stage records:
   check overlap through the existing tool. Do not use its latest metrics as evidence of success
   or failure. Missing metrics are not zero.
 
-Call production_external_references at least once to read the fixed external sample: five random
-high-rate candidates plus five recent posts across all spy accounts. Nodes cannot discover or collect
-new candidates. There is no requirement to adopt an external example. When actual slides are needed,
-call production_reference_images(id), then production_read_images(set_id). Do not infer visual details
-from captions. Video-only records provide caption/metric evidence, not slideshow evidence.
+## Select the original before the topic
 
-## Analyze and select
+Read production_context.input. Automatic: select one assigned internal post, inspect its actual
+slides, and choose a related new topic fitting its format, progression and visual composition.
+Do not query external references for automatic selection. Past_post: use only the explicitly
+selected internal origin and choose a related topic within that same composition.
+External_url and spy_reference: read the selected caption and ALL preserved slides. Keep the
+external topic and content. Select the assigned internal project closest in page structure,
+copy density and image roles, inspect it, and use it as the editable clone origin. Always produce;
+if the fit is weak, plan larger changes. Reuse useful internal visual elements where possible.
+Record exactly ONE sources entry with clone_project_id set to the internal project ID.
+Presentation explains the retained structure and required replacements. Never plan blank creation.
 
-Read production_context.input before choosing a direction. For automatic requests, use the
-assigned own posts and external content references to discover candidates. For past_post requests,
-inspect the selected source and choose a new subject/content within its existing format and visual
-composition. For spy_reference requests, inspect ALL preserved slides and the caption of the
-selected spy post, then choose a NEW subject/content within that same format and visual composition.
-Do not keep its subject as a constraint or substitute a different reference. For external_url requests, read the caption and every preserved source slide, keep
-its subject, and evaluate the own posts collectively to plan our expression and visual composition.
-No exact internal layout match is required. The selected source is an anchor, not an optional candidate.
 Community questions, non-overlap and app-feature fit do not establish TikTok interest.
 Factual verification belongs to first-draft production; this stage has no general web search or shell.
 
-Apply the research guide's grouped comparisons across subjects for the active product's target audience,
-or the audience in liftcode.md when no product is configured. Keep these findings distinct:
-- Format/value: which answers and broad information structures attracted a response.
-- Delivery: how actual hook wording, copy and visual treatment conveyed that value.
-
-For influential cases, identify the post, relevant slide/copy and metrics. Explain what the hook
-promises, what the post delivers and why that experience may have encouraged or weakened response.
-Compare stronger and weaker cases and relevant counterexamples. Do not assume simple topics are
-better or interpretation is a weakness; assess the value the viewer receives.
-
-For automatic requests compare materially different topic/message/format candidates, including
-developments of successful past content. For past_post compare subjects within the selected format;
-for external_url compare ways to explain the fixed subject in our visual language. For each ask: what would someone in the target audience want to discover,
-compare, obtain or confirm, and which actual post observations support that interest?
-Choose one and explain why its answer and format give viewers a reason to stop and read.
-An unfamiliar topic is not automatically valuable, and a weak post's topic is not automatically
-worth repeating with cleaner presentation.
+For automatic selection, compare origin-plus-variation candidates using actual content and stage
+performance under the research guide. Record observations that changed the decision, separating
+observed response from inferred causes. For past_post, choose a useful variation of the fixed origin.
+For external selections, evaluate internal clone suitability, not alternative external topics or
+whether the user's selected content deserves production. No exhaustive performance study is needed.
 
 ## Check overlap
 
-Call production_comparisons before selecting direction and again before finalizing.
+Only automatic requests apply this section. Explicit internal and external selections bypass
+duplicate prevention entirely. Call production_comparisons once before finalizing direction.
 Only retained drafts and posts published within 24 hours participate in duplicate prevention.
 The same topic AND similar format is a duplicate; a different topic OR format is a new candidate,
 not proof of appeal. Older successful combinations may be reused.
@@ -102,8 +89,7 @@ recent content. Let the selected content determine its information structure and
 shorter candidates or apply a fixed information checklist to every body page.
 Plan enough slides to meet the content guide and inspect actual references before
 claiming a visual direction. For past_post, presentation explains how the new subject fits the
-source format; do not select a new visual direction. For external_url, presentation describes the
-synthesized own-brand composition, not an obligation to copy one own post. Save sources and research findings; do not create or edit a project.
+source format; do not select a new visual direction. For external_url and spy_reference, presentation identifies the internal clone and changes needed to deliver the fixed external content. Save sources and research findings; do not create or edit a project.
 Do not create an unresolved-claims checklist or a "things to verify" handoff. First-draft
 production verifies only the claims/numbers it actually uses. Save reasoning with
 production_save_draft along with the direction and relevant sources. Return analysis, reasoning,

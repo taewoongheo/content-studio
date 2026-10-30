@@ -25,7 +25,7 @@ test("production MCP separates comparison reads, selected-source cloning and bla
  try{
   await server.connect(b);await client.connect(a);
   const tools=(await client.listTools()).tools.map(tool=>tool.name);
-  assert.ok(tools.includes("production_clone_project"));assert.ok(tools.includes("production_create_project"));assert.ok(!tools.includes("clone_project"));
+  assert.ok(tools.includes("production_clone_project"));assert.ok(!tools.includes("production_create_project"));assert.ok(!tools.includes("clone_project"));
   const pool=await call("production_query",{kind:"logs"});
   assert.deepEqual((pool.structuredContent!.items as Array<{id:string}>).map(row=>row.id),[source.id]);
   assert.equal((await call("production_query",{kind:"logs",ids:[outside.id]})).isError,true);

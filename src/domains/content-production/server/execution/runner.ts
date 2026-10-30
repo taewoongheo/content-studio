@@ -5,11 +5,11 @@ import { productionRequestsSchema, type ProductionRequest } from "../../domain/s
 import { prepareStartInput } from "../start/prepare";
 import { activeProduct } from "../products/store";
 import { readPersona } from "../persona/store";
-import { assertCompleteProjectReview, assertCurrentSlidePlan, type ObservedReview } from "./review/validation";
+import { assertCompleteProjectReview, assertSavedProjectContent, assertCurrentSlidePlan, type ObservedReview } from "./review/validation";
 import type { ToolAttempt } from "../../domain/diagnostics";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { OperationError } from "@/lib/errors/operation";
-import { productionFailure, requiredToolFailure } from "./diagnostics/failure";
+import { productionFailure } from "./diagnostics/failure";
 import { beginToolCall, finishToolCall } from "./diagnostics/tools";
 import { z } from "zod";
 import type { PerformanceRefresh } from "../../domain/performance";
@@ -24,6 +24,7 @@ import { stagePolicy, PRODUCTION_MODEL } from "./policy/stages";
 import { resultSchema, stageImages, stagePrompt } from "./prompts";
 import {
   productionResultSchema,
+  visualResultSchema,
   firstDraftResultSchema,
   sourceSchema,
   type ProductionStep,
@@ -36,10 +37,8 @@ type Run = {
   token: string;
   step: ProductionStep;
   analysisRead: Set<string>;
-  sourceImages: boolean;
   sourceProjects: Set<string>;
   sourceSets: Set<string>;
-  externalCompared: boolean;
   toolCalls: ToolAttempt[];
   imageStartedAt: number;
   imageThreadId: string | null;
@@ -88,7 +87,7 @@ export function recordReview(
 }
 export function recordSourceReview(id: string, projectId?: string, setId?: string, indexes?: number[]) {
   const run = runs.get(id);
-  if (run) { run.sourceImages = true; if (projectId) run.sourceProjects.add(projectId); if (setId && indexes === undefined) run.sourceSets.add(setId); }
+  if (run) { if (projectId) run.sourceProjects.add(projectId); if (setId && indexes === undefined) run.sourceSets.add(setId); }
 }
 export function recordAnalysisRead(id: string, ids: string[]) {
   const run = runs.get(id);
@@ -97,10 +96,7 @@ export function recordAnalysisRead(id: string, ids: string[]) {
     ids.forEach(id => run.analysisRead.add(id));
   }
 }
-export function recordExternalComparison(id: string) {
-  const run = runs.get(id);
-  if (run) run.externalCompared = true;
-}
+
 export function recordToolCall(id: string, event: {callId: string; name: string; input: unknown; result?: CallToolResult}) {
   const run = runs.get(id);
   if (!run) return;
@@ -187,10 +183,8 @@ export async function execute(
     step: detail.task.current_step,
     reviews: new Map(),
     analysisRead: new Set(),
-    sourceImages: false,
     sourceProjects: new Set(),
     sourceSets: new Set(),
-    externalCompared: false,
     toolCalls: [],
     imageStartedAt: Date.now(),
     imageThreadId: null,
@@ -204,10 +198,8 @@ export async function execute(
       store.state(id, "running");
       run.reviews.clear();
       run.analysisRead.clear();
-      run.sourceImages = false;
       run.sourceProjects.clear();
       run.sourceSets.clear();
-      run.externalCompared = false;
       run.toolCalls = [];
       run.imageStartedAt = Date.now();
       run.imageThreadId = null;
@@ -244,24 +236,26 @@ export async function execute(
       const sources = z.array(sourceSchema).parse(
         z.array(z.record(z.string(), z.unknown())).parse(rawSources).map(source =>
           Object.fromEntries(Object.entries(source).filter(([key, value]) =>
-            !(["id", "url", "visual_set_id"].includes(key) && value === null)))),
+            !(["id", "url", "visual_set_id", "clone_project_id"].includes(key) && value === null)))),
       );
       if (run.step === "analysis") {
         phase = "validation";
-        const missingInputs = inputs.filter(row => !run.analysisRead.has(String(row.id))).map(row => row.id);
+        const missingInputs = (startInput.request.mode === "automatic" ? inputs : []).filter(row => !run.analysisRead.has(String(row.id))).map(row => row.id);
         if (missingInputs.length) throw new OperationError("ANALYSIS_INPUTS_NOT_READ", "분석용 게시글 조회가 누락됐습니다.", {ids:missingInputs});
         if (startInput.request.mode === "past_post" && !run.sourceProjects.has(startInput.request.sourceProjectId))
           throw new OperationError("START_SOURCE_NOT_REVIEWED", "선택한 원본 게시글의 실제 슬라이드를 확인해 주세요.");
         if ((startInput.request.mode === "external_url" || startInput.request.mode === "spy_reference") && !run.sourceSets.has(startInput.source?.visual_set_id ?? ""))
           throw new OperationError("START_SOURCE_NOT_REVIEWED", "외부 원본 게시글의 전체 슬라이드를 확인해 주세요.");
-        if (!run.externalCompared) throw requiredToolFailure(run.toolCalls, ["production_external_references"], "외부 레퍼런스 조회가 확인되지 않았습니다.");
+        const origins = sources.filter(source => source.clone_project_id);
+        const origin = origins.length === 1 ? origins[0].clone_project_id : undefined;
+        if (typeof origin !== "string" || !store.sourceProjectAllowed(id, origin) || !run.sourceProjects.has(origin))
+          throw new OperationError("LAYOUT_SOURCE_NOT_SELECTED", "복제할 내부 게시글을 선택하고 실제 슬라이드를 확인해 주세요.");
+        if (startInput.request.mode === "past_post" && origin !== startInput.request.sourceProjectId)
+          throw new OperationError("LAYOUT_SOURCE_NOT_SELECTED", "지정한 내부 게시글을 복제해 주세요.");
         phase = "save";
         store.completeAnalysis(id, { ...fields, sources });
         continue;
       }
-      if (startInput.request.mode === "spy_reference" && (run.step === "production" || run.step === "visual") &&
-          !run.sourceSets.has(startInput.source?.visual_set_id ?? ""))
-        throw new OperationError("START_SOURCE_NOT_REVIEWED", "선택한 레퍼런스의 실제 슬라이드를 확인해 주세요.");
       const { review: reviewText, review_passed, ...rest } = fields;
       if (run.step !== "production") {
         z.object({review:z.string(),review_passed:z.boolean()}).parse(fields);
@@ -274,13 +268,12 @@ export async function execute(
           });
         if (run.step === "visual" && sources.length)
           throw new OperationError("VISUAL_REFERENCES_FORBIDDEN", "시각 검증에서는 레퍼런스를 조회하거나 출처로 기록하지 않습니다.");
-        if (run.step === "hook" && !run.sourceImages)
-          throw requiredToolFailure(run.toolCalls, ["production_preview_project", "production_read_images"], "참고 게시글의 실제 이미지 확인이 필요합니다.");
+
       }
       phase = "output";
       const rawOutput = { ...rest, sources };
       const firstDraft = run.step === "production" ? firstDraftResultSchema.parse(rawOutput) : null;
-      const output = firstDraft ?? productionResultSchema.parse(rawOutput);
+      const output = firstDraft ?? (run.step === "visual" ? visualResultSchema : productionResultSchema).parse(rawOutput);
       phase = "validation";
       const detail = store.get(id);
       if (detail.task.project_id !== output.project_id)
@@ -288,10 +281,11 @@ export async function execute(
       await loadContentProject(contentJobRegistry, output.project_id);
       if (firstDraft)
         assertCurrentSlidePlan(contentJobRegistry.getRecord(output.project_id), firstDraft.slide_plan);
-      assertCompleteProjectReview(
-        contentJobRegistry.getRecord(output.project_id), output,
-        run.reviews.get(output.project_id), run.toolCalls,
-      );
+      const project = contentJobRegistry.getRecord(output.project_id);
+      if (run.step === "visual") {
+        assertCompleteProjectReview(project, visualResultSchema.parse(rawOutput),
+          run.reviews.get(output.project_id), run.toolCalls);
+      } else assertSavedProjectContent(project);
       phase = "save";
       store.completeProduction(id, { ...output, review: typeof reviewText === "string" ? reviewText : undefined });
       if (store.get(id).task.state === "finished") break;

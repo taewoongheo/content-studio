@@ -1,3 +1,5 @@
+import { saveTaskProject } from "../projects/creation";
+import { createBlankDocument } from "@/domains/slideshow/editor/document";
 import { seedLayoutSource } from "../projects/testing/fixtures";
 import { SlideshowProjectWrites } from "@/domains/slideshow/server/project-writes";
 import { makeElementDefinition } from "@/domains/slideshow/editor/elements/factory";
@@ -13,10 +15,9 @@ import {
   stopProduction,
   recordReview,
   recordSourceReview,
-  recordExternalComparison,
   recordAnalysisRead,
 } from "./runner";
-import { createTaskProject, deleteTaskProject } from "../projects";
+import { deleteTaskProject } from "../projects";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import type { runCodex } from "./process";
 const direction = {
@@ -55,20 +56,19 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       calls++;
       if (calls === 1) {
         assert.equal(store.get(id).task.current_step, "analysis");
-        recordExternalComparison(id);
         recordAnalysisRead(id,[source.id]);
-        return direction;
+        recordSourceReview(id, source.project_id);
+        return {...direction,sources:[...direction.sources,{kind:"log",id:source.id,clone_project_id:source.project_id,part:"Layout",used_for:"Clone"}]};
       }
       assert.equal(store.get(id).analysis.state, "completed");
       const step = store.get(id).task.current_step;
-      const { projectId } = step === "production" ? createTaskProject(store, id, 1) : { projectId: store.get(id).task.project_id! };
+      const { projectId } = step === "production" ? saveTaskProject(store, id, createBlankDocument({slideCount:1,aspectRatio:"4:5",structure:"sequential"})) : { projectId: store.get(id).task.project_id! };
       const job = contentJobRegistry.get(projectId);
       if (step === "hook" || step === "visual" || step === "polish") {
-        if (step === "hook") recordSourceReview(id);
-        recordReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => s.id));
+        if (step === "visual") recordReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => s.id));
         return { project_id: projectId, summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "test" }, sources: [],
           review: "The current content meets the review criteria.", review_passed: true,
-          reviewed_slide_ids: job.editor.document.slides.map(s => s.id), reviewed_revision: job.editor.revision };
+          ...(step === "visual" ? {reviewed_slide_ids: job.editor.document.slides.map(s => s.id), reviewed_revision: job.editor.revision} : {}) };
       }
       new SlideshowProjectWrites(contentJobRegistry, store.db).edit(
         projectId,
@@ -94,20 +94,12 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
         job.tabId,
       );
       const final = contentJobRegistry.get(projectId);
-      recordReview(
-        id,
-        projectId,
-        final.editor.revision,
-        final.editor.document.slides.map((s) => s.id),
-      );
       return {
         project_id: projectId,
         slide_plan: final.editor.document.slides.map(slide => ({ slide_id: slide.id, role: slide.role, purpose: "Give a starting prescription", copy: ["3 SETS TO START"], visual: "Demonstrate the exercise" })),
         content_review: { assessment: "The prescription is supported and the hook matches the body.", issues: [] },
         summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "test" },
         sources: [],
-        reviewed_slide_ids: job.editor.document.slides.map((s) => s.id),
-        reviewed_revision: final.editor.revision,
       };
     };
     await execute(id, "http://127.0.0.1:3000", executor);
@@ -127,7 +119,6 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
         slide_plan: [{ slide_id: "stale-slide", role: "hook", purpose: "Invalid", copy: ["Invalid"], visual: "Invalid" }],
         content_review: { assessment: "Invalid replacement", issues: [] },
         summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type }, sources: [],
-        reviewed_slide_ids: ["stale-slide"], reviewed_revision: 0,
       }));
       assert.equal(store.get(id).task.state, "failed");
       assert.deepEqual(store.get(id).production?.slide_plan, savedPlanning.slide_plan);
@@ -187,7 +178,7 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
     const [withoutComparison] = store.create(1,[]);
     await execute(withoutComparison, "http://127.0.0.1:3000", async () => direction);
     assert.equal(store.get(withoutComparison).task.state, "failed");
-    assert.match(String((store.get(withoutComparison).analysis.error as { message: string }).message), /外部|외부/);
+    assert.match(String((store.get(withoutComparison).analysis.error as { message: string }).message), /복제할 내부 게시글/);
     stopProduction(withoutComparison, true);
     const [invalid] = store.create(1);
     await execute(invalid, "http://127.0.0.1:3000", async () => ({

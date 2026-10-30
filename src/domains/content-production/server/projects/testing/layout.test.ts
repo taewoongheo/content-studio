@@ -8,12 +8,11 @@ import { makeElementDefinition } from "@/domains/slideshow/editor/elements/facto
 import type { EditorDocument } from "@/domains/slideshow/editor/types";
 import { ProductionStore } from "../../persistence/store";
 import { cloneTaskProject } from "../layout";
-import { createTaskProject } from "../creation";
 import { seedLayoutSource } from "./fixtures";
 
 const direction={analysis: "A routine comparison.", reasoning: { observations: [], interpretations: [], candidates: [] },topic:"New content",message:"A new session",content_type:"Routine cards",answer:"Five moves",presentation:"Cards",reason:"Useful",expected_response:"Save",goal_connection:"Follow",difference_from_recent:"Different content",sources:[]};
 
-test("cloning uses only the explicitly selected saved layout, clears old copy/images, preserves styles and source",()=>{
+test("cloning uses only the explicitly selected saved layout, preserves copy/assets, preserves styles and source",()=>{
   const db=openLocalDatabase(":memory:"),store=new ProductionStore(db),projects=new ContentProjectStore(db);
   const source=seedLayoutSource(db,"layout-source");
   let cloneId:string|undefined;
@@ -44,14 +43,14 @@ test("cloning uses only the explicitly selected saved layout, clears old copy/im
     assert.equal((before!.document as EditorDocument).aspectRatio,"9:16");
     assert.equal(copy.elements.find(element=>element.id==="title")!.style.fontSize,72,"must use DB, not the open unsaved source");
     assert.deepEqual(copy.slides[0].placements.find(item=>item.id==="title")!.frameOverride,document.slides[0].placements.find(item=>item.id==="title")!.frameOverride);
-    assert.equal(copy.slides[0].placements.find(item=>item.id==="title")!.value,"");
-    assert.equal(copy.slides[0].placements.find(item=>item.id==="title")!.textColors,undefined);
+    assert.equal(copy.slides[0].placements.find(item=>item.id==="title")!.value,"OLD TOPIC");
+    assert.deepEqual(copy.slides[0].placements.find(item=>item.id==="title")!.textColors,[{start:0,end:3,color:"#FF0000"}]);
     assert.equal(copy.slides[0].placements.find(item=>item.id==="badge")!.value,"LIFTCODE");
-    assert.equal(copy.slides[0].placements.find(item=>item.id==="image")!.value,"");
-    assert.deepEqual(target.assets,[]);assert.deepEqual(contentJobRegistry.getRecord(cloned.projectId).imageData,{});
+    assert.equal(copy.slides[0].placements.find(item=>item.id==="image")!.value,"source-image");
+    assert.equal(target.assets.length,1);assert.deepEqual(Buffer.from(contentJobRegistry.getRecord(cloned.projectId).imageData["source-image"]),Buffer.from([1,2,3]));
     assert.equal(target.topic,direction.topic);
     assert.deepEqual(projects.get(source.project_id),before);
-    assert.equal((store.get(id).production?.sources as Array<{id:string}>)[0].id,source.id);
+    assert.equal((store.get(id).production?.sources as Array<{id:string}>)[0].id,source.project_id);
     assert.equal(cloneTaskProject(store,id,outside.project_id,"Resume existing").projectId,cloned.projectId);
   }finally{if(cloneId)contentJobRegistry.remove(cloneId);contentJobRegistry.remove(source.project_id);db.close();}
 });
@@ -71,29 +70,19 @@ test("failed clone creation rolls back the draft, DB project and open editor tog
   }finally{db.close();}
 });
 
-test("automatic and external requests start blank, link atomically and reuse their project on resume", () => {
-  const db = openLocalDatabase(":memory:"), store = new ProductionStore(db), projects = new ContentProjectStore(db);
-  const created: string[] = [];
+test("automatic and external URL clone the confirmed internal origin and retain it across resume",()=>{
+  const db=openLocalDatabase(":memory:"),store=new ProductionStore(db);
+  const source=seedLayoutSource(db,"clone-origin"),other=seedLayoutSource(db,"other-origin");
+  const created:string[]=[];
   try {
-    for (const mode of ["automatic", "external_url"] as const) {
-      const request = mode === "automatic" ? { mode, instructions: "" } : { mode, url: "https://www.tiktok.com/@example/photo/123", instructions: "" };
-      const [id] = store.create([request], []);
-      store.state(id, "running"); store.completeAnalysis(id, direction); store.state(id, "running");
-      const result = createTaskProject(store, id, 4); created.push(result.projectId);
-      assert.equal(store.get(id).task.project_id, result.projectId);
-      const document = projects.get(result.projectId)!.document as EditorDocument;
-      assert.equal(document.slides.length, 4);
-      assert.equal(document.aspectRatio, "4:5");
-      assert.ok(document.slides.every(slide => slide.placements.every(placement => !placement.value)));
-      assert.equal(createTaskProject(store, id, 8).projectId, result.projectId);
+    for(const mode of ["automatic","external_url"] as const){
+      const request=mode === "automatic" ? {mode,instructions:""} : {mode,url:"https://www.tiktok.com/@example/photo/123",instructions:""};
+      const [id]=store.create([request],[source,other]);store.state(id,"running");
+      store.completeAnalysis(id,{...direction,sources:[{kind:"log",id:source.id,clone_project_id:source.project_id,part:"Layout",used_for:"Preserve composition"}]});store.state(id,"running");
+      assert.throws(()=>cloneTaskProject(store,id,other.project_id,"Wrong source"),{code:"LAYOUT_SOURCE_NOT_SELECTED"});
+      const result=cloneTaskProject(store,id,source.project_id,"Approved origin");created.push(result.projectId);
+      assert.equal(cloneTaskProject(store,id,source.project_id,"Resume").projectId,result.projectId);
+      assert.equal((store.get(id).analysis.sources as Array<{clone_project_id:string}>)[0].clone_project_id,source.project_id);
     }
-    const [id] = store.create(1, []);
-    store.state(id, "running"); store.completeAnalysis(id, direction); store.state(id, "running");
-    const before = contentJobRegistry.list().length;
-    db.exec("CREATE TRIGGER reject_blank_link BEFORE UPDATE OF project_id ON content_drafts BEGIN SELECT RAISE(ABORT,'blank link failed'); END;");
-    assert.throws(() => createTaskProject(store, id, 4), /blank link failed/);
-    assert.equal(store.get(id).task.project_id, null);
-    assert.equal(contentJobRegistry.list().length, before);
-    assert.equal(projects.list().length, 2);
-  } finally { created.forEach(id => contentJobRegistry.remove(id)); db.close(); }
+  } finally {created.forEach(id=>contentJobRegistry.remove(id));db.close();}
 });

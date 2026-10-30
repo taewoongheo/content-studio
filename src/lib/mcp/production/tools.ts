@@ -21,7 +21,7 @@ import {
   reviewDraftPatchSchema,
   directionSchema,
 } from "@/domains/content-production/domain/contracts";
-import { cloneTaskProject, createTaskProject } from "@/domains/content-production/server/projects";
+import { cloneTaskProject } from "@/domains/content-production/server/projects";
 
 export function registerProductionTools(server: McpServer, taskId?: string, origin = "http://127.0.0.1:3000", validateProject?: ProjectWriteValidator) {
   registerSourceTools(server, origin);
@@ -183,7 +183,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     "production_change_direction",
     {
       description:
-        "During production only, resolve a recent collision within the request constraints. Preserve the format for past-post requests and the topic for external URLs. If all considered alternatives overlap, keep the direction and record why the duplicate is accepted instead of calling this tool repeatedly.",
+        "During production only, resolve a recent collision within the request constraints. Automatic requests only; preserve the confirmed internal origin format. Explicit requests never change direction for overlap. If all considered alternatives overlap, keep the direction and record why the duplicate is accepted instead of calling this tool repeatedly.",
       inputSchema: z.object({
         direction: directionSchema,
         cause: z.literal("collision"),
@@ -202,17 +202,12 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
         return json({ saved: true });
       }),
   );
-  registerTool(server, "production_create_project", {
-    description: "Production only. Create a blank 4:5 project for automatic, external-URL or spy-reference production. For spy_reference reconstruct the selected external composition with new copy/artwork; do not substitute an own-post layout. Compose a new layout using the assigned own posts collectively as references; copying a single post is not required. Reuses the task's linked project on resume. Past-post requests must use production_clone_project instead.",
-    inputSchema: z.object({ slideCount: z.number().int().min(1).max(20).default(6) }),
-    annotations: annotations(false),
-  }, input => guarded(() => json(createTaskProject(productionStore(), taskId, input.slideCount))));
   registerTool(
     server,
     "production_clone_project",
     {
       description:
-        "Production only, for past-post requests. Inspect and clone the explicitly selected saved source from production_context.input. It may be outside the assigned comparison pool. Preserve its format and visual language while changing the subject and content. Preserves frames, styles, shared elements, slide roles and badge; clears source text and all images, copies no source asset bytes. Change subject-specific wording and create fresh images while preserving the source format, page progression and visual composition. Records the source and reason. Reuses an existing linked project on resume without overwriting it.",
+        "Clone the internal project confirmed by analysis sources.clone_project_id. Preserve document, copy and assets; replace only what the approved direction needs. Reuse the linked project on resume.",
       inputSchema: z.object({
         sourceProjectId: z.string().min(1),
         reason: z.string().trim().min(1),

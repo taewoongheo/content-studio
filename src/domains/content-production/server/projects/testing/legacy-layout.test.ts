@@ -47,7 +47,7 @@ test("past-post production normalizes legacy definitions and local fonts without
     assert.equal(cloned.elements.find(element=>element.id==='title')!.style.fontFamily,'inter');
     assert.equal(cloned.elements.find(element=>element.id==='title')!.style.lineHeight,1.2);
     assert.equal(cloned.slides[0].placements.at(-1)!.styleOverride?.fontFamily,'oswald');
-    assert.equal(cloned.slides[0].placements.at(-1)!.value,'');
+    assert.equal(cloned.slides[0].placements.at(-1)!.value,'OLD TOPIC');
     assert.deepEqual(cloned.slides[0].placements.at(-1)!.frameOverride,{x:0.1,y:0.1,width:0.8,height:0.2});
     assert.deepEqual(projects.get(source.project_id),before);
     assert.equal(store.get(id).task.project_id,cloneId);

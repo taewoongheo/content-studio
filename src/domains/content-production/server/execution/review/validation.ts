@@ -24,13 +24,8 @@ interface ReportedReview {
   reviewed_slide_ids: string[];
 }
 
-/** Every authored stage must finish against the complete, saved project it actually previewed. */
-export function assertCompleteProjectReview(
-  project: ContentJobRecord,
-  output: ReportedReview,
-  observed: ObservedReview | undefined,
-  toolCalls: ToolAttempt[],
-) {
+/** Structural persistence checks apply without requiring visual inspection. */
+export function assertSavedProjectContent(project: ContentJobRecord) {
   const { document, revision } = project.editor;
   if (document.aspectRatio !== PRODUCTION_ASPECT_RATIO)
     throw new OperationError("PRODUCTION_ASPECT_RATIO_FIXED", "자동 제작 완료 전 화면 비율을 4:5로 맞춰 주세요.");
@@ -42,6 +37,19 @@ export function assertCompleteProjectReview(
     return kind === "text" || kind === "image" ? !!placement.value.trim() : true;
   }));
   if (hasEmptySlide) throw new OperationError("EMPTY_SLIDE", "내용이 비어 있는 슬라이드가 있습니다.");
+  if (project.savedRevision !== revision)
+    throw new OperationError("PROJECT_NOT_SAVED", "최신 편집 내용을 저장해 주세요.");
+}
+
+/** Only final visual verification requires observed full-slide preview coverage. */
+export function assertCompleteProjectReview(
+  project: ContentJobRecord,
+  output: ReportedReview,
+  observed: ObservedReview | undefined,
+  toolCalls: ToolAttempt[],
+) {
+  assertSavedProjectContent(project);
+  const { document, revision } = project.editor;
   if (!observed)
     throw requiredToolFailure(toolCalls, ["preview_slide", "preview_slides"], "현재 슬라이드의 실제 이미지 검토가 필요합니다.");
   if (project.savedRevision !== revision || revision !== output.reviewed_revision || observed.revision !== output.reviewed_revision)

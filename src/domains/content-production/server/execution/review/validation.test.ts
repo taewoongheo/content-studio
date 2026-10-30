@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { ContentJobRegistry } from "@/domains/slideshow/workflow/registry";
 import { makeElementDefinition } from "@/domains/slideshow/editor/elements/factory";
-import { assertCompleteProjectReview, assertCurrentSlidePlan } from "./validation";
+import { assertCompleteProjectReview, assertSavedProjectContent, assertCurrentSlidePlan } from "./validation";
 
 function project() {
   const registry = new ContentJobRegistry();
@@ -26,7 +26,7 @@ test("completion requires saved, latest previews covering every slide in both ob
   assert.throws(() => assertCompleteProjectReview(record, { ...reported, reviewed_slide_ids: [] }, observed, []), { code: "REVIEW_SLIDES_INCOMPLETE" });
   assert.throws(() => assertCompleteProjectReview(record, reported, { ...observed, revision: 99 }, []), { code: "REVIEW_REVISION_MISMATCH" });
   record.savedRevision = -1;
-  assert.throws(() => assertCompleteProjectReview(record, reported, observed, []), { code: "REVIEW_REVISION_MISMATCH" });
+  assert.throws(() => assertCompleteProjectReview(record, reported, observed, []), { code: "PROJECT_NOT_SAVED" });
 });
 
 test("final validation rejects wrong canvas and empty content before accepting a successful preview", () => {
@@ -48,4 +48,11 @@ test("first-draft plans must follow the current pages, including their roles", (
   for (const invalid of [plan.slice(1), [...plan].reverse(), [plan[0], plan[0]],
     plan.map(item => ({ ...item, role: "cta" as const }))])
     assert.throws(() => assertCurrentSlidePlan(record, invalid), { code: "SLIDE_PLAN_MISMATCH" });
+});
+
+test("content completion requires saved content but no previews, badges or visual report",()=>{
+  const {record}=project();
+  assert.doesNotThrow(()=>assertSavedProjectContent(record));
+  record.savedRevision=-1;
+  assert.throws(()=>assertSavedProjectContent(record),{code:"PROJECT_NOT_SAVED"});
 });

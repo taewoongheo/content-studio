@@ -76,7 +76,7 @@ test("CLI schemas accept flexible comparisons and issue-free review using the pr
   assert.equal(analysis({ ...direction, reasoning: { observations: [], interpretations: [], candidates: [] } }), true);
   assert.equal(analysis({ ...direction, reasoning: "A freeform replacement" }), false);
   const production = ajv.compile(resultSchema("production"));
-  const result = { project_id: "planned", summary: { title: "Choose", topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "Choose", caption: "", hashtags: [], slides: [{ slide_id: "s1", role: "body", copy: ["Choose"], visual: "Two options" }], changes: [] }, sources: [], slide_plan, content_review, reviewed_slide_ids: ["s1"], reviewed_revision: 1 };
+  const result = { project_id: "planned", summary: { title: "Choose", topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "Choose", caption: "", hashtags: [], slides: [{ slide_id: "s1", role: "body", copy: ["Choose"], visual: "Two options" }], changes: [] }, sources: [], slide_plan, content_review };
   assert.equal(production(result), true, JSON.stringify(production.errors));
   const { content_review: removed, ...withoutReview } = result;
   void removed;

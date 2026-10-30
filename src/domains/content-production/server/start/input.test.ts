@@ -74,9 +74,9 @@ test("collision repair cannot change a fixed source format or external subject",
     ], []);
     for (const id of [past, external]) { store.state(id, "running"); store.completeAnalysis(id, direction); store.state(id, "running"); }
     const change = Object.fromEntries(Object.entries(direction).filter(([key]) => !["analysis", "reasoning", "sources"].includes(key)));
-    assert.throws(() => store.changeDirection(past, { ...change, content_type: "Tier list" }, "collision"), /포맷을 유지/);
-    assert.throws(() => store.changeDirection(external, { ...change, topic: "Back routine" }, "collision"), /원본 소재를 유지/);
-    assert.doesNotThrow(() => store.changeDirection(past, { ...change, topic: "Leg routine" }, "collision"));
-    assert.doesNotThrow(() => store.changeDirection(external, { ...change, content_type: "Comparison" }, "collision"));
+    assert.throws(() => store.changeDirection(past, { ...change, content_type: "Tier list" }, "collision"), /중복 검사를 적용하지/);
+    assert.throws(() => store.changeDirection(external, { ...change, topic: "Back routine" }, "collision"), /중복 검사를 적용하지/);
+    assert.throws(() => store.changeDirection(past, { ...change, topic: "Leg routine" }, "collision"));
+    assert.throws(() => store.changeDirection(external, { ...change, content_type: "Comparison" }, "collision"));
   } finally { db.close(); }
 });

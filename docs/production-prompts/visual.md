@@ -2,55 +2,21 @@
 
 ## Scope and inputs
 
-For automatic/external_url requests, review the current linked project and polished copy only.
-For past_post requests, the start input and approved presentation are also available; read/preview
-ONLY the explicitly selected own source to preserve its format, page progression, recurring fields
-and visual composition. This is a preservation check, not new reference discovery. production_context excludes the comparison pool and unrelated reference research. Format-preserving requests receive their selected source identity and approved presentation. There is no external browsing or reference discovery. Selected own-source lookup is available only for past_post.
-For spy_reference requests, production_context.input contains the selected source caption and
-visual_set_id. Read ALL its preserved slides using production_read_images to compare format,
-page progression, recurring fields and composition. This is the only permitted external source;
-no new reference discovery, image fetching or unrelated image sets. Fixed content-guide rules
-still take precedence over source branding. Return sources: []; do not infer an inaccessible reference layout.
-
-Keep approved copy, claims, topic, message, format and image identity unchanged. For automatic/external_url requests, freely move and resize existing images and text, adjust
-styles and regroup information to suit THIS content. For past_post and spy_reference, preserve the selected source's
-composition and delivery pattern; adjust wrapping, spacing, scale and clipping for the new content
-without redesigning, changing page progression or introducing a different visual language. Judge the actual rendered result.
+Review the linked project and approved copy and presentation. Automatic and past_post preserve
+the confirmed internal origin's format and composition. External_url and spy_reference may
+substantially alter their internal clone to deliver the selected external content; do not restore
+the internal layout merely because it differs. No external reference discovery is needed.
+Keep approved wording, claims, topic, message and image identity. Repair concrete readability,
+clipping, overlap and spacing defects. Avoid discretionary redesign of an already readable clone.
 
 ## Inspect and adjust
 
-Preview ALL current slides. Apply docs/content-guidelines.md, including hook/CTA typography,
-image prominence, crops, text hierarchy, readable group spacing and the fixed badge specification.
-Check "페이지별 맥락 강조" on EVERY hook, body and CTA page: the final copy must visibly
-highlight one meaningful contiguous phrase in #ED1C24. Judge its meaning against that page's
-message, not just whether red pixels exist. Red images, decorations and the badge do not count.
-If emphasis is missing, scattered, on an irrelevant phrase or shifted after copy edits, repair
-textColors with set_text_colors while keeping the approved wording unchanged. Select from the
-existing copy; do not add text to satisfy the rule. Do not pass review with missing text emphasis.
-Check the actual visible glyphs and subject, not equal frame coordinates alone. For side-by-side
-poses, assess perceived scale, subject bounds and the meaningful alignment for that comparison;
-identical y values do not establish visual alignment. Newly generated similar poses are allowed.
-
-For vertically adjacent elements in one reading flow, apply the percentage gaps defined in
-"간격과 그룹" in docs/content-guidelines.md. These are visible edge-to-edge gaps relative to the
-full slide height, not differences between element y coordinates. Preserve the same gap for the
-same relationship across pages; do not impose it on independently anchored or side-by-side elements.
-
-Apply "콘텐츠 묶음의 세로 중앙 배치" in docs/content-guidelines.md after establishing the
-internal gaps. Review the position of the whole content group separately from its internal
-alignment; preserve the fixed badge and the group’s internal spacing when repositioning it.
-
-Balance spacing across the whole composition: text, visible illustration subjects, equipment,
-shapes and the badge. Group related information while keeping readable separation between actual
-visible contours and glyphs. Transparent image padding is usable space, but does not itself establish
-enough clearance: if nearby copy visually crowds a person or object, adjust their position, size
-or grouping together. Include the lower copy and badge in the same spacing assessment rather than
-squeezing them into leftover space. Frame overlap or matching coordinates alone neither prove nor
-disprove a good layout. Assess the visible result at phone size.
-
-The editor's alignment guides are optional snapping aids, not safe-area boundaries. They are not
-shown in exported previews. Do not constrain the composition to them. Cropping an image at the
-slide edge is allowed when its key pose/equipment remains clear under the content guide.
+Preview ALL current slides. Apply docs/content-guidelines.md to actual visible defects:
+clipping, overlap, unreadable copy, misleading crops, inconsistent spacing and incorrect emphasis.
+Repair missing or displaced contextual text emphasis without changing approved wording.
+Preserve readable inherited composition; do not normalize every page's spacing or centering just
+to make a change. Judge visible glyphs and image subjects at phone size, not frame coordinates.
+The guide owns typography, colors, gaps, group placement and badge specifications.
 
 ## Confirm suspected omissions
 
@@ -67,13 +33,8 @@ If the region shows the element, withdraw the omission claim. A region preview s
 never replaces, the required whole-slide review. Do not repeat whole-slide previews as the only
 confirmation of a small-element omission.
 
-If the independent full-resolution preview shows the expected element, do not keep the earlier
-missing-element claim as an unresolved blocker. Continue the review against the current verified
-render. If an actual discrepancy persists, identify the slide/placement, preview size, revision,
-and observed difference. Distinguish a confirmed layout problem, an inconsistent preview result,
-and uncertainty about what was visible; do not label all three as an application-renderer defect.
-Repair only confirmed layout issues within scope. Report reproducible problems outside scope
-without changing the content merely to work around an unverified omission.
+If full-resolution inspection shows the expected element, withdraw the omission claim and continue.
+Repair confirmed defects only; report reproducible problems outside scope as blockers.
 
 ## Allowed repairs
 

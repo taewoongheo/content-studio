@@ -18,5 +18,3 @@ export function deleteTaskProject(store: ProductionStore, taskId: string) {
   discardTask(store, taskId);
 }
 export { cloneTaskProject } from "./layout";
-
-export { createTaskProject } from "./creation";

@@ -177,7 +177,7 @@ test("검토 draft는 분리 저장하고 훅 통과 후 시각 검증까지 끝
   try {
     const [id] = store.create(1);
     store.state(id, "running");
-    store.completeAnalysis(id, { ...direction, analysis: "A clear starting plan.", reasoning: { observations: [], interpretations: [], candidates: [] }, sources: [] });
+    store.completeAnalysis(id, { ...direction, content_type: "Routine cards", analysis: "A clear starting plan.", reasoning: { observations: [], interpretations: [], candidates: [] }, sources: [] });
     store.state(id, "running");
     db.prepare("INSERT INTO content_projects(id,name,aspect_ratio,slide_count,output_language,document_json,created_at,updated_at) VALUES('review-project','Review','4:5',1,'English','{}','now','now')").run();
     db.prepare("UPDATE content_drafts SET project_id='review-project' WHERE id=?").run(id);

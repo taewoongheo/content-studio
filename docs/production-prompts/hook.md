@@ -8,11 +8,9 @@ a different body or promises more than it delivers.
 
 ## Compare and revise
 
-Query relevant own posts with production_query(kind="logs", query=...). This searches saved
-topic/title text. Stored external examples and community wording may help the comparison, within
-the research guide; do not explore a new topic.
-Inspect at least one actual source hook image in THIS execution through production_preview_project
-or production_read_images. Previous stages' image checks do not satisfy this requirement.
+Use the confirmed origin's hook approach, approved presentation and current body. If needed,
+inspect that saved internal origin through production_read_project.
+Source lookup is optional; do not search for new external examples or repeat topic selection.
 
 Compare a few natural US English candidates against the actual body. Make the value apparent and
 give the intended viewer a specific reason to continue. Keep the current hook if it is stronger.
@@ -27,9 +25,9 @@ Undo, project creation and unrelated research are outside this stage.
 
 Save the assessment, relevant candidates, chosen wording and source observations. Explain the
 change or why retaining the current wording is justified. Do not invent changes to show activity.
-Preview ALL current slides at the latest saved revision and inspect the results.
+Read the saved hook wording to verify the edit. Do not perform visual QA or block on layout, badges or rendering; final visual verification owns those checks.
 Return the complete updated summary and required review fields. Set review_passed=true only when
 the hook meets the content guide and scope; otherwise identify the blocker.
 
-For past_post and spy_reference requests, preserve the selected source's hook approach and visual composition.
+For automatic and past_post requests, preserve the internal origin’s hook approach and visual composition. External_url and spy_reference keep the approved external content and presentation.
 Improve wording within that approach; do not introduce a different delivery pattern.

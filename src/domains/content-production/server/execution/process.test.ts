@@ -52,9 +52,9 @@ if (args[0] === "mcp") {
       const stageArgs:string[] = JSON.parse(await readFile(argsPath,"utf8"));
       const values=stageArgs.flatMap((value,index)=>value==="-c"?[stageArgs[index+1]]:[]);
       assert.ok(values.includes("features.image_generation=false"));
-      assert.ok(values.includes(step === "hook" ? 'web_search="live"' : 'web_search="disabled"'));
-      assert.equal(values.includes("features.shell_tool=false"),step !== "hook");
-      assert.equal(values.includes("features.unified_exec=false"),step !== "hook");
+      assert.ok(values.includes('web_search="disabled"'));
+      assert.equal(values.includes("features.shell_tool=false"),true);
+      assert.equal(values.includes("features.unified_exec=false"),true);
     }
     await runCodex({ prompt: "Analyze attached slide text", schema: {}, origin: "", taskId: "", token: "", standalone: true,
       images: ["/tmp/persona-slide.webp"], signal: new AbortController().signal, onActivity() {} });
