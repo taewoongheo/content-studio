@@ -8,33 +8,23 @@ const referenceTools = [
   "production_reference_images", "production_external_references", "production_describe_reference", "production_read_images",
 ];
 const commonTools = [
-  "production_context", "production_query", "production_comparisons",
+  "production_context", "production_query",
   "production_save_draft", "production_read_project", "production_preview_project",
 ];
 export const editorReadTools = ["open_project", "read_project", "preview_slide", "preview_slides"];
 export const editorWriteTools = [
-  "production_create_project", "production_clone_project", "production_use_generated_image", "production_change_direction",
+  "production_clone_project", "production_use_generated_image", "production_change_direction",
   "edit_project", "undo_project", "rename_project", "set_content_metadata",
 ];
 
-const toolsByStage: Record<ProductionStep, readonly string[]> = {
-  analysis: [...commonTools, ...referenceTools],
-  production: [...commonTools, ...referenceTools, ...editorReadTools, ...editorWriteTools],
-  hook: [...commonTools, ...referenceTools, ...editorReadTools, "edit_project"],
-  polish: [...commonTools, ...editorReadTools, "edit_project"],
-  visual: ["production_repair_badge", "production_context", "production_save_draft", ...editorReadTools, "edit_project"],
-};
-
-/** Tool availability and native CLI capabilities are separate enforcement boundaries. */
+/** Every node can repair the linked project; request mode controls source selection. */
 export function stagePolicy(step: ProductionStep, mode: ProductionRequest["mode"] = "automatic") {
-  const usesReferences = step === "analysis" || step === "production" || step === "hook";
-  const canResearchCopy = step === "production" || step === "hook";
-  return {
-    imageGeneration: step === "production",
-    externalCollection: false,
-    externalLimit: step === "analysis" ? 10 : usesReferences ? REFERENCE_LIMIT : 0,
-    webSearch: canResearchCopy,
-    shell: canResearchCopy,
-    tools: new Set([...toolsByStage[step], ...(step === "visual" && mode === "past_post" ? ["production_read_project", "production_preview_project"] : []), ...(step === "visual" && mode === "spy_reference" ? ["production_read_images"] : [])]),
-  };
+  const external = mode === "external_url" || mode === "spy_reference";
+  const tools = new Set([...commonTools, ...editorReadTools, ...editorWriteTools,
+    "production_repair_badge", "production_read_images"]);
+  if (external) for (const tool of referenceTools) tools.add(tool);
+  if (mode === "automatic") tools.add("production_comparisons");
+  if (mode !== "automatic" || !["analysis", "production"].includes(step)) tools.delete("production_change_direction");
+  return { imageGeneration: true, externalCollection: false,
+    externalLimit: external ? REFERENCE_LIMIT : 0, webSearch: true, shell: true, tools };
 }

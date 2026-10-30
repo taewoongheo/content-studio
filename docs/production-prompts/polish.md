@@ -1,35 +1,6 @@
-# English polishing
+# Polish: make the language natural
 
-## Scope
-
-Read production_context, the latest linked project and hook-stage summary. Review all slide copy,
-title, caption and hashtags for natural American English, grammar, exercise terminology, awkward
-phrasing, redundancy and consistent voice. Preserve the topic, message, format, claims, prescriptions,
-numbers and approved hook promise. Preserve the content guide’s uppercase hook/CTA titles and
-intentional emphasis while correcting their English. Do not add information or rewrite the content direction.
-
-Use the current copy and, only if needed, wording in recent published own posts as voice examples
-via production_query and production_read_project. No external references, web research or image
-creation. Reference wording is optional; do not copy claims or unrelated content.
-
-## Changes
-
-Use edit_project with set_slot_value on existing text placements only. Keep placement IDs, slides,
-images, style, layout and the LIFTCODE badge unchanged. The server rejects other edits.
-Apply the content guide’s content-editing criteria while preserving approved information.
-Do not shorten correct explanations to meet a word or line target. Retain intentional line breaks
-where practical, but let the following visual stage handle wrapping after necessary wording edits.
-Do not change correct, natural wording just to demonstrate activity.
-
-## Finish
-
-Save the language assessment and actual edits with production_save_draft. Return the entire current
-summary, including polished title, caption and hashtags (empty when absent), not just changed lines.
-Preview all current slides at the latest saved revision and record any text-fit issues for the
-following visual stage. Keep the language natural rather than distorting copy to fit the existing
-layout; final layout adjustment belongs to visual verification. If a wording change makes the
-existing red emphasis disappear or point at a different phrase, note the affected slide and
-intended phrase for visual review to repair. Do not change colors in this language-only stage.
-Return review, review_passed, reviewed_slide_ids and reviewed_revision under the shared output
-contract. Set review_passed=true when the language review passes; layout issues are handed off to
-visual verification, not repaired or treated as language-review failures here.
+Review slide copy, title, caption and hashtags for natural American English, grammar, terminology,
+clarity and repetition. Express the intended meaning in the persona's voice, including intentional
+fragments, humor and sentence patterns. Correct actual problems and check the saved result and any
+related repairs. Save the assessment and return review, review_passed and the current summary.

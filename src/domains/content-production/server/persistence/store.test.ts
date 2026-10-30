@@ -177,17 +177,18 @@ test("검토 draft는 분리 저장하고 훅 통과 후 시각 검증까지 끝
   try {
     const [id] = store.create(1);
     store.state(id, "running");
-    store.completeAnalysis(id, { ...direction, analysis: "A clear starting plan.", reasoning: { observations: [], interpretations: [], candidates: [] }, sources: [] });
+    store.completeAnalysis(id, { ...direction, content_type: "Routine cards", analysis: "A clear starting plan.", reasoning: { observations: [], interpretations: [], candidates: [] }, sources: [] });
     store.state(id, "running");
     db.prepare("INSERT INTO content_projects(id,name,aspect_ratio,slide_count,output_language,document_json,created_at,updated_at) VALUES('review-project','Review','4:5',1,'English','{}','now','now')").run();
     db.prepare("UPDATE content_drafts SET project_id='review-project' WHERE id=?").run(id);
     const beforeInvalidMetadata = store.get(id);
     assert.throws(() => store.completeProduction(id, {project_id:"review-project",summary:{topic:"arms",message:"Train with three sets"},sources:[]}));
     assert.deepEqual(store.get(id),beforeInvalidMetadata,"missing format must not advance or overwrite the draft");
-    store.completeProduction(id, { slide_plan: [{ slide_id: "slide", role: "body", purpose: "Give a starting prescription", copy: ["Three sets"], visual: "Demonstrate the exercise" }], content_review: { assessment: "Claims and hook match the body.", issues: [] }, project_id: "review-project", summary: { topic: "arms", message: "Train with three sets", content_type: "Routine cards", hook: "Start with three sets", slides: [{visual:"Fixed bottom-left LIFTCODE badge"}] }, sources: [] });
+    store.completeProduction(id, { slide_plan: [{ slide_id: "slide", role: "body", purpose: "Give a starting prescription", copy: ["Three sets"], visual: "Demonstrate the exercise" }], content_review: { assessment: "Claims and hook match the body.", issues: [] }, project_id: "review-project", summary: { topic: "arms", message: "Train with three sets", content_type: "Exercise cards with starting targets", hook: "Start with three sets", slides: [{visual:"Fixed bottom-left LIFTCODE badge"}] }, sources: [] });
     const storedMetadata = db.prepare("SELECT topic,message,content_type FROM content_projects WHERE id='review-project'").get();
     assert.deepEqual(storedMetadata,{topic:"arms",message:"Train with three sets",content_type:"Routine cards"});
     assert.equal(store.get(id).log.content_type,"Routine cards");
+    assert.equal((store.get(id).production?.content as Record<string, unknown>).content_type,"Routine cards");
     assert.equal(store.get(id).task.current_step, "hook");
     assert.equal(store.get(id).task.state, "pending");
     assert.equal(store.get(id).production?.state, "completed");
@@ -206,8 +207,8 @@ test("검토 draft는 분리 저장하고 훅 통과 후 시각 검증까지 끝
     assert.equal(store.get(id).hook?.state, "completed");
     assert.equal(store.get(id).production?.content && (store.get(id).production!.content as {hook:string}).hook, "Start with three sets");
     store.state(id, "running");
-    assert.throws(() => store.completeProduction(id, { ...result, summary: { ...result.summary, topic: "A different topic" } }), /소재·메시지·포맷/);
-    store.completeProduction(id, { ...result, review: "The English copy is natural and preserves the approved meaning." });
+    store.completeProduction(id, { ...result, summary: { ...result.summary, message: "Corrected factual guidance" }, review: "Corrected a factual problem while polishing." });
+    assert.equal(store.get(id).log.message, "Corrected factual guidance");
     assert.equal(store.get(id).polish?.state, "completed");
     assert.equal(store.get(id).task.current_step, "visual");
     assert.equal(store.get(id).task.state, "pending");
@@ -232,5 +233,23 @@ test("log metadata edits update the project atomically and reject incomplete rep
       {topic:"Arms",message:"Compare curl options",content_type:"A tier chart with ranked rows"});
     assert.throws(()=>store.editLog("l",{content_type:""}));
     assert.equal((db.prepare("SELECT content_type FROM content_creation_logs WHERE id='l'").get() as {content_type:string}).content_type,"A tier chart with ranked rows");
+  } finally {db.close();}
+});
+
+
+test("collision reselection accepts an unconfirmed format and preserves later-stage state on rejection", () => {
+  const db=openLocalDatabase(":memory:"), store=new ProductionStore(db);
+  try {
+    const [id]=store.create(1);
+    store.state(id,"running");
+    store.changeDirection(id,direction,"collision");
+    assert.equal(store.get(id).analysis.content_type,direction.content_type);
+    assert.throws(()=>store.changeDirection(id,{...direction,content_type:"Other"},"collision"));
+    for (const step of ["hook","polish","visual"]) {
+      db.prepare("UPDATE content_drafts SET current_step=? WHERE id=?").run(step,id);
+      const before=store.get(id);
+      assert.throws(()=>store.changeDirection(id,{...direction,topic:"Other"},"collision"),/중복 재선정/);
+      assert.deepEqual(store.get(id),before);
+    }
   } finally {db.close();}
 });

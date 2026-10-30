@@ -18,6 +18,7 @@ test("분석은 고정된 최대 10개, 후속 단계는 관련 자료 최대 5�
   const [id]=store.create(1);store.state(id,"running");
   const first=await queryStageReferences(db,id,"analysis",input);
   assert.equal(first.posts.length,10);
+  assert.deepEqual((await queryStageReferences(db,id,"analysis",input)).posts,first.posts,"a full context must not grow through a negative slice limit");
   assert.deepEqual((await queryStageReferences(db,id,"analysis",{...input,query:"Arm"})).posts,first.posts);
   store.save(id,"analysis",{research:[]});assert.equal(getReferenceContext(db,id,"analysis")?.posts.length,10);
   await assert.rejects(()=>queryStageReferences(db,id,"analysis",{...input,collect:true}),/수집하지 않습니다/);

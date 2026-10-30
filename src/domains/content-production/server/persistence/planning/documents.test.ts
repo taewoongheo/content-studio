@@ -30,7 +30,7 @@ test("decisions and plans survive progress saves, resume, completion and removal
     assert.deepEqual(resumed.get(id).analysis.reasoning, reasoning);
     store.state(id, "running");
     store.completeAnalysis(id, direction);
-    assert.deepEqual(stageContext(store.get(id)).analysis.reasoning, reasoning);
+    assert.equal(stageContext(store.get(id)).analysis.reasoning, undefined);
     store.state(id, "running");
     store.save(id, "production", { slide_plan });
     assert.equal(store.get(id).production?.draft_saved_at, null, "planning alone is not actual content");
@@ -48,7 +48,8 @@ test("decisions and plans survive progress saves, resume, completion and removal
     const hookContext = stageContext(resumed.get(id));
     assert.equal(hookContext.task.current_step, "hook");
     assert.deepEqual(hookContext.production?.slide_plan, slide_plan);
-    assert.deepEqual(hookContext.production?.content_review, content_review);
+    assert.deepEqual(resumed.get(id).production?.slide_plan, slide_plan);
+    assert.deepEqual(hookContext.production?.content_review, resumed.get(id).production?.content_review);
     const logId = hookContext.task.log_id;
     db.prepare("UPDATE content_creation_logs SET project_id='planned',post_url='https://example.com/published' WHERE id=?").run(logId);
     store.remove(id);
@@ -76,7 +77,7 @@ test("CLI schemas accept flexible comparisons and issue-free review using the pr
   assert.equal(analysis({ ...direction, reasoning: { observations: [], interpretations: [], candidates: [] } }), true);
   assert.equal(analysis({ ...direction, reasoning: "A freeform replacement" }), false);
   const production = ajv.compile(resultSchema("production"));
-  const result = { project_id: "planned", summary: { title: "Choose", topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "Choose", caption: "", hashtags: [], slides: [{ slide_id: "s1", role: "body", copy: ["Choose"], visual: "Two options" }], changes: [] }, sources: [], slide_plan, content_review, reviewed_slide_ids: ["s1"], reviewed_revision: 1 };
+  const result = { project_id: "planned", summary: { title: "Choose", topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "Choose", caption: "", hashtags: [], slides: [{ slide_id: "s1", role: "body", copy: ["Choose"], visual: "Two options" }], changes: [] }, sources: [], slide_plan, content_review };
   assert.equal(production(result), true, JSON.stringify(production.errors));
   const { content_review: removed, ...withoutReview } = result;
   void removed;

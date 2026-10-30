@@ -15,7 +15,7 @@ const referenceModes = [
 ] as const;
 
 const descriptions: Record<ProductionRequest["mode"], string> = {
-  spy_reference: "선택한 스파이 게시글의 구성과 표현 방식을 유지하고 새로운 주제로 만듭니다.",
+  spy_reference: "선택한 스파이 게시글의 내용을 내부 게시글 복제본에서 제작합니다.",
   automatic: "과거 콘텐츠와 레퍼런스를 분석해 주제와 구성을 정합니다.",
   past_post: "원본의 구성과 표현 방식을 유지하고 새로운 주제로 만듭니다.",
   external_url: "외부 게시글의 주제를 우리 콘텐츠의 스타일로 만듭니다.",

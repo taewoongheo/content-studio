@@ -27,6 +27,7 @@ export type Direction = z.infer<typeof directionSchema>;
 export const sourceSchema = z
   .object({
     kind: z.enum(["log", "reference", "url"]),
+    clone_project_id: z.string().min(1).optional(),
     id: z.string().optional(),
     url: z.string().url().optional(),
     part: z.string(),
@@ -76,10 +77,12 @@ export const productionResultSchema = z
     project_id: z.string().min(1),
     summary: z.record(z.string(), z.unknown()),
     sources: z.array(sourceSchema),
-    reviewed_slide_ids: z.array(z.string()).min(1),
-    reviewed_revision: z.number().int().nonnegative(),
   })
   .strict();
+export const visualResultSchema = productionResultSchema.extend({
+  reviewed_slide_ids: z.array(z.string()).min(1),
+  reviewed_revision: z.number().int().nonnegative(),
+});
 export const firstDraftResultSchema = productionResultSchema.extend(firstDraftPlanningSchema.shape);
 export type Row = Record<string, unknown>;
 export interface WorkItem extends Row {

@@ -1,6 +1,5 @@
-import { PRODUCTION_ASPECT_RATIO, type Row } from "../../domain/contracts";
+import { type Row } from "../../domain/contracts";
 import { readContentMetadata } from "@/domains/content-metadata/schema";
-import { createBlankDocument } from "@/domains/slideshow/editor/document";
 import type { EditorDocument } from "@/domains/slideshow/editor/types";
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 import {
@@ -8,7 +7,6 @@ import {
   saveContentProject,
 } from "@/domains/slideshow/projects/service";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
-import { OperationError } from "@/lib/errors/operation";
 import type { ProductionStore } from "../persistence/store";
 import { publishChange } from "../events";
 
@@ -18,8 +16,9 @@ export function saveTaskProject(
   taskId: string,
   document: EditorDocument,
   source?: Row,
+  assets: import("@/domains/slideshow/server/persistence/projects/store").SavedProjectAsset[] = [],
 ) {
-  const detail = store.assertActive(taskId, "production");
+  const detail = store.assertActive(taskId, store.get(taskId).task.current_step);
 
   if (detail.task.project_id)
     return { projectId: detail.task.project_id, reused: true };
@@ -43,6 +42,8 @@ export function saveTaskProject(
 
       contentJobRegistry.update(job.id, (record) => {
         record.editor.document = document;
+        record.assets = assets.map(asset => ({id:asset.assetId,name:asset.name,type:asset.type,size:asset.bytes.length}));
+        record.imageData = Object.fromEntries(assets.map(asset => [asset.assetId,new Uint8Array(asset.bytes)]));
       });
 
       saveContentProject(contentJobRegistry, job.id, metadata.topic, {
@@ -83,31 +84,5 @@ export function saveTaskProject(
       );
       return { projectId: job.id, reused: false };
     })(),
-  );
-}
-
-export function createTaskProject(
-  store: ProductionStore,
-  taskId: string,
-  slideCount: number,
-) {
-  const detail = store.assertActive(taskId, "production");
-  if (detail.task.project_id)
-    return { projectId: detail.task.project_id, reused: true };
-  if (detail.input?.request.mode === "past_post")
-    throw new OperationError(
-      "SOURCE_LAYOUT_REQUIRED",
-      "과거 게시글 기반 제작은 지정 원본의 배치를 복제해 주세요.",
-    );
-  if (!Number.isInteger(slideCount) || slideCount < 1 || slideCount > 20)
-    throw new Error("장 수는 1~20으로 입력해 주세요.");
-  return saveTaskProject(
-    store,
-    taskId,
-    createBlankDocument({
-      structure: "sequential",
-      aspectRatio: PRODUCTION_ASPECT_RATIO,
-      slideCount,
-    }),
   );
 }

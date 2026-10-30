@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { stagePolicy } from "./policy/stages";
@@ -23,6 +23,7 @@ if (args[0] === "mcp") {
   console.log(JSON.stringify({type:"item.started",item:{type:"mcp_tool_call",id:"tool-1",tool:"production_preview_project",arguments:{projectId:"source"}}}));
   console.log(JSON.stringify({type:"item.completed",item:{type:"mcp_tool_call",id:"tool-1",tool:"production_preview_project",arguments:{projectId:"source"},error:{message:"Connection refused"},result:null}}));
   fs.writeFileSync(${JSON.stringify(argsPath)},JSON.stringify(args));
+  fs.writeFileSync(${JSON.stringify(argsPath + ".cwd")},process.cwd());
   fs.writeFileSync(args[args.indexOf("--output-last-message")+1],JSON.stringify({ok:true}));
 }
 `, { mode: 0o700 });
@@ -32,6 +33,8 @@ if (args[0] === "mcp") {
       images: ["/tmp/turnaround.png", "/tmp/face.png", "/tmp/example.png"],
       taskId: "task", token: "test-token", signal: new AbortController().signal, onActivity() {}, onToolActivity(event) { toolEvents.push(event); } });
     assert.deepEqual(result, { ok: true });
+    assert.notEqual(await readFile(argsPath + ".cwd", "utf8"), process.cwd());
+    assert.ok((await readFile(argsPath + ".cwd", "utf8")).includes("content-production-"));
     assert.deepEqual(threadIds,["test-image-thread"]);
     assert.equal(toolEvents.length,2);
     assert.equal(toolEvents[0].result,undefined);
@@ -51,10 +54,10 @@ if (args[0] === "mcp") {
         taskId:"task",token:"test-token",signal:new AbortController().signal,onActivity() {}});
       const stageArgs:string[] = JSON.parse(await readFile(argsPath,"utf8"));
       const values=stageArgs.flatMap((value,index)=>value==="-c"?[stageArgs[index+1]]:[]);
-      assert.ok(values.includes("features.image_generation=false"));
-      assert.ok(values.includes(step === "hook" ? 'web_search="live"' : 'web_search="disabled"'));
-      assert.equal(values.includes("features.shell_tool=false"),step !== "hook");
-      assert.equal(values.includes("features.unified_exec=false"),step !== "hook");
+      assert.ok(values.includes("features.image_generation=true"));
+      assert.ok(values.includes('web_search="live"'));
+      assert.equal(values.includes("features.shell_tool=false"),false);
+      assert.equal(values.includes("features.unified_exec=false"),false);
     }
     await runCodex({ prompt: "Analyze attached slide text", schema: {}, origin: "", taskId: "", token: "", standalone: true,
       images: ["/tmp/persona-slide.webp"], signal: new AbortController().signal, onActivity() {} });
@@ -140,6 +143,47 @@ else {
       if (scenario === "recover") assert.deepEqual(await result, { ok: true });
       else await assert.rejects(result, scenario === "cancel" ? /abort/i : /Codex 실행 실패/);
       assert.equal(Number(await readFile(countPath, "utf8")), scenario === "recover" ? 2 : scenario === "exhaust" ? 3 : 1);
+    }
+  } finally {
+    if (previous === undefined) delete process.env.CONTENT_STUDIO_CODEX_BIN;
+    else process.env.CONTENT_STUDIO_CODEX_BIN = previous;
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+
+test("editor CLI starts and resumes in its non-repository session directory", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "editor-cli-test-"));
+  const executable = join(directory, "codex.cjs");
+  const previous = process.env.CONTENT_STUDIO_CODEX_BIN;
+  try {
+    await writeFile(executable, `#!/usr/bin/env node
+const fs = require("node:fs");
+const args = process.argv.slice(2);
+if (args[0] === "mcp") console.log("[]");
+else {
+  if (!args.includes("--skip-git-repo-check")) {
+    console.error("Not inside a trusted directory and --skip-git-repo-check was not specified.");
+    process.exit(1);
+  }
+  fs.writeFileSync(args[args.indexOf("--output-last-message")+1], JSON.stringify({
+    resumed: args[1] === "resume", ephemeral: args.includes("--ephemeral"),
+    thread: args.includes("editor-thread"), cwd: process.cwd()
+  }));
+}
+`, { mode: 0o700 });
+    process.env.CONTENT_STUDIO_CODEX_BIN = executable;
+    for (const threadId of [undefined, "editor-thread"]) {
+      const result = await runCodex({
+        conversation: { directory, threadId }, standalone: true,
+        prompt: "test", schema: {}, origin: "", taskId: "editor", token: "",
+        signal: new AbortController().signal, onActivity() {},
+      });
+      assert.equal(result.resumed, !!threadId);
+      assert.equal(result.thread, !!threadId);
+      assert.equal(result.ephemeral, false);
+      assert.equal(await realpath(String(result.cwd)),
+        await realpath(directory));
     }
   } finally {
     if (previous === undefined) delete process.env.CONTENT_STUDIO_CODEX_BIN;

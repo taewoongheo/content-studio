@@ -1,3 +1,5 @@
+import type { EditorDocument } from "@/domains/slideshow/editor/types";
+import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 import { badgeRepairCommands } from "@/domains/content-production/server/execution/policy/editing/badge/repair";
 import { SlideshowProjectWrites } from "@/domains/slideshow/server/project-writes";
 import { stageContext } from "@/domains/content-production/server/execution/policy/context";
@@ -21,7 +23,7 @@ import {
   reviewDraftPatchSchema,
   directionSchema,
 } from "@/domains/content-production/domain/contracts";
-import { cloneTaskProject, createTaskProject } from "@/domains/content-production/server/projects";
+import { cloneTaskProject } from "@/domains/content-production/server/projects";
 
 export function registerProductionTools(server: McpServer, taskId?: string, origin = "http://127.0.0.1:3000", validateProject?: ProjectWriteValidator) {
   registerSourceTools(server, origin);
@@ -94,28 +96,35 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
   if (!taskId) return;
   registerExternalReferenceTools(server, taskId);
   registerTool(server, "production_repair_badge", {
-    description: "Visual review only. Restore all slides to the exact approved two-element LIFTCODE badge specification. Repairs legacy, missing, misplaced or locally overridden badges. Preserves other content; saves as one undoable edit. Re-read and preview ALL slides at the new revision after repair. No custom badge styles accepted.",
+    description: "Restore missing or damaged badge elements from the confirmed internal clone origin. No brand is assumed or added when the source has no badge. Preserves other content; saves as one undoable edit. Re-read and preview ALL slides at the new revision after repair. No custom badge styles accepted.",
     inputSchema: z.object({ expectedRevision: z.number().int().nonnegative(), expectedTabId: z.string().min(1) }),
     annotations: annotations(false),
   }, input => guarded(async () => {
     const store = productionStore();
-    const detail = store.assertActive(taskId, "visual");
+    const detail = store.assertActive(taskId, store.get(taskId).task.current_step);
     const projectId = detail.task.project_id;
     if (!projectId) throw new Error("연결된 프로젝트가 없습니다.");
     const document = contentJobRegistry.get(projectId).editor.document;
     const writes = new SlideshowProjectWrites(contentJobRegistry, store.db, project => {
-      const active = store.assertActive(taskId, "visual");
+      const active = store.assertActive(taskId, store.get(taskId).task.current_step);
       if (active.task.project_id !== project.id) throw new Error("연결된 프로젝트가 변경되었습니다.");
       validateProject?.(project);
     });
-    const result = await writes.edit(projectId, badgeRepairCommands(document), input.expectedRevision, input.expectedTabId);
-    return json({ projectId, revision: result.editor.revision, tabId: result.tabId, warnings: result.warnings });
+    const sourceId = (detail.analysis.sources as Array<{clone_project_id?:string}> | undefined)?.find(source => source.clone_project_id)?.clone_project_id
+      ?? detail.input?.source?.project_id;
+    if (!sourceId) throw new Error("확정된 원본이 없습니다.");
+    const source = new ContentProjectStore(store.db).get(sourceId);
+    if (!source) throw new Error("원본 프로젝트를 찾을 수 없습니다.");
+    const commands = badgeRepairCommands(document, source.document as EditorDocument);
+    if (!commands.length) return json({projectId, repaired:false, badge_presence:"matches_source", authoritative:true});
+    const result = await writes.edit(projectId, commands, input.expectedRevision, input.expectedTabId);
+    return json({ projectId, revision: result.editor.revision, tabId: result.tabId, warnings: result.warnings, badge_presence:"matches_source", authoritative:true });
   }));
   registerTool(
     server,
     "production_use_generated_image",
     {
-      description: "Production only. Import an actual newly created native image_gen output from CODEX_HOME/generated_images into an existing image placement. localPath must be the real path returned by image_gen in THIS execution; older outputs and external files are rejected. Converts to lossless WebP and saves bytes in this project only. Duplicate image placements in this project are rejected atomically. Re-read revision after success. Never import past post/reference assets or reuse one generated asset in multiple placements.",
+      description: "Import an actual newly created native image_gen output from CODEX_HOME/generated_images into an existing image placement. localPath must be the real path returned by image_gen in THIS execution; older outputs and external files are rejected. Converts to lossless WebP and saves bytes in this project only. Duplicate image placements in this project are rejected atomically. Re-read revision after success. Never import past post/reference assets or reuse one generated asset in multiple placements.",
       inputSchema: z.object({
         slideId:z.string(),placementId:z.string(),expectedRevision:z.number().int(),expectedTabId:z.string(),localPath:z.string().min(1),
       }),
@@ -123,16 +132,16 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     },
     input => guarded(async () => {
       const store = productionStore();
-      const detail = store.assertActive(taskId,"production");
+      const detail = store.assertActive(taskId, store.get(taskId).task.current_step);
       const projectId = detail.task.project_id;
       if (!projectId) throw new Error("먼저 프로젝트를 생성해 주세요.");
       const execution = imageExecution(taskId);
       const bytes = await readFreshGeneratedImage(input.localPath,execution.startedAt,join(generatedImagesRoot(),execution.threadId));
       // Recheck after file work: cancellation must not result in a late write.
-      store.assertActive(taskId,"production");
+      store.assertActive(taskId, store.get(taskId).task.current_step);
       if (imageExecution(taskId).threadId !== execution.threadId) throw new OperationError("RUN_STAGE_CHANGED", "이미지 생성 실행이 변경되었습니다.");
       return json({...await importSlideshowImage(contentJobRegistry,store.db,{...input,projectId},bytes,project => {
-        store.assertActive(taskId,"production");
+        store.assertActive(taskId, store.get(taskId).task.current_step);
         if (imageExecution(taskId).threadId !== execution.threadId) throw new OperationError("RUN_STAGE_CHANGED", "이미지 생성 실행이 변경되었습니다.");
         validateProject?.(project);
       })});
@@ -147,7 +156,12 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
       inputSchema: z.object({}),
       annotations: annotations(true),
     },
-    () => guarded(() => json({ ...stageContext(productionStore().get(taskId)) })),
+    () => guarded(() => {
+      const detail = productionStore().get(taskId);
+      return json({ ...stageContext(detail), ...(detail.task.current_step === "visual" ? {
+        badge_policy: "Server restores source badges before visual review. Use production_repair_badge for an authoritative source-match check; ambiguous image readings are not blockers."
+      } : {}) });
+    }),
   );
   registerTool(
     server,
@@ -183,7 +197,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     "production_change_direction",
     {
       description:
-        "During production only, resolve a recent collision within the request constraints. Preserve the format for past-post requests and the topic for external URLs. If all considered alternatives overlap, keep the direction and record why the duplicate is accepted instead of calling this tool repeatedly.",
+        "Resolve a recent collision within the request constraints. Automatic requests only; preserve the confirmed internal origin format. Explicit requests never change direction for overlap. If all considered alternatives overlap, keep the direction and record why the duplicate is accepted instead of calling this tool repeatedly.",
       inputSchema: z.object({
         direction: directionSchema,
         cause: z.literal("collision"),
@@ -202,17 +216,12 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
         return json({ saved: true });
       }),
   );
-  registerTool(server, "production_create_project", {
-    description: "Production only. Create a blank 4:5 project for automatic, external-URL or spy-reference production. For spy_reference reconstruct the selected external composition with new copy/artwork; do not substitute an own-post layout. Compose a new layout using the assigned own posts collectively as references; copying a single post is not required. Reuses the task's linked project on resume. Past-post requests must use production_clone_project instead.",
-    inputSchema: z.object({ slideCount: z.number().int().min(1).max(20).default(6) }),
-    annotations: annotations(false),
-  }, input => guarded(() => json(createTaskProject(productionStore(), taskId, input.slideCount))));
   registerTool(
     server,
     "production_clone_project",
     {
       description:
-        "Production only, for past-post requests. Inspect and clone the explicitly selected saved source from production_context.input. It may be outside the assigned comparison pool. Preserve its format and visual language while changing the subject and content. Preserves frames, styles, shared elements, slide roles and badge; clears source text and all images, copies no source asset bytes. Change subject-specific wording and create fresh images while preserving the source format, page progression and visual composition. Records the source and reason. Reuses an existing linked project on resume without overwriting it.",
+        "Clone the internal project confirmed by analysis sources.clone_project_id. Preserve document, copy and assets; replace only what the approved direction needs. Reuse the linked project on resume.",
       inputSchema: z.object({
         sourceProjectId: z.string().min(1),
         reason: z.string().trim().min(1),
