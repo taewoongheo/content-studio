@@ -34,9 +34,9 @@ test("spy source selection validates account and post, persists its identity and
     assert.match(startInputPrompt(input, "analysis"), /Keep its topic/);
     assert.match(startInputPrompt(input, "production"), /production_clone_project/);
     assert.doesNotMatch(startInputPrompt(input, "visual"), /visual_set_id/);
-    assert.equal(stagePolicy("visual", "spy_reference").tools.has("production_read_images"), false);
-    assert.equal(stagePolicy("visual", "spy_reference").tools.has("production_external_references"), false);
-    assert.equal(stagePolicy("visual", "automatic").tools.has("production_read_images"), false);
+    assert.equal(stagePolicy("visual", "spy_reference").tools.has("production_read_images"), true);
+    assert.equal(stagePolicy("visual", "spy_reference").tools.has("production_external_references"), true);
+    assert.equal(stagePolicy("visual", "automatic").tools.has("production_read_images"), true);
     setReferenceExcluded(db, "spy", true);
     assert.throws(() => store.create([request], []), /사용할 수 없습니다/);
     setReferenceExcluded(db, "spy", false);

@@ -7,7 +7,7 @@ import { productionStore, execute, recordAnalysisRead, recordSourceReview } from
 import type { runCodex } from "../process";
 
 const direction={analysis:"Compare observed post performance.",reasoning:{observations:[{source:"assigned-log",observation:"The comparison makes exercise choices visible."}],interpretations:[],candidates:[]},topic:"Arms",content_type:"Comparison",message:"Choose an exercise",answer:"Compare available options",presentation:"Comparison cards",reason:"Observed interest",expected_response:"Save",goal_connection:"Relevant audience",difference_from_recent:"Another choice",sources:[]};
-test("analysis cannot finish without all assigned reads; input IDs and disabled capabilities reach the CLI", async()=>{
+test("analysis cannot finish without all assigned reads; input IDs and repair capabilities reach the CLI", async()=>{
   const dir=await mkdtemp(join(tmpdir(),"analysis-input-flow-"));
   process.env.CONTENT_STUDIO_DB_PATH=join(dir,"test.sqlite");
   const store=productionStore();
@@ -16,8 +16,8 @@ test("analysis cannot finish without all assigned reads; input IDs and disabled 
     store.db.prepare("INSERT INTO content_creation_logs(id,project_id,post_url,actual_published_at,view_count,like_count,comment_count,save_count,created_at,updated_at) VALUES('assigned-log','p','https://example.com/post','2026-10-25',100,1,1,1,'now','now')").run();
     const [id]=store.create(1);
     const missing:typeof runCodex=async input=>{
-      assert.equal(input.capabilities?.webSearch,false);
-      assert.equal(input.capabilities?.shell,false);
+      assert.equal(input.capabilities?.webSearch,true);
+      assert.equal(input.capabilities?.shell,true);
       assert.match(input.prompt,/assigned-log/);
       assert.ok(!input.prompt.includes("Unique private post label"),"initial prompt carries IDs, not full post content");
       return direction;

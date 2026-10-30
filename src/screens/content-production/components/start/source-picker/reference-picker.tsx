@@ -15,6 +15,9 @@ export function ReferencePicker({ posts, value, onChange }: {
     [post.title, post.caption, post.topic, post.content_type, post.account].some(v => String(v ?? "").toLowerCase().includes(term)))
     .sort((a, b) => String(b.published_at ?? "").localeCompare(String(a.published_at ?? "")));
   const list = filtered.map(post => ({ id: String(post.id), name: String(post.title || post.caption || "캡션 없음"),
+    metrics: {view_count: typeof post.view_count === "number" ? post.view_count : null,
+      like_count: typeof post.like_count === "number" ? post.like_count : null,
+      save_count: typeof post.save_count === "number" ? post.save_count : null},
     topic: `@${post.account}`, content_type: String(post.content_type ?? ""), updatedAt: String(post.observed_at ?? ""),
     publishedOn: post.published_at ? new Date(String(post.published_at)).toLocaleDateString("ko-KR") : "게시일 미상", slideCount: Number(post.slide_count) || 0 }));
   return <div className="flex min-h-0 flex-1 flex-col gap-2">

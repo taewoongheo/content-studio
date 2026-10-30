@@ -1,3 +1,6 @@
+import { executeWithOutputRepair } from "./review/output/output-repair";
+import { reviewedSummary } from "./review/summary";
+import { prepareOriginalBadges } from "./policy/editing/badge/prepare";
 import { refreshSpy } from "../references/spy/refresh";
 import { readSampling } from "../settings/sampling";
 import { readPlanningLogs } from "../persistence/planning/logs";
@@ -28,6 +31,7 @@ import {
   firstDraftResultSchema,
   sourceSchema,
   type ProductionStep,
+  type Row,
 } from "../../domain/contracts";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import { loadContentProject } from "@/domains/slideshow/projects/service";
@@ -108,7 +112,7 @@ export function recordToolCall(id: string, event: {callId: string; name: string;
 }
 export function imageExecution(id: string) {
   const run = runs.get(id);
-  if (!run || run.step !== "production" || run.controller.signal.aborted) throw new Error("이미지는 실행 중인 초안 제작 단계에서만 가져올 수 있습니다.");
+  if (!run || run.controller.signal.aborted) throw new Error("이미지는 실행 중인 작업에서 가져올 수 있습니다.");
   if (!run.imageThreadId || !/^[a-zA-Z0-9-]+$/.test(run.imageThreadId))
     throw new OperationError("IMAGE_EXECUTION_NOT_READY", "현재 CLI 실행의 이미지 출력 위치가 아직 확인되지 않았습니다.");
   return {startedAt:run.imageStartedAt,threadId:run.imageThreadId};
@@ -206,11 +210,12 @@ export async function execute(
       phase = "source_collection";
       if (run.step === "analysis" && ["external_url", "spy_reference"].includes(store.get(id).input!.request.mode))
         await prepareStartInput(store, id, run.controller.signal);
+      if (run.step === "visual") await prepareOriginalBadges(store, id);
       phase = "cli";
       const inputs = run.step === "analysis" || run.step === "production" ? store.analysisInputs(id, true) : [];
       const startInput = store.get(id).input!;
       const capabilities = stagePolicy(run.step, startInput.request.mode);
-      const result = await executor({
+      const result = await executeWithOutputRepair(executor, {
         capabilities,
         onThreadStarted: threadId => { run.imageThreadId = threadId; },
         model: PRODUCTION_MODEL,
@@ -229,7 +234,7 @@ export async function execute(
             kind: "state",
             detail: message,
           }),
-      });
+      }, run.step);
       run.controller.signal.throwIfAborted();
       phase = "output";
       const { sources: rawSources, ...fields } = result;
@@ -266,8 +271,6 @@ export async function execute(
           throw new OperationError("REVIEW_REJECTED", "검토를 통과하지 못했습니다. 검토 결과를 확인해 주세요.", {
             review: reviewText, review_passed,
           });
-        if (run.step === "visual" && sources.length)
-          throw new OperationError("VISUAL_REFERENCES_FORBIDDEN", "시각 검증에서는 레퍼런스를 조회하거나 출처로 기록하지 않습니다.");
 
       }
       phase = "output";
@@ -287,7 +290,9 @@ export async function execute(
           run.reviews.get(output.project_id), run.toolCalls);
       } else assertSavedProjectContent(project);
       phase = "save";
-      store.completeProduction(id, { ...output, review: typeof reviewText === "string" ? reviewText : undefined });
+      const previous = (detail.log.content_summary ?? detail.production?.content ?? {}) as Row;
+      const summary = run.step === "production" ? output.summary : reviewedSummary(run.step, previous, output.summary, project);
+      store.completeProduction(id, { ...output, summary, review: typeof reviewText === "string" ? reviewText : undefined });
       if (store.get(id).task.state === "finished") break;
     }
   } catch (error) {

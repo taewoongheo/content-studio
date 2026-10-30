@@ -18,7 +18,7 @@ export function saveTaskProject(
   source?: Row,
   assets: import("@/domains/slideshow/server/persistence/projects/store").SavedProjectAsset[] = [],
 ) {
-  const detail = store.assertActive(taskId, "production");
+  const detail = store.assertActive(taskId, store.get(taskId).task.current_step);
 
   if (detail.task.project_id)
     return { projectId: detail.task.project_id, reused: true };

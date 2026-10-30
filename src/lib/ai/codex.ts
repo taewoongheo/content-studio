@@ -72,7 +72,7 @@ export async function runCodex(input: {
               "-c",
               !input.displayOnly && input.capabilities?.webSearch ? 'web_search="live"' : 'web_search="disabled"',
               ...(!input.capabilities?.shell || input.displayOnly ? ["-c", "features.shell_tool=false", "-c", "features.unified_exec=false"] : []),
-              ...(isolated ? ["--skip-git-repo-check"] : []),
+              "--skip-git-repo-check",
               ...(input.displayOnly ? ["-c", 'model_reasoning_effort="low"'] : []),
               "-c", 'sandbox_mode="read-only"',
               "--output-schema",
@@ -89,7 +89,8 @@ export async function runCodex(input: {
               "-",
             ],
             {
-              cwd: input.conversation?.directory ?? (isolated ? directory : process.cwd()),
+              // Fresh automation stages must not inherit repository AGENTS/development instructions.
+              cwd: input.conversation?.directory ?? directory,
               env: { ...process.env, CONTENT_PRODUCTION_RUN_TOKEN: input.token },
               stdio: ["pipe", "pipe", "pipe"],
               shell: false,
@@ -195,10 +196,10 @@ export async function runCodex(input: {
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
         throw new Error("Expected an object");
     } catch {
-      throw new OperationError("CLI_OUTPUT_INVALID_JSON", "CLI 최종 응답이 JSON 객체 형식이 아닙니다. 저장된 draft에서 다시 실행해 주세요.");
+      throw new OperationError("CLI_OUTPUT_INVALID_JSON", "CLI 최종 응답이 JSON 객체 형식이 아닙니다. 저장된 draft에서 다시 실행해 주세요.", {output:raw});
     }
     const validate = new Ajv({ strict: false, allErrors: true }).compile(input.schema as object);
-    if (!validate(parsed)) throw new OperationError("OUTPUT_SCHEMA_INVALID", "CLI 최종 응답이 출력 스키마와 맞지 않습니다.", { issues: validate.errors });
+    if (!validate(parsed)) throw new OperationError("OUTPUT_SCHEMA_INVALID", "CLI 최종 응답이 출력 스키마와 맞지 않습니다.", { issues: validate.errors, output:parsed });
     return parsed as Record<string, unknown>;
   } finally {
     await rm(directory, { recursive: true, force: true });

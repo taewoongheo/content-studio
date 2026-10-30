@@ -4,8 +4,6 @@ import { stagePolicy, editorReadTools, editorWriteTools as writeTools } from "@/
 import { REFERENCE_LIMIT } from "@/domains/content-production/domain/references/context";
 import { OperationError } from "@/lib/errors/operation";
 import { referenceImagesAllowed } from "@/domains/content-production/server/references/selection";
-import { assertStageWrite } from "@/domains/content-production/server/execution/policy/editing";
-import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { isLocalRequest } from "@/lib/http/local-request";
 import { createStudioMcpServer } from "@/lib/mcp/server";
@@ -55,8 +53,6 @@ export async function POST(
         }
         if (name === "production_read_images") {
           const setId = (input as {set_id:string}).set_id;
-          if (step === "visual" && (startInput.request.mode !== "spy_reference" || setId !== startInput.source?.visual_set_id))
-            throw new Error("시각 검수에서는 선택한 레퍼런스 원본만 확인할 수 있습니다.");
           if (setId !== startInput.source?.visual_set_id && !referenceImagesAllowed(productionStore().db,taskId,step,setId))
             throw new Error(`먼저 이번 단계의 외부 레퍼런스로 조회해 주세요. 단계별 한도는 ${REFERENCE_LIMIT}개입니다.`);
         }
@@ -64,9 +60,6 @@ export async function POST(
           const projectId = (input as { projectId?: string }).projectId;
           if (projectId !== productionStore().get(taskId).task.project_id)
             throw new Error("이 작업에 연결된 프로젝트만 수정할 수 있습니다.");
-          if (name === "edit_project" && projectId) {
-            assertStageWrite(step, input, contentJobRegistry.get(projectId).editor.document);
-          }
         }
       },
       after(name, input, result) {

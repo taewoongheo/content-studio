@@ -290,9 +290,10 @@ export class ProductionStore {
     const next = productionSteps[productionSteps.findIndex(value => value.id === step) + 1]?.id ?? null;
     if (step !== "production" && !result.review?.trim()) throw new Error("검토 결과를 남겨 주세요.");
     const metadata = readContentMetadata(result.summary);
+    // The format is selected by analysis; a model paraphrase must not block completion.
+    if (["automatic", "past_post"].includes(detail.input?.request.mode ?? ""))
+      metadata.content_type = String(detail.analysis.content_type);
     this.assertRequestDirection(detail, metadata);
-    if (step === "polish" && contentMetadataFields.some(key => metadata[key] !== detail.log[key]))
-      throw new Error("영어 폴리싱에서는 확정한 소재·메시지·포맷을 변경할 수 없습니다.");
     this.db.transaction(() => {
       if (planning) saveStageDocument(this.db, detail.task.log_id, step, planning);
       if (detail.task.project_id !== result.project_id)
@@ -301,6 +302,7 @@ export class ProductionStore {
       const sources = [...(detail.log.sources as unknown[]), ...result.sources];
       const summary = {
         ...result.summary,
+        ...metadata,
         direction_changes: detail.production?.direction_changes ?? null,
       };
       this.update("content_creation_logs", "id", detail.task.log_id, {
@@ -311,7 +313,7 @@ export class ProductionStore {
       });
       this.update(`content_${step}_drafts`, "draft_id", id, {
         state: "completed",
-        content_json: JSON.stringify(result.summary),
+        content_json: JSON.stringify(summary),
         sources_json: JSON.stringify(result.sources),
         ...(step !== "production" ? { review: result.review } : {}),
         completed_at: now,
@@ -341,7 +343,7 @@ export class ProductionStore {
     cause: "collision" | "research",
     reason?: string,
   ) {
-    const detail = this.assertActive(id, "production"),
+    const detail = this.assertActive(id, this.get(id).task.current_step),
       direction = directionSchema.parse(raw),
       now = this.now();
     if (cause === "collision" && detail.input?.request.mode !== "automatic") throw new Error("지정 제작에는 중복 검사를 적용하지 않습니다.");

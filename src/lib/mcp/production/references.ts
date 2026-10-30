@@ -13,7 +13,7 @@ import { getReferenceContext } from "@/domains/content-production/server/referen
 
 export function registerExternalReferenceTools(server: McpServer, taskId: string) {
   registerTool(server,"production_external_references",{
-    description: "Read external references from the database only. Analysis returns the batch's fixed sample: five random performance candidates plus five recent posts. Production and hook search the entire saved library for relevant topic/message/format, up to five distinct posts per stage. Use short literal keywords or IDs. No account collection or external discovery is available. Use production_reference_images for a selected post only when its actual slides are needed; then production_read_images with the returned set_id. Captions alone cannot establish visual features.",
+    description: "Read external references from the database only. All nodes in external-source requests can search the saved library for relevant topic/message/format, up to five distinct posts per stage. Use short literal keywords or IDs. No account collection or external discovery is available. Use production_reference_images for a selected post only when its actual slides are needed; then production_read_images with the returned set_id. Captions alone cannot establish visual features.",
     inputSchema:z.object({query:z.string().default(""),content_type:z.string().default(""),ids:z.array(z.string()).max(REFERENCE_LIMIT).optional()}),annotations:annotations(false),
   },input=>guarded(async()=>{
     const store=productionStore(),step=store.get(taskId).task.current_step;

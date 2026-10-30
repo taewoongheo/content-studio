@@ -1,11 +1,15 @@
+import { ProjectReferences } from "./references/project-references";
 import { ArrowUpRight, Folder } from "lucide-react";
-import type { ProductionStep, WorkDetail, WorkItem } from "@/domains/content-production/domain/contracts";
+import type { Row, ProductionStep, WorkDetail, WorkItem } from "@/domains/content-production/domain/contracts";
 import { StatusIcon } from "../workflow/status-icon";
 import { getStepState, productionSteps } from "../../model/task-controls";
 
-export function ProjectDetails({ task, detail, onSelectStep, onOpen, onClose }: {
+export function ProjectDetails({ task, detail, logs, visuals, references, onSelectStep, onOpen, onClose }: {
   task: WorkItem;
   detail?: WorkDetail;
+  logs: Row[];
+  visuals: Row[];
+  references: Row[];
   onSelectStep: (id: string, step: ProductionStep) => void;
   onOpen: (id: string) => void;
   onClose: () => void;
@@ -23,6 +27,7 @@ export function ProjectDetails({ task, detail, onSelectStep, onOpen, onClose }: 
         <div key={String(label)}><dt className="text-xs text-muted-foreground">{String(label)}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-sm leading-6">{typeof value === "string" && value.trim() ? value : detail ? "미입력" : "불러오는 중…"}</dd></div>)}
     </dl>
     {task.project_id && <button className="production-button mt-5" onClick={() => onOpen(task.project_id!)}>편집기로 열기<ArrowUpRight size={14} /></button>}
+    {detail && <ProjectReferences detail={detail} logs={logs} visuals={visuals} references={references} onOpen={onOpen} />}
     <div className="mt-6 space-y-3">
       {productionSteps.map(({ id: step, label }, index) => {
         const state = getStepState(task, step);

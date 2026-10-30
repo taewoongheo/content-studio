@@ -24,7 +24,7 @@ export function productionFailure(error: unknown, step: string, phase: string, c
       : error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : "STAGE_EXECUTION_FAILED",
     message: error instanceof ZodError ? "데이터 형식이 스키마와 맞지 않습니다. 필드별 오류를 확인해 주세요."
       : error instanceof Error ? error.message : "실행 실패",
-    step, phase: operation && (error.code.startsWith("CLI_OUTPUT_") || error.code === "OUTPUT_SCHEMA_INVALID") ? "output" : phase,
+    step, phase: operation && (error.code.startsWith("CLI_OUTPUT_") || ["OUTPUT_SCHEMA_INVALID", "OUTPUT_REPAIR_EXHAUSTED"].includes(error.code)) ? "output" : phase,
     details: operation ? error.details : error instanceof ZodError ? { issues: error.issues } : {},
     tool_calls: calls,
   };

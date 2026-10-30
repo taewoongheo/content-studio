@@ -28,7 +28,7 @@ test("one persona is replaced on reanalysis, manual edits are discarded and stal
   } finally { db.close(); }
 });
 
-test("production prompts receive the persona context appropriate to their stage without widening editing scope", () => {
+test("production prompts receive the persona context appropriate to their stage for related repairs", () => {
   const persona = { ...fixture(), revision: 1 };
   for (const [id, fields] of Object.entries(persona.content)) {
     for (const key of Object.keys(fields)) fields[key] = `PERSONA_${id}_${key}`;
@@ -37,22 +37,17 @@ test("production prompts receive the persona context appropriate to their stage 
   for (const stage of ["analysis", "production", "hook", "polish", "visual"] as const) {
     const prompt = stagePrompt("task", stage, [], persona);
     for (const [id, fields] of Object.entries(persona.content)) {
-      const included = stage !== "visual" && (stage === "analysis" ? ["development", "instructions"].includes(id) : id !== "links");
+      const included = id !== "links";
       for (const key of Object.keys(fields)) {
         assert.equal(prompt.includes(`PERSONA_${id}_${key}`), included, `${stage}: ${id}.${key}`);
       }
     }
-    assert.match(prompt, /Workspace guidance: liftcode.md/);
-    if (stage === "visual") {
-      assert.doesNotMatch(prompt, /Active text persona \(applies/);
-      assert.doesNotMatch(prompt, /source_handle/);
-    } else {
-      assert.match(prompt, /source account's products/);
-      assert.match(prompt, /Do not include reference-account or reference-material links/);
-    }
+    assert.doesNotMatch(prompt, /Workspace guidance: liftcode.md/);
+    assert.match(prompt, /source account's products/);
+    assert.match(prompt, /Do not include reference-account or reference-material links/);
   }
-  assert.match(stagePrompt("task", "analysis", [], persona), /Then apply the observed development patterns/);
-  assert.match(stagePrompt("task", "hook", [], persona), /revise only the hook/);
+  assert.match(stagePrompt("task", "analysis", [], persona), /Page progression and slot roles come from the selected reference/);
+  assert.match(stagePrompt("task", "hook", [], persona), /write a hook grounded in the body/);
   assert.match(stagePrompt("task", "polish", [], persona), /Preserve intentional fragments, colloquial endings, humor and personality/);
   assert.deepEqual(persona, original);
   assert.doesNotMatch(stagePrompt("task", "analysis"), /Active text persona \(applies/);

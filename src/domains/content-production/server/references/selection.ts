@@ -25,8 +25,6 @@ export function queryStageReferences(db: Database.Database, id: string, step: Pr
   return work;
   async function run() {
     assertActive(db,id,step);
-    if (step === "polish") throw new Error("영어 폴리싱은 외부 레퍼런스를 사용하지 않습니다.");
-    if (step === "visual") throw new Error("시각 검증은 내부·외부 레퍼런스를 사용하지 않습니다. 현재 프로젝트만 확인해 주세요.");
     if (input.collect) throw new Error("노드에서는 새 외부 레퍼런스를 수집하지 않습니다. 스파이 대시보드에서 갱신해 주세요.");
     let context = getReferenceContext(db,id,step) ?? empty("");
     if (!context.queries.includes(input.query)) context.queries.push(input.query);
@@ -36,7 +34,7 @@ export function queryStageReferences(db: Database.Database, id: string, step: Pr
         .filter(post => !used.has(post.id) && (!input.ids?.length || input.ids.includes(String(post.id))));
       return candidates.slice(0,REFERENCE_LIMIT-context.posts.length);
     };
-    const selected = step === "analysis" ? [] : select();
+    const selected = select();
     context = db.transaction(() => {
       assertActive(db,id,step);
       const now = new Date().toISOString();

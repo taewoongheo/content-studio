@@ -20,7 +20,7 @@ function layoutDocument(savedDocument: EditorDocument): EditorDocument {
 
 /** All modes clone the internal source confirmed by analysis. */
 export function cloneTaskProject(store: ProductionStore, taskId: string, sourceProjectId: string, reason: string) {
-  const detail = store.assertActive(taskId, "production");
+  const detail = store.assertActive(taskId, store.get(taskId).task.current_step);
   if (detail.task.project_id) return { projectId: detail.task.project_id, reused: true };
   const input = detail.input;
   const selected = (detail.analysis.sources as Array<{clone_project_id?:string}> | undefined)?.find(source => source.clone_project_id)?.clone_project_id

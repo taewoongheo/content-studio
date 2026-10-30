@@ -184,10 +184,11 @@ test("검토 draft는 분리 저장하고 훅 통과 후 시각 검증까지 끝
     const beforeInvalidMetadata = store.get(id);
     assert.throws(() => store.completeProduction(id, {project_id:"review-project",summary:{topic:"arms",message:"Train with three sets"},sources:[]}));
     assert.deepEqual(store.get(id),beforeInvalidMetadata,"missing format must not advance or overwrite the draft");
-    store.completeProduction(id, { slide_plan: [{ slide_id: "slide", role: "body", purpose: "Give a starting prescription", copy: ["Three sets"], visual: "Demonstrate the exercise" }], content_review: { assessment: "Claims and hook match the body.", issues: [] }, project_id: "review-project", summary: { topic: "arms", message: "Train with three sets", content_type: "Routine cards", hook: "Start with three sets", slides: [{visual:"Fixed bottom-left LIFTCODE badge"}] }, sources: [] });
+    store.completeProduction(id, { slide_plan: [{ slide_id: "slide", role: "body", purpose: "Give a starting prescription", copy: ["Three sets"], visual: "Demonstrate the exercise" }], content_review: { assessment: "Claims and hook match the body.", issues: [] }, project_id: "review-project", summary: { topic: "arms", message: "Train with three sets", content_type: "Exercise cards with starting targets", hook: "Start with three sets", slides: [{visual:"Fixed bottom-left LIFTCODE badge"}] }, sources: [] });
     const storedMetadata = db.prepare("SELECT topic,message,content_type FROM content_projects WHERE id='review-project'").get();
     assert.deepEqual(storedMetadata,{topic:"arms",message:"Train with three sets",content_type:"Routine cards"});
     assert.equal(store.get(id).log.content_type,"Routine cards");
+    assert.equal((store.get(id).production?.content as Record<string, unknown>).content_type,"Routine cards");
     assert.equal(store.get(id).task.current_step, "hook");
     assert.equal(store.get(id).task.state, "pending");
     assert.equal(store.get(id).production?.state, "completed");
@@ -206,8 +207,8 @@ test("검토 draft는 분리 저장하고 훅 통과 후 시각 검증까지 끝
     assert.equal(store.get(id).hook?.state, "completed");
     assert.equal(store.get(id).production?.content && (store.get(id).production!.content as {hook:string}).hook, "Start with three sets");
     store.state(id, "running");
-    assert.throws(() => store.completeProduction(id, { ...result, summary: { ...result.summary, topic: "A different topic" } }), /소재·메시지·포맷/);
-    store.completeProduction(id, { ...result, review: "The English copy is natural and preserves the approved meaning." });
+    store.completeProduction(id, { ...result, summary: { ...result.summary, message: "Corrected factual guidance" }, review: "Corrected a factual problem while polishing." });
+    assert.equal(store.get(id).log.message, "Corrected factual guidance");
     assert.equal(store.get(id).polish?.state, "completed");
     assert.equal(store.get(id).task.current_step, "visual");
     assert.equal(store.get(id).task.state, "pending");

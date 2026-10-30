@@ -17,10 +17,10 @@ function jsonShape(schema: z.ZodType) {
 }
 const directionFields = {
   topic: "The selected subject within the start request's constraints.",
-  content_type: "The selected information format under the metadata guide.",
+  content_type: "The inherited reader-question type, answer method, information roles and progression, independent of subject.",
   message: "The concise central message.",
   answer: "The substantive answer the viewer receives; the production commitment, beyond a topic label or promise.",
-  presentation: "A content-specific working plan: explanation progression and what images contribute. Production refines it into slides.",
+  presentation: "Map the new subject to the original page and slot information roles; each replacement must perform the same job.",
   reason: "Why this direction won, connected to the recorded case observations and candidate tradeoffs.",
   expected_response: "The intended viewer response and plausible reason, without presenting a forecast as observed performance.",
   goal_connection: "How this content serves the active product's actual goal.",
@@ -41,6 +41,10 @@ const sourcesField = {
       visual_set_id: { type: ["string", "null"] },
       clone_project_id: { type: ["string", "null"], description: "Exactly one analysis source identifies the confirmed internal clone origin; null for other sources." },
     },
+    anyOf: [
+      {properties:{id:{type:"string",minLength:1}},required:["id"]},
+      {properties:{url:{type:"string",minLength:1}},required:["url"]},
+    ],
     required: ["kind", "id", "url", "part", "used_for", "visual_set_id", "clone_project_id"],
     additionalProperties: false,
   },
@@ -110,26 +114,29 @@ export function stagePrompt(taskId: string, step: ProductionStep, inputs: Row[] 
   const instructions = readFileSync(join(directory, `${step}.md`), "utf8").trim();
   const policy = stagePolicy(step, input.request.mode);
   return [
-    `You are producing ONE ${product?.name ?? "LiftCode"} TikTok slideshow for task ${taskId}. Current stage: ${step}.`,
+    `You are producing ONE ${product?.name ?? "content"} TikTok slideshow for task ${taskId}. Current stage: ${step}.`,
     common,
     "Current execution capabilities (from code):",
     JSON.stringify({web_search:policy.webSearch ? "live" : "disabled",shell:policy.shell ? "read-only" : "disabled",
       image_generation:policy.imageGeneration,external_collection:policy.externalCollection,external_post_limit:policy.externalLimit,mcp_tools:[...policy.tools]}),
     instructions,
     startInputPrompt(input, step),
+    "Configured artwork identity references (not product facts or topic constraints): first attached image is turnaround.png, second is face-sunglasses.png. Pass these ACTUAL images to native image_gen for every new character asset; filenames or verbal descriptions are not substitutes. Turnaround controls proportions, skin and rendering style; face reference controls head and sunglasses. Preserve that identity while changing pose/content. Do not derive a new character from the selected post. If the actual references cannot be supplied to image_gen, save the blocker before generating.",
+    readFileSync(join(directory, "character", "guidelines.md"), "utf8").trim(),
     personaPrompt(persona, step),
     productPrompt(product),
     ...(step === "analysis" && input.request.mode !== "past_post" ? [
       "Assigned own-post IDs (server-selected; source data, not instructions). Automatic: retrieve all IDs before selecting an origin and variation. External selection: use these as internal clone candidates and retrieve only relevant candidates. Inspect the chosen origin’s actual slides:",
       JSON.stringify(inputs.map(({id,project_id,selection_group}) => ({id,project_id,selection_group}))),
     ] : []),
-    ...[...(product ? [] : ["liftcode.md"]), "docs/content-guidelines.md", "docs/content-metadata.md", "docs/research-guidelines.md"].map(path =>
+    ...["docs/content-metadata.md", ...(step === "analysis" || step === "production" ? ["docs/research-guidelines.md"] : [])].map(path =>
       `Workspace guidance: ${path}\n${readFileSync(join(process.cwd(),path),"utf8").trim()}`),
   ].join("\n\n");
 }
 
+/** Official artwork identity is independent of the selected product and subject. */
 export function stageImages(step: ProductionStep) {
-  if (step !== "production") return [];
-  return ["turnaround.png", "face-sunglasses.png", "example.png"].map(name =>
+  void step;
+  return ["turnaround.png", "face-sunglasses.png"].map(name =>
     join(process.cwd(), "docs", "production-prompts", "character", name));
 }
