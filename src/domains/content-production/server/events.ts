@@ -5,6 +5,10 @@ const globalState = globalThis as typeof globalThis & {
 const listeners = (globalState.productionListeners ??= new Set<
   (event: ChangeEvent) => void
 >());
+export function subscribeProduction(listener:(event:ChangeEvent)=>void) {
+  listeners.add(listener);
+  return () => {listeners.delete(listener);};
+}
 export function publishChange(event: ChangeEvent) {
   for (const listener of listeners) listener(event);
 }

@@ -52,13 +52,10 @@ const sourcesField = {
 const summaryField = {
   type: "object",
   properties: {
-    title: stringField,
     topic: stringField,
     message: stringField,
     content_type: stringField,
     hook: stringField,
-    caption: stringField,
-    hashtags: { type: "array", items: stringField },
     slides: {
       type: "array",
       items: {
@@ -75,7 +72,7 @@ const summaryField = {
     },
     changes: { type: "array", items: stringField },
   },
-  required: ["title", "topic", "message", "content_type", "hook", "caption", "hashtags", "slides", "changes"],
+  required: ["topic", "message", "content_type", "hook", "slides", "changes"],
   additionalProperties: false,
 };
 export function resultSchema(step: ProductionStep) {

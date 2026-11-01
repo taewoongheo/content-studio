@@ -58,3 +58,22 @@ test("incomplete or cancelled spy source capture cannot mark a task prepared", a
     assert.equal(store.get(id).input?.source?.visual_set_id, undefined);
   } finally { db.close(); }
 });
+
+test("YouTube URL preparation preserves caption and every image through the existing external workflow",async()=>{
+ const {db,store}=fixture();
+ const request={mode:"external_url" as const,url:"https://youtube.com/post/Ugtest?si=tracking",instructions:"Use the subject"};
+ const fakeYouTube:typeof import("@/domains/research/collectors/platforms/youtube").collectYouTube=async()=>({posts:[{
+   id:"Ugtest",platform:"youtube",url:"https://www.youtube.com/post/Ugtest",author:"Author",text:"Original content",publishedAt:null,publishedLabel:null,collectedAt:"now",format:"slideshow",
+   media:[{type:"image",url:"https://yt3.ggpht.com/first=s0",width:1254,height:1254},{type:"image",url:"https://yt3.ggpht.com/second=s0",width:1254,height:1254}],metrics:{viewCount:null,likeCount:null,commentCount:null,saveCount:null,shareCount:null},metricsAsDisplayed:{},
+ }],nextCursor:null,warnings:[]});
+ const client={posts:async()=>{throw Error("must not use Apify for YouTube");}};
+ const slide={data:Buffer.from("image"),width:540,height:540};
+ try{
+   const [id]=store.create([request],[]);store.state(id,"running");
+   await assert.rejects(()=>prepareStartInput(store,id,new AbortController().signal,client,async()=>[slide],fakeYouTube),/전체 슬라이드/);
+   assert.equal(store.get(id).input?.source?.visual_set_id,undefined);
+   await prepareStartInput(store,id,new AbortController().signal,client,async urls=>{assert.equal(urls.length,2);return [slide,slide];},fakeYouTube);
+   const source=store.get(id).input?.source;
+   assert.equal(source?.caption,"Original content");assert.equal(source?.slide_count,2);assert.ok(source?.visual_set_id);
+ }finally{db.close();}
+});

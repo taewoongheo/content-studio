@@ -13,16 +13,16 @@ export function updateLatestPerformance(
     .run(...metricKeys.map(key => post[key]), observedAt, observedAt, id);
 }
 
-function insertStage(db: Database.Database, id: string, stage: StagePerformance["stage"], post: PerformanceMetrics) {
-  return db.prepare(`INSERT OR IGNORE INTO content_performance(log_id,stage,${metricKeys.join(",")})
-    VALUES(?,?,?,?,?,?,?)`).run(id, stage, ...metricKeys.map(key => post[key])).changes;
+function insertStage(db: Database.Database, id: string, stage: StagePerformance["stage"], post: PerformanceMetrics, observedAt: string) {
+  return db.prepare(`INSERT OR IGNORE INTO content_performance(log_id,stage,${metricKeys.join(",")},observed_at)
+    VALUES(?,?,?,?,?,?,?,?)`).run(id, stage, ...metricKeys.map(key => post[key]), observedAt).changes;
 }
 
 export function savePerformance(db: Database.Database, id: string, post: PerformanceMetrics, now = Date.now()) {
   const log = db.prepare("SELECT actual_published_at FROM content_creation_logs WHERE id=?")
     .get(id) as { actual_published_at: string } | undefined;
   const stage = log && performanceStage(log.actual_published_at, now);
-  return stage ? insertStage(db, id, stage, post) : 0;
+  return stage ? insertStage(db, id, stage, post, new Date(now).toISOString()) : 0;
 }
 
 /** Historical latest values belong to the stage when they were observed. */
@@ -35,7 +35,7 @@ export function backfillPerformance(db: Database.Database) {
     for (const row of rows) {
       const stage = performanceStage(row.actual_published_at, Date.parse(row.observed_at));
       if (stage && metricKeys.some(key => row[key] !== null)) {
-        changes += insertStage(db, row.id, stage, row);
+        changes += insertStage(db, row.id, stage, row, row.observed_at);
       }
     }
     return changes;

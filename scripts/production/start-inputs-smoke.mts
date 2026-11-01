@@ -104,10 +104,10 @@ export async function verifyProductionStart(browser: Browser, origin: string, po
     await page.getByRole("dialog").getByRole("button", { name: "추가", exact: true }).click();
     await add.click();
     await page.getByRole("radio", { name: "외부 URL", exact: true }).check();
-    await page.getByLabel("TikTok 슬라이드쇼 URL", { exact: true }).fill("https://example.com/post");
+    await page.getByLabel("TikTok · YouTube 게시글 URL", { exact: true }).fill("https://example.com/post");
     await page.getByRole("dialog").getByRole("button", { name: "추가", exact: true }).click();
-    await page.getByRole("alert").filter({ hasText: "TikTok 게시물의 전체 URL" }).waitFor();
-    await page.getByLabel("TikTok 슬라이드쇼 URL", { exact: true }).fill("https://www.tiktok.com/@example/photo/123?tracking=1");
+    await page.getByRole("alert").filter({ hasText: "TikTok 게시물 또는 YouTube 커뮤니티 게시글 URL" }).waitFor();
+    await page.getByLabel("TikTok · YouTube 게시글 URL", { exact: true }).fill("https://www.tiktok.com/@example/photo/123?tracking=1");
     await page.getByLabel("추가 지침", { exact: false }).fill("초보자 대상");
     if (process.env.CONTENT_STUDIO_SMOKE_SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.CONTENT_STUDIO_SMOKE_SCREENSHOT_DIR}/start-dialog.png` });
     await page.setViewportSize({ width: 390, height: 844 });

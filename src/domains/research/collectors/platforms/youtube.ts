@@ -1,3 +1,4 @@
+import { discoverPostChannel, originalYouTubeImage } from "./youtube/post-source";
 import { randomUUID } from "node:crypto";
 import { Innertube, YTNodes } from "youtubei.js";
 import { emptyMetrics, type SocialPost } from "@/domains/research/domain/schema";
@@ -21,7 +22,7 @@ function normalize(post: YTNodes.BackstagePost | YTNodes.Post | YTNodes.SharedPo
     attachment instanceof YTNodes.BackstageImage ? [attachment] : [];
   const media: SocialPost["media"] = images.flatMap(image => {
     const thumbnail = [...image.image].sort((a, b) => b.width - a.width)[0];
-    return thumbnail ? [{ type: "image" as const, url: thumbnail.url, width: thumbnail.width, height: thumbnail.height }] : [];
+    return thumbnail ? [{ type: "image" as const, url: originalYouTubeImage(thumbnail.url), width: null, height: null }] : [];
   });
   const likeLabel = original?.vote_count?.toString();
   const commentLabel = original?.action_buttons?.reply_button?.text;
@@ -50,9 +51,8 @@ export const collectYouTube: Collector = async (request, context) => {
     const youtube = await Innertube.create({ retrieve_player: false, generate_session_locally: true,
       fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.any([context.signal, AbortSignal.timeout(20_000)]) }) });
     const channelUrl = request.kind === "account" ? request.source.url : request.channelUrl;
-    if (!channelUrl) throw new CollectionBlocked("source_error", "YouTube post lookup requires channelUrl. Use list_account_posts to discover the source channel.");
-    const endpoint = await youtube.resolveURL(channelUrl);
-    const channelId = endpoint.payload.browseId as string | undefined;
+    const channelId = channelUrl ? (await youtube.resolveURL(channelUrl)).payload.browseId as string | undefined
+      : await discoverPostChannel(request.source.id,context.signal);
     if (!channelId?.startsWith("UC")) throw new CollectionBlocked("source_error", "The supplied YouTube channel URL did not resolve to a channel.");
     feed = request.kind === "post" ? await youtube.getPost(request.source.id, channelId) : await (await youtube.getChannel(channelId)).getCommunity();
     posts = feed.posts.map(normalize);

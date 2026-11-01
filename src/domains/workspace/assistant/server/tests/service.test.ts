@@ -46,12 +46,13 @@ test("tab sessions isolate context, group real writes, require visual checks, an
       const latest = contentJobRegistry.get(target.projectId);
       run.reviewedRevision = latest.editor.revision;
       run.slides.add(latest.editor.document.slides[0].id);
-      return { kind: "edit", text: "", suggestion: "" };
+      return { kind: "edit", text: "Caption from the final saved slides", suggestion: "" };
     };
     const requestId = randomUUID();
     startAssistant(targets[0], {}, "배경 수정", requestId, "http://127.0.0.1:3000", fake);
     assert.equal(startAssistant(targets[0], {}, "배경 수정", requestId, "http://127.0.0.1:3000", fake).state, "running");
     assert.equal((await finished(targets[0])).state, "completed");
+    assert.equal(assistantStatus(targets[0]).text,"Caption from the final saved slides");
     assert.equal(contentJobRegistry.getRecord(targets[0].projectId).editorHistory.length, 1);
     assert.equal(contentJobRegistry.get(targets[1].projectId).editor.revision, 0);
     assert.deepEqual(calls.map(item => item.thread), [undefined, targets[0].tabId]);

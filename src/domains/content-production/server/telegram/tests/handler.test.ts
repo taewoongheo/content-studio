@@ -105,3 +105,33 @@ test("a stop is never replayed when its response and error response fail",async(
     assert.equal(stops,1);assert.equal(state.get("offset"),2);
   } finally {db.close();}
 });
+
+
+test("copy takes exactly a job number and rejects extra instructions",async()=>{
+  const db=openLocalDatabase(":memory:"),store=new ProductionStore(db),state=new TelegramStore(db,"bot:1"),client=new FakeClient();
+  const handler=new TelegramHandler(client,state,"1","local",{store:()=>store,start:async()=>[],stop(){}});
+  try {
+    for(const [index,text] of ["/copy","/copy 1 make it short"].entries()) {
+      await handler.handle({update_id:index+1,message:{text,from:{id:1},chat:{id:1,type:"private"}}});
+      assert.match(client.sent.at(-1)!.text,/작업번호만/);
+    }
+  } finally {db.close();}
+});
+
+test("create resolves short links and matches stored origins by post ID rather than URL spelling",async()=>{
+  const {requestFromText}=await import("../commands/sources");
+  const {socialSource}=await import("@/domains/research/domain/source");
+  const db=openLocalDatabase(":memory:"),store=new ProductionStore(db);
+  const resolve=async(raw:string)=>socialSource(raw.includes("vt.tiktok.com") ? "https://www.tiktok.com/@newname/photo/123" : raw,"post");
+  try {
+    db.prepare("INSERT INTO content_projects(id,name,aspect_ratio,slide_count,output_language,document_json,created_at,updated_at) VALUES('origin','Origin','4:5',1,'English','{}','now','now')").run();
+    db.prepare("INSERT INTO content_creation_logs(id,project_id,post_url,actual_published_at,created_at,updated_at) VALUES('log','origin','https://tiktok.com/@oldname/video/123?tracking=1','now','now','now')").run();
+    assert.deepEqual(await requestFromText(store,"https://vt.tiktok.com/AbCd/ 초보자용으로",resolve),{mode:"past_post",sourceProjectId:"origin",instructions:"초보자용으로"});
+    assert.equal((await requestFromText(store,"https://www.tiktok.com/@newname/photo/123",resolve)).mode,"past_post");
+    db.prepare("INSERT INTO content_external_references(id,url,account,caption,observed_at,images_json,created_at) VALUES('ref','https://tiktok.com/@old/video/456?x=1','old','Reference','now','[]','now')").run();
+    assert.deepEqual(await requestFromText(store,"https://www.tiktok.com/@new/photo/456 변형",resolve),{mode:"spy_reference",referenceId:"ref",instructions:"변형"});
+    assert.deepEqual(await requestFromText(store,"https://www.tiktok.com/@new/photo/789?track=1",resolve),{mode:"external_url",url:"https://www.tiktok.com/@new/photo/789",instructions:""});
+    assert.deepEqual(await requestFromText(store,"덤벨만 사용",resolve),{mode:"automatic",instructions:"덤벨만 사용"});
+    await assert.rejects(()=>requestFromText(store,"https://vt.tiktok.com/AbCd/",async()=>{throw new Error("단축 링크 실패");}),/단축 링크 실패/);
+  } finally {db.close();}
+});

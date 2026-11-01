@@ -1,3 +1,4 @@
+import { performanceStages } from "../../domain/performance";
 import { reviewSteps } from "../../domain/contracts";
 
 const direction = `topic TEXT, content_type TEXT, message TEXT, answer TEXT, presentation TEXT,
@@ -28,8 +29,9 @@ CREATE TABLE IF NOT EXISTS content_creation_logs (
 );
 CREATE TABLE IF NOT EXISTS content_performance (
  log_id TEXT NOT NULL REFERENCES content_creation_logs(id) ON DELETE CASCADE,
- stage TEXT NOT NULL CHECK(stage IN ('early','middle','late')),
+ stage TEXT NOT NULL CHECK(stage IN (${performanceStages.map(({stage}) => `'${stage}'`).join(",")})),
  view_count INTEGER, like_count INTEGER, comment_count INTEGER, save_count INTEGER, share_count INTEGER,
+ observed_at TEXT,
  PRIMARY KEY(log_id,stage)
 );
 CREATE TABLE IF NOT EXISTS content_telegram_state (

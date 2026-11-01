@@ -4,8 +4,8 @@ import Ajv from "ajv";
 import { resultSchema, stageImages, stagePrompt } from "../prompts";
 import { productionSteps } from "../../../domain/contracts";
 const summary = {
-  title: "A simple plan", topic: "Arms", message: "A complete session", content_type: "Routine cards", hook: "Start here",
-  caption: "", hashtags: [], slides: [{ slide_id: "slide-1", role: "hook", copy: ["Start here"], visual: "A large lifter image" }], changes: [],
+  topic: "Arms", message: "A complete session", content_type: "Routine cards", hook: "Start here",
+  slides: [{ slide_id: "slide-1", role: "hook", copy: ["Start here"], visual: "A large lifter image" }], changes: [],
 };
 const stageSummary = (step: string) => { void step; return summary; };
 const planning = {

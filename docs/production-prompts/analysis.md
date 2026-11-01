@@ -11,13 +11,14 @@ for external requests retrieve relevant internal layout candidates, not the enti
 The recent group contains the absolute newest posts; performance sampling excludes that group.
 
 Own posts include a frozen `performance` array of collected stage metrics: `early` (1 to under
-3 days), `middle` (3 to under 7 days), and `late` (7 days onward). Selection still uses the existing
-latest-rate pool; interpret performance using these stage records:
+3 days), `middle` (3 to under 7 days), `late` (7 to under 21 days), and `long_term` (21 days onward).
+Selection still uses the existing latest-rate pool; interpret performance using these stage records:
 - Compare metrics only between matching stages. Do not judge an early result against another
   post's late result or treat an early result as its final outcome.
 - When multiple stages exist, use their observed changes as additional evidence. Do not infer
-  missing stages, exact day-1/day-3/day-7 results, or daily growth speed; collection times vary
-  within each stage, especially late records.
+  missing stages, exact day-1/day-3/day-7/day-21 results, or daily growth speed; collection times vary
+  within each stage, especially long-term records. Later-stage growth can reveal delayed response;
+  distinguish that observation from hypotheses about its cause.
 - If the array is empty or absent, use the post's subject, format and expression as context and
   check overlap through the existing tool. Do not use its latest metrics as evidence of success
   or failure. Missing metrics are not zero.

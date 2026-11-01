@@ -24,3 +24,15 @@ test("an old notification cannot acknowledge a newly resumed job or restore rese
     assert.deepEqual(state.get("jobs"), []);
   } finally { db.close(); }
 });
+
+test("failed notifications include the saved hook and slide copy",async()=>{
+ const db=openLocalDatabase(":memory:"),store=new ProductionStore(db),state=new TelegramStore(db,"bot");
+ try{
+  const [id]=store.create(1);store.state(id,"failed");
+  const logId=store.get(id).task.log_id;
+  db.prepare("UPDATE content_creation_logs SET content_summary_json=? WHERE id=?").run(JSON.stringify({hook:"Saved hook",slides:[{copy:["Saved slide copy"]}]}),logId);
+  const client=new TelegramClient("unused");let text="";client.send=async(_chat,message)=>{text=message;};
+  const jobs=new TelegramJobs(client,state,"1","local",{store:()=>store,stop(){}},{resume:async()=>{},reset(){}});
+  jobs.track(id);await jobs.notify();assert.match(text,/Saved hook/);assert.match(text,/Saved slide copy/);
+ }finally{db.close();}
+});

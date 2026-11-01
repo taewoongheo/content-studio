@@ -32,7 +32,7 @@ repair cannot produce correct content; record the concrete problem, attempted fi
 Return review_passed=true when the review outcome is satisfied; false describes an actual remaining
 problem. Production content_review records resolved issues and any genuinely unresolved blockers.
 
-Return the complete current summary, including title, caption, hashtags and slide image descriptions.
+Return the complete current summary, including slide copy and image descriptions.
 The server reconstructs slide text from the saved document. Record actual changes and sources used;
 use null for unused optional source fields in final output and omit them in draft saves. Analysis
 records exactly one confirmed clone_project_id. The supplied guidance is self-contained.
