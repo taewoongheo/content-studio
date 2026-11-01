@@ -1,3 +1,4 @@
+import { subscribeProduction } from "../events";
 import { setTimeout as delay } from "node:timers/promises";
 import { getLocalDatabase } from "@/lib/local-db/database";
 import { TelegramClient } from "./client";
@@ -25,6 +26,7 @@ export function startTelegram() {
   const client=new TelegramClient(token);
   const state=new TelegramStore(getLocalDatabase(),`${token.split(":")[0]}:${user}`);
   const handler=new TelegramHandler(client,state,user,url.origin);
+  subscribeProduction(() => { void handler.notify().catch(() => console.error("텔레그램 완료 알림 재시도 대기")); });
   // Do not block Next.js startup; reconnect after transient network failures.
   void (async()=> {
     let configured=false;
@@ -38,6 +40,10 @@ export function startTelegram() {
             {command:"posts",description:"과거 게시글 조회"},
             {command:"refs",description:"외부 레퍼런스 조회"},
             {command:"status",description:"서버 연결 확인"},
+            {command:"get",description:"작업번호로 전체 이미지 받기"},
+            {command:"edit",description:"완성 draft 슬라이드 수정"},
+            {command:"copy",description:"작업번호로 제목·캡션·해시태그 생성"},
+            {command:"publish",description:"작업번호와 게시글 링크로 게시 등록"},
             {command:"job",description:"전체 작업 번호·상태 조회"},
             {command:"stop",description:"선택 취소 또는 작업 중단"},
             {command:"resume",description:"작업번호로 중단·실패 작업 재개"},

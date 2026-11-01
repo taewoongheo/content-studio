@@ -6,7 +6,7 @@ Replace the cloned text and images with the selected content, matching each slot
 Write in the persona's voice and carry the reference's visual treatment into the replacement content.
 
 Save slide_plan before generation with the current slide IDs, roles, replacement copy and image roles.
-Write the title, caption and hashtags. Retain images that explain the new content; generate replacements
+Retain images that explain the new content; generate replacements
 for subject-specific images using the approved scene/action plan and official character references.
 Import generated images into the corresponding placements. Supplementary references help resolve
 concrete uncertainty about actions or equipment.

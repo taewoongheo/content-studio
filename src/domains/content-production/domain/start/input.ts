@@ -2,19 +2,19 @@ import { z } from "zod";
 import { socialSource } from "@/domains/research/domain/source";
 
 const instructions = z.string().trim().max(10000).default("");
-const tiktokUrl = z.string().trim().transform((value, context) => {
+const referenceUrl = z.string().trim().transform((value, context) => {
   try {
     const source = socialSource(value, "post");
-    if (source.platform === "tiktok") return source.url;
+    if (["tiktok", "youtube"].includes(source.platform)) return source.url;
   } catch { /* Return the same actionable validation message below. */ }
-  context.addIssue({ code: "custom", message: "TikTok 게시물의 전체 URL을 입력해 주세요." });
+  context.addIssue({ code: "custom", message: "TikTok 게시물 또는 YouTube 커뮤니티 게시글 URL을 입력해 주세요." });
   return z.NEVER;
 });
 export const productionRequestSchema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("automatic"), instructions }),
   z.object({ mode: z.literal("past_post"), sourceProjectId: z.string().min(1), instructions }),
   z.object({ mode: z.literal("spy_reference"), referenceId: z.string().min(1), instructions }),
-  z.object({ mode: z.literal("external_url"), url: tiktokUrl, instructions }),
+  z.object({ mode: z.literal("external_url"), url: referenceUrl, instructions }),
 ]);
 export const productionRequestsSchema = z.array(productionRequestSchema).min(1);
 export type ProductionRequest = z.infer<typeof productionRequestSchema>;

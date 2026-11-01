@@ -42,7 +42,7 @@ export function RequestDialog({ initial, posts, references, onClose, onSave }: {
         {mode === "past_post" && <SourcePicker posts={posts} value={sourceProjectId} onChange={value => { setSource(value); setError(""); }} />}
         {mode === "spy_reference" && <ReferencePicker posts={references} value={referenceId} onChange={value => { setReference(value); setError(""); }} />}
         {mode === "external_url" && <div className="space-y-2">
-          <label htmlFor="production-source-url" className="block text-xs font-medium">TikTok 슬라이드쇼 URL</label>
+          <label htmlFor="production-source-url" className="block text-xs font-medium">TikTok · YouTube 게시글 URL</label>
           <input id="production-source-url" className="production-field" type="url" value={url} onChange={event => { setUrl(event.target.value); setError(""); }} required placeholder="https://www.tiktok.com/@.../photo/..." />
           <p className="text-xs text-muted-foreground">게시글의 전체 URL을 입력하세요. 시작 후 캡션과 전체 슬라이드를 가져옵니다.</p>
         </div>}

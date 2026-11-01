@@ -1,3 +1,4 @@
+import { ResultDelivery, type ResultTarget } from "../results/delivery";
 import { randomUUID } from "node:crypto";
 import { draftId, draftNumber } from "../../persistence/draft-numbers";
 import type { productionStore, stopProduction, execute, resetProduction } from "../../execution/runner";
@@ -9,10 +10,11 @@ const states: Record<string, string> = { pending: "대기", running: "진행 중
 const steps: Record<string, string> = { analysis: "분석", production: "초안 제작", hook: "훅 검토", polish: "영어 교정", visual: "시각 검수" };
 
 export class TelegramJobs {
+  private delivering=new Set<string>();
   constructor(private readonly client: TelegramClient, private readonly state: TelegramStore,
     private readonly user: string, private readonly origin: string,
     private readonly services: { store: typeof productionStore; stop: typeof stopProduction },
-    private readonly lifecycle: { resume: typeof execute; reset: typeof resetProduction }) {}
+    private readonly lifecycle: { resume: typeof execute; reset: typeof resetProduction }, private readonly delivery?:ResultDelivery) {}
 
   track(id: string) {
     const jobs = this.state.get<Job[]>("jobs") ?? [];
@@ -71,13 +73,42 @@ export class TelegramJobs {
       detail.task.project_id ? `프로젝트: ${detail.task.project_id}` : ""].filter(Boolean).join("\n");
   }
 
+  async sendResult(id:string) {
+    const task=this.services.store().get(id).task;
+    if(task.state!=="finished" || !task.project_id) throw new Error("완성된 작업만 받을 수 있습니다.");
+    if(!this.delivery) throw new Error("결과 전송이 준비되지 않았습니다.");
+    await this.delivery.images({draftId:id,projectId:task.project_id,number:draftNumber(this.services.store().db,id)});
+  }
   async notify() {
+    // Includes jobs started in the desktop UI, not only /create.
+    for(const task of this.services.store().list()) {
+      if(task.state!=="finished" || !task.project_id || !this.delivery || this.delivering.has(task.id)) continue;
+      const key=`delivered:${task.id}`;
+      const progress=this.state.get<{images:number;copy:boolean;retryAt?:number;done?:boolean}>(key) ?? {images:0,copy:false};
+      if(progress.done || (progress.retryAt ?? 0)>Date.now()) continue;
+      this.delivering.add(task.id);
+      const target:ResultTarget={draftId:task.id,projectId:task.project_id,number:draftNumber(this.services.store().db,task.id)};
+      void (async()=>{
+        try {
+          await this.delivery!.images(target,progress.images,count=>{progress.images=count;this.state.set(key,progress);});
+          if(!progress.copy) {
+            try {await this.delivery!.text(target,await this.delivery!.copy(target));}
+            catch {await this.client.send(this.user,`job ${target.number} - 이미지는 전송했습니다. 게시 문구 생성·전송에 실패했습니다. 이미지에 답장해 문구를 다시 요청해 주세요.`);}
+            progress.copy=true;
+          }
+          progress.done=true;this.state.set(key,progress);
+        } catch {
+          progress.retryAt=Date.now()+60_000;this.state.set(key,progress);
+          console.error(`텔레그램 결과 전송 재시도 대기: job ${target.number}`);
+        } finally {this.delivering.delete(task.id);}
+      })();
+    }
     const jobs = this.state.get<Job[]>("jobs") ?? [];
     const tasks = new Map(this.services.store().list().map(task => [task.id, task]));
     for (const job of jobs.filter(job => !job.notified)) {
       const task = tasks.get(job.id);
       if (task && !["finished", "failed", "stopped"].includes(task.state)) continue;
-      await this.client.send(job.chat, task ? this.result(job.id) : `작업${job.number ? ` #${job.number}` : ""}이 앱에서 정리되었습니다.`);
+      if (!(task?.state === "finished" && this.delivery)) await this.client.send(job.chat, task ? this.result(job.id) : `작업${job.number ? ` #${job.number}` : ""}이 앱에서 정리되었습니다.`);
       // Read again after network I/O so a concurrent start/resume/reset is preserved.
       const current = this.state.get<Job[]>("jobs") ?? [];
       const record = current.find(record => record.id === job.id);

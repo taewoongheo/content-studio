@@ -15,7 +15,7 @@ export function registerCollectionTools(server: McpServer, registry: CollectionR
   }, input => guarded(() => json(registry.start({ source: socialSource(input.accountUrl, "account"),
     kind: "account", limit: input.limit, criteria: input.criteria, cursor: input.cursor }, input.sessionId))));
   registerTool(server, "read_social_post", {
-    description: "Collect one public YouTube community post without login: text, ordered media URLs and available like/view/save/comment/share counts. Does not read comment text. Requires the source channelUrl. Returns jobId/sessionId; get_collection_job returns the result. Missing metrics are null; criteriaEvaluation distinguishes failed/unverified/passed. Do not treat popularity as factual evidence.",
+    description: "Collect one public YouTube community post without login: text, ordered media URLs and available like/view/save/comment/share counts. Does not read comment text. Discovers the source channel from the post URL when channelUrl is omitted. Returns jobId/sessionId; get_collection_job returns the result. Missing metrics are null; criteriaEvaluation distinguishes failed/unverified/passed. Do not treat popularity as factual evidence.",
     inputSchema: z.strictObject({ url: z.url(), channelUrl: z.url().optional(), criteria: criteriaSchema.optional(), sessionId: z.uuid().optional() }), annotations,
   }, input => guarded(() => {
     const source = socialSource(input.url, "post");

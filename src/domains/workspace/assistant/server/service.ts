@@ -87,7 +87,7 @@ async function execute(session: Session, run: AssistantRun, selection: Assistant
       return;
     }
     run.phase = "edit"; session.status.phase = "수정·시각 확인 중";
-    await call(true);
+    const edited = await call(true);
     run.controller.signal.throwIfAborted();
     const latest = assistantSnapshot(run.target);
     const revision = "editor" in latest ? latest.editor.revision : latest.revision;
@@ -95,7 +95,7 @@ async function execute(session: Session, run: AssistantRun, selection: Assistant
       latest.editor.document.slides.some(slide => !run.slides.has(slide.id)))))
       throw new Error("수정은 저장됐지만 최종 시각 확인이 완료되지 않았습니다. 기존 되돌리기를 사용할 수 있습니다.");
     if (!run.changed) throw new Error("수정이 적용되지 않았습니다. 명령을 구체적으로 다시 입력해 주세요.");
-    session.status = { ...session.status, state: "completed", phase: "완료", text: "", suggestion: "", changed: true };
+    session.status = { ...session.status, state: "completed", phase: "완료", text: String(edited.text ?? ""), suggestion: "", changed: true };
   } catch (error) {
     // Failed/cancelled turns have uncertain context; the next command starts with the saved editor state.
     session.threadId = undefined;
