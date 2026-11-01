@@ -5,7 +5,7 @@ test("channel extraction selects the requested post and handles embedded JSON br
  const data={items:[{backstagePostRenderer:{postId:"other",authorEndpoint:{browseEndpoint:{browseId:"UCwrong"}}}},{backstagePostRenderer:{postId:"target",contentText:'quoted " } text',authorEndpoint:{browseEndpoint:{browseId:"UCcorrect"}}}}]};
  assert.equal(postChannel(`var ytInitialData = ${JSON.stringify(data)}; otherScript();`,"target"),"UCcorrect");
  assert.throws(()=>postChannel(`var ytInitialData = ${JSON.stringify(data)};`,"missing"),/채널/);
- assert.equal(originalYouTubeImage("https://yt3.ggpht.com/asset=s640-c-fcrop64=abc"),"https://yt3.ggpht.com/asset=s0");
+ assert.equal(originalYouTubeImage("https://yt3.ggpht.com/asset=s640-c-fcrop64=abc"),"https://yt3.ggpht.com/asset=s1600");
  assert.throws(()=>originalYouTubeImage("https://evil.test/asset"));
 });
 test("channel discovery uses a bounded canonical request and propagates cancellation",async()=>{

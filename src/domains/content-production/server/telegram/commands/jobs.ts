@@ -63,13 +63,16 @@ export class TelegramJobs {
     const store = this.services.store();
     const detail = store.get(id);
     const content = detail.log.content_summary ?? detail.production?.content;
+    const slideCopy = content && typeof content === "object" && "slides" in content && Array.isArray(content.slides)
+      ? content.slides.flatMap(slide => slide && typeof slide === "object" && Array.isArray(slide.copy)
+        ? slide.copy.filter((copy:unknown) => typeof copy === "string") : []).join("\n\n") : "";
     const summary = content && typeof content === "object" ? Object.entries(content)
-      .filter(([key, value]) => ["title", "caption", "summary"].includes(key) && typeof value === "string")
+      .filter(([key, value]) => ["title", "caption", "summary", "hook"].includes(key) && typeof value === "string")
       .map(([, value]) => String(value)).join("\n\n") : "";
     const error = detail[detail.task.current_step]?.error as { message?: string } | undefined;
     return [`작업 #${draftNumber(store.db, id)}`,
       `${states[detail.task.state] ?? detail.task.state} · ${steps[detail.task.current_step] ?? detail.task.current_step}`,
-      detail.task.topic, detail.log.message, summary || detail.log.answer, error?.message,
+      detail.task.topic, detail.log.message, [summary,slideCopy].filter(Boolean).join("\n\n") || detail.log.answer, error?.message,
       detail.task.project_id ? `프로젝트: ${detail.task.project_id}` : ""].filter(Boolean).join("\n");
   }
 

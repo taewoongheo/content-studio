@@ -27,7 +27,7 @@ export class TelegramFeedback {
     const previous=this.queues.get(target.projectId) ?? Promise.resolve();
     const next=previous.catch(()=>{}).then(()=>{
       if(epoch!==(this.epochs.get(target.projectId) ?? 0)) throw new Error("수정 요청이 중단되었습니다.");
-      return this.execute(target,message,requestId,slideId,mode);
+      return this.execute(target,message,requestId,slideId,mode,epoch);
     });
     this.queues.set(target.projectId,next);
     void next.catch(async error=>{
@@ -51,8 +51,12 @@ export class TelegramFeedback {
     const task=this.store().get(target.draftId).task;
     if(task.state!=="finished" || task.project_id!==target.projectId) throw new Error("제작이 완료된 현재 draft만 수정할 수 있습니다.");
   }
-  private async execute(target:ResultTarget,message:string,requestId:string,slideId:string|undefined,mode:"conversation"|"edit"|"copy") {
-    this.assertEditable(target);
+  private async execute(target:ResultTarget,message:string,requestId:string,slideId:string|undefined,mode:"conversation"|"edit"|"copy",epoch:number) {
+    const check=()=>{
+      if(epoch!==(this.epochs.get(target.projectId) ?? 0)) throw new Error("수정 요청이 중단되었습니다.");
+      this.assertEditable(target);
+    };
+    check();
     const key=`feedback:${requestId}`;
     if(this.state.get(key)) return;
     this.state.set(key,"running"); // Never replay an uncertain edit after a server restart.
@@ -63,12 +67,14 @@ export class TelegramFeedback {
         this.state.set(key,"completed");return;
       }
       editor=await this.assistant.load(target.projectId);
+      check();
       const deadline=Date.now()+21*60_000;
       while(this.assistant.status(editor).state==="running") {
-        this.assertEditable(target);
+        check();
         if(Date.now()>deadline) throw new Error("편집기가 사용 중입니다. 잠시 후 다시 요청해 주세요.");
         await delay(500);
       }
+      check();
       this.assistant.start(editor,slideId ? {slideIds:[slideId]} : {},mode==="edit" ? `This is a slide-edit-only command. Apply slide changes requested below. For publishing copy requests, answer only with guidance to use /copy [job number]; do not generate publishing copy. User request: ${message}` : message,requestId,this.origin);
       this.active.set(target.projectId,editor);
       while(this.assistant.status(editor).state==="running") {

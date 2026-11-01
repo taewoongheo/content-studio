@@ -39,6 +39,6 @@ export function originalYouTubeImage(raw:string) {
   const url=new URL(raw,"https://www.youtube.com");
   if(url.protocol!=="https:" || !["ggpht.com","googleusercontent.com"].some(host=>url.hostname===host || url.hostname.endsWith(`.${host}`)))
     throw new Error("YouTube 이미지 주소를 확인할 수 없습니다.");
-  url.pathname=url.pathname.split("=")[0]+"=s0";
+  url.pathname=url.pathname.split("=")[0]+"=s1600";
   return url.href;
 }

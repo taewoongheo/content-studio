@@ -57,3 +57,22 @@ test("feedback serializes commands, reads fresh state for each edit and resends 
     f.store.remove(f.id);assert.throws(()=>feedback.request(target,"수정","4"));
   }finally{f.db.close();}
 });
+
+test("stop cancels feedback while loading or waiting for an existing editor",async()=>{
+ for(const waiting of [false,true]){
+  const f=fixture();let loaded=false,starts=0,release!:()=>void;
+  const gate=new Promise<void>(resolve=>{release=resolve;});
+  const feedback=new TelegramFeedback(f.delivery,f.client,f.state,"1","local",()=>f.store,{
+   load:async projectId=>{loaded=true;if(!waiting)await gate;return {projectId,tabId:"tab",projectType:"slideshow"};},
+   start:()=>{starts++;throw new Error("must not start");},
+   status:()=>({state:"running",phase:"",text:"",suggestion:"",error:"",changed:false}),stop(){},
+  });
+  try{
+   feedback.request({projectId:f.project.id,draftId:f.id},"edit","stopped");
+   while(!loaded)await tick();
+   feedback.stop(f.project.id);release();
+   for(let i=0;i<100 && f.state.get("feedback:stopped")!=="failed";i++)await tick();
+   assert.equal(f.state.get("feedback:stopped"),"failed");assert.equal(starts,0);
+  }finally{f.db.close();}
+ }
+});

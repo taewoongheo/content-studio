@@ -53,3 +53,15 @@ test("existing latest observations populate their measured stage without overwri
     assert.equal((db.prepare("SELECT view_count FROM content_performance WHERE log_id='200'").get() as {view_count:number}).view_count,42);
   } finally { db.close(); }
 });
+
+test("collection uses each fetch completion time when crossing the long-term boundary",async()=>{
+ const db=openLocalDatabase(":memory:");
+ try{
+  db.prepare("INSERT INTO content_creation_logs(id,post_url,actual_published_at,created_at,updated_at) VALUES('cross','https://www.tiktok.com/@a/photo/123',?,?,?)").run(start,start,start);
+  let now=base+504*3600000-1;
+  await collectPerformance(db,{posts:async()=>{now++;return [parseApifyItem({id:"123",playCount:42})];}},()=>now);
+  const record=db.prepare("SELECT stage,observed_at FROM content_performance").get();
+  assert.deepEqual(record,{stage:"long_term",observed_at:new Date(now).toISOString()});
+  assert.equal((db.prepare("SELECT observed_at FROM content_creation_logs WHERE id='cross'").get() as {observed_at:string}).observed_at,new Date(now).toISOString());
+ }finally{db.close();}
+});
