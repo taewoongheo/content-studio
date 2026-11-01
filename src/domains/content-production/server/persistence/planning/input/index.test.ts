@@ -10,7 +10,7 @@ test("batch inputs freeze IDs and metrics, survive saves/reconnect, and never re
   try {
     db.prepare("INSERT INTO content_projects(id,name,aspect_ratio,slide_count,output_language,document_json,created_at,updated_at) VALUES('p','Post','4:5',1,'English','{}','now','now')").run();
     db.prepare("INSERT INTO content_creation_logs(id,project_id,post_url,actual_published_at,view_count,like_count,comment_count,save_count,content_summary_json,created_at,updated_at) VALUES('l','p','https://example.com/post','2026-10-25',100,10,1,1,?,'now','now')").run(JSON.stringify({draft_context:{analysis:{research_json:"huge prior inputs"}}}));
-    db.prepare("INSERT INTO content_performance(log_id,stage,view_count,like_count,comment_count,save_count,share_count) VALUES('l','early',100,10,0,1,NULL),('l','late',500,30,2,10,3)").run();
+    db.prepare("INSERT INTO content_performance(log_id,stage,view_count,like_count,comment_count,save_count,share_count) VALUES('l','early',100,10,0,1,NULL),('l','late',500,30,2,10,3),('l','long_term',2000,100,4,20,8)").run();
     const ids=store.create(2);
     const first=store.analysisInputs(ids[0]);
     assert.deepEqual(first,store.analysisInputs(ids[1]));
@@ -18,6 +18,7 @@ test("batch inputs freeze IDs and metrics, survive saves/reconnect, and never re
     assert.deepEqual(first[0].performance,[
       {stage:"early",view_count:100,like_count:10,comment_count:0,save_count:1,share_count:null},
       {stage:"late",view_count:500,like_count:30,comment_count:2,save_count:10,share_count:3},
+      {stage:"long_term",view_count:2000,like_count:100,comment_count:4,save_count:20,share_count:8},
     ]);
     assert.equal("content_summary" in first[0],false);
     db.prepare("UPDATE content_creation_logs SET like_count=99 WHERE id='l'").run();

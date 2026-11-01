@@ -8,13 +8,14 @@ export type PerformanceRefresh = {
   records: PerformanceRecord[]; error: string | null;
 };
 export type StagePerformance = Record<typeof metricKeys[number], number | null> & {
-  stage: "early" | "middle" | "late";
+  stage: typeof performanceStages[number]["stage"];
 };
 
 export const performanceStages = [
   { stage: "early", minDays: 1, label: "초기 · 1–3일" },
   { stage: "middle", minDays: 3, label: "중기 · 3–7일" },
-  { stage: "late", minDays: 7, label: "후기 · 7일 이후" },
+  { stage: "late", minDays: 7, label: "후기 · 7–21일" },
+  { stage: "long_term", minDays: 21, label: "장기 · 21일 이후" },
 ] as const;
 
 export function performanceStage(publishedAt: string, now = Date.now()): StagePerformance["stage"] | null {

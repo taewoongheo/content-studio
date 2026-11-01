@@ -7,7 +7,7 @@ import { performanceStage } from "../../../domain/performance";
 import { parseApifyItem } from "@/domains/research/server/apify/client";
 const start = "2026-10-01T00:00:00Z", base = Date.parse(start);
 test("elapsed boundaries select only the current stage", () => {
-  for (const [hours,stage] of [[23,null],[24,"early"],[56,"early"],[72,"middle"],[100,"middle"],[168,"late"],[1000,"late"]] as const)
+  for (const [hours,stage] of [[23,null],[24,"early"],[56,"early"],[72,"middle"],[100,"middle"],[168,"late"],[503,"late"],[504,"long_term"],[1000,"long_term"]] as const)
     assert.equal(performanceStage(start,base+hours*3600000),stage);
 });
 test("missed stages stay empty, successful stages survive restarts and failures retry", async () => {
@@ -32,6 +32,10 @@ test("missed stages stay empty, successful stages survive restarts and failures 
     assert.equal(db.prepare("SELECT * FROM content_performance").all().length,1);
     await collectPerformance(db,client,base+201*3600000);
     assert.equal(db.prepare("SELECT * FROM content_performance").all().length,2);
+    await collectPerformance(db,client,base+504*3600000);
+    await collectPerformance(db,client,base+600*3600000);
+    assert.equal(calls,3);
+    assert.equal(db.prepare("SELECT stage FROM content_performance WHERE stage='long_term'").all().length,1);
   } finally { db.close(); }
 });
 

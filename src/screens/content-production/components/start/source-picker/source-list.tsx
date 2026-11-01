@@ -2,6 +2,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { PublishedPost } from "@/domains/content-production/domain/published-posts";
 
+import { performanceStages } from "@/domains/content-production/domain/performance";
+
 const PAGE_SIZE = 8;
 type Metrics = { view_count: number | null; like_count: number | null; save_count: number | null };
 const formatCount = (value: number | null | undefined) => typeof value === "number" ? value.toLocaleString("ko-KR") : "—";
@@ -23,9 +25,9 @@ export function SourceList({ posts, value, onChange }: {
   return <div ref={root} role="radiogroup" aria-labelledby="source-list-label" className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-lg border">
     {posts.slice(0, count).map(post => {
       const id = `${group}-${post.id}`;
-      const stage = ["late", "middle", "early"].map(stage => post.performance?.find(record => record.stage === stage)).find(Boolean);
+      const stage = performanceStages.toReversed().map(({stage}) => post.performance?.find(record => record.stage === stage)).find(Boolean);
       const metrics = post.metrics ?? stage;
-      const stageLabel = stage && !post.metrics ? ({early:"초기",middle:"중기",late:"후기"} as const)[stage.stage] : null;
+      const stageLabel = stage && !post.metrics ? performanceStages.find(item => item.stage === stage.stage)?.label : null;
       return <div key={`${post.id}:${post.updatedAt}`} className="relative border-b last:border-b-0">
         <input id={id} className="peer sr-only" type="radio" name={group} aria-label={post.name} checked={value === post.id} onChange={() => onChange(post.id)} />
         <label htmlFor={id} className={`flex cursor-pointer gap-3 p-3 transition-colors peer-focus-visible:outline-2 peer-focus-visible:-outline-offset-2 peer-focus-visible:outline-ring ${value === post.id ? "bg-muted ring-1 ring-inset ring-foreground" : "hover:bg-muted/50"}`}>
