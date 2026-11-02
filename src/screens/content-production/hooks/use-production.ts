@@ -1,4 +1,5 @@
 "use client";
+import { subscribeBackgroundEvents } from "@/domains/workspace/client/editor-load-priority";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   fetchProduction,
@@ -39,6 +40,7 @@ export function useProduction() {
   useEffect(() => {
     mounted.current = true;
     queueMicrotask(() => void reload());
+    const disconnect = subscribeBackgroundEvents(() => {
     const events = new EventSource("/api/content-production");
     events.onopen = () => void reload();
     events.onmessage = (message) => {
@@ -67,9 +69,11 @@ export function useProduction() {
           void reload();
         }, 120);
     };
+    return () => events.close();
+    });
     return () => {
       mounted.current = false;
-      events.close();
+      disconnect();
       clearTimeout(timer.current);
       timer.current = undefined;
     };

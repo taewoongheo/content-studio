@@ -7,7 +7,7 @@ import type { ProjectWriteValidator } from "@/domains/slideshow/server/project-w
 import { join } from "node:path";
 import { OperationError } from "@/lib/errors/operation";
 import { readFreshGeneratedImage, generatedImagesRoot } from "@/domains/content-production/server/images/generated";
-import { imageExecution } from "@/domains/content-production/server/execution/runner";
+import { imageExecution, validateProductionCompletion } from "@/domains/content-production/server/execution/runner";
 import { registerSourceTools } from "./sources";
 import { importSlideshowImage } from "@/domains/slideshow/server/import-image";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
@@ -94,6 +94,11 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
       }),
   );
   if (!taskId) return;
+  registerTool(server, "production_validate_completion", {
+    description: "Before returning final output, submit the COMPLETE intended final result for server validation. On failure repair the document or result and retry in this same execution (initial check plus at most 3 retries). Passing does not advance the stage; return the validated result without further edits. Never fabricate approval.",
+    inputSchema: z.object({ result: z.record(z.string(), z.unknown()) }),
+    annotations: annotations(true),
+  }, input => guarded(async () => json(await validateProductionCompletion(taskId, input.result))));
   registerExternalReferenceTools(server, taskId);
   registerTool(server, "production_repair_badge", {
     description: "Restore missing or damaged badge elements from the confirmed internal clone origin. No brand is assumed or added when the source has no badge. Preserves other content; saves as one undoable edit. Re-read and preview ALL slides at the new revision after repair. No custom badge styles accepted.",

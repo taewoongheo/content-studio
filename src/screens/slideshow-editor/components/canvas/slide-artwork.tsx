@@ -3,6 +3,7 @@
 import { useEffect, useEffectEvent, useRef, useState, type HTMLAttributes } from "react";
 import type { EditorDocument, EditorSlide, ElementFrame } from "@/domains/slideshow/editor/types";
 import type { ArtworkScene } from "@/domains/slideshow/rendering/artwork";
+import { editorLoadPriority } from "@/domains/workspace/client/editor-load-priority";
 import { createArtworkImageLoader } from "@/domains/slideshow/rendering/assets";
 
 export type FramePreview = { placementId: string; frame: ElementFrame } | null;
@@ -39,6 +40,7 @@ export function SlideArtwork({ document, slide, jobId, framePreview = null, onLo
   }
 
   useEffect(() => {
+    const release = editorLoadPriority.begin();
     const controller = new AbortController();
     let scene: ArtworkScene | null = null;
     void import("@/domains/slideshow/rendering/artwork").then(({ createArtworkScene }) => {
@@ -59,9 +61,10 @@ export function SlideArtwork({ document, slide, jobId, framePreview = null, onLo
         setError(cause instanceof Error ? cause.message : "슬라이드를 그리지 못했습니다.");
         notifyLoadSettled();
       }
-    });
+    }).finally(release);
     return () => {
       controller.abort();
+      release();
       if (sceneRef.current === scene) sceneRef.current = null;
       scene?.destroy();
     };

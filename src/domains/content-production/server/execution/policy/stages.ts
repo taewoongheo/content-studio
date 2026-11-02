@@ -8,7 +8,7 @@ const referenceTools = [
   "production_reference_images", "production_external_references", "production_describe_reference", "production_read_images",
 ];
 const commonTools = [
-  "production_context", "production_query",
+  "production_context", "production_query", "production_validate_completion",
   "production_save_draft", "production_read_project", "production_preview_project",
 ];
 export const editorReadTools = ["open_project", "read_project", "preview_slide", "preview_slides"];

@@ -20,3 +20,13 @@ export function createEditorLoadPriority() {
   };
 }
 export const editorLoadPriority = createEditorLoadPriority();
+
+/** Release persistent HTTP connections while foreground saves and artwork need them. */
+export function subscribeBackgroundEvents(connect: () => () => void) {
+  let disconnect: (() => void) | undefined;
+  const unsubscribe = editorLoadPriority.subscribe(paused => {
+    disconnect?.();
+    disconnect = paused ? undefined : connect();
+  });
+  return () => { unsubscribe(); disconnect?.(); };
+}

@@ -31,12 +31,12 @@ export function assertSavedProjectContent(project: ContentJobRecord) {
     throw new OperationError("PRODUCTION_ASPECT_RATIO_FIXED", "자동 제작 완료 전 화면 비율을 4:5로 맞춰 주세요.");
   assertUniqueProjectImages(project);
   const kinds = new Map(document.elements.map(element => [element.id, element.kind]));
-  const hasEmptySlide = document.slides.some(slide => !slide.placements.some(placement => {
+  const emptySlides = document.slides.filter(slide => !slide.placements.some(placement => {
     const kind = kinds.get(placement.elementId);
     if (!kind || kind === "background") return false;
     return kind === "text" || kind === "image" ? !!placement.value.trim() : true;
   }));
-  if (hasEmptySlide) throw new OperationError("EMPTY_SLIDE", "내용이 비어 있는 슬라이드가 있습니다.");
+  if (emptySlides.length) throw new OperationError("EMPTY_SLIDE", "내용이 비어 있는 슬라이드가 있습니다.", { slide_ids: emptySlides.map(slide => slide.id) });
   if (project.savedRevision !== revision)
     throw new OperationError("PROJECT_NOT_SAVED", "최신 편집 내용을 저장해 주세요.");
 }

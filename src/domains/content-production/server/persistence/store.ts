@@ -241,10 +241,11 @@ export class ProductionStore {
     publishChange({ task_id: id, step, kind: "saved" });
     return this.get(id);
   }
-  completeAnalysis(id: string, raw: unknown) {
+  completeAnalysis(id: string, raw: unknown, validateOnly = false) {
     const detail = this.assertActive(id, "analysis"),
       result = analysisResultSchema.parse(raw),
       now = this.now();
+    if (validateOnly) return;
     this.db.transaction(() => {
       saveStageDocument(this.db, detail.task.log_id, "analysis", { reasoning: result.reasoning });
       const values: Row = {
@@ -277,6 +278,7 @@ export class ProductionStore {
   completeProduction(
     id: string,
     result: { project_id: string; summary: Row; sources: unknown[]; review?: string; slide_plan?: unknown; content_review?: unknown },
+    validateOnly = false,
   ) {
     const step = this.get(id).task.current_step;
     if (step === "analysis") throw new Error("분석 단계는 제작 완료로 저장할 수 없습니다.");
@@ -294,6 +296,9 @@ export class ProductionStore {
     if (["automatic", "past_post"].includes(detail.input?.request.mode ?? ""))
       metadata.content_type = String(detail.analysis.content_type);
     this.assertRequestDirection(detail, metadata);
+    if (detail.task.project_id !== result.project_id)
+      throw new Error("이 작업의 프로젝트만 완료할 수 있습니다.");
+    if (validateOnly) return;
     this.db.transaction(() => {
       if (planning) saveStageDocument(this.db, detail.task.log_id, step, planning);
       if (detail.task.project_id !== result.project_id)

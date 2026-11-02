@@ -37,6 +37,7 @@ import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import { loadContentProject } from "@/domains/slideshow/projects/service";
 
 type Run = {
+  completionAttempts?: number;
   controller: AbortController;
   token: string;
   step: ProductionStep;
@@ -200,6 +201,7 @@ export async function execute(
       run.controller.signal.throwIfAborted();
       run.step = store.get(id).task.current_step;
       store.state(id, "running");
+      run.completionAttempts = 0;
       run.reviews.clear();
       run.analysisRead.clear();
       run.sourceProjects.clear();
@@ -236,63 +238,8 @@ export async function execute(
           }),
       }, run.step);
       run.controller.signal.throwIfAborted();
-      phase = "output";
-      const { sources: rawSources, ...fields } = result;
-      const sources = z.array(sourceSchema).parse(
-        z.array(z.record(z.string(), z.unknown())).parse(rawSources).map(source =>
-          Object.fromEntries(Object.entries(source).filter(([key, value]) =>
-            !(["id", "url", "visual_set_id", "clone_project_id"].includes(key) && value === null)))),
-      );
-      if (run.step === "analysis") {
-        phase = "validation";
-        const missingInputs = (startInput.request.mode === "automatic" ? inputs : []).filter(row => !run.analysisRead.has(String(row.id))).map(row => row.id);
-        if (missingInputs.length) throw new OperationError("ANALYSIS_INPUTS_NOT_READ", "분석용 게시글 조회가 누락됐습니다.", {ids:missingInputs});
-        if (startInput.request.mode === "past_post" && !run.sourceProjects.has(startInput.request.sourceProjectId))
-          throw new OperationError("START_SOURCE_NOT_REVIEWED", "선택한 원본 게시글의 실제 슬라이드를 확인해 주세요.");
-        if ((startInput.request.mode === "external_url" || startInput.request.mode === "spy_reference") && !run.sourceSets.has(startInput.source?.visual_set_id ?? ""))
-          throw new OperationError("START_SOURCE_NOT_REVIEWED", "외부 원본 게시글의 전체 슬라이드를 확인해 주세요.");
-        const origins = sources.filter(source => source.clone_project_id);
-        const origin = origins.length === 1 ? origins[0].clone_project_id : undefined;
-        if (typeof origin !== "string" || !store.sourceProjectAllowed(id, origin) || !run.sourceProjects.has(origin))
-          throw new OperationError("LAYOUT_SOURCE_NOT_SELECTED", "복제할 내부 게시글을 선택하고 실제 슬라이드를 확인해 주세요.");
-        if (startInput.request.mode === "past_post" && origin !== startInput.request.sourceProjectId)
-          throw new OperationError("LAYOUT_SOURCE_NOT_SELECTED", "지정한 내부 게시글을 복제해 주세요.");
-        phase = "save";
-        store.completeAnalysis(id, { ...fields, sources });
-        continue;
-      }
-      const { review: reviewText, review_passed, ...rest } = fields;
-      if (run.step !== "production") {
-        z.object({review:z.string(),review_passed:z.boolean()}).parse(fields);
-        phase = "save";
-        store.save(id, run.step, { review: reviewText, sources });
-        phase = "validation";
-        if (review_passed !== true || typeof reviewText !== "string" || !reviewText.trim())
-          throw new OperationError("REVIEW_REJECTED", "검토를 통과하지 못했습니다. 검토 결과를 확인해 주세요.", {
-            review: reviewText, review_passed,
-          });
-
-      }
-      phase = "output";
-      const rawOutput = { ...rest, sources };
-      const firstDraft = run.step === "production" ? firstDraftResultSchema.parse(rawOutput) : null;
-      const output = firstDraft ?? (run.step === "visual" ? visualResultSchema : productionResultSchema).parse(rawOutput);
       phase = "validation";
-      const detail = store.get(id);
-      if (detail.task.project_id !== output.project_id)
-        throw new OperationError("PROJECT_RESULT_MISMATCH", "연결된 프로젝트와 결과가 다릅니다.");
-      await loadContentProject(contentJobRegistry, output.project_id);
-      if (firstDraft)
-        assertCurrentSlidePlan(contentJobRegistry.getRecord(output.project_id), firstDraft.slide_plan);
-      const project = contentJobRegistry.getRecord(output.project_id);
-      if (run.step === "visual") {
-        assertCompleteProjectReview(project, visualResultSchema.parse(rawOutput),
-          run.reviews.get(output.project_id), run.toolCalls);
-      } else assertSavedProjectContent(project);
-      phase = "save";
-      const previous = (detail.log.content_summary ?? detail.production?.content ?? {}) as Row;
-      const summary = run.step === "production" ? output.summary : reviewedSummary(run.step, previous, output.summary, project);
-      store.completeProduction(id, { ...output, summary, review: typeof reviewText === "string" ? reviewText : undefined });
+      await checkStageCompletion(id, run, result);
       if (store.get(id).task.state === "finished") break;
     }
   } catch (error) {
@@ -334,4 +281,77 @@ export function resetProduction() {
   })());
   shared.productionRefresh = undefined;
   publishChange({ kind: "reset" });
+}
+
+async function checkStageCompletion(id: string, run: Run, result: Record<string, unknown>, validateOnly = false) {
+  run.controller.signal.throwIfAborted();
+  if ((run.completionAttempts ?? 0) > 4)
+    throw new OperationError("COMPLETION_REPAIR_EXHAUSTED", "완료 검증 수정 횟수를 초과했습니다.");
+  const store = productionStore();
+  store.assertActive(id, run.step);
+  const startInput = store.get(id).input!;
+  const inputs = store.analysisInputs(id, true);
+  const { sources: rawSources, ...fields } = result;
+  const sources = z.array(sourceSchema).parse(
+    z.array(z.record(z.string(), z.unknown())).parse(rawSources).map(source =>
+      Object.fromEntries(Object.entries(source).filter(([key, value]) =>
+        !(["id", "url", "visual_set_id", "clone_project_id"].includes(key) && value === null)))),
+  );
+  if (run.step === "analysis") {
+    const missingInputs = (startInput.request.mode === "automatic" ? inputs : []).filter(row => !run.analysisRead.has(String(row.id))).map(row => row.id);
+    if (missingInputs.length) throw new OperationError("ANALYSIS_INPUTS_NOT_READ", "분석용 게시글 조회가 누락됐습니다.", {ids:missingInputs});
+    if (startInput.request.mode === "past_post" && !run.sourceProjects.has(startInput.request.sourceProjectId))
+      throw new OperationError("START_SOURCE_NOT_REVIEWED", "선택한 원본 게시글의 실제 슬라이드를 확인해 주세요.");
+    if ((startInput.request.mode === "external_url" || startInput.request.mode === "spy_reference") && !run.sourceSets.has(startInput.source?.visual_set_id ?? ""))
+      throw new OperationError("START_SOURCE_NOT_REVIEWED", "외부 원본 게시글의 전체 슬라이드를 확인해 주세요.");
+    const origins = sources.filter(source => source.clone_project_id);
+    const origin = origins.length === 1 ? origins[0].clone_project_id : undefined;
+    if (typeof origin !== "string" || !store.sourceProjectAllowed(id, origin) || !run.sourceProjects.has(origin))
+      throw new OperationError("LAYOUT_SOURCE_NOT_SELECTED", "복제할 내부 게시글을 선택하고 실제 슬라이드를 확인해 주세요.");
+    if (startInput.request.mode === "past_post" && origin !== startInput.request.sourceProjectId)
+      throw new OperationError("LAYOUT_SOURCE_NOT_SELECTED", "지정한 내부 게시글을 복제해 주세요.");
+    store.completeAnalysis(id, { ...fields, sources }, validateOnly);
+    return;
+  }
+  const { review: reviewText, review_passed, ...rest } = fields;
+  if (run.step !== "production") {
+    z.object({review:z.string(),review_passed:z.boolean()}).parse(fields);
+    if (!validateOnly) store.save(id, run.step, { review: reviewText, sources });
+    if (review_passed !== true || typeof reviewText !== "string" || !reviewText.trim())
+      throw new OperationError("REVIEW_REJECTED", "검토를 통과하지 못했습니다. 검토 결과를 확인해 주세요.", {
+        review: reviewText, review_passed,
+      });
+
+  }
+  const rawOutput = { ...rest, sources };
+  const firstDraft = run.step === "production" ? firstDraftResultSchema.parse(rawOutput) : null;
+  const output = firstDraft ?? (run.step === "visual" ? visualResultSchema : productionResultSchema).parse(rawOutput);
+  const detail = store.get(id);
+  if (detail.task.project_id !== output.project_id)
+    throw new OperationError("PROJECT_RESULT_MISMATCH", "연결된 프로젝트와 결과가 다릅니다.");
+  await loadContentProject(contentJobRegistry, output.project_id);
+  run.controller.signal.throwIfAborted();
+  if (firstDraft)
+    assertCurrentSlidePlan(contentJobRegistry.getRecord(output.project_id), firstDraft.slide_plan);
+  const project = contentJobRegistry.getRecord(output.project_id);
+  if (run.step === "visual") {
+    assertCompleteProjectReview(project, visualResultSchema.parse(rawOutput),
+      run.reviews.get(output.project_id), run.toolCalls);
+  } else assertSavedProjectContent(project);
+  const previous = (detail.log.content_summary ?? detail.production?.content ?? {}) as Row;
+  const summary = run.step === "production" ? output.summary : reviewedSummary(run.step, previous, output.summary, project);
+  store.completeProduction(id, { ...output, summary, review: typeof reviewText === "string" ? reviewText : undefined }, validateOnly);
+
+}
+
+/** Return validation errors through MCP while the same agent still has editing tools. */
+export async function validateProductionCompletion(id: string, result: Record<string, unknown>) {
+  const run = runs.get(id);
+  if (!run) throw new OperationError("RUN_NOT_ACTIVE", "실행 중인 작업만 검증할 수 있습니다.");
+  run.completionAttempts = (run.completionAttempts ?? 0) + 1;
+  if (run.completionAttempts > 4)
+    throw new OperationError("COMPLETION_REPAIR_EXHAUSTED", "완료 검증 수정은 최대 3회까지 가능합니다. 미해결 문제를 보고해 주세요.");
+  await checkStageCompletion(id, run, result, true);
+  run.controller.signal.throwIfAborted();
+  return { passed: true, step: run.step };
 }

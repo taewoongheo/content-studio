@@ -69,13 +69,16 @@ export function WorkspaceScreen() {
   });
 
   async function prepareSwitch() {
-    if (currentVideo.current) {
-      if (!videoEditor.current) throw new Error("영상 편집기를 불러오는 중입니다.");
-      if (!await videoEditor.current.flushPending()) throw new Error("영상을 저장하지 못했습니다. 현재 탭을 확인해 주세요.");
-    }
-    if (!editor.current) return;
-    if (!(await editor.current.flushPending())) throw new Error("입력 중인 변경을 반영하지 못했습니다. 현재 탭을 확인해 주세요.");
-    if (current.current) views.current.set(current.current.tabId, editor.current.getViewState());
+    const release = editorLoadPriority.begin();
+    try {
+      if (currentVideo.current) {
+        if (!videoEditor.current) throw new Error("영상 편집기를 불러오는 중입니다.");
+        if (!await videoEditor.current.flushPending()) throw new Error("영상을 저장하지 못했습니다. 현재 탭을 확인해 주세요.");
+      }
+      if (!editor.current) return;
+      if (!(await editor.current.flushPending())) throw new Error("입력 중인 변경을 반영하지 못했습니다. 현재 탭을 확인해 주세요.");
+      if (current.current) views.current.set(current.current.tabId, editor.current.getViewState());
+    } finally { release(); }
   }
 
   function editorLoadSettled(projectId: string) {
@@ -167,6 +170,8 @@ export function WorkspaceScreen() {
     let active = true;
     const restore = async () => {
       const id = new URL(window.location.href).searchParams.get("job");
+      const release = editorLoadPriority.begin();
+      let waitingForArtwork = false;
       try {
         if (id && new URL(window.location.href).searchParams.get("type") === "video") {
           const next = await openVideoProject(id);
@@ -175,10 +180,15 @@ export function WorkspaceScreen() {
         }
         const next = id ? await loadContentProject(id) : null;
         if (active) { currentVideo.current = null; setVideo(null); }
-        if (active) { current.current = next; setJob(next); setInitialViewState(next ? views.current.get(next.tabId) : undefined); }
+        if (active) {
+          pendingEditorLoad.current?.release();
+          pendingEditorLoad.current = next ? { projectId: next.id, release } : null;
+          waitingForArtwork = !!next;
+          current.current = next; setJob(next); setInitialViewState(next ? views.current.get(next.tabId) : undefined);
+        }
       } catch (cause) {
         if (active) { setError(cause instanceof Error ? cause.message : "탭을 열지 못했습니다."); updateUrl(null, true); }
-      }
+      } finally { if (!waitingForArtwork) release(); }
     };
     void restore();
     const pop = () => { void run(async () => {

@@ -38,3 +38,13 @@ use null for unused optional source fields in final output and omit them in draf
 records exactly one confirmed clone_project_id. The supplied guidance is self-contained.
 
 The server may return exact output validation errors in an output-only repair call. Correct the reported fields and return the complete result using the saved work. Record real source IDs or URLs for each source.
+
+Before ending this stage, call production_validate_completion with the complete intended final
+result. A validation failure is feedback within this same execution: inspect the reported fields
+and saved document, repair the cause using your tools, save, and validate again. Allow at most
+three correction attempts after the initial check. Prioritize satisfying server completion requirements
+when they conflict with a user presentation request; make the smallest necessary change and record
+what changed and why. Preserve factual accuracy, source identity, project access and save integrity.
+Do not fabricate review approval or evidence to pass. If correction is impossible or retries are
+exhausted, report the concrete blocker. After a passing response, return that result without further
+edits. The server rechecks the latest saved state before advancing the stage.
