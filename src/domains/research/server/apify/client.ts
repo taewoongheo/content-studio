@@ -70,7 +70,7 @@ export class ApifyTikTokClient {
     private token = process.env.APIFY_API_TOKEN,
     private transport: typeof fetch = fetch,
   ) {}
-  private async run(input: Record<string, unknown>, signal?: AbortSignal) {
+  private async run(input: Record<string, unknown>, signal?: AbortSignal, partial = false) {
     if (!this.token) throw new Error("서버의 APIFY_API_TOKEN을 설정해 주세요.");
     const response = await this.transport(
       "https://api.apify.com/v2/acts/clockworks~tiktok-scraper/run-sync-get-dataset-items?timeout=240&format=json&clean=true",
@@ -99,7 +99,10 @@ export class ApifyTikTokClient {
     const result: unknown = await response.json();
     if (!Array.isArray(result))
       throw new Error("Apify의 게시물 배열을 확인할 수 없습니다.");
-    return result.map(parseApifyItem);
+    return result.flatMap(item => {
+      try { return [parseApifyItem(item)]; }
+      catch (error) { if (!partial) throw error; return []; }
+    });
   }
   async posts(urls: string[], signal?: AbortSignal) {
     if (!urls.length) return [];
@@ -112,6 +115,16 @@ export class ApifyTikTokClient {
       const item = items.find((i) => i.id === source.id);
       if (!item) throw new Error(`게시물을 조회하지 못했습니다: ${source.url}`);
       return { ...item, url: source.url };
+    });
+  }
+  /** Performance batches retain valid rows even if another requested post is unavailable. */
+  async postsPartial(urls: string[], signal?: AbortSignal) {
+    if (!urls.length) return [];
+    const sources = [...new Map(urls.map(url => { const source = normalizeTikTokUrl(url); return [source.id, source] as const; })).values()];
+    const items = await this.run({postURLs:sources.map(source => source.url),resultsPerPage:sources.length},signal,true);
+    return sources.flatMap(source => {
+      const item = items.find(item => item.id === source.id);
+      return item ? [{...item,url:source.url}] : [];
     });
   }
 }

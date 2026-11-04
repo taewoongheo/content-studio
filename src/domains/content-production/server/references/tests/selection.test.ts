@@ -7,20 +7,20 @@ import { getReferenceContext } from "../context";
 import { setReferenceExcluded, describeReference, externalReferences } from "../library";
 const input={query:"",content_type:"",collect:false};
 function seed(db:ReturnType<typeof openLocalDatabase>,count=12) {
-  for(let i=0;i<count;i++)db.prepare("INSERT INTO content_external_references(id,url,account,caption,observed_at,images_json,created_at,view_count,like_count,comment_count,save_count) VALUES(?,?, 'example',?,'now','[]','now',100,?,1,2)")
-    .run(String(i),`https://www.tiktok.com/@example/photo/${i}`,i<4?"Arm workout":"Back workout",i);
+  for(let i=0;i<count;i++)db.prepare("INSERT INTO content_external_references(id,url,account,caption,observed_at,images_json,created_at) VALUES(?,?, 'example',?,'now','[]','now')")
+    .run(String(i),`https://www.tiktok.com/@example/photo/${i}`,i<4?"Arm workout":"Back workout");
 }
 const direction={analysis: "A practical plan.", reasoning: { observations: [], interpretations: [], candidates: [] },topic:"arms",content_type:"routine",message:"train",answer:"3 sets",presentation:"cards",reason:"useful",expected_response:"save",goal_connection:"install",difference_from_recent:"new",sources:[]};
 
-test("분석은 고정된 최대 10개, 후속 단계는 관련 자료 최대 5개만 DB에서 조회한다",async()=>{
+test("단계별 관련 자료는 최대 5개만 조회하고 성과 순위로 미리 배정하지 않는다",async()=>{
  const db=openLocalDatabase(":memory:"),store=new ProductionStore(db);seed(db);
  try {
   const [id]=store.create(1);store.state(id,"running");
   const first=await queryStageReferences(db,id,"analysis",input);
-  assert.equal(first.posts.length,10);
+  assert.equal(first.posts.length,5);
   assert.deepEqual((await queryStageReferences(db,id,"analysis",input)).posts,first.posts,"a full context must not grow through a negative slice limit");
   assert.deepEqual((await queryStageReferences(db,id,"analysis",{...input,query:"Arm"})).posts,first.posts);
-  store.save(id,"analysis",{research:[]});assert.equal(getReferenceContext(db,id,"analysis")?.posts.length,10);
+  store.save(id,"analysis",{research:[]});assert.equal(getReferenceContext(db,id,"analysis")?.posts.length,5);
   await assert.rejects(()=>queryStageReferences(db,id,"analysis",{...input,collect:true}),/수집하지 않습니다/);
   store.completeAnalysis(id,direction);store.state(id,"running");
   const next=await queryStageReferences(db,id,"production",{...input,query:"Arm"});

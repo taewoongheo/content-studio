@@ -7,7 +7,7 @@ export function SpyPage() {
   const {data,error,busy,act}=useSpy();
   const [account,setAccount]=useState("");
   return <div className="space-y-8">
-    <header className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-semibold">외부 레퍼런스 스파이</h1><p className="mt-2 text-sm text-muted-foreground">등록한 계정의 게시글과 성과를 모아 제작에 참고합니다.</p></div>
+    <header className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-semibold">외부 레퍼런스 스파이</h1><p className="mt-2 text-sm text-muted-foreground">등록한 계정의 새 게시글을 모아 주제와 전달 방식의 패턴을 찾습니다.</p></div>
       <button className="rounded-lg border px-4 py-2 text-sm disabled:opacity-50" disabled={busy||!data?.referenceAccounts.length} onClick={()=>void act({action:"refresh_spy"})}>{busy?"갱신 중…":"전체 갱신"}</button></header>
     {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
     <section className="rounded-xl border p-5" aria-label="스파이 계정">

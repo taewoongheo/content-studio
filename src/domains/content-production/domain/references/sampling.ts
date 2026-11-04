@@ -1,8 +1,8 @@
 import { z } from "zod";
 import type { Row } from "../contracts";
-export const samplingSchema = z.object({ internalCandidates: z.number().int().min(5).max(1000), externalCandidates: z.number().int().min(5).max(1000) });
+export const samplingSchema = z.object({ internalCandidates: z.number().int().min(5).max(1000) });
 export type SamplingSettings = z.infer<typeof samplingSchema>;
-export const defaultSampling: SamplingSettings = { internalCandidates: 10, externalCandidates: 10 };
+export const defaultSampling: SamplingSettings = { internalCandidates: 10 };
 
 /** Absolute recent five first; performance candidates exclude those five. */
 export function sampleReferences(rows: Row[], candidates: number, dateField: string, random = Math.random): Row[] {

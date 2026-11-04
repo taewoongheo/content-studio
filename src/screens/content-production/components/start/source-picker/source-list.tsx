@@ -5,10 +5,9 @@ import type { PublishedPost } from "@/domains/content-production/domain/publishe
 import { performanceStages } from "@/domains/content-production/domain/performance";
 
 const PAGE_SIZE = 8;
-type Metrics = { view_count: number | null; like_count: number | null; save_count: number | null };
 const formatCount = (value: number | null | undefined) => typeof value === "number" ? value.toLocaleString("ko-KR") : "—";
-export function SourceList({ posts, value, onChange }: {
-  posts: (Pick<PublishedPost, "id" | "name" | "topic" | "content_type" | "updatedAt" | "publishedOn" | "slideCount" | "performance"> & { metrics?: Metrics })[]; value: string; onChange: (id: string) => void;
+export function SourceList({ posts, value, onChange, showPerformance = true }: {
+  posts: (Pick<PublishedPost, "id" | "name" | "topic" | "content_type" | "updatedAt" | "publishedOn" | "slideCount" | "performance">)[]; showPerformance?: boolean; value: string; onChange: (id: string) => void;
 }) {
   const [count, setCount] = useState(PAGE_SIZE);
   const root = useRef<HTMLDivElement>(null), sentinel = useRef<HTMLDivElement>(null);
@@ -26,17 +25,17 @@ export function SourceList({ posts, value, onChange }: {
     {posts.slice(0, count).map(post => {
       const id = `${group}-${post.id}`;
       const stage = performanceStages.toReversed().map(({stage}) => post.performance?.find(record => record.stage === stage)).find(Boolean);
-      const metrics = post.metrics ?? stage;
-      const stageLabel = stage && !post.metrics ? performanceStages.find(item => item.stage === stage.stage)?.label : null;
+      const metrics = stage;
+      const stageLabel = stage ? performanceStages.find(item => item.stage === stage.stage)?.label : null;
       return <div key={`${post.id}:${post.updatedAt}`} className="relative border-b last:border-b-0">
         <input id={id} className="peer sr-only" type="radio" name={group} aria-label={post.name} checked={value === post.id} onChange={() => onChange(post.id)} />
         <label htmlFor={id} className={`flex cursor-pointer gap-3 p-3 transition-colors peer-focus-visible:outline-2 peer-focus-visible:-outline-offset-2 peer-focus-visible:outline-ring ${value === post.id ? "bg-muted ring-1 ring-inset ring-foreground" : "hover:bg-muted/50"}`}>
           <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{post.name}</span>
             {post.topic && <span className="mt-1 block truncate text-xs text-muted-foreground">{post.topic}</span>}
             <span className="mt-1 block text-xs text-muted-foreground">{post.publishedOn} · {post.slideCount}장</span>
-            <span className="mt-1 block text-xs tabular-nums text-muted-foreground">
+            {showPerformance && <span className="mt-1 block text-xs tabular-nums text-muted-foreground">
               {metrics ? <>{stageLabel && `${stageLabel} · `}조회 {formatCount(metrics.view_count)} · 좋아요 {formatCount(metrics.like_count)} · 저장 {formatCount(metrics.save_count)}</> : "성과 미수집"}
-            </span>
+            </span>}
             {post.content_type && <span className="mt-1 block truncate text-xs text-muted-foreground">{post.content_type}</span>}
 
           </span>

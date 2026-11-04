@@ -1,7 +1,6 @@
 import { readSampling } from "../settings/sampling";
-import { sampleReferences } from "../../domain/references/sampling";
 import { externalReferences } from "../references/library";
-import { externalRecord } from "../../domain/references/context";
+import { ANALYSIS_REFERENCE_LIMIT, externalRecord } from "../../domain/references/context";
 import { START_INPUT, readStartInput, startInputRecord } from "../start/context";
 import { productionRequestSchema, type ProductionRequest, type PreparedSource } from "../../domain/start/input";
 import type { ProductionFailure } from "../../domain/diagnostics";
@@ -112,10 +111,11 @@ export class ProductionStore {
     };
   }
   create(requests: number | ProductionRequest[], inputs = this.planningLogs(), sampling = readSampling(this.db), topics: {assignments:TopicAssignment[];history:Row[]} = {assignments:[],history:[]}) {
-    const external = externalRecord({checked_at:this.now(),queries:[],collection_attempted:false,message:"Assigned external references for this batch.",sampling,posts:sampleReferences(externalReferences(this.db),sampling.externalCandidates,"published_at")});
     const entries = typeof requests === "number"
       ? Array.from({ length: requests }, () => productionRequestSchema.parse({ mode: "automatic" }))
       : requests.map(request => productionRequestSchema.parse(request));
+    const references = new Map((topics.assignments.length || entries.some(request => request.mode === "spy_reference")
+      ? externalReferences(this.db) : []).map(row => [String(row.id), row]));
     const sources = entries.map(request => this.requestSource(request));
     const inputIds = new Set(inputs.map(row => String(row.id)));
     const historyById = new Map(topics.history.map(row => [String(row.id), row]));
@@ -124,6 +124,10 @@ export class ProductionStore {
     this.db.transaction(() => {
       for (const [index, request] of entries.entries()) {
         const assignment = request.mode === "automatic" ? topics.assignments[automaticIndex++] : undefined;
+        const referenceIds = assignment?.candidate.reference_ids ?? (request.mode === "spy_reference" ? [request.referenceId] : []);
+        const external = externalRecord({checked_at:this.now(),queries:[],collection_attempted:false,
+          message:"References supporting the assigned topic or explicitly selected source.",sampling,
+          posts:[...new Set(referenceIds)].flatMap(id => { const row=references.get(id); return row ? [row] : []; }).slice(0,ANALYSIS_REFERENCE_LIMIT)});
         const matchedIds = new Set([...(assignment?.direct_log_ids ?? []), ...(assignment?.related_log_ids ?? [])]);
         const taskInputs = [...inputs, ...[...matchedIds].flatMap(matchedId => {
           const row = historyById.get(matchedId);

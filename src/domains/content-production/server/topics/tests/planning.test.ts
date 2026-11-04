@@ -74,6 +74,7 @@ test('pool and semantic links cache independently; metrics recompute without mod
     assert.equal(calls, 2);
     const ids = store.create(2, [], undefined, first);
     assert.equal(store.get(ids[0]).input?.topic_assignment?.status, 'proven');
+    assert.deepEqual(store.get(ids[0]).external?.analysis?.posts.map(row=>row.id), ['reference'], 'assigned topic determines spy evidence');
     assert.equal(store.analysisInputs(ids[0]).length, 2, 'direct matches supplement the sampled comparison set');
     store.state(ids[0], 'running');
     store.save(ids[0], 'analysis', { research: [] });
@@ -88,9 +89,9 @@ test('pool and semantic links cache independently; metrics recompute without mod
     db.prepare("UPDATE content_external_references SET caption='A new topic' WHERE id='reference'").run();
     await prepareTopics(db, 2, 'http://localhost', executor);
     assert.equal(calls, 4, 'pool reruns, unchanged output reuses matches');
-    db.prepare("UPDATE content_external_references SET view_count=12345,observed_at='later' WHERE id='reference'").run();
+    db.prepare("UPDATE content_external_references SET observed_at='later' WHERE id='reference'").run();
     await prepareTopics(db, 2, 'http://localhost', executor);
-    assert.equal(calls, 4, 'spy metric updates do not invalidate topic evidence');
+    assert.equal(calls, 4, 'collection timestamps do not invalidate topic evidence');
     db.prepare("UPDATE content_reference_accounts SET enabled=0 WHERE username='spy'").run();
     await assert.rejects(prepareTopics(db, 2, 'http://localhost', executor), /spy 자료가 없습니다/);
     assert.equal(calls, 4, 'disabled accounts cannot reuse a previously valid pool');

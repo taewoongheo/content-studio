@@ -38,6 +38,11 @@ CREATE TABLE IF NOT EXISTS content_telegram_state (
  bot TEXT NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL CHECK(json_valid(value)),
  PRIMARY KEY(bot,key)
 );
+CREATE TABLE IF NOT EXISTS content_performance_retries (
+ log_id TEXT NOT NULL REFERENCES content_creation_logs(id) ON DELETE CASCADE,
+ stage TEXT NOT NULL, attempts INTEGER NOT NULL, next_retry_at INTEGER NOT NULL,
+ PRIMARY KEY(log_id,stage)
+);
 CREATE INDEX IF NOT EXISTS content_logs_published_idx ON content_creation_logs(actual_published_at);
 CREATE INDEX IF NOT EXISTS content_logs_created_idx ON content_creation_logs(created_at);
 CREATE TABLE IF NOT EXISTS content_stage_documents (
@@ -98,7 +103,7 @@ CREATE TABLE IF NOT EXISTS content_reference_accounts (
 CREATE TABLE IF NOT EXISTS content_external_references (
  id TEXT PRIMARY KEY, url TEXT NOT NULL UNIQUE, account TEXT NOT NULL, caption TEXT NOT NULL,
  title TEXT NOT NULL DEFAULT '', topic TEXT NOT NULL DEFAULT '', content_type TEXT NOT NULL DEFAULT '', message TEXT NOT NULL DEFAULT '',
- published_at TEXT, observed_at TEXT NOT NULL, view_count INTEGER, like_count INTEGER, comment_count INTEGER, save_count INTEGER, share_count INTEGER,
+ published_at TEXT, observed_at TEXT NOT NULL,
  images_json TEXT NOT NULL CHECK(json_valid(images_json)), visual_set_id TEXT REFERENCES content_visual_sets(id), image_error TEXT,
  excluded INTEGER NOT NULL DEFAULT 0 CHECK(excluded IN (0,1)), created_at TEXT NOT NULL, last_selected_at TEXT
 );

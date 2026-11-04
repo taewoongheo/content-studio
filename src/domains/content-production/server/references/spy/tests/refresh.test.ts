@@ -48,6 +48,7 @@ test("new-post checks preserve existing snapshots and metadata, including on man
   addReferenceAccount(db,'a');
   await refreshSpy(db,{posts:async()=>new Map([['a',[post('a','1')]]])},undefined,{now:start});
   db.prepare("UPDATE content_external_references SET title='Reviewed title',topic='Reviewed topic',excluded=1 WHERE id='1'").run();
+  assert.ok(!(db.prepare("PRAGMA table_info(content_external_references)").all() as {name:string}[]).some(row=>["view_count","like_count","comment_count","save_count","share_count"].includes(row.name)));
   const original=db.prepare("SELECT * FROM content_external_references WHERE id='1'").get();
   const calls:number[]=[];
   const changed={...post('a','1'),text:'Changed caption',view_count:99999,like_count:999,images:['https://example.com/changed.jpg']};
@@ -58,10 +59,10 @@ test("new-post checks preserve existing snapshots and metadata, including on man
   await refreshSpy(db,client,undefined,{force:true,now:start+1000});
   assert.deepEqual(calls,[1,3], 'stop after reaching a saved post; no full-history metric refresh');
   assert.deepEqual(db.prepare("SELECT * FROM content_external_references WHERE id='1'").get(),original);
-  assert.equal((db.prepare("SELECT view_count FROM content_external_references WHERE id='2'").get() as {view_count:number}).view_count,100);
+  assert.equal(db.prepare("SELECT caption FROM content_external_references WHERE id='2'").pluck().get(),"Caption");
   assert.equal((db.prepare("SELECT last_fetched_at FROM content_reference_accounts WHERE username='a'").get() as {last_fetched_at:string}).last_fetched_at,new Date(start+1000).toISOString());
   await refreshSpy(db,{posts:async()=>new Map([['a',[{...post('a','2'),view_count:555}]]])},undefined,{now:start+SPY_REFRESH_INTERVAL_MS+1000});
-  assert.equal((db.prepare("SELECT view_count FROM content_external_references WHERE id='2'").get() as {view_count:number}).view_count,100);
+  assert.equal(db.prepare("SELECT caption FROM content_external_references WHERE id='2'").pluck().get(),"Caption");
  } finally { db.close(); }
 });
 
