@@ -14,7 +14,7 @@ const reasoning = {
   interpretations: [{ finding: "A visible choice may help readers apply the answer.", support: "The stronger comparison gives a criterion; the weaker case only lists options.", limits: "The posts also differ in publication age." }],
   candidates: [{ direction: "Compare two exercise options using one criterion.", viewer_value: "Choose the option that fits the available equipment.", assessment: "Selected because it makes the tradeoff actionable." }],
 };
-const direction = { analysis: "Choose an actionable comparison.", reasoning, topic: "Exercise choices", message: "Choose for your equipment",
+const direction = { analysis: "Choose an actionable comparison.", reasoning, readiness: { ready: true, reason: "All source roles mapped" }, topic: "Exercise choices", message: "Choose for your equipment",
   content_type: "Comparison", answer: "Two options and their selection criterion", presentation: "Show the choice, then demonstrate each option",
   reason: "The observed comparison makes the decision usable", expected_response: "Save the comparison", goal_connection: "Build trust", difference_from_recent: "A different equipment choice", sources: [] };
 const slide_plan = [{ slide_id: "s1", role: "body" as const, purpose: "Make the choice actionable", copy: ["Choose for your equipment"], visual: "Show two equipment options side by side" }];
@@ -84,7 +84,7 @@ test("CLI schemas accept flexible comparisons and issue-free review using the pr
   const ajv = new Ajv({ strict: false });
   const analysis = ajv.compile(resultSchema("analysis"));
   assert.equal(analysis(direction), true, JSON.stringify(analysis.errors));
-  assert.equal(analysis({ ...direction, reasoning: { observations: [], interpretations: [], candidates: [] } }), true);
+  assert.equal(analysis({ ...direction, readiness: { ready: true, reason: "All source roles mapped" }, reasoning: { observations: [], interpretations: [], candidates: [] } }), true);
   assert.equal(analysis({ ...direction, reasoning: "A freeform replacement" }), false);
   const production = ajv.compile(resultSchema("production"));
   const result = { project_id: "planned", summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "Choose", slides: [{ slide_id: "s1", role: "body", copy: ["Choose"], visual: "Two options" }], changes: [] }, sources: [], slide_plan, content_review };

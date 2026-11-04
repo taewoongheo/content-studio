@@ -19,10 +19,10 @@ test("language detection does not reject authored drafts; output structure remai
   try {
     const [id] = store.create(1);
     store.state(id, "running");
-    store.save(id, "analysis", { analysis: "분석 메모", reasoning: { observations: [], interpretations: [], candidates: [] } });
+    store.save(id, "analysis", { analysis: "분석 메모", readiness: { ready: true, reason: "All source roles mapped" }, reasoning: { observations: [], interpretations: [], candidates: [] } });
     assert.equal(store.get(id).analysis.analysis, "분석 메모");
-    assert.throws(() => store.completeAnalysis(id, { analysis: "No required direction fields", reasoning: { observations: [], interpretations: [], candidates: [] } }));
-    store.completeAnalysis(id, { ...direction, analysis: "분석 메모", reasoning: { observations: [], interpretations: [], candidates: [] }, sources: [] });
+    assert.throws(() => store.completeAnalysis(id, { analysis: "No required direction fields", readiness: { ready: true, reason: "All source roles mapped" }, reasoning: { observations: [], interpretations: [], candidates: [] } }));
+    store.completeAnalysis(id, { ...direction, analysis: "분석 메모", readiness: { ready: true, reason: "All source roles mapped" }, reasoning: { observations: [], interpretations: [], candidates: [] }, sources: [] });
     store.state(id, "running");
     const content = { slides: [{ visual: "Fixed bottom-left LIFTCODE badge", copy: ["3 sets of 8 reps", "설명"] }] };
     store.save(id, "production", { content, research: [{ question:"Question",source:"https://example.com",finding:"조사 기록",judgment:"참고" }] });
@@ -43,7 +43,7 @@ test("단계 출력 검사·분리 저장·재개·취소 후 쓰기 거부", ()
     store.state(id, "running");
     assert.throws(() => store.save(id, "production", {}), /현재 실행 단계/);
     store.save(id, "analysis", {
-      analysis: "partial", reasoning: { observations: [], interpretations: [], candidates: [] },
+      analysis: "partial", readiness: { ready: true, reason: "All source roles mapped" }, reasoning: { observations: [], interpretations: [], candidates: [] },
       research: [{ question: "q", source: "url", finding: "f", judgment: "j" }],
     });
     assert.throws(() => store.completeAnalysis(id, {}));
@@ -52,7 +52,7 @@ test("단계 출력 검사·분리 저장·재개·취소 후 쓰기 거부", ()
     store.state(id, "running");
     store.completeAnalysis(id, {
       ...direction,
-      analysis: "observation", reasoning: { observations: [], interpretations: [], candidates: [] },
+      analysis: "observation", readiness: { ready: true, reason: "All source roles mapped" }, reasoning: { observations: [], interpretations: [], candidates: [] },
       sources: [],
     });
     assert.equal(store.get(id).analysis.state, "completed");
@@ -177,7 +177,7 @@ test("검토 draft는 분리 저장하고 훅 통과 후 시각 검증까지 끝
   try {
     const [id] = store.create(1);
     store.state(id, "running");
-    store.completeAnalysis(id, { ...direction, content_type: "Routine cards", analysis: "A clear starting plan.", reasoning: { observations: [], interpretations: [], candidates: [] }, sources: [] });
+    store.completeAnalysis(id, { ...direction, content_type: "Routine cards", analysis: "A clear starting plan.", readiness: { ready: true, reason: "All source roles mapped" }, reasoning: { observations: [], interpretations: [], candidates: [] }, sources: [] });
     store.state(id, "running");
     db.prepare("INSERT INTO content_projects(id,name,aspect_ratio,slide_count,output_language,document_json,created_at,updated_at) VALUES('review-project','Review','4:5',1,'English','{}','now','now')").run();
     db.prepare("UPDATE content_drafts SET project_id='review-project' WHERE id=?").run(id);

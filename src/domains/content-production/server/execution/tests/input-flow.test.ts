@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { productionStore, execute, recordAnalysisRead, recordSourceReview } from "../runner";
 import type { runCodex } from "../process";
 
-const direction={analysis:"Compare observed post performance.",reasoning:{observations:[{source:"assigned-log",observation:"The comparison makes exercise choices visible."}],interpretations:[],candidates:[]},topic:"Arms",content_type:"Comparison",message:"Choose an exercise",answer:"Compare available options",presentation:"Comparison cards",reason:"Observed interest",expected_response:"Save",goal_connection:"Relevant audience",difference_from_recent:"Another choice",sources:[]};
+const direction={analysis:"Compare observed post performance.",readiness: { ready: true, reason: "All source roles mapped" }, reasoning: {observations:[{source:"assigned-log",observation:"The comparison makes exercise choices visible."}],interpretations:[],candidates:[]},topic:"Arms",content_type:"Comparison",message:"Choose an exercise",answer:"Compare available options",presentation:"Comparison cards",reason:"Observed interest",expected_response:"Save",goal_connection:"Relevant audience",difference_from_recent:"Another choice",sources:[]};
 test("analysis cannot finish without all assigned reads; input IDs and repair capabilities reach the CLI", async()=>{
   const dir=await mkdtemp(join(tmpdir(),"analysis-input-flow-"));
   process.env.CONTENT_STUDIO_DB_PATH=join(dir,"test.sqlite");

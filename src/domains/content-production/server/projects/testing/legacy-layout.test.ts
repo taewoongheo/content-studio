@@ -15,7 +15,7 @@ function productionTask(store: ProductionStore, sourceProjectId: string) {
   store.state(id,"running");
   store.completeAnalysis(id,{
     analysis:"Use the original countdown format for a new exercise topic.",
-    reasoning:{observations:[],interpretations:[],candidates:[]},
+    readiness: { ready: true, reason: "All source roles mapped" }, reasoning: {observations:[],interpretations:[],candidates:[]},
     topic:"Chest exercises",message:"Compare chest exercises",content_type:"Exercise countdown",
     answer:"Rank exercises",presentation:"One exercise per slide",reason:"Useful comparison",
     expected_response:"Save",goal_connection:"Follow",difference_from_recent:"New exercise group",sources:[],

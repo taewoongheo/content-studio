@@ -1,7 +1,7 @@
 import type { ExternalContext, ReferenceStep } from "./references/context";
 import { z } from "zod";
 import { contentMetadataSchema } from "@/domains/content-metadata/schema";
-import { analysisReasoningSchema, firstDraftPlanningSchema, slidePlanSchema, contentReviewSchema } from "./planning/contracts";
+import { analysisReadinessSchema, analysisReasoningSchema, firstDraftPlanningSchema, slidePlanSchema, contentReviewSchema } from "./planning/contracts";
 
 export const PRODUCTION_ASPECT_RATIO = "4:5";
 
@@ -54,7 +54,7 @@ export const reviewDraftPatchSchema = z.object({
 }).strict();
 export const analysisPatchSchema = directionSchema
   .partial()
-  .extend({ analysis: z.string().optional(), reasoning: analysisReasoningSchema.optional(), ...progress })
+  .extend({ analysis: z.string().optional(), reasoning: analysisReasoningSchema.optional(), readiness: analysisReadinessSchema.optional(), ...progress })
   .strict();
 export const productionPatchSchema = z
   .object({
@@ -69,6 +69,7 @@ export const analysisResultSchema = directionSchema
   .extend({
     analysis: z.string().trim().min(1),
     reasoning: analysisReasoningSchema,
+    readiness: analysisReadinessSchema,
     sources: z.array(sourceSchema),
   })
   .strict();

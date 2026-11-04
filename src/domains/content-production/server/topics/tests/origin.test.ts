@@ -93,7 +93,7 @@ test("automatic spy capture refreshes expired URLs once and later tasks/nodes on
 
 test("automatic spy topic can change while its source format and image cache remain fixed", async () => {
   const { db, store } = fixture();
-  const direction = { analysis: "New subject in observed cards", reasoning: { observations: [], interpretations: [], candidates: [] },
+  const direction = { analysis: "New subject in observed cards", readiness: { ready: true, reason: "All source roles mapped" }, reasoning: { observations: [], interpretations: [], candidates: [] },
     topic: "Bodyweight legs", content_type: "Exercise cards", message: "Train legs", answer: "Two movements", presentation: "Two source roles",
     reason: "New subject", expected_response: "Save", goal_connection: "Follow", difference_from_recent: "Different subject", sources: [] };
   try {
@@ -104,10 +104,13 @@ test("automatic spy topic can change while its source format and image cache rem
       async () => [{ data: Buffer.from("one"), width: 540, height: 675 }]);
     const source = store.get(id).input!.source;
     store.completeAnalysis(id, direction); store.state(id, "running");
-    const { analysis, reasoning, sources, ...change } = direction;
-    void analysis; void reasoning; void sources;
+    const { analysis, readiness, reasoning, sources, ...change } = direction;
+    void analysis; void readiness; void reasoning; void sources;
     assert.doesNotThrow(() => store.changeDirection(id, { ...change, topic: "Bodyweight shoulders" }, "collision"));
     assert.equal(store.get(id).analysis.topic, "Bodyweight shoulders");
+    assert.doesNotThrow(() => store.changeDirection(id, {...change,topic:"Bodyweight core"}, "source_fit", "Two meaningful cards fit the origin"));
+    assert.equal(store.get(id).analysis.topic, "Bodyweight core");
+    assert.throws(() => store.changeDirection(id, {...change,content_type:"Explanation"}, "source_fit", "Change format"), /포맷/);
     assert.deepEqual(store.get(id).input!.source, source);
     assert.throws(() => store.changeDirection(id, { ...change, content_type: "Explanation" }, "collision"), /포맷/);
     assert.throws(() => assertSourcePageCount(store.get(id).input!, 2), { code: "SOURCE_FORMAT_MISMATCH" });

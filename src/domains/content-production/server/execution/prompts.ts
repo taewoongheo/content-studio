@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { stagePolicy } from "./policy/stages";
 import type { ProductionStep, Row } from "../../domain/contracts";
 import { z } from "zod";
-import { analysisReasoningSchema, firstDraftPlanningSchema } from "../../domain/planning/contracts";
+import { analysisReadinessSchema, analysisReasoningSchema, firstDraftPlanningSchema } from "../../domain/planning/contracts";
 
 function jsonShape(schema: z.ZodType) {
   const { $schema: dialect, ...shape } = z.toJSONSchema(schema, { target: "draft-7" });
@@ -42,10 +42,6 @@ const sourcesField = {
       visual_set_id: { type: ["string", "null"] },
       clone_project_id: { type: ["string", "null"], description: "Internal origin: exactly one analysis source identifies the confirmed clone origin. External origins (including automatic origin=spy) and other sources: null." },
     },
-    anyOf: [
-      {properties:{id:{type:"string",minLength:1}},required:["id"]},
-      {properties:{url:{type:"string",minLength:1}},required:["url"]},
-    ],
     required: ["kind", "id", "url", "part", "used_for", "visual_set_id", "clone_project_id"],
     additionalProperties: false,
   },
@@ -82,6 +78,7 @@ export function resultSchema(step: ProductionStep) {
       ? {
           ...Object.fromEntries(Object.entries(directionFields).map(([key, description]) => [key, { ...stringField, description }])),
           reasoning: jsonShape(analysisReasoningSchema),
+          readiness: jsonShape(analysisReadinessSchema),
           sources: sourcesField,
         }
       : {

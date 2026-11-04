@@ -24,7 +24,7 @@ import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import type { runCodex } from "./process";
 const direction = {
   analysis: "Observed",
-  reasoning: { observations: [], interpretations: [], candidates: [] },
+  readiness: { ready: true, reason: "All source roles mapped" }, reasoning: { observations: [], interpretations: [], candidates: [] },
   topic: "arms",
   content_type: "routine",
   message: "train",
@@ -183,15 +183,18 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
     assert.throws(() => store.get(id), /취소/);
     const [canceled] = store.create(1);
     assert.throws(() => deleteTaskProject(store, canceled), /완성된 포스트/);
+    let signalStarted!: () => void;
+    const started = new Promise<void>(resolve => { signalStarted = resolve; });
     let unblock!: (value: Record<string, unknown>) => void;
     const execution = execute(
       canceled,
       "http://127.0.0.1:3000",
       () =>
         new Promise((resolve) => {
-          unblock = resolve;
+          unblock = resolve; signalStarted();
         }),
     );
+    await started;
     stopProduction(canceled, true);
     unblock(direction);
     await execution;

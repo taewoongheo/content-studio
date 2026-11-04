@@ -1,3 +1,4 @@
+import { OperationError } from "@/lib/errors/operation";
 import { externalReferences } from "../references/library";
 import { ANALYSIS_REFERENCE_LIMIT, externalRecord } from "../../domain/references/context";
 import { START_INPUT, readStartInput, startInputRecord } from "../start/context";
@@ -244,7 +245,7 @@ export class ProductionStore {
     }
     const values: Row = { updated_at: this.now() }, document: Row = {};
     for (const [key, value] of Object.entries(patch)) {
-      if (["reasoning", "slide_plan", "content_review"].includes(key)) {
+      if (["reasoning", "readiness", "slide_plan", "content_review"].includes(key)) {
         document[key] = value;
         continue;
       }
@@ -274,9 +275,11 @@ export class ProductionStore {
     const detail = this.assertActive(id, "analysis"),
       result = analysisResultSchema.parse(raw),
       now = this.now();
+    if (!result.readiness.ready)
+      throw new OperationError("ANALYSIS_NOT_READY", "제작 가능한 계획을 확정한 뒤 계속 진행해 주세요.", { readiness: result.readiness });
     if (validateOnly) return;
     this.db.transaction(() => {
-      saveStageDocument(this.db, detail.task.log_id, "analysis", { reasoning: result.reasoning });
+      saveStageDocument(this.db, detail.task.log_id, "analysis", { reasoning: result.reasoning, readiness: result.readiness });
       const values: Row = {
         analysis: result.analysis,
         sources_json: JSON.stringify(result.sources),
@@ -317,7 +320,7 @@ export class ProductionStore {
       slide_plan: result.slide_plan, content_review: result.content_review,
     }) : null;
     if (planning?.content_review.issues.some(issue => issue.status === "blocked"))
-      throw new Error("초안의 내용 검토에서 확인한 문제를 해결해 주세요.");
+      throw new OperationError("CONTENT_REVIEW_BLOCKED", "초안의 내용 검토에서 확인한 문제를 해결해 주세요.", { issues: planning.content_review.issues });
     const next = productionSteps[productionSteps.findIndex(value => value.id === step) + 1]?.id ?? null;
     if (step !== "production" && !result.review?.trim()) throw new Error("검토 결과를 남겨 주세요.");
     const metadata = readContentMetadata(result.summary);
@@ -374,12 +377,14 @@ export class ProductionStore {
   changeDirection(
     id: string,
     raw: unknown,
-    cause: "collision" | "research",
+    cause: "collision" | "source_fit" | "research",
     reason?: string,
   ) {
     const detail = this.assertActive(id, this.get(id).task.current_step),
       direction = directionSchema.parse(raw),
       now = this.now();
+    if (cause === "source_fit" && (!reason?.trim() || detail.input?.request.mode !== "automatic" || !["analysis", "production"].includes(detail.task.current_step)))
+      throw new Error("구성에 맞는 주제 수정은 자동 분석·초안에서 이유와 함께 진행해 주세요.");
     if (cause === "collision" && detail.input?.request.mode !== "automatic") throw new Error("지정 제작에는 중복 검사를 적용하지 않습니다.");
     if (cause === "collision" && !["analysis", "production"].includes(detail.task.current_step))
       throw new Error("중복 재선정은 분석·초안에서 완료해 주세요. 후속 단계에서는 현재 내용을 직접 수정해 주세요.");
@@ -387,7 +392,7 @@ export class ProductionStore {
     if (cause === "research" && !reason?.trim())
       throw new Error("추가 조사에 따른 변경 이유가 필요합니다.");
     this.db.transaction(() => {
-      if (cause === "collision") {
+      if (cause === "collision" || cause === "source_fit") {
         this.db.prepare("DELETE FROM content_stage_documents WHERE log_id=? AND step='production'").run(detail.task.log_id);
         this.update("content_analysis_drafts", "draft_id", id, {
           ...direction,

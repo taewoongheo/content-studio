@@ -32,11 +32,14 @@ test("automatic spy origin reaches every stage using cached images, no internal 
       requested_lane: "exploration", selected_lane: "exploration", status: "untried", direct_log_ids: [], related_log_ids: [], evidence: "No own history", fallback: null,
     };
     const [id] = store.create(1, [], { assignments: [assignment], history: [] });
-    const direction = { analysis: "Checked source", reasoning: { observations: [], interpretations: [], candidates: [] }, topic: "Arms",
+    const direction = { analysis: "Checked source", readiness: { ready: true, reason: "All source roles mapped" }, reasoning: { observations: [], interpretations: [], candidates: [] }, topic: "Arms",
       content_type: "Exercise cards", message: "Train arms", answer: "Exercise choices", presentation: "Preserve both source pages", reason: "Untried topic",
       expected_response: "Save", goal_connection: "Follow", difference_from_recent: "Untried", sources: [{ kind: "reference", id: "spy", visual_set_id: setId, part: "Both pages", used_for: "Format origin" }] };
     await execute(id, "http://127.0.0.1:3000", async input => {
       const step = store.get(id).task.current_step; stages.push(step);
+      const attempt = stages.filter(value => value === step).length;
+      if (attempt > 1) assert.equal(input.conversation?.threadId, `${step}-thread`);
+      input.onThreadStarted?.(`${step}-thread`);
       assert.ok(input.capabilities && "tools" in input.capabilities && input.capabilities.tools instanceof Set);
       assert.ok(input.capabilities.tools.has("production_create_project"));
       assert.equal(input.capabilities.tools.has("production_clone_project"), false);
@@ -46,12 +49,21 @@ test("automatic spy origin reaches every stage using cached images, no internal 
       const paths = input.images!.slice(2); attachments.push(...paths);
       assert.equal(paths.length, ["production", "visual"].includes(step) ? 2 : 0);
       for (const [index, path] of paths.entries()) assert.equal(await readFile(path, "utf8"), `cached-${index}`);
-      if (step === "analysis") { recordSourceReview(id, undefined, setId); return direction; }
+      if (step === "analysis") {
+        if (attempt === 1) { recordSourceReview(id, undefined, setId); return {...direction, readiness:{ready:false,reason:"Unmapped source roles"}}; }
+        assert.match(input.prompt, /ANALYSIS_NOT_READY/);
+        assert.equal(store.get(id).production, null, "blocked analysis never creates a production draft");
+        return direction;
+      }
       if (step === "production") {
         assert.throws(() => cloneTaskProject(store, id, "unrelated", "Wrong origin"), { code: "PROJECT_CREATION_MODE" });
-        assert.throws(() => createTaskProject(store, id, 3), { code: "SOURCE_FORMAT_MISMATCH" });
+        if (attempt === 1) assert.throws(() => createTaskProject(store, id, 3), { code: "SOURCE_FORMAT_MISMATCH" });
         projectId = createTaskProject(store, id, 2).projectId;
         const project = contentJobRegistry.get(projectId);
+        if (attempt === 1) return {project_id:projectId, summary:{topic:direction.topic,message:direction.message,content_type:direction.content_type},sources:[],
+          slide_plan:project.editor.document.slides.map(slide=>({slide_id:slide.id,role:slide.role,purpose:"Source page",copy:["Planned content"],visual:"Exercise"})),
+          content_review:{assessment:"Needs filling",issues:[]}};
+        assert.match(input.prompt, /EMPTY_SLIDE/);
         const commands: EditorCommand[] = [{ type: "add_element", element: makeElementDefinition({ id: "text", kind: "text" }) }];
         for (const slide of project.editor.document.slides) commands.push(
           { type: "place_element", slideId: slide.id, elementId: "text", placementId: "text" },
@@ -70,7 +82,7 @@ test("automatic spy origin reaches every stage using cached images, no internal 
       return { ...result, review: "Source roles retained", review_passed: true,
         ...(step === "visual" ? { reviewed_revision: project.editor.revision, reviewed_slide_ids: project.editor.document.slides.map(slide => slide.id) } : {}) };
     });
-    assert.deepEqual(stages, ["analysis", "production", "hook", "polish", "visual"]);
+    assert.deepEqual(stages, ["analysis", "analysis", "production", "production", "hook", "polish", "visual"]);
     assert.equal(store.get(id).task.state, "finished", JSON.stringify(store.get(id).production?.error));
     assert.equal(store.get(id).analysis.source_format, undefined, "external production must not require an internal snapshot");
     for (const path of attachments) await assert.rejects(access(path));

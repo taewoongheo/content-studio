@@ -53,8 +53,8 @@ map every original page to its corresponding replacement content. An exercise ca
 it must not become a setup, progression, explanation or summary page. Do not combine formats from other posts.
 Choose by topic/answer fit, never editing convenience. Do not expand an observed topic into an unsupported
 second question (for example, adding limited-load progression to an exercise list). If no inspected source
-can express the assigned question faithfully, report that mismatch; do not invent a format or silently
-change the reader question to make a convenient template fit.
+can express the proposed subject faithfully, repair the generated subject/scope through source_fit; do not invent a format or silently
+change the reader-question type to make a convenient template fit. A concrete generated subject may be revised to resolve a demonstrated source-capacity mismatch while keeping that question type and source composition.
 
 For past_post variations, a replacement must perform the SAME INFORMATION ROLE in the SAME SLOT.
 Describe the original information roles and map a different subject to them, retaining the reader question,
@@ -66,7 +66,12 @@ external-reference contract, retaining its page count/order and information role
 Map the NEW topic into its existing page roles. Source content is evidence of composition, not the answer
 to reuse. In reasoning.interpretations and presentation, state original subject → new subject, which concrete
 items/claims change, and which page roles/layouts remain. Apply this comparison to internal origins too.
-If the actual source composition cannot express the new topic, report the mismatch rather than inventing pages.
+If the actual source composition cannot express the proposed topic, revise the automatically generated
+subject or scope with production_change_direction(cause="source_fit", reason=...) while keeping the selected
+composition and a genuinely new subject. Do not stop solely because a generated candidate named too few items.
+Do not pad with repeated entries or unsupported distinctions. Map usable content to every original page role.
+Set readiness.ready=true only when this mapping is complete and production can proceed; otherwise report
+readiness.ready=false with the actual blocker so the same CLI can continue repairing before handoff.
 
 For internal origins, record exactly one sources.clone_project_id for the inspected internal origin.
 External origins, including automatic origin=spy, have no clone origin. Keep topic (subject), content_type (reader question and answer method)

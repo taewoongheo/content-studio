@@ -202,10 +202,10 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     "production_change_direction",
     {
       description:
-        "Resolve a recent collision within the request constraints. Automatic requests only; preserve the confirmed internal origin format. Explicit requests never change direction for overlap. If all considered alternatives overlap, keep the direction and record why the duplicate is accepted instead of calling this tool repeatedly.",
+        "Resolve a recent collision or topic/source capacity mismatch in automatic analysis/production. cause=source_fit revises the generated topic and answer to fill the existing source roles; supply a reason. Preserve source page count, composition and information roles while using a new subject. A machine-generated assignment is revisable; explicit user constraints remain fixed. Explicit requests never change direction for overlap. If all considered alternatives overlap, keep the direction and record why the duplicate is accepted instead of calling this tool repeatedly.",
       inputSchema: z.object({
         direction: directionSchema,
-        cause: z.literal("collision"),
+        cause: z.enum(["collision", "source_fit"]),
         reason: z.string().optional(),
       }),
       annotations: annotations(false),

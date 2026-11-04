@@ -2,6 +2,11 @@ import { z } from "zod";
 
 const prose = z.string().trim().min(1);
 
+export const analysisReadinessSchema = z.object({
+  ready: z.boolean().describe("True only when every source page role has concrete new content and no unresolved production blocker remains."),
+  reason: prose.describe("Explain the completed source-to-new-topic mapping, or the actual unresolved blocker. Never mark an unresolved plan ready."),
+}).strict();
+
 /** Decision records capture consequential evidence, without prescribing case or candidate counts. */
 export const analysisReasoningSchema = z.object({
   observations: z.array(z.object({

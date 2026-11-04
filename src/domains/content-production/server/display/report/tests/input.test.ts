@@ -4,7 +4,7 @@ import { buildReportInput } from "../input";
 import { reportSourceKey } from "../../../../domain/report/model";
 import type { WorkDetail } from "../../../../domain/contracts";
 const id="12345678-1234-1234-1234-123456789012";
-function detail():WorkDetail{return {task:{id:"draft",log_id:"log",current_step:"analysis",state:"running",created_at:"now",updated_at:"now",project_id:null,topic:null,content_type:null},analysis:{state:"completed",analysis:`Observed ${id}.`,reasoning:{observations:[{source:id,observation:"Clear exercise comparisons"}],interpretations:[],candidates:[]},research:[{question:"Why?",source:"https://example.com",finding:`Use ${id}`,judgment:"Useful comparison"}],sources:[{id,kind:"log",part:"Exercise ranking",used_for:"Explain the alternatives"}]},production:null,log:{}};}
+function detail():WorkDetail{return {task:{id:"draft",log_id:"log",current_step:"analysis",state:"running",created_at:"now",updated_at:"now",project_id:null,topic:null,content_type:null},analysis:{state:"completed",analysis:`Observed ${id}.`,readiness: { ready: true, reason: "All source roles mapped" }, reasoning: {observations:[{source:id,observation:"Clear exercise comparisons"}],interpretations:[],candidates:[]},research:[{question:"Why?",source:"https://example.com",finding:`Use ${id}`,judgment:"Useful comparison"}],sources:[{id,kind:"log",part:"Exercise ranking",used_for:"Explain the alternatives"}]},production:null,log:{}};}
 test("report inputs connect recognizable examples to observations and remove technical source data without modifying drafts",()=>{
  const original=detail(),before=structuredClone(original);
  const input=buildReportInput(original,"analysis",[{id,name:"Back Exercise Ranking",project_id:"project"}]);

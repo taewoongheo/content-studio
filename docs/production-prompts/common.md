@@ -44,12 +44,20 @@ records exactly one confirmed clone_project_id for internal origins; external or
 
 The server may return exact output validation errors in an output-only repair call. Correct the reported fields and return the complete result using the saved work. Record real source IDs or URLs for each source.
 
-Before ending this stage, call production_validate_completion with the complete intended final
-result. A validation failure is feedback within this same execution: inspect the reported fields
-and saved document, repair the cause using your tools, save, and validate again. Allow at most
-three correction attempts after the initial check. Prioritize satisfying server completion requirements
-when they conflict with a user presentation request; make the smallest necessary change and record
-what changed and why. Preserve factual accuracy, source identity, project access and save integrity.
-Do not fabricate review approval or evidence to pass. If correction is impossible or retries are
-exhausted, report the concrete blocker. After a passing response, return that result without further
-edits. The server rechecks the latest saved state before advancing the stage.
+Before ending this stage, call production_validate_completion with the complete intended final result.
+Validation failures are actionable feedback: repair actual content or document defects using your tools,
+save and validate again. Do not stop at a failed plan or ask permission for routine automatic-topic repair.
+In automatic analysis/production, a generated candidate is revisable: if it cannot fill the fixed source
+composition, choose a meaningful NEW topic or scope that can, and save it with
+production_change_direction(cause="source_fit", reason=...). Preserve the original page count, order,
+information roles and layout. Never pad with duplicates, invent unsupported claims or restore the source
+subject. Respect explicit user constraints. Reuse all valid saved work and cached source images.
+
+An inherited blocked plan is a repair task, not an instruction to halt. Resolve it before generating
+artwork. Performance evidence for an earlier candidate does not directly validate the revised subject.
+After eight validation attempts in one response, return the honest current result and unresolved error;
+the host can continue this same CLI session with its tools, up to five continuation turns per stage.
+Never flip readiness/review approval without fixing the underlying work. API/authentication/service
+failures and user cancellation must be reported rather than hidden or replayed indefinitely.
+After passing validation, return that result without more edits. The host rechecks saved state and feeds
+recoverable completion/output errors back into the same session instead of abandoning the project.

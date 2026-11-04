@@ -23,6 +23,7 @@ test("all CLI output schemas require source parts and usage as structured fields
         key, key === "summary" ? stageSummary(step) : field.type === "array" ? [] : field.type === "boolean" ? true : field.type === "integer" ? 0 : "English output",
       ]),
     );
+    if (step === "analysis") output.readiness = { ready: true, reason: "Ready" };
     if (step === "analysis") output.reasoning = { observations: [], interpretations: [], candidates: [] };
     if (step === "production") Object.assign(output, planning);
     const source = { kind: "url", id: null, url: "https://example.com", part: "Research summary", used_for: "Checked the prescription.", visual_set_id: null, clone_project_id: null };
@@ -176,4 +177,18 @@ test("automatic internal and spy stages require a new subject without copying so
       assert.doesNotMatch(prompt, /Keep the source subject, verified substance/);
     }
   }
+});
+
+
+test("CLI schemas close every nested object including union branches", () => {
+  function inspect(value: unknown): void {
+    if (!value || typeof value !== "object") return;
+    const schema = value as Record<string, unknown>;
+    if (schema.properties) {
+      assert.equal(schema.additionalProperties, false);
+      assert.deepEqual(new Set(schema.required as string[]), new Set(Object.keys(schema.properties as object)));
+    }
+    for (const child of Object.values(schema)) inspect(child);
+  }
+  for (const { id } of productionSteps) inspect(resultSchema(id));
 });

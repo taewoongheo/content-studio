@@ -1,7 +1,7 @@
 import { isExternalProduction } from "../../domain/start/input";
 import { assertTaskSourceFormat } from "../projects/format/snapshot";
 import { withReferenceImages } from "../start/media/attachments";
-import { executeWithOutputRepair } from "./review/output/output-repair";
+import { executeWithStageRecovery } from "./review/output/stage-recovery";
 import { reviewedSummary } from "./review/summary";
 import { prepareOriginalBadges } from "./policy/editing/badge/prepare";
 import { refreshSpy } from "../references/spy/refresh";
@@ -216,7 +216,7 @@ export async function execute(
       const inputs = run.step === "analysis" || run.step === "production" ? store.analysisInputs(id, true) : [];
       const startInput = store.get(id).input!;
       const capabilities = stagePolicy(run.step, startInput);
-      const result = await withReferenceImages(store, startInput, run.step, run.controller.signal, referenceImages => executeWithOutputRepair(executor, {
+      await withReferenceImages(store, startInput, run.step, run.controller.signal, referenceImages => executeWithStageRecovery(executor, {
         capabilities,
         onThreadStarted: threadId => { run.imageThreadId = threadId; },
         model: PRODUCTION_MODEL,
@@ -235,10 +235,10 @@ export async function execute(
             kind: "state",
             detail: message,
           }),
-      }, run.step));
-      run.controller.signal.throwIfAborted();
-      phase = "validation";
-      await checkStageCompletion(id, run, result);
+      }, run.step, async result => {
+        phase = "validation";
+        await checkStageCompletion(id, run, result);
+      }, () => { phase = "cli"; run.completionAttempts = 0; }));
       if (store.get(id).task.state === "finished") break;
     }
   } catch (error) {
@@ -284,8 +284,6 @@ export function resetProduction() {
 
 async function checkStageCompletion(id: string, run: Run, result: Record<string, unknown>, validateOnly = false) {
   run.controller.signal.throwIfAborted();
-  if ((run.completionAttempts ?? 0) > 4)
-    throw new OperationError("COMPLETION_REPAIR_EXHAUSTED", "완료 검증 수정 횟수를 초과했습니다.");
   const store = productionStore();
   store.assertActive(id, run.step);
   const startInput = store.get(id).input!;
@@ -351,8 +349,8 @@ export async function validateProductionCompletion(id: string, result: Record<st
   const run = runs.get(id);
   if (!run) throw new OperationError("RUN_NOT_ACTIVE", "실행 중인 작업만 검증할 수 있습니다.");
   run.completionAttempts = (run.completionAttempts ?? 0) + 1;
-  if (run.completionAttempts > 4)
-    throw new OperationError("COMPLETION_REPAIR_EXHAUSTED", "완료 검증 수정은 최대 3회까지 가능합니다. 미해결 문제를 보고해 주세요.");
+  if (run.completionAttempts > 8)
+    throw new OperationError("COMPLETION_REPAIR_EXHAUSTED", "이번 CLI 응답에서 검증을 8회 시도했습니다. 미해결 문제와 현재 결과를 반환하면 같은 세션에서 계속 수정합니다.");
   await checkStageCompletion(id, run, result, true);
   run.controller.signal.throwIfAborted();
   return { passed: true, step: run.step };
