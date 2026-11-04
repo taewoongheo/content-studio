@@ -23,7 +23,19 @@ Selection still uses the existing latest-rate pool; interpret performance using 
   check overlap through the existing tool. Do not use its latest metrics as evidence of success
   or failure. Missing metrics are not zero.
 
-## Choose a subject within the original information roles
+## Choose the content, then its source
+
+For automatic requests, compare substantive subjects and answers from the assigned evidence using
+the research guide's selection criteria. Decide what the audience should receive before choosing
+ONE assigned internal origin that can communicate it. Record why the content merits selection;
+describe the source's role mapping separately in presentation.
+
+Past_post uses only the user-selected origin and varies its subject. External_url/spy_reference
+uses the selected caption and ALL preserved slides; keep that subject and verified substance,
+and specify the body structure to preserve and required changes in presentation.
+Explicit external content is not rejected for duplication. Do not reinterpret it as a new topic.
+
+## Map the selected content to the original information roles
 
 Separate three concepts:
 - topic: the concrete subject or set of things being explained; this changes for internal variations.
@@ -31,22 +43,19 @@ Separate three concepts:
 - visual composition: the positions and expression of those roles; internal clones retain it; external bodies follow the supplied external-reference contract.
 
 For internal variations, a replacement must perform the SAME INFORMATION ROLE in the SAME SLOT, not merely fit its space.
-First describe what each original slot does, independent of its subject. Then choose a different
-subject whose content can fill those roles unchanged. Retain the kind of reader question, answer,
+Describe what each selected source slot does, independent of its subject, and map the chosen
+content to those roles. Retain the kind of reader question, answer,
 page sequence and relationship between text and images. Changing only the angle of explanation
 about the same subject is not the requested variation. Do not turn an instruction slot into a
 selection criterion, condition, evaluation or troubleshooting slot simply because text fits there.
 These are information roles, not a fixed taxonomy or domain-specific examples.
 
-Automatic: inspect the assigned internal candidates, select one origin and a distinct subject
-that preserves its information roles. Past_post: use only the selected origin and change the subject
-under the same rule. External_url/spy_reference: read the selected caption and ALL preserved slides;
-keep that subject and verified substance, and specify the body structure to preserve and required changes in presentation.
-Explicit external content is not rejected for duplication. Do not reinterpret it as a new topic.
 For internal modes, record exactly one sources.clone_project_id for the inspected internal origin. External modes have no clone origin.
 
 In presentation, map content to the selected source page/slot roles and explain why those roles still fit.
-Reject a proposed internal variation if it requires a different reader task or information role.
+If an automatic source cannot communicate the chosen content within its information roles,
+compare another assigned source for that content under the research guide's selection criteria.
+Do not force a different reader task into the same slot.
 State a clear subject and usable content direction for the first draft.
 
 ## Verify the content in use

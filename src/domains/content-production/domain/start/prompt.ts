@@ -10,7 +10,7 @@ export function startInputPrompt(input: ProductionInput, step: ProductionStep) {
     ...(mode === "past_post" ? {source: {project_id: input.source?.project_id}} : {}),
   };
   const selection = mode === "automatic"
-    ? "Select ONE assigned own post first, inspect its slides, then choose a different subject that preserves each original slot’s information role. Use internal posts only. Apply the research guide's automatic overlap rule."
+    ? "Use the research guide's selection criteria to choose the subject and substantive answer from the assigned evidence first. Then select ONE assigned own post whose information roles communicate that content, inspect its slides and plan the variation. Use internal posts only. Apply the research guide's automatic overlap rule."
     : mode === "past_post"
       ? "Clone ONLY the user-selected own post. Inspect it and choose a different subject within the same reader-question type and slot information roles."
       : "Read the selected external caption and ALL preserved slides. Keep its topic and verified substance. In presentation, specify the body sequence, page/slot roles, layout relationships to retain and the changes needed for our identity and hook. Do not select an internal clone origin.";
