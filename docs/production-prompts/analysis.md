@@ -34,6 +34,8 @@ validation, and no direct history means untried, not poor performance. The serve
 is an operational screen, not causal proof. Do not turn a comparison, explanation, correction or planning
 question into an executable routine merely because a familiar source is convenient.
 Explain whether this is an exploration or a repeatedly supported topic and the actual evidence or fallback.
+The supplied selection baseline covers all eligible own posts at that observation stage. A median calculated
+from the smaller assigned comparison sample describes that sample; do not substitute it for the selection baseline.
 
 Past_post uses only the user-selected origin and varies its subject. External_url/spy_reference uses the
 selected caption and ALL preserved slides; keep that subject and verified substance and follow the supplied

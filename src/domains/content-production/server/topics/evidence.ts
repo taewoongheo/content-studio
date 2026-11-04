@@ -31,7 +31,7 @@ export function evaluateTopics(candidates: TopicCandidate[], matches: TopicMatch
   return candidates.map(candidate => {
     const match = byCandidate.get(candidate.id);
     if (!match) throw new Error("주제 후보에 연결된 게시 이력 분석이 없습니다.");
-    let supportedStage: string | null = null, score = 0;
+    let supportedStage: string | null = null, score = 0, supportCount = 0;
     for (const [stage, baseline] of baselines) {
       const records = stages.get(stage)!;
       const qualified = [...new Set(match.direct_log_ids)].flatMap(id => {
@@ -40,13 +40,13 @@ export function evaluateTopics(candidates: TopicCandidate[], matches: TopicMatch
       });
       if (qualified.length < 2) continue;
       const mean = qualified.reduce((sum, value) => sum + value, 0) / qualified.length;
-      if (!supportedStage || mean > score) { supportedStage = stage; score = mean; }
+      if (!supportedStage || mean > score) { supportedStage = stage; score = mean; supportCount = qualified.length; }
     }
     const status: TopicStatus = supportedStage ? "proven" : match.direct_log_ids.length ? "inconclusive" : "untried";
     return {
       candidate, match, status, score,
       evidence: supportedStage
-        ? `At least two direct posts at ${supportedStage}, each with at least 500 views and response at or above that stage's median. ${match.reason}`
+        ? `${supportCount} direct posts at ${supportedStage}, each with at least 500 views and positive response at or above the ${(baselines.get(supportedStage)! * 100).toFixed(2)}% stage median across ${stages.get(supportedStage)!.size} eligible own posts. This baseline uses the full eligible history, not just this task's comparison sample. ${match.reason}`
         : `${status === "untried" ? "No direct publication history." : "Direct history exists, but repeated stage-matched evidence is insufficient."} ${match.reason}`,
     };
   });

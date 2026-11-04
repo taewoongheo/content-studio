@@ -13,6 +13,7 @@ const matches: TopicMatch[] = candidates.map(row => ({ candidate_id: row.id, dir
 const performance = [{ log_id: 'a', stage: 'middle', view_count: 1000, like_count: 60, comment_count: 0, save_count: 40 }, { log_id: 'b', stage: 'middle', view_count: 1000, like_count: 50, comment_count: 0, save_count: 40 }, { log_id: 'c', stage: 'middle', view_count: 1000, like_count: 10, comment_count: 0, save_count: 10 }];
 test('repeat evidence is stage matched; missing, tiny and single viral results cannot establish support', () => {
   assert.deepEqual(evaluateTopics(candidates, matches, performance).map(row => row.status), ['proven', 'untried', 'untried', 'inconclusive']);
+  assert.match(evaluateTopics(candidates, matches, performance)[0].evidence, /9.00% stage median across 3 eligible own posts/);
   for (const replacement of [{ ...performance[1], stage: 'early' }, { ...performance[1], view_count: 10 }, { ...performance[1], save_count: null }])
     assert.equal(evaluateTopics(candidates, matches, [performance[0], replacement, performance[2]])[0].status, 'inconclusive');
   const zero = performance.map(row => ({...row,like_count:0,comment_count:0,save_count:0}));
