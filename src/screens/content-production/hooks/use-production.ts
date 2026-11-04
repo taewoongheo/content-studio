@@ -6,7 +6,7 @@ import {
   type ProductionSnapshot,
   productionAction,
 } from "@/domains/content-production/client";
-import type { ChangeEvent } from "@/domains/content-production/domain/contracts";
+import { productionSteps, type ChangeEvent } from "@/domains/content-production/domain/contracts";
 export function useProduction() {
   const [data, setData] = useState<ProductionSnapshot | null>(null),
     [error, setError] = useState<string | null>(null),
@@ -18,6 +18,8 @@ export function useProduction() {
     timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined),
     inflight = useRef(false),
     queued = useRef(false);
+  const reconcile = useRef(false);
+  const previousSnapshot = useRef<ProductionSnapshot | null>(null);
   const reload = useCallback(async () => {
     if (inflight.current) {
       queued.current = true;
@@ -28,7 +30,25 @@ export function useProduction() {
       do {
         queued.current = false;
         const snapshot = await fetchProduction<ProductionSnapshot>();
-        if (mounted.current) setData(snapshot);
+        if (mounted.current) {
+          if (reconcile.current) {
+            reconcile.current = false;
+            const ids = new Set(snapshot.tasks.map(task => task.id));
+            if (previousSnapshot.current?.tasks.some(task => !ids.has(task.id))) {
+              setResetVersion(value => value + 1);
+              setError(null);
+            }
+            setActivity({});
+            setWrites(previous => Object.fromEntries(snapshot.tasks.flatMap(task =>
+              productionSteps.map(step => {
+                const key = `${task.id}:${step.id}`;
+                return [key, task.state === "pending" && task.current_step === "analysis"
+                  ? (previous[key] ?? 0) : (previous[key] ?? 0) + 1];
+              }))));
+          }
+          previousSnapshot.current = snapshot;
+          setData(snapshot);
+        }
       } while (queued.current && mounted.current);
     } catch (e) {
       if (mounted.current)
@@ -42,7 +62,7 @@ export function useProduction() {
     queueMicrotask(() => void reload());
     const disconnect = subscribeBackgroundEvents(() => {
     const events = new EventSource("/api/content-production");
-    events.onopen = () => void reload();
+    events.onopen = () => { reconcile.current = true; void reload(); };
     events.onmessage = (message) => {
       const event = JSON.parse(message.data) as ChangeEvent;
       if (event.kind === "reset") {

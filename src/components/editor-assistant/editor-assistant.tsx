@@ -49,7 +49,7 @@ export function EditorAssistant({ target, selection, scopeLabel, beforeStart, on
     {position && createPortal(<div ref={panel} role="dialog" aria-label="에디터 AI 명령" aria-busy={running} onContextMenu={event => { event.preventDefault(); setPosition(null); }}
       style={{ left: position.x, top: position.y, maxHeight: `calc(100dvh - ${position.y + 8}px)` }} className="fixed z-[100] flex max-h-[calc(100dvh-16px)] w-[368px] max-w-[calc(100vw-16px)] flex-col gap-3 overflow-y-auto rounded-xl border bg-background p-4 text-foreground shadow-xl">
       <div className="flex items-center justify-between"><span className="text-sm font-medium">AI 편집 · {scopeLabel}</span><button aria-label="AI 명령 닫기" onClick={() => setPosition(null)}><X className="size-4" /></button></div>
-      {status?.text && <div className="whitespace-pre-wrap text-sm leading-6">{status.text}</div>}
+      {!sending && status?.text && <div className="whitespace-pre-wrap text-sm leading-6">{status.text}</div>}
       {!running && status?.suggestion && <button className="self-start rounded-md border px-3 py-1.5 text-sm" disabled={running} onClick={() => void send(status.suggestion)}>제안 적용</button>}
       <textarea ref={field} aria-label="AI 편집 명령" placeholder="이미지 크기를 시각적으로 맞춰 줘" disabled={running} value={running && !sending ? status?.command ?? message : message} onChange={event => setMessage(event.target.value)}
         onKeyDown={event => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(message); } }}

@@ -25,3 +25,11 @@ test("incremental answers expose only the text field and safely handle JSON esca
   assert.equal(answerText('{"kind":"answer","text":"\\u12'),undefined);
   assert.equal(answerText('{"kind":"answer","text":"\\u1234'),"\u1234");
 });
+
+test("deleting the final slide requires reviewing the new final slide", () => {
+  const before = createBlankDocument({ structure: "sequential", aspectRatio: "4:5", slideCount: 3 });
+  const after = structuredClone(before);
+  after.slides.pop();
+  assert.deepEqual(affectedSlides(before, after), ["slide-2"]);
+  assert.deepEqual(affectedSlides(before, structuredClone(before)), []);
+});

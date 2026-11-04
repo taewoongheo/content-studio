@@ -40,8 +40,10 @@ export async function POST(request: Request, context: { params: Promise<{ tabId:
       after(name, _input, result) {
         if (result.isError) return;
         if (name === write) {
-          run.changed = true; run.slides.clear(); run.reviewedRevision = undefined;
           const snapshot = assistantSnapshot(run.target);
+          if (beforeDocument && "editor" in snapshot &&
+            JSON.stringify(beforeDocument) === JSON.stringify(snapshot.editor.document)) return;
+          run.changed = true; run.slides.clear(); run.reviewedRevision = undefined;
           if (beforeDocument && "editor" in snapshot)
             for (const id of affectedSlides(beforeDocument, snapshot.editor.document)) run.affectedSlides.add(id);
         }

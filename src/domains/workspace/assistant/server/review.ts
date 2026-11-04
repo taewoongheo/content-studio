@@ -9,5 +9,8 @@ export function affectedSlides(before: EditorDocument, after: EditorDocument): s
     return JSON.stringify({ index, aspectRatio: document.aspectRatio, slide,
       elements: slide.placements.map(placement => document.elements.find(element => element.id === placement.elementId)) });
   };
-  return after.slides.filter(slide => signature(before, slide.id) !== signature(after, slide.id)).map(slide => slide.id);
+  // A deleted final page has no surviving ID to mark; review the new last page.
+  const removed = before.slides.some(slide => !after.slides.some(next => next.id === slide.id));
+  const lastId = removed ? after.slides.at(-1)?.id : undefined;
+  return after.slides.filter(slide => slide.id === lastId || signature(before, slide.id) !== signature(after, slide.id)).map(slide => slide.id);
 }
