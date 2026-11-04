@@ -6,7 +6,8 @@ export function topicHistory(db: Database.Database): Row[] {
   FROM content_creation_logs l JOIN content_projects p ON p.id=l.project_id
   WHERE l.post_url IS NOT NULL AND l.actual_published_at IS NOT NULL ORDER BY l.id`).all() as Row[];
   const performance = db.prepare(`SELECT p.* FROM content_performance p JOIN content_creation_logs l ON l.id=p.log_id
-  WHERE l.post_url IS NOT NULL ORDER BY p.log_id,p.stage`).all() as Row[];
+  JOIN content_projects project ON project.id=l.project_id
+  WHERE l.post_url IS NOT NULL AND l.actual_published_at IS NOT NULL ORDER BY p.log_id,p.stage`).all() as Row[];
   const grouped = new Map<string, Row[]>();
   for (const row of performance) {
     const list = grouped.get(String(row.log_id)) ?? [];
