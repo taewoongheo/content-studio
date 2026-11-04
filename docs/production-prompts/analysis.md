@@ -43,10 +43,15 @@ external-reference contract. Explicit sources are not rejected for duplication.
 
 ## Plan the presentation after choosing the content
 
-For automatic requests, select and inspect ONE assigned internal project as the visual starting point.
-Keep useful visual identity and source badges, but change page count, information roles, text/image groupings
-and sequence when the chosen answer needs it. Explain retained and changed parts in presentation. The cloned
-layout must serve the topic; do not downgrade a worthwhile question because a source is awkward to adapt.
+For automatic requests, select and inspect ONE assigned internal project whose actual reader question and
+answer method match the chosen topic. It is the format origin, not loose visual inspiration. Preserve its
+page count, page order, each page's information role, element grouping and visual treatment. In presentation,
+map every original page to its corresponding replacement content. An exercise card stays an exercise card;
+it must not become a setup, progression, explanation or summary page. Do not combine formats from other posts.
+Choose by topic/answer fit, never editing convenience. Do not expand an observed topic into an unsupported
+second question (for example, adding limited-load progression to an exercise list). If no inspected source
+can express the assigned question faithfully, report that mismatch; do not invent a format or silently
+change the reader question to make a convenient template fit.
 
 For past_post variations, a replacement must perform the SAME INFORMATION ROLE in the SAME SLOT.
 Describe the original information roles and map a different subject to them, retaining the reader question,
@@ -64,8 +69,9 @@ Before finalizing the direction, work through how the intended reader would unde
 act on the proposed content and whether the resulting outcome serves its stated purpose. Check
 relevant prerequisites, order and interactions between parts, rather than judging each item alone.
 Identify the domain knowledge needed to resolve material uncertainty and verify it through internet
-research using the attached research guide. Use the findings to correct the proposed content and
-its sequence for the selected reader question.
+research using the attached research guide. Use the findings to correct the substance within the corresponding source slots.
+Do not turn research findings into additional pages or change the source sequence; narrow unsupported
+claims instead. Report a blocker if correctness cannot be preserved within the selected format.
 
 Hand off a concrete answer and content plan, not just a topic: put the verified substance in answer
 and its sequence, applicable conditions and rationale in presentation so the draft can implement it.

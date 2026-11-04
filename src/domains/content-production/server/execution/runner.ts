@@ -1,4 +1,5 @@
 import { isExternalProduction } from "../../domain/start/input";
+import { assertTaskSourceFormat } from "../projects/format/snapshot";
 import { withReferenceImages } from "../start/media/attachments";
 import { executeWithOutputRepair } from "./review/output/output-repair";
 import { reviewedSummary } from "./review/summary";
@@ -338,6 +339,7 @@ async function checkStageCompletion(id: string, run: Run, result: Record<string,
   if (firstDraft)
     assertCurrentSlidePlan(contentJobRegistry.getRecord(output.project_id), firstDraft.slide_plan);
   const project = contentJobRegistry.getRecord(output.project_id);
+  assertTaskSourceFormat(detail, project.editor.document);
   if (run.step === "visual") {
     assertCompleteProjectReview(project, visualResultSchema.parse(rawOutput),
       run.reviews.get(output.project_id), run.toolCalls);

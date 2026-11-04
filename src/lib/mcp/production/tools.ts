@@ -235,7 +235,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     "production_clone_project",
     {
       description:
-        "Clone the internal project confirmed by analysis sources.clone_project_id. Preserve document, copy and assets; replace only what the approved direction needs. Reuse the linked project on resume.",
+        "Clone the internal project confirmed by analysis sources.clone_project_id. Freeze the original document in analysis.source_format. Preserve page count/order and slot structure; replace corresponding copy/images only. Reuse the linked project on resume and read production_context for the frozen source.",
       inputSchema: z.object({
         sourceProjectId: z.string().min(1),
         reason: z.string().trim().min(1),

@@ -9,6 +9,9 @@ wrong content. Check the repaired content and its effect on the page.
 For ambiguous thumbnails, inspect the saved placement and a full-resolution preview; use a region
 preview for small details. For internal clones, source-based badge restoration provides an authoritative presence check.
 For internal clones, use production_repair_badge when needed and repair visible obstruction in the actual page.
+Compare the draft against analysis.source_format, page by page: original information roles, grouping, hierarchy
+and sequence must remain. An exercise card replaced by an explanation is a format defect even when both are
+labelled body. Correct deviations within the original slots and record the comparison in review.
 
 For external modes, compare the attached source body slides using the supplied external-reference contract.
 

@@ -13,7 +13,12 @@ Use each input for its purpose:
 
 Each node focuses on its assigned outcome. When a concrete problem prevents that outcome, directly
 repair the relevant text, image, layout or earlier decision in the linked project. Use the confirmed
-subject and user request as the basis for repairs. Keep working parts and check the consequences of
+subject and user request as the basis for repairs. For internal clones, analysis.source_format is the frozen
+original. All stages preserve its page count/order, slot structure, page-specific information roles and layout
+relationships. Hook and polish refine existing wording; they do not insert sections or turn an exercise slot
+into an explanation. Limit geometry/style repairs to concrete readability or content-fit defects while keeping
+the source hierarchy and composition. Compare changes with the original copy and roles, not only the prior draft.
+Keep working parts and check the consequences of
 changes: corrected text for meaning and voice, generated images for meaning and identity, and changed
 pages for fit. Read authoritative saved state when previews or prior reports are ambiguous.
 

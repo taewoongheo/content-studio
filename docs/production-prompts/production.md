@@ -3,13 +3,18 @@
 Read the approved answer, presentation, content sequence, conditions and rationale, and the linked document.
 Resume the linked document. For internal modes, clone the confirmed analysis.sources.clone_project_id
 with production_clone_project after inspecting that source. Replace the cloned text and images with
-the selected content. In automatic mode, adapt page count, structure and information roles to the approved
-answer, retaining useful visual identity and badges. In past_post mode, match each original slot's information
-role and retain its visual treatment.
+the selected content. In both automatic and past_post modes, preserve the source page count, order,
+information roles, element grouping and visual treatment. Replace corresponding copy and images only.
+Read analysis.source_format from production_context after cloning: it is the frozen original document,
+including original copy, for comparison. An older presentation that requests extra explanation pages does
+not override this contract. Reconcile it with the source before implementing; do not recreate the project.
 For external modes, create a blank project with production_create_project and implement the supplied
 external-reference contract using the attached source slides. Write in the persona's voice.
 
-Save slide_plan before generation with the current slide IDs, roles, replacement copy and image roles.
+Save slide_plan before generation with the original slide IDs/order, roles, replacement copy and image roles.
+For each purpose, identify the corresponding source page's specific job and how the replacement preserves it
+(e.g. an exercise prescription, not merely "body"). Do not add/remove pages or slots or repurpose an exercise
+page as commentary. Do not hide an extra explanation inside existing text slots.
 Retain images that explain the new content; generate replacements
 for subject-specific images using the approved scene/action plan and official character references.
 Import generated images into the corresponding placements. Supplementary references help resolve
@@ -18,5 +23,7 @@ concrete uncertainty about actions or equipment.
 Implement the confirmed substance and sequence. For automatic requests, check production_comparisons and apply the
 research guide's overlap rule; explicit requests use their selected material.
 Review the actual saved content for accuracy, logic, relevance, text/image agreement and whether the
-body delivers the hook. Repair discovered problems and verify the result. Save metadata, slide_plan,
+body delivers the hook. In content_review.assessment, compare the saved draft page by page with the frozen
+source, including each page's specific information role. Check against the original, not just your own plan.
+Repair deviations and verify the result. Save metadata, slide_plan,
 content_review and the complete current summary. Use issues=[] when no issues remain to report.

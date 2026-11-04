@@ -9,6 +9,8 @@ import type { EditorDocument } from "@/domains/slideshow/editor/types";
 import { ProductionStore } from "../../persistence/store";
 import { createTaskProject } from "../creation";
 import { cloneTaskProject } from "../layout";
+import { stageContext } from "../../execution/policy/context";
+import { assertTaskSourceFormat } from "../format/snapshot";
 import { seedLayoutSource } from "./fixtures";
 
 const direction={analysis: "A routine comparison.", reasoning: { observations: [], interpretations: [], candidates: [] },topic:"New content",message:"A new session",content_type:"Routine cards",answer:"Five moves",presentation:"Cards",reason:"Useful",expected_response:"Save",goal_connection:"Follow",difference_from_recent:"Different content",sources:[]};
@@ -53,6 +55,17 @@ test("cloning uses only the explicitly selected saved layout, preserves copy/ass
     assert.deepEqual(projects.get(source.project_id),before);
     assert.equal((store.get(id).production?.sources as Array<{id:string}>)[0].id,source.project_id);
     assert.equal(cloneTaskProject(store,id,outside.project_id,"Resume existing").projectId,cloned.projectId);
+    const frozen = structuredClone(store.get(id).analysis.source_format);
+    const changedSource = projects.get(source.project_id)!;
+    (changedSource.document as EditorDocument).slides.pop();
+    projects.save(changedSource);
+    store.save(id, "production", { content_review: { assessment: "Reviewed", issues: [] } });
+    const resumed = new ProductionStore(db);
+    assert.deepEqual(resumed.get(id).analysis.source_format, frozen);
+    assert.deepEqual(stageContext(resumed.get(id)).analysis.source_format, frozen);
+    assert.doesNotThrow(() => assertTaskSourceFormat(resumed.get(id), copy));
+    assert.equal(cloneTaskProject(resumed,id,source.project_id,"Resume").projectId,cloned.projectId);
+    assert.deepEqual(resumed.get(id).analysis.source_format, frozen);
   }finally{if(cloneId)contentJobRegistry.remove(cloneId);contentJobRegistry.remove(source.project_id);db.close();}
 });
 

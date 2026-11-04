@@ -10,12 +10,14 @@ quotas proportional to account size or copying a creator's claims. Rewording one
 
 Each candidate specifies a concrete topic, the reader's question, the answer method (content_type), a useful
 central message and the supporting reference IDs. Derive candidates from topics explicitly present in captions
-or saved descriptions/inspected cover text, or a clearly explained extension of their pattern. A generic save/follow caption cannot
+or saved descriptions/inspected cover text. Each candidate must have an actual source supporting its reader
+question AND answer method. Vary subjects within observed formats; do not append an unobserved second question,
+new explanatory section or progression guide to an exercise list. A generic save/follow caption cannot
 establish its image content. Use meaningful saved descriptions and the supplied pattern observations instead.
 Do not invent source observations, effects, personal experiences or performance forecasts. Unsupported health
 promises may inspire a question, but do not repeat them as the answer. Focus on the active product's audience.
 
-Include established, common questions as well as meaningful extensions: past publication is not an eligibility
+Include observed questions we have covered and ones we have never tried: our past publication is not an eligibility
 condition. Do not inspect internal layout complexity or optimize for fewer slides, easier edits or image generation.
 There is no fixed topic taxonomy, mandatory equal category distribution, or required candidate count. Build enough
 substantively distinct directions to represent the useful observed patterns and support repeated production.

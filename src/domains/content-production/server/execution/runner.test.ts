@@ -1,4 +1,5 @@
-import { saveTaskProject } from "../projects/creation";
+import { cloneTaskProject } from "../projects/layout";
+import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 import { createBlankDocument } from "@/domains/slideshow/editor/document";
 import { seedLayoutSource } from "../projects/testing/fixtures";
 import { SlideshowProjectWrites } from "@/domains/slideshow/server/project-writes";
@@ -41,6 +42,12 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
   const store = productionStore();
   try {
     const source = seedLayoutSource(store.db);
+    const projects = new ContentProjectStore(store.db);
+    const saved = projects.get(source.project_id)!;
+    const sourceDocument = createBlankDocument({ slideCount: 1, aspectRatio: "4:5", structure: "sequential" });
+    sourceDocument.elements.push(makeElementDefinition({ id: "title", kind: "text" }));
+    sourceDocument.slides[0].placements.push({ id: "title-placement", elementId: "title", value: "", frameOverride: null, styleOverride: null });
+    projects.save({ ...saved, document: sourceDocument });
     const [id] = store.create(1,[source]);
     const previousToken = process.env.APIFY_API_TOKEN;
     try {
@@ -69,13 +76,18 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       }
       assert.equal(store.get(id).analysis.state, "completed");
       const step = store.get(id).task.current_step;
-      const { projectId } = step === "production" ? saveTaskProject(store, id, createBlankDocument({slideCount:1,aspectRatio:"4:5",structure:"sequential"})) : { projectId: store.get(id).task.project_id! };
+      const { projectId } = step === "production" ? cloneTaskProject(store, id, source.project_id, "Preserve the source") : { projectId: store.get(id).task.project_id! };
       const job = contentJobRegistry.get(projectId);
       if (step === "hook" || step === "visual" || step === "polish") {
         if (step === "visual") recordReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => s.id));
-        return { project_id: projectId, summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "test" }, sources: [],
+        const result = { project_id: projectId, summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "test" }, sources: [],
           review: "The current content meets the review criteria.", review_passed: true,
           ...(step === "visual" ? {reviewed_slide_ids: job.editor.document.slides.map(s => s.id), reviewed_revision: job.editor.revision} : {}) };
+        const document = contentJobRegistry.getRecord(projectId).editor.document;
+        document.slides.push({ ...structuredClone(document.slides[0]), id: "extra-explanation" });
+        await assert.rejects(validateProductionCompletion(id, result), { code: "SOURCE_FORMAT_MISMATCH" });
+        document.slides.pop();
+        return result;
       }
       const candidate = {
         project_id: projectId,
@@ -89,16 +101,6 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       new SlideshowProjectWrites(contentJobRegistry, store.db).edit(
         projectId,
         [
-          {
-            type: "add_element",
-            element: makeElementDefinition({ id: "title", kind: "text" }),
-          },
-          {
-            type: "place_element",
-            slideId: "slide-1",
-            elementId: "title",
-            placementId: "title-placement",
-          },
           {
             type: "set_slot_value",
             slideId: "slide-1",

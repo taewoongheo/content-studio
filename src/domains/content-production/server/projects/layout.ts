@@ -5,7 +5,9 @@ import { ensureSharedBackground, validateEditorDocument } from "@/domains/slides
 import type { EditorDocument } from "@/domains/slideshow/editor/types";
 import { OperationError } from "@/lib/errors/operation";
 import type { ProductionStore } from "../persistence/store";
+import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import { saveTaskProject } from "./creation";
+import { saveStageDocument } from "../persistence/planning/documents";
 
 /** Normalize the saved source while preserving its copy, geometry and asset references. */
 function layoutDocument(savedDocument: EditorDocument): EditorDocument {
@@ -24,7 +26,8 @@ export function cloneTaskProject(store: ProductionStore, taskId: string, sourceP
   const detail = store.assertActive(taskId, store.get(taskId).task.current_step);
   if (detail.input && isExternalProduction(detail.input.request.mode))
     throw new OperationError("PROJECT_CREATION_MODE", "외부 레퍼런스 제작은 production_create_project로 시작해 주세요.");
-  if (detail.task.project_id) return { projectId: detail.task.project_id, reused: true };
+  if (detail.task.project_id && detail.analysis.source_format)
+    return { projectId: detail.task.project_id, reused: true };
   const input = detail.input;
   const selected = (detail.analysis.sources as Array<{clone_project_id?:string}> | undefined)?.find(source => source.clone_project_id)?.clone_project_id
     ?? (input?.request.mode === "past_post" ? input.request.sourceProjectId : undefined);
@@ -35,5 +38,14 @@ export function cloneTaskProject(store: ProductionStore, taskId: string, sourceP
   if (!saved) throw new OperationError("LAYOUT_SOURCE_MISSING", "원본 게시글을 찾을 수 없습니다.");
   const source = { kind: "log", id: sourceProjectId,
     part: "Selected source format, page structure, typography and spacing", used_for: reason.trim() };
-  return { ...saveTaskProject(store, taskId, layoutDocument(saved.document as EditorDocument), source, saved.assets), sourceProjectId };
+  const document = layoutDocument(saved.document as EditorDocument);
+  // Freeze the original before any draft edits. Existing drafts acquire the original,
+  // never their already modified document; later saves cannot replace this server field.
+  return contentJobRegistry.transaction(() => store.db.transaction(() => {
+    const result = saveTaskProject(store, taskId, document, source, saved.assets);
+    saveStageDocument(store.db, detail.task.log_id, "analysis", {
+      source_format: { project_id: sourceProjectId, document },
+    });
+    return { ...result, sourceProjectId };
+  })());
 }
