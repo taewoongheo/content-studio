@@ -8,15 +8,18 @@ const shared = globalThis as typeof globalThis & { spyRefreshes?: Map<string,{pr
 const refreshes = (shared.spyRefreshes ??= new Map<string,{promise?:Promise<SpyStatus>;status:SpyStatus;scope:string[]}>());
 export function spyStatus(db: Database.Database): SpyStatus { return refreshes.get(db.name)?.status ?? {running:false,accounts:{}}; }
 
-export function refreshSpy(db: Database.Database, client: Pick<ApifySpyClient,"posts"> = new ApifySpyClient(), onlyAccounts?: string[]): Promise<SpyStatus> {
-  const accounts = (db.prepare("SELECT username,last_fetched_at FROM content_reference_accounts ORDER BY username").all() as {username:string;last_fetched_at:string|null}[])
+export const SPY_REFRESH_INTERVAL_MS = 12 * 60 * 60 * 1000;
+export function refreshSpy(db: Database.Database, client: Pick<ApifySpyClient,"posts"> = new ApifySpyClient(), onlyAccounts?: string[], options: {force?:boolean;now?:number} = {}): Promise<SpyStatus> {
+  const now = options.now ?? Date.now();
+  const accounts = (db.prepare("SELECT username,last_fetched_at FROM content_reference_accounts WHERE enabled=1 ORDER BY username").all() as {username:string;last_fetched_at:string|null}[])
+    .filter(account => options.force || !account.last_fetched_at || !Number.isFinite(Date.parse(account.last_fetched_at)) || now - Date.parse(account.last_fetched_at) >= SPY_REFRESH_INTERVAL_MS)
     .filter(account => !onlyAccounts || onlyAccounts.includes(account.username));
   const existing = refreshes.get(db.name);
   if (existing?.promise) {
     const missing = accounts.map(account=>account.username).filter(name=>!existing.scope.includes(name));
     if (!missing.length) return existing.promise;
     return existing.promise.then(async first => {
-      const next = await refreshSpy(db,client,missing);
+      const next = await refreshSpy(db,client,missing,options);
       return {running:false,accounts:{...first.accounts,...next.accounts}};
     });
   }
@@ -45,14 +48,14 @@ export function refreshSpy(db: Database.Database, client: Pick<ApifySpyClient,"p
         const result = await client.posts(names,limit);
         const remaining: string[]=[];
         for (const account of names) {
-          if (!db.prepare("SELECT 1 FROM content_reference_accounts WHERE username=?").get(account)) continue;
+          if (!db.prepare("SELECT 1 FROM content_reference_accounts WHERE username=? AND enabled=1").get(account)) continue;
           const posts=result.get(account);
           // An empty/missing profile cannot establish a successful crawl or advance its checkpoint.
           if (!posts?.length) { entry.status.accounts[account]={state:"failed",count:0,error:"게시글이 반환되지 않았습니다. 기존 자료를 유지합니다."};continue; }
           const reached = posts.some(post=>known.get(account)!.has(post.id));
           if (!initial && !reached && posts.length>=limit) { remaining.push(account);continue; }
           const count = posts.filter(post=>!known.get(account)!.has(post.id)).length;
-          saveSpyPosts(db,account,posts);
+          saveSpyPosts(db,account,posts,new Date(now).toISOString());
           entry.status.accounts[account]={state:"completed",count};
         }
         publishChange({kind:"library"});

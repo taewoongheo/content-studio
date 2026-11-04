@@ -40,6 +40,11 @@ test("start appends tasks while existing drafts remain and serializes shared pre
     assert.equal(store.list().length,6);
     assert.deepEqual(ids.map(id => store.get(id)),existing,'starting another batch leaves existing work unchanged');
     assert.equal(syncState().running,false);
+    const specified = await startProduction([
+      {mode:'past_post',sourceProjectId:'p',instructions:''},
+      {mode:'external_url',url:'https://www.tiktok.com/@example/photo/123',instructions:''},
+    ], 'http://127.0.0.1:3000', {...services, refreshSpy:async()=>{throw new Error('Specified sources must not crawl spy accounts');}});
+    assert.equal(specified.length,2);
     resetProduction();
   } finally {
     store.db.close(); rmSync(directory, { recursive: true, force: true });

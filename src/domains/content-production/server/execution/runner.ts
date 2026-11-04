@@ -143,7 +143,7 @@ export async function startProduction(
   shared.productionRefresh = report;
   publishChange({ kind: "sync", detail: "running" });
   try {
-    await (services.refreshSpy ?? refreshSpy)(store.db);
+    if (requests.some(request => request.mode === "automatic")) await (services.refreshSpy ?? refreshSpy)(store.db);
     const inputs = readPlanningLogs(store.db,"",sampling.internalCandidates);
     const topics = await (services.prepareTopics ?? prepareTopics)(store.db, requests.filter(request=>request.mode==='automatic').length, origin);
     const ids = store.create(requests, inputs, sampling, topics);

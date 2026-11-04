@@ -180,7 +180,7 @@ export async function POST(request: Request) {
       case "remove_reference_account":
         removeReferenceAccount(store.db, input.username); break;
       case "refresh_spy":
-        return Response.json(await refreshSpy(store.db));
+        return Response.json(await refreshSpy(store.db,undefined,undefined,{force:true}));
       case "sampling_settings":
         return Response.json(saveSampling(store.db,input.settings));
       case "exclude_reference":
