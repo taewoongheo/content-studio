@@ -17,7 +17,7 @@ import {
 import {
   productionEvents,
 } from "@/domains/content-production/server/events";
-import { accountIdentity, addReferenceAccount, referenceAccounts, externalReferences, removeReferenceAccount, setReferenceExcluded } from "@/domains/content-production/server/references/library";
+import { accountIdentity, addReferenceAccount, referenceAccounts, externalReferences, removeReferenceAccount } from "@/domains/content-production/server/references/library";
 import { refreshSpy, spyStatus } from "@/domains/content-production/server/references/spy/refresh";
 import { readSampling, saveSampling } from "@/domains/content-production/server/settings/sampling";
 import { samplingSchema } from "@/domains/content-production/domain/references/sampling";
@@ -54,7 +54,6 @@ const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("remove_reference_account"), username: z.string() }),
   z.object({ action: z.literal("refresh_spy") }),
   z.object({ action: z.literal("sampling_settings"), settings: samplingSchema }),
-  z.object({ action: z.literal("exclude_reference"), id: z.string(), excluded: z.boolean() }),
 ]);
 export async function GET(request: Request) {
   if (!isLocalRequest(request)) return new Response(null, { status: 403 });
@@ -91,7 +90,7 @@ export async function GET(request: Request) {
             publishedPosts: listPublishedPosts(store.db),
             logs: store.logs(params.get("query") ?? ""),
             planningLogs: tasks.length ? store.analysisInputs(tasks[0].id) : store.planningLogs(),
-            externalReferences: externalReferences(store.db, "", "", true),
+            externalReferences: externalReferences(store.db),
             referenceAccounts: referenceAccounts(store.db),
             visuals: listVisuals(store.db),
             sync: syncState(),
@@ -183,8 +182,6 @@ export async function POST(request: Request) {
         return Response.json(await refreshSpy(store.db,undefined,undefined,{force:true}));
       case "sampling_settings":
         return Response.json(saveSampling(store.db,input.settings));
-      case "exclude_reference":
-        setReferenceExcluded(store.db,input.id,input.excluded); break;
     }
     return Response.json({ ok: true });
   } catch (error) {

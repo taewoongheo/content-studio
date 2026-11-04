@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { openLocalDatabase } from "@/lib/local-db/database";
 import { ProductionStore } from "../persistence/store";
-import { addReferenceAccount, setReferenceExcluded } from "../references/library";
+import { addReferenceAccount } from "../references/library";
 import { prepareStartInput } from "./prepare";
 import { stagePolicy } from "../execution/policy/stages";
 import { startInputPrompt } from "../../domain/start/prompt";
@@ -37,9 +37,6 @@ test("spy source selection validates account and post, persists its identity and
     assert.equal(stagePolicy("visual", "spy_reference").tools.has("production_read_images"), true);
     assert.equal(stagePolicy("visual", "spy_reference").tools.has("production_external_references"), true);
     assert.equal(stagePolicy("visual", "automatic").tools.has("production_read_images"), true);
-    setReferenceExcluded(db, "spy", true);
-    assert.throws(() => store.create([request], []), /사용할 수 없습니다/);
-    setReferenceExcluded(db, "spy", false);
     db.prepare("UPDATE content_reference_accounts SET enabled=0").run();
     assert.throws(() => store.create([request], []), /사용할 수 없습니다/);
     assert.equal(store.list().length, 2);

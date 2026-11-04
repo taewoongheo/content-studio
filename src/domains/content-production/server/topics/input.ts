@@ -19,7 +19,7 @@ export function topicHistory(db: Database.Database): Row[] {
 export function topicReferences(db: Database.Database): Row[] {
   return db.prepare(`SELECT r.id,r.account,r.caption,r.title,r.topic,r.message,r.content_type
   FROM content_external_references r JOIN content_reference_accounts a ON a.username=r.account
-  WHERE a.enabled=1 AND r.excluded=0 ORDER BY r.account,r.id`).all() as Row[];
+  WHERE a.enabled=1 ORDER BY r.account,r.id`).all() as Row[];
 }
 export function semanticHistory(rows: Row[]) {
   return rows.map(({ id, name, topic, message, content_type }) => ({ id, name, topic, message, content_type }));

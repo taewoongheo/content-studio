@@ -1,9 +1,8 @@
 import type { Row } from "@/domains/content-production/domain/contracts";
-export function ReferenceCard({ post, onExclude }: { post: Row; onExclude?: (excluded: boolean) => void }) {
+export function ReferenceCard({ post }: { post: Row }) {
   return <article className="rounded-xl border p-4">
     <div className="flex items-start justify-between gap-3">
       <a className="min-w-0 break-words text-sm font-semibold underline" href={String(post.url)} target="_blank" rel="noreferrer">{String(post.title || `@${post.account}`)} ↗</a>
-      {onExclude && <button className="production-button shrink-0" onClick={() => onExclude(!post.excluded)}>{post.excluded ? "복원" : "제외"}</button>}
     </div>
     {!!post.topic && <p className="mt-2 text-sm">{String(post.topic)}</p>}
     {!!post.content_type && <p className="mt-1 text-xs text-muted-foreground">{String(post.content_type)}</p>}

@@ -26,7 +26,7 @@ export function ReferencePicker({ posts, value, onChange }: {
     </div>
     <span id="source-list-label" className="sr-only">레퍼런스 원본 게시글</span>
     <SourceList showPerformance={false} key={`${term}:${account}`} posts={list} value={value} onChange={onChange} />
-    {!filtered.length && <p className="text-xs text-muted-foreground">선택할 슬라이드쇼가 없습니다. 스파이 계정의 수집 게시글과 제외 상태를 확인해 주세요.</p>}
+    {!filtered.length && <p className="text-xs text-muted-foreground">선택할 슬라이드쇼가 없습니다. 스파이 계정에 수집된 게시글을 확인해 주세요.</p>}
     {selected && <div className="min-w-0 shrink-0 rounded-lg border p-2 text-xs">
       <p className="truncate font-medium">선택한 게시글: {String(selected.title || selected.caption || "캡션 없음")}</p>
       <a href={String(selected.url)} target="_blank" rel="noreferrer" className="underline">@{String(selected.account)} 원본 보기 ↗</a>

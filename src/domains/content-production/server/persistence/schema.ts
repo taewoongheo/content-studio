@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS content_external_references (
  title TEXT NOT NULL DEFAULT '', topic TEXT NOT NULL DEFAULT '', content_type TEXT NOT NULL DEFAULT '', message TEXT NOT NULL DEFAULT '',
  published_at TEXT, observed_at TEXT NOT NULL,
  images_json TEXT NOT NULL CHECK(json_valid(images_json)), visual_set_id TEXT REFERENCES content_visual_sets(id), image_error TEXT,
- excluded INTEGER NOT NULL DEFAULT 0 CHECK(excluded IN (0,1)), created_at TEXT NOT NULL, last_selected_at TEXT
+ created_at TEXT NOT NULL, last_selected_at TEXT
 );
 CREATE INDEX IF NOT EXISTS external_references_account_idx ON content_external_references(account);
 CREATE TABLE IF NOT EXISTS content_topic_cache (

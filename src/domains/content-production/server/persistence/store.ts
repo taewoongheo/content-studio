@@ -163,7 +163,7 @@ export class ProductionStore {
     if (request.mode === "spy_reference") {
       const source = this.row(`SELECT r.id,r.url,r.caption,r.title FROM content_external_references r
         JOIN content_reference_accounts a ON a.username=r.account
-        WHERE r.id=? AND r.excluded=0 AND a.enabled=1`, request.referenceId);
+        WHERE r.id=? AND a.enabled=1`, request.referenceId);
       if (!source) throw new Error("선택한 스파이 게시글을 사용할 수 없습니다. 계정 또는 게시글의 제외 상태를 확인해 주세요.");
       return { id: String(source.id), url: String(source.url), caption: String(source.caption), name: String(source.title || source.caption || "선택한 레퍼런스") };
     }

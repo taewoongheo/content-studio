@@ -41,9 +41,8 @@ export async function verifyProductionStart(browser: Browser, origin: string, po
       const response = await route.fetch();
       const snapshot = await response.json();
       return route.fulfill({ json: { ...snapshot, publishedPosts: posts,
-        externalReferences: [{ id: "spy-pick", account: "example", title: "Spy routine format", caption: "Back exercises", url: "https://www.tiktok.com/@example/photo/456", slide_count: 12, visual_set_id: "spy-preview", excluded: 0 },
-          ...Array.from({ length: 25 }, (_, i) => ({ id: `spy-list-${i}`, account: "example", title: `Spy list ${i}`, caption: "Routine", url: `https://www.tiktok.com/@example/photo/${1000+i}`, slide_count: 3, excluded: 0 })),
-          { id: "spy-excluded", account: "example", title: "Excluded reference", url: "https://www.tiktok.com/@example/photo/789", slide_count: 3, excluded: 1 }],
+        externalReferences: [{ id: "spy-pick", account: "example", title: "Spy routine format", caption: "Back exercises", url: "https://www.tiktok.com/@example/photo/456", slide_count: 12, visual_set_id: "spy-preview" },
+          ...Array.from({ length: 25 }, (_, i) => ({ id: `spy-list-${i}`, account: "example", title: `Spy list ${i}`, caption: "Routine", url: `https://www.tiktok.com/@example/photo/${1000+i}`, slide_count: 3 }))],
         referenceAccounts: [{ username: "example", enabled: 1 }], configured: { apify: true } } });
     }
     const input = request.postDataJSON();
@@ -142,7 +141,6 @@ export async function verifyProductionStart(browser: Browser, origin: string, po
     await page.getByRole("radio", { name: "내 게시글", exact: true }).check();
     await page.getByRole("radio", { name: "스파이 게시글", exact: true }).check();
     assert.equal(await page.getByRole("radio", { name: "Spy routine format", exact: true }).isChecked(), true);
-    assert.equal(await page.getByRole("radio", { name: "Excluded reference", exact: true }).count(), 0);
     await page.getByLabel("추가 지침", { exact: false }).fill("가슴 운동으로");
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForFunction(() => {

@@ -46,7 +46,7 @@ export function ensureReferenceImages(db: Database.Database, id: string,
     current.work.then(value => finish(() => resolve(value)), error => finish(() => reject(error)));
   });
   async function run(workSignal: AbortSignal) {
-    const read=()=>db.prepare("SELECT url,images_json,visual_set_id FROM content_external_references WHERE id=? AND excluded=0").get(id) as {url:string;images_json:string;visual_set_id:string|null}|undefined;
+    const read=()=>db.prepare("SELECT url,images_json,visual_set_id FROM content_external_references WHERE id=?").get(id) as {url:string;images_json:string;visual_set_id:string|null}|undefined;
     const row=read();
     if (!row) throw new Error("사용 가능한 외부 레퍼런스가 아닙니다.");
     if (row.visual_set_id) return row.visual_set_id;
@@ -62,7 +62,7 @@ export function ensureReferenceImages(db: Database.Database, id: string,
       }
       workSignal.throwIfAborted();
       if (slides.length!==images.length) throw new Error("전체 슬라이드를 확보하지 못했습니다.");
-      if (!read()) throw new Error("제외되거나 제거된 레퍼런스입니다.");
+      if (!read()) throw new Error("제거된 레퍼런스입니다.");
       return db.transaction(()=>{
         const set=saveVisuals(db,{kind:"reference",url:row.url,slides});
         db.prepare("UPDATE content_external_references SET visual_set_id=?,images_json=?,image_error=NULL WHERE id=?").run(set,JSON.stringify(images),id);

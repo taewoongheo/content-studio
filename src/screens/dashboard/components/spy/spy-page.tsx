@@ -23,6 +23,6 @@ export function SpyPage() {
       </li>;})}</ul>
       {!data?.referenceAccounts.length&&<p className="mt-4 text-sm text-muted-foreground">참고할 TikTok 계정을 등록해 주세요.</p>}
     </section>
-    <SpyPosts posts={data?.externalReferences ?? []} busy={busy} onExclude={(id,excluded)=>void act({action:"exclude_reference",id,excluded})} />
+    <SpyPosts posts={data?.externalReferences ?? []} />
   </div>;
 }

@@ -47,7 +47,7 @@ test("new-post checks preserve existing snapshots and metadata, including on man
  try {
   addReferenceAccount(db,'a');
   await refreshSpy(db,{posts:async()=>new Map([['a',[post('a','1')]]])},undefined,{now:start});
-  db.prepare("UPDATE content_external_references SET title='Reviewed title',topic='Reviewed topic',excluded=1 WHERE id='1'").run();
+  db.prepare("UPDATE content_external_references SET title='Reviewed title',topic='Reviewed topic' WHERE id='1'").run();
   assert.ok(!(db.prepare("PRAGMA table_info(content_external_references)").all() as {name:string}[]).some(row=>["view_count","like_count","comment_count","save_count","share_count"].includes(row.name)));
   const original=db.prepare("SELECT * FROM content_external_references WHERE id='1'").get();
   const calls:number[]=[];
