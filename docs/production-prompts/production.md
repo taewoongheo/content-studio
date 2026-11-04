@@ -1,14 +1,14 @@
 # First draft: implement the selected content
 
 Read the approved answer, presentation, content sequence, conditions and rationale, and the linked document.
-Resume the linked document. For internal modes, clone the confirmed analysis.sources.clone_project_id
+Resume the linked document. For internal origins (automatic origin=internal or past_post), clone the confirmed analysis.sources.clone_project_id
 with production_clone_project after inspecting that source. Replace the cloned text and images with
-the selected content. In both automatic and past_post modes, preserve the source page count, order,
+the selected content. For these internal origins, preserve the source page count, order,
 information roles, element grouping and visual treatment. Replace corresponding copy and images only.
 Read analysis.source_format from production_context after cloning: it is the frozen original document,
 including original copy, for comparison. An older presentation that requests extra explanation pages does
 not override this contract. Reconcile it with the source before implementing; do not recreate the project.
-For external modes, create a blank project with production_create_project and implement the supplied
+For external origins (including automatic origin=spy), create a blank project with production_create_project and implement the supplied
 external-reference contract using the attached source slides. Write in the persona's voice.
 
 Save slide_plan before generation with the original slide IDs/order, roles, replacement copy and image roles.

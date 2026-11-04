@@ -30,6 +30,8 @@ export interface PreparedSource {
 }
 export interface ProductionInput {
   request: ProductionRequest;
+  /** Automatic requests keep their overlap policy while resolving a production origin. */
+  origin?: "internal" | "spy";
   source?: PreparedSource;
   topic_assignment?: TopicAssignment;
 }
@@ -42,6 +44,8 @@ export function preservesSourceFormat(mode: ProductionRequest["mode"]) {
 }
 
 /** External references supply composition, never an internal clone origin. */
-export function isExternalProduction(mode: ProductionRequest["mode"]) {
-  return mode === "external_url" || mode === "spy_reference";
+export function isExternalProduction(input: ProductionRequest["mode"] | ProductionInput) {
+  const mode = typeof input === "string" ? input : input.request.mode;
+  return mode === "external_url" || mode === "spy_reference"
+    || (typeof input !== "string" && mode === "automatic" && input.origin === "spy");
 }

@@ -13,7 +13,7 @@ Compare the draft against analysis.source_format, page by page: original informa
 and sequence must remain. An exercise card replaced by an explanation is a format defect even when both are
 labelled body. Correct deviations within the original slots and record the comparison in review.
 
-For external modes, compare the attached source body slides using the supplied external-reference contract.
+For external origins (including automatic origin=spy), compare the attached source body slides using the supplied external-reference contract.
 
 After all repairs, preview every slide at the latest saved revision. Save observed problems,
 repairs and genuinely unresolved blockers. Return review, review_passed, the complete current summary,

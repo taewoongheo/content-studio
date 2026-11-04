@@ -14,7 +14,7 @@ test("analysis cannot finish without all assigned reads; input IDs and repair ca
   try {
     store.db.prepare("INSERT INTO content_projects(id,name,aspect_ratio,slide_count,output_language,document_json,created_at,updated_at) VALUES('p','Unique private post label','4:5',1,'English','{}','now','now')").run();
     store.db.prepare("INSERT INTO content_creation_logs(id,project_id,post_url,actual_published_at,view_count,like_count,comment_count,save_count,created_at,updated_at) VALUES('assigned-log','p','https://example.com/post','2026-10-25',100,1,1,1,'now','now')").run();
-    const [id]=store.create(1);
+    const [id]=store.create(1, [{id:"assigned-log",project_id:"p",selection_group:"direct"}]);
     const missing:typeof runCodex=async input=>{
       assert.equal(input.capabilities?.webSearch,true);
       assert.equal(input.capabilities?.shell,true);

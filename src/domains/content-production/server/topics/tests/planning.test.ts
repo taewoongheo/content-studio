@@ -72,10 +72,10 @@ test('pool and semantic links cache independently; metrics recompute without mod
     };
     const first = await prepareTopics(db, 2, 'http://localhost', executor);
     assert.equal(calls, 2);
-    const ids = store.create(2, [], undefined, first);
+    const ids = store.create(2, [], first);
     assert.equal(store.get(ids[0]).input?.topic_assignment?.status, 'proven');
     assert.deepEqual(store.get(ids[0]).external?.analysis?.posts.map(row=>row.id), ['reference'], 'assigned topic determines spy evidence');
-    assert.equal(store.analysisInputs(ids[0]).length, 2, 'direct matches supplement the sampled comparison set');
+    assert.equal(store.analysisInputs(ids[0]).length, 2, 'only topic-matched own posts are assigned');
     store.state(ids[0], 'running');
     store.save(ids[0], 'analysis', { research: [] });
     assert.deepEqual(new ProductionStore(db).get(ids[0]).input, store.get(ids[0]).input);

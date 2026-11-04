@@ -1,8 +1,10 @@
 import type Database from "better-sqlite3";
 import type { Row } from "../../domain/contracts";
 export function topicHistory(db: Database.Database): Row[] {
-  const rows = db.prepare(`SELECT l.id,l.project_id,p.name,l.topic,l.message,l.content_type,l.actual_published_at,
-  l.observed_at,l.view_count,l.like_count,l.comment_count,l.save_count,l.share_count
+  const rows = db.prepare(`SELECT l.id,l.project_id,p.name,l.topic,l.message,l.content_type,l.post_url,l.actual_published_at,
+  l.observed_at,l.view_count,l.like_count,l.comment_count,l.save_count,l.share_count,
+  CASE WHEN l.view_count > 0 AND l.like_count IS NOT NULL AND l.comment_count IS NOT NULL AND l.save_count IS NOT NULL
+  THEN 1.0*(l.like_count+l.comment_count+l.save_count)/l.view_count END AS engagement_rate
   FROM content_creation_logs l JOIN content_projects p ON p.id=l.project_id
   WHERE l.post_url IS NOT NULL AND l.actual_published_at IS NOT NULL ORDER BY l.id`).all() as Row[];
   const performance = db.prepare(`SELECT p.* FROM content_performance p JOIN content_creation_logs l ON l.id=p.log_id

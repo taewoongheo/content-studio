@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { samplingSchema } from "./sampling";
 export const referenceStepSchema = z.enum(["analysis", "production", "hook", "visual", "polish"]);
 export type ReferenceStep = z.infer<typeof referenceStepSchema>;
 export const REFERENCE_LIMIT = 5;
@@ -7,7 +6,6 @@ export const ANALYSIS_REFERENCE_LIMIT = 10;
 export const EXTERNAL_CONTEXT = "External reference comparison";
 export const externalContextSchema = z.object({
   checked_at: z.string(), queries: z.array(z.string()), collection_attempted: z.boolean(),
-  sampling: samplingSchema.optional(),
   message: z.string(), posts: z.array(z.record(z.string(), z.unknown())).max(ANALYSIS_REFERENCE_LIMIT),
 });
 export type ExternalContext = z.infer<typeof externalContextSchema>;

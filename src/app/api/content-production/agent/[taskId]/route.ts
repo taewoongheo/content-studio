@@ -37,7 +37,7 @@ export async function POST(
   const server = createStudioMcpServer(
     origin,
     {
-      allowed: stagePolicy(step, startInput.request.mode).tools,
+      allowed: stagePolicy(step, startInput).tools,
       observe(event) { if (run.step === step) recordToolCall(taskId, event); },
       before(name, input) {
         const active = authorizeRun(taskId, request.headers.get("authorization"));

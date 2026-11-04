@@ -9,7 +9,8 @@ than converting everything to a short executable routine. Preserve account diffe
 quotas proportional to account size or copying a creator's claims. Rewording one idea does not create a new candidate.
 
 Each candidate specifies a concrete topic, the reader's question, the answer method (content_type), a useful
-central message and the supporting reference IDs. Derive candidates from topics explicitly present in captions
+central message and the supporting reference IDs. Put the ONE actual post that best embodies this question
+and answer format first in reference_ids; it is the production origin when no direct own-post history exists. Derive candidates from topics explicitly present in captions
 or saved descriptions/inspected cover text. Each candidate must have an actual source supporting its reader
 question AND answer method. Vary subjects within observed formats; do not append an unobserved second question,
 new explanatory section or progression guide to an exercise list. A generic save/follow caption cannot

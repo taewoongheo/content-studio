@@ -1,6 +1,4 @@
 "use client";
-import { SamplingControls } from "./start/sampling-settings";
-import { defaultSampling } from "@/domains/content-production/domain/references/sampling";
 import { StartControls } from "./start/start-controls";
 import { PerformanceDetails } from "./details/performance-details";
 import { useState } from "react";
@@ -35,7 +33,7 @@ export function ProductionWorkspace({ runtime, readWork, onOpen }: {
   const publishTask = data?.tasks.find(task => task.id === publishTaskId && task.state === "finished");
   const current = data?.tasks.find(t => t.id === selected?.id);
   const select = (id: string, step: ProductionStep) => { setPanel(null); setSelected({ id, step }); };
-  const startContent = <div className="space-y-3"><SamplingControls key={JSON.stringify(data?.sampling)} value={data?.sampling ?? defaultSampling} disabled={busy} onSave={settings=>act({action:"sampling_settings",settings})} /><StartControls key={runtime.resetVersion} posts={data?.publishedPosts ?? []}
+  const startContent = <div className="space-y-3"><StartControls key={runtime.resetVersion} posts={data?.publishedPosts ?? []}
     references={(data?.externalReferences ?? []).filter(post => (Number(post.slide_count) > 0 || String(post.url).includes("/photo/")) && data?.referenceAccounts.some(account => account.username === post.account && account.enabled))}
     busy={busy} configured={data?.configured.apify}
     syncing={data?.sync.running ?? false} error={error ?? ""}

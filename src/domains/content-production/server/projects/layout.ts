@@ -21,17 +21,17 @@ function layoutDocument(savedDocument: EditorDocument): EditorDocument {
   return document;
 }
 
-/** Internal modes clone the source confirmed by analysis. */
+/** Internal origins clone the source confirmed by analysis. */
 export function cloneTaskProject(store: ProductionStore, taskId: string, sourceProjectId: string, reason: string) {
   const detail = store.assertActive(taskId, store.get(taskId).task.current_step);
-  if (detail.input && isExternalProduction(detail.input.request.mode))
+  if (detail.input && isExternalProduction(detail.input))
     throw new OperationError("PROJECT_CREATION_MODE", "외부 레퍼런스 제작은 production_create_project로 시작해 주세요.");
   if (detail.task.project_id && detail.analysis.source_format)
     return { projectId: detail.task.project_id, reused: true };
   const input = detail.input;
   const selected = (detail.analysis.sources as Array<{clone_project_id?:string}> | undefined)?.find(source => source.clone_project_id)?.clone_project_id
     ?? (input?.request.mode === "past_post" ? input.request.sourceProjectId : undefined);
-  if (selected !== sourceProjectId)
+  if (selected !== sourceProjectId || !store.cloneSourceAllowed(taskId, sourceProjectId))
     throw new OperationError("LAYOUT_SOURCE_NOT_SELECTED", "분석에서 확정한 내부 원본만 복제할 수 있습니다.");
   if (!reason.trim()) throw new Error("배치를 선택한 이유가 필요합니다.");
   const saved = new ContentProjectStore(store.db).get(sourceProjectId);

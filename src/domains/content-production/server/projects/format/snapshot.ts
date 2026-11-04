@@ -1,3 +1,4 @@
+import { isExternalProduction, type ProductionInput } from "../../../domain/start/input";
 import type { EditorDocument } from "@/domains/slideshow/editor/types";
 import type { WorkDetail } from "../../../domain/contracts";
 import { OperationError } from "@/lib/errors/operation";
@@ -10,6 +11,13 @@ import type { z } from "zod";
 export interface SourceFormat {
   project_id: string;
   document: EditorDocument;
+}
+
+export function assertSourcePageCount(input: ProductionInput | undefined, count: number) {
+  if (!input || !isExternalProduction(input)) return;
+  const expected = input.source?.slide_count;
+  if (expected !== undefined && count !== expected)
+    throw new OperationError("SOURCE_FORMAT_MISMATCH", "원본의 장 수를 유지해 주세요. 설명 페이지를 추가하거나 원본 페이지를 제거할 수 없습니다.", { expected });
 }
 
 /** Reuse the frozen origin for repairs; only older drafts need a live-source fallback. */
@@ -26,7 +34,7 @@ export function sourceDocument(store: ProductionStore, detail: WorkDetail): Edit
 
 function requiredFormat(detail: WorkDetail) {
   const mode = detail.input?.request.mode;
-  if (mode !== "automatic" && mode !== "past_post") return;
+  if (!detail.input || isExternalProduction(detail.input) || (mode !== "automatic" && mode !== "past_post")) return;
   const snapshot = detail.analysis.source_format as SourceFormat | undefined;
   if (!snapshot)
     throw new OperationError("SOURCE_FORMAT_MISSING", "production_clone_project로 확정된 원본 구성을 확인해 주세요. 기존 초안은 유지됩니다.");
@@ -35,6 +43,7 @@ function requiredFormat(detail: WorkDetail) {
 
 /** Catch an invented page sequence before the agent starts expensive image generation. */
 export function assertTaskSourcePlan(detail: WorkDetail, plan: z.infer<typeof slidePlanSchema>) {
+  assertSourcePageCount(detail.input, plan.length);
   const source = requiredFormat(detail);
   if (!source) return;
   const slides = source.document.slides;
@@ -46,6 +55,7 @@ export function assertTaskSourcePlan(detail: WorkDetail, plan: z.infer<typeof sl
 }
 
 export function assertTaskSourceFormat(detail: WorkDetail, document: EditorDocument) {
+  assertSourcePageCount(detail.input, document.slides.length);
   const snapshot = requiredFormat(detail);
   if (snapshot) assertSourceStructure(snapshot.document, document);
 }

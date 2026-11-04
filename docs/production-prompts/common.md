@@ -24,7 +24,7 @@ pages for fit. Read authoritative saved state when previews or prior reports are
 
 For new images, pass the attached official identity images to native image_gen and import its actual
 current-run output with production_use_generated_image. For internal clones, use saved source badges
-and production_repair_badge to resolve badge uncertainty. External modes use the supplied external-reference contract.
+and production_repair_badge to resolve badge uncertainty. External origins, including automatic origin=spy, use the supplied external-reference contract.
 
 Use internet research only to verify domain knowledge needed for the chosen content's accuracy and
 practical suitability. Topic and reference selection use the supplied materials; wording and tone
@@ -40,7 +40,7 @@ problem. Production content_review records resolved issues and any genuinely unr
 Return the complete current summary, including slide copy and image descriptions.
 The server reconstructs slide text from the saved document. Record actual changes and sources used;
 use null for unused optional source fields in final output and omit them in draft saves. Analysis
-records exactly one confirmed clone_project_id in internal modes; external modes leave it null. The supplied guidance is self-contained.
+records exactly one confirmed clone_project_id for internal origins; external origins (including automatic origin=spy) leave it null. The supplied guidance is self-contained.
 
 The server may return exact output validation errors in an output-only repair call. Correct the reported fields and return the complete result using the saved work. Record real source IDs or URLs for each source.
 

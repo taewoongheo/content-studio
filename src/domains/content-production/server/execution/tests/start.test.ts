@@ -22,7 +22,7 @@ test("start appends tasks while existing drafts remain and serializes shared pre
     const ids = await startProduction(4, "http://127.0.0.1:3000", {...services, refreshSpy: async () => ({}) as never});
     assert.equal(ids.length,4);
     assert.deepEqual(calls,["topics","execute","execute","execute","execute"]);
-    for (const id of ids) assert.equal(store.analysisInputs(id)[0].like_count,1);
+    for (const id of ids) assert.deepEqual(store.analysisInputs(id),[], "no unrelated own posts when the supplied topic has no matches");
     assert.equal(syncState().running,false);
     const states = ["running", "finished", "stopped", "failed"] as const;
     ids.forEach((id,index) => store.state(id,states[index]));

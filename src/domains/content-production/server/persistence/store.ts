@@ -1,8 +1,7 @@
-import { readSampling } from "../settings/sampling";
 import { externalReferences } from "../references/library";
 import { ANALYSIS_REFERENCE_LIMIT, externalRecord } from "../../domain/references/context";
 import { START_INPUT, readStartInput, startInputRecord } from "../start/context";
-import { productionRequestSchema, type ProductionRequest, type PreparedSource } from "../../domain/start/input";
+import { productionRequestSchema, isExternalProduction, type ProductionRequest, type PreparedSource } from "../../domain/start/input";
 import type { ProductionFailure } from "../../domain/diagnostics";
 import { EXTERNAL_CONTEXT, readExternalContext } from "../../domain/references/context";
 import { z } from "zod";
@@ -27,7 +26,6 @@ import { readContentMetadata, contentMetadataFields } from "@/domains/content-me
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 import { publishChange } from "../events";
 import { ANALYSIS_INPUTS, analysisInputRecord, readAnalysisInputs } from "./planning/input";
-import { readPlanningLogs } from "./planning/logs";
 import { readTaskTiming, updateTaskTiming, removeTaskTiming } from "../timing";
 import { readStageDocument, saveStageDocument } from "./planning/documents";
 import { firstDraftPlanningSchema } from "../../domain/planning/contracts";
@@ -111,14 +109,13 @@ export class ProductionStore {
       external: { analysis: decoded.external, production: production ? stage(production).external : null, ...Object.fromEntries(reviews.map(({step,value}) => [step,value?.external ?? null])) },
     };
   }
-  create(requests: number | ProductionRequest[], inputs = this.planningLogs(), sampling = readSampling(this.db), topics: {assignments:TopicAssignment[];history:Row[]} = {assignments:[],history:[]}) {
+  create(requests: number | ProductionRequest[], inputs: Row[] = [], topics: {assignments:TopicAssignment[];history:Row[]} = {assignments:[],history:[]}) {
     const entries = typeof requests === "number"
       ? Array.from({ length: requests }, () => productionRequestSchema.parse({ mode: "automatic" }))
       : requests.map(request => productionRequestSchema.parse(request));
     const references = new Map((topics.assignments.length || entries.some(request => request.mode === "spy_reference")
       ? externalReferences(this.db) : []).map(row => [String(row.id), row]));
     const sources = entries.map(request => this.requestSource(request));
-    const inputIds = new Set(inputs.map(row => String(row.id)));
     const historyById = new Map(topics.history.map(row => [String(row.id), row]));
     const ids: string[] = [];
     let automaticIndex = 0;
@@ -127,13 +124,18 @@ export class ProductionStore {
         const assignment = request.mode === "automatic" ? topics.assignments[automaticIndex++] : undefined;
         const referenceIds = assignment?.candidate.reference_ids ?? (request.mode === "spy_reference" ? [request.referenceId] : []);
         const external = externalRecord({checked_at:this.now(),queries:[],collection_attempted:false,
-          message:"References supporting the assigned topic or explicitly selected source.",sampling,
+          message:"References supporting the assigned topic or explicitly selected source.",
           posts:[...new Set(referenceIds)].flatMap(id => { const row=references.get(id); return row ? [row] : []; }).slice(0,ANALYSIS_REFERENCE_LIMIT)});
         const matchedIds = new Set([...(assignment?.direct_log_ids ?? []), ...(assignment?.related_log_ids ?? [])]);
-        const taskInputs = [...inputs, ...[...matchedIds].flatMap(matchedId => {
+        const taskInputs = assignment ? [...matchedIds].map(matchedId => {
           const row = historyById.get(matchedId);
-          return row && !inputIds.has(matchedId) ? [row] : [];
-        })];
+          if (!row) throw new Error("선정 주제에 매칭된 게시글을 찾을 수 없습니다.");
+          return { ...row, selection_group: assignment.direct_log_ids.includes(matchedId) ? "direct" : "related" };
+        }) : inputs;
+        const origin = assignment ? (assignment.direct_log_ids.length ? "internal" as const : "spy" as const) : undefined;
+        const source = origin === "spy"
+          ? this.requestSource({ mode: "spy_reference", referenceId: assignment!.candidate.reference_ids[0], instructions: request.instructions })
+          : sources[index];
         const id = randomUUID(),
           log = randomUUID(),
           now = this.now();
@@ -151,7 +153,7 @@ export class ProductionStore {
           .prepare(
             "INSERT INTO content_analysis_drafts(draft_id,created_at,updated_at,research_json) VALUES(?,?,?,?)",
           )
-          .run(id, now, now, JSON.stringify([external, analysisInputRecord(taskInputs), startInputRecord({ request, ...(sources[index] ? { source: sources[index] } : {}), ...(assignment ? {topic_assignment:assignment} : {}) })]));
+          .run(id, now, now, JSON.stringify([external, analysisInputRecord(taskInputs), startInputRecord({ request, ...(source ? { source } : {}), ...(origin ? { origin } : {}), ...(assignment ? {topic_assignment:assignment} : {}) })]));
         if (assignment) this.db.prepare("INSERT INTO content_topic_selections(log_id,candidate_id,requested_lane,document_json) VALUES(?,?,?,?)")
           .run(log,assignment.candidate.id,assignment.requested_lane,JSON.stringify(assignment));
         ids.push(id);
@@ -165,7 +167,7 @@ export class ProductionStore {
       const source = this.row(`SELECT r.id,r.url,r.caption,r.title FROM content_external_references r
         JOIN content_reference_accounts a ON a.username=r.account
         WHERE r.id=? AND a.enabled=1`, request.referenceId);
-      if (!source) throw new Error("선택한 스파이 게시글을 사용할 수 없습니다. 계정 또는 게시글의 제외 상태를 확인해 주세요.");
+      if (!source) throw new Error("선택한 스파이 게시글을 사용할 수 없습니다. 계정과 게시글의 등록 상태를 확인해 주세요.");
       return { id: String(source.id), url: String(source.url), caption: String(source.caption), name: String(source.title || source.caption || "선택한 레퍼런스") };
     }
     if (request.mode !== "past_post") return;
@@ -186,6 +188,14 @@ export class ProductionStore {
   sourceProjectAllowed(id: string, projectId: string) {
     return this.analysisInputs(id).some(row => row.project_id === projectId)
       || this.get(id).input?.source?.project_id === projectId;
+  }
+  cloneSourceAllowed(id: string, projectId: string) {
+    const input = this.get(id).input!;
+    if (isExternalProduction(input)) return false;
+    if (input.request.mode === "automatic" && input.topic_assignment)
+      return this.analysisInputs(id).some(row => row.project_id === projectId
+        && input.topic_assignment!.direct_log_ids.includes(String(row.id)));
+    return this.sourceProjectAllowed(id, projectId);
   }
   assertActive(id: string, step: ProductionStep) {
     const detail = this.get(id);
@@ -356,9 +366,9 @@ export class ProductionStore {
     publishChange({ task_id: id, step, kind: "saved" });
   }
   private assertRequestDirection(detail: WorkDetail, direction: Row) {
-    if (["automatic", "past_post"].includes(detail.input?.request.mode ?? "") && detail.analysis.content_type && direction.content_type !== detail.analysis.content_type)
+    if (detail.input && !isExternalProduction(detail.input) && detail.analysis.content_type && direction.content_type !== detail.analysis.content_type)
       throw new Error("내부 원본 기반 제작에서는 확정한 표현 포맷을 유지해 주세요.");
-    if (["external_url", "spy_reference"].includes(detail.input?.request.mode ?? "") && direction.topic !== detail.analysis.topic)
+    if (detail.input && isExternalProduction(detail.input) && direction.topic !== detail.analysis.topic)
       throw new Error("외부 URL 기반 제작에서는 확정한 원본 소재를 유지해 주세요.");
   }
   changeDirection(
@@ -449,8 +459,8 @@ export class ProductionStore {
     const existing = readAnalysisInputs(research);
     if (existing) return existing;
     if (!initialize) return [];
-    // Older retained drafts receive a comparison set once, on their first resume.
-    const record = analysisInputRecord(this.planningLogs());
+    // Never refill a retained draft with unrelated performance/recent samples.
+    const record = analysisInputRecord([]);
     this.db.prepare("UPDATE content_analysis_drafts SET research_json=? WHERE draft_id=?")
       .run(JSON.stringify([...research, record]), id);
     return readAnalysisInputs([record])!;
@@ -464,9 +474,6 @@ export class ProductionStore {
       if (!row) throw new Error(`분석 게시글을 찾을 수 없습니다: ${logId}`);
       return {...decode(row), ...assigned.find(row => row.id === logId)};
     });
-  }
-  planningLogs(query = "") {
-    return readPlanningLogs(this.db, query).map(decode);
   }
   editLog(id: string, raw: unknown) {
     const nullableText = z

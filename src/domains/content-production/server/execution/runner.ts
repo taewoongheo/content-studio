@@ -5,8 +5,6 @@ import { executeWithOutputRepair } from "./review/output/output-repair";
 import { reviewedSummary } from "./review/summary";
 import { prepareOriginalBadges } from "./policy/editing/badge/prepare";
 import { refreshSpy } from "../references/spy/refresh";
-import { readSampling } from "../settings/sampling";
-import { readPlanningLogs } from "../persistence/planning/logs";
 import { prepareTopics } from "../topics/service";
 import { productionRequestsSchema, type ProductionRequest } from "../../domain/start/input";
 import { prepareStartInput } from "../start/prepare";
@@ -138,16 +136,14 @@ export async function startProduction(
     ? Array.from({ length: count }, () => ({ mode: "automatic" })) : count);
   const store = productionStore();
   requests.forEach(request => store.requestSource(request));
-  const sampling = readSampling(store.db);
   shared.productionSync = true;
   const report: PerformanceRefresh = { started_at: new Date().toISOString(), completed_at: null, state: "running", records: [], error: null };
   shared.productionRefresh = report;
   publishChange({ kind: "sync", detail: "running" });
   try {
     if (requests.some(request => request.mode === "automatic")) await (services.refreshSpy ?? refreshSpy)(store.db);
-    const inputs = readPlanningLogs(store.db,"",sampling.internalCandidates);
     const topics = await (services.prepareTopics ?? prepareTopics)(store.db, requests.filter(request=>request.mode==='automatic').length, origin);
-    const ids = store.create(requests, inputs, sampling, topics);
+    const ids = store.create(requests, [], topics);
     report.state = "completed";
     report.completed_at = new Date().toISOString();
     ids.forEach((id) => {
@@ -213,13 +209,13 @@ export async function execute(
       run.imageStartedAt = Date.now();
       run.imageThreadId = null;
       phase = "source_collection";
-      if (run.step === "analysis" && ["external_url", "spy_reference"].includes(store.get(id).input!.request.mode))
+      if (run.step === "analysis" && isExternalProduction(store.get(id).input!))
         await prepareStartInput(store, id, run.controller.signal);
       if (run.step === "visual") await prepareOriginalBadges(store, id);
       phase = "cli";
       const inputs = run.step === "analysis" || run.step === "production" ? store.analysisInputs(id, true) : [];
       const startInput = store.get(id).input!;
-      const capabilities = stagePolicy(run.step, startInput.request.mode);
+      const capabilities = stagePolicy(run.step, startInput);
       const result = await withReferenceImages(store, startInput, run.step, run.controller.signal, referenceImages => executeWithOutputRepair(executor, {
         capabilities,
         onThreadStarted: threadId => { run.imageThreadId = threadId; },
@@ -305,13 +301,13 @@ async function checkStageCompletion(id: string, run: Run, result: Record<string,
     if (missingInputs.length) throw new OperationError("ANALYSIS_INPUTS_NOT_READ", "분석용 게시글 조회가 누락됐습니다.", {ids:missingInputs});
     if (startInput.request.mode === "past_post" && !run.sourceProjects.has(startInput.request.sourceProjectId))
       throw new OperationError("START_SOURCE_NOT_REVIEWED", "선택한 원본 게시글의 실제 슬라이드를 확인해 주세요.");
-    if ((startInput.request.mode === "external_url" || startInput.request.mode === "spy_reference") && !run.sourceSets.has(startInput.source?.visual_set_id ?? ""))
+    if (isExternalProduction(startInput) && !run.sourceSets.has(startInput.source?.visual_set_id ?? ""))
       throw new OperationError("START_SOURCE_NOT_REVIEWED", "외부 원본 게시글의 전체 슬라이드를 확인해 주세요.");
     const origins = sources.filter(source => source.clone_project_id);
     const origin = origins.length === 1 ? origins[0].clone_project_id : undefined;
-    if (isExternalProduction(startInput.request.mode) && origins.length)
+    if (isExternalProduction(startInput) && origins.length)
       throw new OperationError("EXTERNAL_CLONE_SOURCE", "외부 레퍼런스 제작에는 내부 복제 원본을 지정하지 않습니다.");
-    if (!isExternalProduction(startInput.request.mode) && (typeof origin !== "string" || !store.sourceProjectAllowed(id, origin) || !run.sourceProjects.has(origin)))
+    if (!isExternalProduction(startInput) && (typeof origin !== "string" || !store.cloneSourceAllowed(id, origin) || !run.sourceProjects.has(origin)))
       throw new OperationError("LAYOUT_SOURCE_NOT_SELECTED", "복제할 내부 게시글을 선택하고 실제 슬라이드를 확인해 주세요.");
     if (startInput.request.mode === "past_post" && origin !== startInput.request.sourceProjectId)
       throw new OperationError("LAYOUT_SOURCE_NOT_SELECTED", "지정한 내부 게시글을 복제해 주세요.");

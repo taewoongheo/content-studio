@@ -19,8 +19,6 @@ import {
 } from "@/domains/content-production/server/events";
 import { accountIdentity, addReferenceAccount, referenceAccounts, externalReferences, removeReferenceAccount } from "@/domains/content-production/server/references/library";
 import { refreshSpy, spyStatus } from "@/domains/content-production/server/references/spy/refresh";
-import { readSampling, saveSampling } from "@/domains/content-production/server/settings/sampling";
-import { samplingSchema } from "@/domains/content-production/domain/references/sampling";
 import { listVisuals } from "@/domains/content-production/server/publication/visuals";
 import { registerPublication } from "@/domains/content-production/server/publication/service";
 import { deleteTaskProject } from "@/domains/content-production/server/projects";
@@ -53,7 +51,6 @@ const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("reference_account"), account: z.string().min(1) }),
   z.object({ action: z.literal("remove_reference_account"), username: z.string() }),
   z.object({ action: z.literal("refresh_spy") }),
-  z.object({ action: z.literal("sampling_settings"), settings: samplingSchema }),
 ]);
 export async function GET(request: Request) {
   if (!isLocalRequest(request)) return new Response(null, { status: 403 });
@@ -85,11 +82,10 @@ export async function GET(request: Request) {
         ? store.get(id)
         : {
             tasks,
-            sampling: readSampling(store.db),
             spy: spyStatus(store.db),
             publishedPosts: listPublishedPosts(store.db),
             logs: store.logs(params.get("query") ?? ""),
-            planningLogs: tasks.length ? store.analysisInputs(tasks[0].id) : store.planningLogs(),
+            planningLogs: [...new Map(tasks.flatMap(task => store.analysisInputs(task.id)).map(row => [row.id, row])).values()],
             externalReferences: externalReferences(store.db),
             referenceAccounts: referenceAccounts(store.db),
             visuals: listVisuals(store.db),
@@ -180,8 +176,6 @@ export async function POST(request: Request) {
         removeReferenceAccount(store.db, input.username); break;
       case "refresh_spy":
         return Response.json(await refreshSpy(store.db,undefined,undefined,{force:true}));
-      case "sampling_settings":
-        return Response.json(saveSampling(store.db,input.settings));
     }
     return Response.json({ ok: true });
   } catch (error) {

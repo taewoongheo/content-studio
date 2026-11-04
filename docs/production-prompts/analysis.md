@@ -2,19 +2,16 @@
 
 ## Retrieve the assigned comparisons
 
-The material node selected five random own posts from the configured high-rate candidate pool,
-plus the five most recent posts, without overlap. The rate is (likes + comments + saves) / views.
-Automatic inputs also include direct and related own-post matches for the assigned topic, including matches
-outside that comparison sample. Read those IDs too; they carry the topic-specific evidence.
-For automatic requests, assigned IDs and selection groups are in this prompt. Retrieve EVERY ID with
-production_query(ids=[...]), preferably in small batches. Keyword search cannot replace this pool.
-Automatic completion requires all assigned IDs. For past_post inspect only the selected origin;
-for external requests inspect the selected external source; no internal layout selection is needed.
-The recent group contains the absolute newest posts; performance sampling excludes that group.
+Automatic inputs contain only own posts directly or indirectly matched to the assigned spy-pool topic.
+There is no separate high-rate or recent-post sample. Retrieve EVERY supplied ID with production_query(ids=[...]);
+an empty list requires no own-post query. Direct matches provide performance evidence and possible internal origins.
+Related matches provide context only: do not use them to claim proven performance or as a clone origin.
+For past_post inspect only the selected origin. For an external origin (including automatic origin=spy), inspect
+the selected caption and ALL preserved slides with production_read_images. Do not search for an internal template.
 
 Own posts include a frozen `performance` array of collected stage metrics: `early` (1 to under
 3 days), `middle` (3 to under 7 days), `late` (7 to under 21 days), and `long_term` (21 days onward).
-Selection still uses the existing latest-rate pool; interpret performance using these stage records:
+Interpret performance using these stage records:
 - Compare metrics only between matching stages. Do not judge an early result against another
   post's late result or treat an early result as its final outcome.
 - When multiple stages exist, use their observed changes as additional evidence. Do not infer
@@ -43,8 +40,9 @@ external-reference contract. Explicit sources are not rejected for duplication.
 
 ## Plan the presentation after choosing the content
 
-For automatic requests, select and inspect ONE assigned internal project whose actual reader question and
-answer method match the chosen topic. It is the format origin, not loose visual inspiration. Preserve its
+For automatic requests with origin=internal, select and inspect ONE directly matched internal project using
+matching-stage performance and topic fit. Its actual reader question and
+answer method must match the chosen topic. It is the format origin, not loose visual inspiration. Preserve its
 page count, page order, each page's information role, element grouping and visual treatment. In presentation,
 map every original page to its corresponding replacement content. An exercise card stays an exercise card;
 it must not become a setup, progression, explanation or summary page. Do not combine formats from other posts.
@@ -58,8 +56,12 @@ Describe the original information roles and map a different subject to them, ret
 answer method and page progression. Changing only the angle of explanation about the same subject is not
 that mode's requested variation. Do not force a different reader task into the same slot.
 
-For internal modes, record exactly one sources.clone_project_id for the inspected internal origin.
-External modes have no clone origin. Keep topic (subject), content_type (reader question and answer method)
+For automatic origin=spy, the server has already selected and preserved a supporting spy post. Follow the
+external-reference contract, retaining its page count/order and information roles. No internal clone is needed.
+Keep the assigned question; if the actual source does not support it, report the mismatch rather than inventing pages.
+
+For internal origins, record exactly one sources.clone_project_id for the inspected internal origin.
+External origins, including automatic origin=spy, have no clone origin. Keep topic (subject), content_type (reader question and answer method)
 and presentation (actual page structure and visuals) distinct. Record why the content is useful separately
 from how it will be implemented.
 

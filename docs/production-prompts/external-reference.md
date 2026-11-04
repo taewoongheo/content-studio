@@ -1,12 +1,13 @@
-# External URL and saved external reference contract
+# External origin contract (URL, saved reference, or automatic origin=spy)
 
-Start from a blank project with production_create_project, using the confirmed plan's slide count.
+Start from a blank project with production_create_project, using the preserved source's exact slide count.
 Do not select or clone an internal project. On resume, keep and repair the already linked project,
 including a draft created under an older workflow.
 
 ## Preserve the external body; apply our identity
 
-Keep the source subject, verified substance, body progression, page roles and information roles.
+Keep the source subject, verified substance, exact page count/order, body progression, page roles and information roles.
+Do not add setup, explanation, progression or summary pages. Map every original page to one replacement page.
 Preserve body layout relationships: grouping, alignment, relative hierarchy, text/image placement,
 and how information is represented. A star rating stays stars; a day-by-day table keeps its columns
 and rest cells. Replacing either with a numeric badge or a loose row of figures loses information.
@@ -28,7 +29,7 @@ Create the hook's wording AND visual composition in our own style, grounded in t
 and persona voice. Do not preserve the external cover layout. Use an uppercase Oswald Bold 700 title,
 110–140px, black with selective red emphasis; at most one optional Inter 35px #B0B5BE supporting phrase.
 Make the official character illustration prominent and arrange a coherent, vertically centered group
-with clear spacing. CTA uses our typography and the selected product's facts and CTA, subject to user
+with clear spacing. Use a CTA only in the source's existing closing slot; do not append a page. CTA uses our typography and the selected product's facts and CTA, subject to user
 instructions. Never carry over the reference account's product, handle, logo or badge.
 
 ## Existing node responsibilities
@@ -47,3 +48,7 @@ without losing body information. Visual receives all source slides too: compare 
 sequence, alignment and representations against the source and presentation, and fix unjustified
 deviations as well as readability, clipping and identity defects. A documented factual correction or
 user request can justify a difference. Do not restore an internal clone badge in this workflow.
+
+Source images are captured once before analysis and stored locally. Production and visual receive those stored
+images; hook and polish use the saved plan and can read stored images if needed. Never recollect the account
+or post in a later stage. Automatic requests retain the automatic overlap check; explicit requests remain exempt.

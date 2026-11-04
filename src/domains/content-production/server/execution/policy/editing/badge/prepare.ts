@@ -9,7 +9,7 @@ import { badgeRepairCommands } from "./repair";
 /** Badge integrity is restored before visual AI runs; ambiguous image readings cannot undo it. */
 export async function prepareOriginalBadges(store: ProductionStore, taskId: string) {
   const detail = store.assertActive(taskId, "visual");
-  if (detail.input && isExternalProduction(detail.input.request.mode)) return;
+  if (detail.input && isExternalProduction(detail.input)) return;
   const projectId = detail.task.project_id;
   if (!projectId) return;
   const source = sourceDocument(store, detail);
