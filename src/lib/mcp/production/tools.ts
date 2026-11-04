@@ -1,7 +1,6 @@
 import { isExternalProduction } from "@/domains/content-production/domain/start/input";
 import { createTaskProject } from "@/domains/content-production/server/projects/creation";
-import type { EditorDocument } from "@/domains/slideshow/editor/types";
-import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
+import { sourceDocument } from "@/domains/content-production/server/projects/format/snapshot";
 import { badgeRepairCommands } from "@/domains/content-production/server/execution/policy/editing/badge/repair";
 import { SlideshowProjectWrites } from "@/domains/slideshow/server/project-writes";
 import { stageContext } from "@/domains/content-production/server/execution/policy/context";
@@ -119,12 +118,9 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
       if (active.task.project_id !== project.id) throw new Error("연결된 프로젝트가 변경되었습니다.");
       validateProject?.(project);
     });
-    const sourceId = (detail.analysis.sources as Array<{clone_project_id?:string}> | undefined)?.find(source => source.clone_project_id)?.clone_project_id
-      ?? detail.input?.source?.project_id;
-    if (!sourceId) throw new Error("확정된 원본이 없습니다.");
-    const source = new ContentProjectStore(store.db).get(sourceId);
-    if (!source) throw new Error("원본 프로젝트를 찾을 수 없습니다.");
-    const commands = badgeRepairCommands(document, source.document as EditorDocument);
+    const source = sourceDocument(store, detail);
+    if (!source) throw new Error("확정된 원본이 없습니다.");
+    const commands = badgeRepairCommands(document, source);
     if (!commands.length) return json({projectId, repaired:false, badge_presence:"matches_source", authoritative:true});
     const result = await writes.edit(projectId, commands, input.expectedRevision, input.expectedTabId);
     return json({ projectId, revision: result.editor.revision, tabId: result.tabId, warnings: result.warnings, badge_presence:"matches_source", authoritative:true });

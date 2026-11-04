@@ -6,6 +6,8 @@ import { ProductionStore } from "../store";
 import { stageContext } from "../../execution/policy/context";
 import { resultSchema } from "../../execution/prompts";
 import { displayContent } from "../../../domain/display";
+import { createBlankDocument } from "@/domains/slideshow/editor/document";
+import { saveStageDocument } from "./documents";
 
 const reasoning = {
   observations: [{ source: "log-one, slide 2", observation: "Two alternatives are shown with a concrete selection criterion." }],
@@ -32,6 +34,14 @@ test("decisions and plans survive progress saves, resume, completion and removal
     store.completeAnalysis(id, direction);
     assert.equal(stageContext(store.get(id)).analysis.reasoning, undefined);
     store.state(id, "running");
+    assert.throws(() => store.save(id, "production", { slide_plan }), { code: "SOURCE_FORMAT_MISSING" });
+    const original = createBlankDocument({ structure: "sequential", aspectRatio: "4:5", slideCount: 1 });
+    original.slides[0].id = "s1"; original.slides[0].role = "body";
+    saveStageDocument(db, store.get(id).task.log_id, "analysis", { source_format: { project_id: "origin", document: original } });
+    const beforePlan = store.get(id);
+    assert.throws(() => store.save(id, "production", { slide_plan: [...slide_plan, { ...slide_plan[0], slide_id: "extra-explanation" }] }),
+      { code: "SOURCE_PLAN_MISMATCH" });
+    assert.deepEqual(store.get(id), beforePlan, "an invented page plan must fail before image generation or progress writes");
     store.save(id, "production", { slide_plan });
     assert.equal(store.get(id).production?.draft_saved_at, null, "planning alone is not actual content");
     store.save(id, "production", { content: { hook: "Choose for your equipment" } });

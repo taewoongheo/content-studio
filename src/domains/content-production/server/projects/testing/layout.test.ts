@@ -10,7 +10,7 @@ import { ProductionStore } from "../../persistence/store";
 import { createTaskProject } from "../creation";
 import { cloneTaskProject } from "../layout";
 import { stageContext } from "../../execution/policy/context";
-import { assertTaskSourceFormat } from "../format/snapshot";
+import { assertTaskSourceFormat, sourceDocument, type SourceFormat } from "../format/snapshot";
 import { seedLayoutSource } from "./fixtures";
 
 const direction={analysis: "A routine comparison.", reasoning: { observations: [], interpretations: [], candidates: [] },topic:"New content",message:"A new session",content_type:"Routine cards",answer:"Five moves",presentation:"Cards",reason:"Useful",expected_response:"Save",goal_connection:"Follow",difference_from_recent:"Different content",sources:[]};
@@ -62,6 +62,7 @@ test("cloning uses only the explicitly selected saved layout, preserves copy/ass
     store.save(id, "production", { content_review: { assessment: "Reviewed", issues: [] } });
     const resumed = new ProductionStore(db);
     assert.deepEqual(resumed.get(id).analysis.source_format, frozen);
+    assert.deepEqual(sourceDocument(resumed, resumed.get(id)), (frozen as SourceFormat).document);
     assert.deepEqual(stageContext(resumed.get(id)).analysis.source_format, frozen);
     assert.doesNotThrow(() => assertTaskSourceFormat(resumed.get(id), copy));
     assert.equal(cloneTaskProject(resumed,id,source.project_id,"Resume").projectId,cloned.projectId);
@@ -82,6 +83,42 @@ test("failed clone creation rolls back the draft, DB project and open editor tog
     assert.equal((db.prepare("SELECT count(*) n FROM content_projects").get() as {n:number}).n,1);
     assert.deepEqual(db.pragma("foreign_key_check"),[]);
   }finally{db.close();}
+});
+
+test("a failed format snapshot rolls back the already created clone and editor", () => {
+  const db = openLocalDatabase(":memory:"), store = new ProductionStore(db);
+  try {
+    const source = seedLayoutSource(db, "snapshot-rollback");
+    const [id] = store.create([{ mode: "past_post", sourceProjectId: source.project_id, instructions: "" }], []);
+    store.state(id, "running"); store.completeAnalysis(id, direction); store.state(id, "running");
+    const before = store.get(id), openBefore = contentJobRegistry.list().map(job => job.id);
+    db.exec(`CREATE TRIGGER reject_snapshot BEFORE UPDATE ON content_stage_documents
+      WHEN json_type(NEW.document_json, '$.source_format') IS NOT NULL
+      BEGIN SELECT RAISE(ABORT, 'snapshot failed'); END;`);
+    assert.throws(() => cloneTaskProject(store, id, source.project_id, "Source"), /snapshot failed/);
+    assert.deepEqual(store.get(id), before);
+    assert.deepEqual(contentJobRegistry.list().map(job => job.id), openBefore);
+    assert.equal((db.prepare("SELECT count(*) n FROM content_projects").get() as { n: number }).n, 1);
+  } finally { db.close(); }
+});
+
+test("older drafts acquire the original format on resume without overwriting their work", () => {
+  const db = openLocalDatabase(":memory:"), store = new ProductionStore(db);
+  let projectId: string | undefined;
+  try {
+    const source = seedLayoutSource(db, "legacy-format");
+    const [id] = store.create([{ mode: "past_post", sourceProjectId: source.project_id, instructions: "" }], []);
+    store.state(id, "running"); store.completeAnalysis(id, direction); store.state(id, "running");
+    projectId = cloneTaskProject(store, id, source.project_id, "Source").projectId;
+    db.prepare("UPDATE content_stage_documents SET document_json=json_remove(document_json,'$.source_format') WHERE log_id=?")
+      .run(store.get(id).task.log_id);
+    const draft = contentJobRegistry.getRecord(projectId).editor.document;
+    draft.slides.push({ ...structuredClone(draft.slides[0]), id: "old-extra-explanation" });
+    assert.throws(() => assertTaskSourceFormat(store.get(id), draft), { code: "SOURCE_FORMAT_MISSING" });
+    assert.equal(cloneTaskProject(store, id, source.project_id, "Resume").reused, true);
+    assert.equal(draft.slides.length, 2, "resume must not discard existing edits");
+    assert.throws(() => assertTaskSourceFormat(store.get(id), draft), { code: "SOURCE_FORMAT_MISMATCH" });
+  } finally { if (projectId) contentJobRegistry.remove(projectId); db.close(); }
 });
 
 test("automatic requests clone the confirmed internal origin and retain it across resume",()=>{

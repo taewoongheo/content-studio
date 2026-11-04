@@ -32,6 +32,7 @@ import { readTaskTiming, updateTaskTiming, removeTaskTiming } from "../timing";
 import { readStageDocument, saveStageDocument } from "./planning/documents";
 import { firstDraftPlanningSchema } from "../../domain/planning/contracts";
 import type { TopicAssignment } from "../../domain/topics/model";
+import { assertTaskSourcePlan } from "../projects/format/snapshot";
 
 const directionKeys = Object.keys(directionSchema.shape) as Array<
   keyof Direction
@@ -220,6 +221,8 @@ export class ProductionStore {
     const patch = (
       step === "analysis" ? analysisPatchSchema : step === "production" ? productionPatchSchema : reviewDraftPatchSchema
     ).parse(raw);
+    if (step === "production" && "slide_plan" in patch && patch.slide_plan)
+      assertTaskSourcePlan(detail, patch.slide_plan);
     // Collection snapshots are server-owned evidence, not agent-authored prose.
     if (patch.research) {
       patch.research = patch.research.filter(item => ![EXTERNAL_CONTEXT, ANALYSIS_INPUTS, START_INPUT].includes(item.question));
