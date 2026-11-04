@@ -4,6 +4,8 @@
 
 The material node selected five random own posts from the configured high-rate candidate pool,
 plus the five most recent posts, without overlap. The rate is (likes + comments + saves) / views.
+Automatic inputs also include direct and related own-post matches for the assigned topic, including matches
+outside that comparison sample. Read those IDs too; they carry the topic-specific evidence.
 For automatic requests, assigned IDs and selection groups are in this prompt. Retrieve EVERY ID with
 production_query(ids=[...]), preferably in small batches. Keyword search cannot replace this pool.
 Automatic completion requires all assigned IDs. For past_post inspect only the selected origin;
@@ -23,40 +25,36 @@ Selection still uses the existing latest-rate pool; interpret performance using 
   check overlap through the existing tool. Do not use its latest metrics as evidence of success
   or failure. Missing metrics are not zero.
 
-## Choose the content, then its source
+## Resolve the assigned topic
 
-For automatic requests, compare substantive subjects and answers from the assigned evidence using
-the research guide's selection criteria. Decide what the audience should receive before choosing
-ONE assigned internal origin that can communicate it. Record why the content merits selection;
-describe the source's role mapping separately in presentation.
+Automatic requests receive a cached topic candidate with its reader question, intended answer method,
+direct own-post matches, related matches and evidence classification. Keep the candidate's question and
+substance while verifying the answer. Read the assigned own-post evidence; a related post is not direct
+validation, and no direct history means untried, not poor performance. The server's evidence classification
+is an operational screen, not causal proof. Do not turn a comparison, explanation, correction or planning
+question into an executable routine merely because a familiar source is convenient.
+Explain whether this is an exploration or a repeatedly supported topic and the actual evidence or fallback.
 
-Past_post uses only the user-selected origin and varies its subject. External_url/spy_reference
-uses the selected caption and ALL preserved slides; keep that subject and verified substance,
-and specify the body structure to preserve and required changes in presentation.
-Explicit external content is not rejected for duplication. Do not reinterpret it as a new topic.
+Past_post uses only the user-selected origin and varies its subject. External_url/spy_reference uses the
+selected caption and ALL preserved slides; keep that subject and verified substance and follow the supplied
+external-reference contract. Explicit sources are not rejected for duplication.
 
-## Map the selected content to the original information roles
+## Plan the presentation after choosing the content
 
-Separate three concepts:
-- topic: the concrete subject or set of things being explained; this changes for internal variations.
-- content_type: the reader's question type, answer method, information roles and progression; retain it.
-- visual composition: the positions and expression of those roles; internal clones retain it; external bodies follow the supplied external-reference contract.
+For automatic requests, select and inspect ONE assigned internal project as the visual starting point.
+Keep useful visual identity and source badges, but change page count, information roles, text/image groupings
+and sequence when the chosen answer needs it. Explain retained and changed parts in presentation. The cloned
+layout must serve the topic; do not downgrade a worthwhile question because a source is awkward to adapt.
 
-For internal variations, a replacement must perform the SAME INFORMATION ROLE in the SAME SLOT, not merely fit its space.
-Describe what each selected source slot does, independent of its subject, and map the chosen
-content to those roles. Retain the kind of reader question, answer,
-page sequence and relationship between text and images. Changing only the angle of explanation
-about the same subject is not the requested variation. Do not turn an instruction slot into a
-selection criterion, condition, evaluation or troubleshooting slot simply because text fits there.
-These are information roles, not a fixed taxonomy or domain-specific examples.
+For past_post variations, a replacement must perform the SAME INFORMATION ROLE in the SAME SLOT.
+Describe the original information roles and map a different subject to them, retaining the reader question,
+answer method and page progression. Changing only the angle of explanation about the same subject is not
+that mode's requested variation. Do not force a different reader task into the same slot.
 
-For internal modes, record exactly one sources.clone_project_id for the inspected internal origin. External modes have no clone origin.
-
-In presentation, map content to the selected source page/slot roles and explain why those roles still fit.
-If an automatic source cannot communicate the chosen content within its information roles,
-compare another assigned source for that content under the research guide's selection criteria.
-Do not force a different reader task into the same slot.
-State a clear subject and usable content direction for the first draft.
+For internal modes, record exactly one sources.clone_project_id for the inspected internal origin.
+External modes have no clone origin. Keep topic (subject), content_type (reader question and answer method)
+and presentation (actual page structure and visuals) distinct. Record why the content is useful separately
+from how it will be implemented.
 
 ## Verify the content in use
 
@@ -65,7 +63,7 @@ act on the proposed content and whether the resulting outcome serves its stated 
 relevant prerequisites, order and interactions between parts, rather than judging each item alone.
 Identify the domain knowledge needed to resolve material uncertainty and verify it through internet
 research using the attached research guide. Use the findings to correct the proposed content and
-its sequence within the selected information roles.
+its sequence for the selected reader question.
 
 Hand off a concrete answer and content plan, not just a topic: put the verified substance in answer
 and its sequence, applicable conditions and rationale in presentation so the draft can implement it.
@@ -82,5 +80,5 @@ attached research guide's overlap rule. If every viable candidate overlaps, reco
 Save analysis and reasoning: influential observed examples, interpretations and meaningful candidate
 comparisons. Separate observed performance from causal hypotheses. Do not fill candidate quotas.
 Use the metadata guide for topic/message/content_type. answer states the concrete answer;
-presentation maps it to inherited information roles; reason explains the selection. Keep these
+presentation maps it to the planned pages; reason explains the selection. Keep these
 fields complementary. Return all required direction fields, reasoning and sources. Hand off the decision and its supporting evidence.

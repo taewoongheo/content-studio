@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { SCHEMA_VERSION, defaultDatabasePath, openLocalDatabase } from "./database";
+import { SCHEMA_VERSION, defaultDatabasePath, openLocalDatabase, getLocalDatabase } from "./database";
 import { listPublishedPosts } from "@/domains/content-production/server/publication/list";
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 
@@ -39,7 +39,7 @@ test("DB 재연결 후 URL 기반 게시 기록과 현재 테이블 구조가 �
     database.close();
     const reopened = openLocalDatabase(path);
     assert.equal(listPublishedPosts(reopened)[0].publishedAt, publishedAt);
-    assert.deepEqual((reopened.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all() as Array<{name:string}>).map(row => row.name), ["content_analysis_drafts", "content_creation_logs", "content_draft_numbers", "content_drafts", "content_external_references", "content_hook_drafts", "content_performance", "content_persona", "content_polish_drafts", "content_production_drafts", "content_production_settings", "content_products", "content_project_assets", "content_projects", "content_reference_accounts", "content_stage_documents", "content_telegram_state", "content_visual_drafts", "content_visual_sets", "content_visual_slides", "sqlite_sequence", "video_project_assets", "video_projects"]);
+    assert.deepEqual((reopened.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all() as Array<{name:string}>).map(row => row.name), ["content_analysis_drafts", "content_creation_logs", "content_draft_numbers", "content_drafts", "content_external_references", "content_hook_drafts", "content_performance", "content_persona", "content_polish_drafts", "content_production_drafts", "content_production_settings", "content_products", "content_project_assets", "content_projects", "content_reference_accounts", "content_stage_documents", "content_telegram_state", "content_topic_cache", "content_topic_selections", "content_visual_drafts", "content_visual_sets", "content_visual_slides", "sqlite_sequence", "video_project_assets", "video_projects"]);
     reopened.close();
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
@@ -83,4 +83,28 @@ test("이전 버전 DB는 자동 변환 없이 거부한다", () => {
     assert.equal(unchanged.pragma("user_version", { simple: true }), SCHEMA_VERSION - 1);
     unchanged.close();
   } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test("개발 중 보존된 연결에도 새 테이블을 적용하고 기존 내용과 연결은 유지한다", () => {
+  const originalPath = process.env.CONTENT_STUDIO_DB_PATH;
+  const shared = globalThis as typeof globalThis & {
+    contentStudioLocalDatabase?: {path:string;version?:number;schema?:string;database:Database.Database};
+  };
+  const original = shared.contentStudioLocalDatabase;
+  const db = openLocalDatabase(":memory:");
+  try {
+    db.exec("DROP TABLE content_topic_selections; DROP TABLE content_topic_cache");
+    process.env.CONTENT_STUDIO_DB_PATH = ":memory:";
+    shared.contentStudioLocalDatabase = {path:":memory:",version:SCHEMA_VERSION,database:db};
+    assert.equal(getLocalDatabase(), db);
+    db.prepare("INSERT INTO content_topic_cache VALUES('pool','signature','{}','now')").run();
+    assert.equal(getLocalDatabase(), db);
+    assert.equal(db.prepare("SELECT count(*) FROM content_topic_cache").pluck().get(), 1);
+    assert.deepEqual(db.pragma("foreign_key_check"), []);
+  } finally {
+    db.close();
+    shared.contentStudioLocalDatabase = original;
+    if (originalPath === undefined) delete process.env.CONTENT_STUDIO_DB_PATH;
+    else process.env.CONTENT_STUDIO_DB_PATH = originalPath;
+  }
 });

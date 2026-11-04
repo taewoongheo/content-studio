@@ -103,4 +103,12 @@ CREATE TABLE IF NOT EXISTS content_external_references (
  excluded INTEGER NOT NULL DEFAULT 0 CHECK(excluded IN (0,1)), created_at TEXT NOT NULL, last_selected_at TEXT
 );
 CREATE INDEX IF NOT EXISTS external_references_account_idx ON content_external_references(account);
+CREATE TABLE IF NOT EXISTS content_topic_cache (
+ key TEXT PRIMARY KEY, signature TEXT NOT NULL, document_json TEXT NOT NULL CHECK(json_valid(document_json)), updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS content_topic_selections (
+ log_id TEXT PRIMARY KEY REFERENCES content_creation_logs(id) ON DELETE CASCADE,
+ candidate_id TEXT NOT NULL, requested_lane TEXT NOT NULL CHECK(requested_lane IN ('proven','exploration')),
+ document_json TEXT NOT NULL CHECK(json_valid(document_json))
+);
 `;

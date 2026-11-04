@@ -32,6 +32,7 @@ import { readPlanningLogs } from "./planning/logs";
 import { readTaskTiming, updateTaskTiming, removeTaskTiming } from "../timing";
 import { readStageDocument, saveStageDocument } from "./planning/documents";
 import { firstDraftPlanningSchema } from "../../domain/planning/contracts";
+import type { TopicAssignment } from "../../domain/topics/model";
 
 const directionKeys = Object.keys(directionSchema.shape) as Array<
   keyof Direction
@@ -110,15 +111,19 @@ export class ProductionStore {
       external: { analysis: decoded.external, production: production ? stage(production).external : null, ...Object.fromEntries(reviews.map(({step,value}) => [step,value?.external ?? null])) },
     };
   }
-  create(requests: number | ProductionRequest[], inputs = this.planningLogs(), sampling = readSampling(this.db)) {
+  create(requests: number | ProductionRequest[], inputs = this.planningLogs(), sampling = readSampling(this.db), topics: {assignments:TopicAssignment[];history:Row[]} = {assignments:[],history:[]}) {
     const external = externalRecord({checked_at:this.now(),queries:[],collection_attempted:false,message:"Assigned external references for this batch.",sampling,posts:sampleReferences(externalReferences(this.db),sampling.externalCandidates,"published_at")});
     const entries = typeof requests === "number"
       ? Array.from({ length: requests }, () => productionRequestSchema.parse({ mode: "automatic" }))
       : requests.map(request => productionRequestSchema.parse(request));
     const sources = entries.map(request => this.requestSource(request));
     const ids: string[] = [];
+    let automaticIndex = 0;
     this.db.transaction(() => {
       for (const [index, request] of entries.entries()) {
+        const assignment = request.mode === "automatic" ? topics.assignments[automaticIndex++] : undefined;
+        const matchedIds = new Set([...(assignment?.direct_log_ids ?? []), ...(assignment?.related_log_ids ?? [])]);
+        const taskInputs = [...inputs, ...topics.history.filter(row=>matchedIds.has(String(row.id)) && !inputs.some(input=>input.id===row.id))];
         const id = randomUUID(),
           log = randomUUID(),
           now = this.now();
@@ -136,7 +141,9 @@ export class ProductionStore {
           .prepare(
             "INSERT INTO content_analysis_drafts(draft_id,created_at,updated_at,research_json) VALUES(?,?,?,?)",
           )
-          .run(id, now, now, JSON.stringify([external, analysisInputRecord(inputs), startInputRecord({ request, ...(sources[index] ? { source: sources[index] } : {}) })]));
+          .run(id, now, now, JSON.stringify([external, analysisInputRecord(taskInputs), startInputRecord({ request, ...(sources[index] ? { source: sources[index] } : {}), ...(assignment ? {topic_assignment:assignment} : {}) })]));
+        if (assignment) this.db.prepare("INSERT INTO content_topic_selections(log_id,candidate_id,requested_lane,document_json) VALUES(?,?,?,?)")
+          .run(log,assignment.candidate.id,assignment.requested_lane,JSON.stringify(assignment));
         ids.push(id);
       }
     })();

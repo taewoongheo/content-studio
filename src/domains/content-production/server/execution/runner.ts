@@ -6,6 +6,7 @@ import { prepareOriginalBadges } from "./policy/editing/badge/prepare";
 import { refreshSpy } from "../references/spy/refresh";
 import { readSampling } from "../settings/sampling";
 import { readPlanningLogs } from "../persistence/planning/logs";
+import { prepareTopics } from "../topics/service";
 import { productionRequestsSchema, type ProductionRequest } from "../../domain/start/input";
 import { prepareStartInput } from "../start/prepare";
 import { activeProduct } from "../products/store";
@@ -125,7 +126,7 @@ export function syncState() {
 }
 export async function startProduction(
   count: number | ProductionRequest[], origin: string,
-  services: {execute: typeof execute;refreshSpy?: typeof refreshSpy} = { execute, refreshSpy },
+  services: {execute: typeof execute;refreshSpy?: typeof refreshSpy;prepareTopics?:typeof prepareTopics} = { execute, refreshSpy },
 ) {
   if (!process.env.APIFY_API_TOKEN?.trim())
     throw new Error("Apify에 연결되지 않아 제작을 시작할 수 없습니다. APIFY_API_TOKEN을 설정해 주세요.");
@@ -146,7 +147,8 @@ export async function startProduction(
   try {
     await (services.refreshSpy ?? refreshSpy)(store.db);
     const inputs = readPlanningLogs(store.db,"",sampling.internalCandidates);
-    const ids = store.create(requests, inputs, sampling);
+    const topics = await (services.prepareTopics ?? prepareTopics)(store.db, requests.filter(request=>request.mode==='automatic').length, origin);
+    const ids = store.create(requests, inputs, sampling, topics);
     report.state = "completed";
     report.completed_at = new Date().toISOString();
     ids.forEach((id) => {

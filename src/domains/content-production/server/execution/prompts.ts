@@ -18,10 +18,10 @@ function jsonShape(schema: z.ZodType) {
 }
 const directionFields = {
   topic: "The selected subject within the start request's constraints.",
-  content_type: "The inherited reader-question type, answer method, information roles and progression, independent of subject.",
+  content_type: "The selected reader-question type, answer method, information roles and progression, independent of subject.",
   message: "The concise central message.",
   answer: "The substantive answer the viewer receives; the production commitment, beyond a topic label or promise.",
-  presentation: "Map the new subject to the original page and slot information roles; each replacement must perform the same job.",
+  presentation: "Describe the planned page roles and sequence for the selected answer, respecting the request mode.",
   reason: "Why this direction won, connected to the recorded case observations and candidate tradeoffs.",
   expected_response: "The intended viewer response and plausible reason, without presenting a forecast as observed performance.",
   goal_connection: "How this content serves the active product's actual goal.",

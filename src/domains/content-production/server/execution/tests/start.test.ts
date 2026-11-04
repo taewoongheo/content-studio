@@ -17,10 +17,11 @@ test("start uses stored metrics without collecting performance", async () => {
     store.db.prepare("INSERT INTO content_creation_logs(id,project_id,post_url,actual_published_at,view_count,like_count,comment_count,save_count,created_at,updated_at) VALUES('l','p','https://example.com/post','2026-10-25',100,1,1,1,'now','now')").run();
     const services = {
       execute: async () => { calls.push("execute"); },
+      prepareTopics: async () => { calls.push("topics"); return {assignments:[],history:[]}; },
     };
     const ids = await startProduction(4, "http://127.0.0.1:3000", {...services, refreshSpy: async () => ({}) as never});
     assert.equal(ids.length,4);
-    assert.deepEqual(calls,["execute","execute","execute","execute"]);
+    assert.deepEqual(calls,["topics","execute","execute","execute","execute"]);
     for (const id of ids) assert.equal(store.analysisInputs(id)[0].like_count,1);
     assert.equal(syncState().running,false);
     resetProduction();

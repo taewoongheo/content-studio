@@ -6,6 +6,7 @@ import { dirname, isAbsolute } from "node:path";
 import { PROJECT_SCHEMA } from "@/domains/slideshow/server/persistence/projects/schema";
 
 export const SCHEMA_VERSION = 21;
+const schema = [PROJECT_SCHEMA, VIDEO_SCHEMA, PRODUCTION_SCHEMA].join("\n");
 
 export function defaultDatabasePath() {
   const override = process.env.CONTENT_STUDIO_DB_PATH;
@@ -30,9 +31,7 @@ export function openLocalDatabase(path = defaultDatabasePath()) {
       throw new Error("지원하지 않는 프로젝트 DB 스키마입니다. 서버를 종료하고 DB를 확인해 주세요. 자동 변환은 제공하지 않습니다.");
     database.pragma("journal_mode = WAL");
     database.transaction(() => {
-      database.exec(PROJECT_SCHEMA);
-      database.exec(VIDEO_SCHEMA);
-      database.exec(PRODUCTION_SCHEMA);
+      database.exec(schema);
       database.pragma(`user_version = ${SCHEMA_VERSION}`);
     })();
     return database;
@@ -43,16 +42,22 @@ export function openLocalDatabase(path = defaultDatabasePath()) {
 }
 
 const globalDatabase = globalThis as typeof globalThis & {
-  contentStudioLocalDatabase?: { path: string; version?: number; database: Database.Database };
+  contentStudioLocalDatabase?: { path: string; version?: number; schema?: string; database: Database.Database };
 };
 
 export function getLocalDatabase() {
   const path = defaultDatabasePath();
   const retained = globalDatabase.contentStudioLocalDatabase;
-  if (retained?.path === path && retained.version === SCHEMA_VERSION && retained.database.open)
+  if (retained?.path === path && retained.version === SCHEMA_VERSION && retained.database.open) {
+    // Apply additive, idempotent schema changes once after development hot reload.
+    if (retained.schema !== schema) {
+      retained.database.transaction(() => retained.database.exec(schema))();
+      retained.schema = schema;
+    }
     return retained.database;
+  }
   if (retained?.database.open) retained.database.close();
   const database = openLocalDatabase(path);
-  globalDatabase.contentStudioLocalDatabase = { path, version: SCHEMA_VERSION, database };
+  globalDatabase.contentStudioLocalDatabase = { path, version: SCHEMA_VERSION, schema, database };
   return database;
 }

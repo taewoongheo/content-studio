@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { socialSource } from "@/domains/research/domain/source";
+import type { TopicAssignment } from "../topics/model";
 
 const instructions = z.string().trim().max(10000).default("");
 const referenceUrl = z.string().trim().transform((value, context) => {
@@ -30,6 +31,7 @@ export interface PreparedSource {
 export interface ProductionInput {
   request: ProductionRequest;
   source?: PreparedSource;
+  topic_assignment?: TopicAssignment;
 }
 export const productionModeLabels: Record<ProductionRequest["mode"], string> = {
   spy_reference: "레퍼런스 · 스파이 게시글", automatic: "자동 생성", past_post: "레퍼런스 · 내 게시글", external_url: "외부 URL",

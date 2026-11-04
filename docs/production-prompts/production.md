@@ -3,7 +3,9 @@
 Read the approved answer, presentation, content sequence, conditions and rationale, and the linked document.
 Resume the linked document. For internal modes, clone the confirmed analysis.sources.clone_project_id
 with production_clone_project after inspecting that source. Replace the cloned text and images with
-the selected content, matching each slot's information role and retaining its visual treatment.
+the selected content. In automatic mode, adapt page count, structure and information roles to the approved
+answer, retaining useful visual identity and badges. In past_post mode, match each original slot's information
+role and retain its visual treatment.
 For external modes, create a blank project with production_create_project and implement the supplied
 external-reference contract using the attached source slides. Write in the persona's voice.
 
