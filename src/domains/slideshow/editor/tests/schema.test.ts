@@ -77,3 +77,20 @@ test("캔버스 밖 프레임은 허용하되 극단적 좌표와 크기는 명�
     assert.equal(validateEditorDocument(document).length === 0, expected);
   }
 });
+
+test("그림자 스타일은 MCP와 문서 검증에서 동일한 범위를 사용한다", () => {
+  const style = { shadowEnabled: true, shadowColor: "#123456", shadowOpacity: 0.4,
+    shadowBlur: 20, shadowOffsetX: -12, shadowOffsetY: 8 };
+  const document = createBlankDocument({ structure: "sequential", aspectRatio: "4:5", slideCount: 2 });
+  const image = makeElementDefinition({ id: "image", kind: "image" });
+  image.style = { ...image.style, ...style };
+  document.elements.push(image);
+  assert.deepEqual(validateEditorDocument(document), []);
+  const command = { type: "update_visual", scope: "common", elementId: "image", style };
+  assert.equal(validateEditorCommands({ commands: [command] }).ok, true);
+  for (const patch of [{ shadowOpacity: 2 }, { shadowBlur: -1 }, { shadowOffsetX: 201 }, { shadowColor: "red" }]) {
+    assert.equal(validateEditorCommands({ commands: [{ ...command, style: patch }] }).ok, false);
+    image.style = { ...image.style, ...style, ...patch };
+    assert.ok(validateEditorDocument(document).length > 0);
+  }
+});

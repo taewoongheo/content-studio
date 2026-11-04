@@ -1,3 +1,5 @@
+import { answerText } from "./answer";
+import { assistantContext } from "./context";
 import { randomUUID } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -10,9 +12,9 @@ import { listOpenProjectTabs } from "../../server/tabs";
 import type { AssistantState, AssistantTarget, AssistantSelection } from "../model";
 import { assistantPrompt, responseSchema } from "./prompt";
 
-type Session = { target: AssistantTarget; directory: Promise<string>; threadId?: string; status: AssistantState; run?: AssistantRun };
+type Session = { promptVersion?: number; target: AssistantTarget; directory: Promise<string>; threadId?: string; status: AssistantState; run?: AssistantRun };
 export type AssistantRun = { id: string; token: string; controller: AbortController; phase: "inspect" | "edit";
-  target: AssistantTarget; reviewedRevision?: number; slides: Set<string>; changed: boolean };
+  target: AssistantTarget; reviewedRevision?: number; slides: Set<string>; affectedSlides: Set<string>; changed: boolean };
 const global = globalThis as typeof globalThis & { editorAssistantSessions?: Map<string, Session>; editorAssistantSubscribed?: boolean };
 const sessions = global.editorAssistantSessions ??= new Map<string, Session>();
 const idle = (): AssistantState => ({ state: "idle", phase: "", text: "", suggestion: "", error: "", changed: false });
@@ -59,7 +61,8 @@ export function startAssistant(target: AssistantTarget, selection: AssistantSele
     session = { target, directory: mkdtemp(join(tmpdir(), "editor-assistant-")), status: idle() };
     sessions.set(target.tabId, session);
   }
-  const run: AssistantRun = { id: randomUUID(), token: randomUUID(), controller: new AbortController(), phase: "inspect", target, slides: new Set(), changed: false };
+  if (session.promptVersion !== 2) { session.threadId = undefined; session.promptVersion = 2; }
+  const run: AssistantRun = { id: randomUUID(), token: randomUUID(), controller: new AbortController(), phase: "edit", target, slides: new Set(), affectedSlides: new Set(), changed: false };
   session.run = run;
   session.status = { ...idle(), requestId, command: message, state: "running", phase: "명령 확인 중" };
   void execute(session, run, selection, message, snapshot, origin, executeCli);
@@ -70,32 +73,38 @@ async function execute(session: Session, run: AssistantRun, selection: Assistant
   const timeout = setTimeout(() => run.controller.abort(new DOMException("AI 실행 시간이 초과됐습니다.", "TimeoutError")), 20 * 60_000);
   try {
     const directory = await session.directory;
-    const call = (execute: boolean) => executeCli({ model: "gpt-6.1-sol", standalone: true,
+    const result = await executeCli({ model: "gpt-6.1-sol", standalone: true,
       conversation: { directory, threadId: session.threadId },
-      capabilities: { webSearch: true, shell: false, imageGeneration: execute },
-      images: execute && run.target.projectType === "slideshow" ? ["turnaround.png", "face-sunglasses.png", "example.png"]
-        .map(name => join(process.cwd(), "docs/production-prompts/character", name)) : [],
-      prompt: assistantPrompt(run.target, selection, message, execute ? assistantSnapshot(run.target) : snapshot, execute),
+      capabilities: { webSearch: true, shell: false, imageGeneration: true },
+      prompt: assistantPrompt(run.target, selection, message, assistantContext(snapshot)),
       schema: responseSchema, origin, taskId: run.target.tabId, token: run.token,
       toolUrl: `${origin}/api/editor-assistant/${run.target.tabId}/agent`, signal: run.controller.signal,
-      onThreadStarted(id) { session.threadId = id; }, onActivity() {},
+      onThreadStarted(id) { session.threadId = id; },
+      onActivity(activity) {
+        session.status.phase = activity === "mcp_tool_call" ? "문서 확인·편집 중" : activity === "image_generation" ? "이미지 생성 중" : "답변 준비 중";
+      },
+      onAgentMessage(text) {
+        const answer = answerText(text);
+        if (answer !== undefined) session.status.text = answer;
+      },
     });
-    const intent = await call(false);
     run.controller.signal.throwIfAborted();
-    if (intent.kind === "answer") {
-      session.status = { ...session.status, state: "completed", phase: "", text: String(intent.text), suggestion: String(intent.suggestion) };
+    if (result.kind === "answer" && !run.changed) {
+      session.status = { ...session.status, state: "completed", phase: "", text: String(result.text), suggestion: String(result.suggestion) };
       return;
     }
-    run.phase = "edit"; session.status.phase = "수정·시각 확인 중";
-    const edited = await call(true);
-    run.controller.signal.throwIfAborted();
     const latest = assistantSnapshot(run.target);
     const revision = "editor" in latest ? latest.editor.revision : latest.revision;
-    if (run.changed && (run.reviewedRevision !== revision || ("editor" in latest &&
-      latest.editor.document.slides.some(slide => !run.slides.has(slide.id)))))
+    const pendingSlides = "editor" in latest
+      ? latest.editor.document.slides.filter(slide => run.affectedSlides.has(slide.id)) : [];
+    const needsReview = !("editor" in latest) || pendingSlides.length > 0;
+    if (run.changed && needsReview && (run.reviewedRevision !== revision || pendingSlides.some(slide => !run.slides.has(slide.id))))
       throw new Error("수정은 저장됐지만 최종 시각 확인이 완료되지 않았습니다. 기존 되돌리기를 사용할 수 있습니다.");
-    if (!run.changed) throw new Error("수정이 적용되지 않았습니다. 명령을 구체적으로 다시 입력해 주세요.");
-    session.status = { ...session.status, state: "completed", phase: "완료", text: String(edited.text ?? ""), suggestion: "", changed: true };
+    if (!run.changed) {
+      session.status = { ...session.status, state: "completed", phase: "변경 없음", text: "문서에 변경된 내용이 없습니다.", changed: false };
+      return;
+    }
+    session.status = { ...session.status, state: "completed", phase: "완료", text: String(result.text ?? ""), suggestion: "", changed: true };
   } catch (error) {
     // Failed/cancelled turns have uncertain context; the next command starts with the saved editor state.
     session.threadId = undefined;

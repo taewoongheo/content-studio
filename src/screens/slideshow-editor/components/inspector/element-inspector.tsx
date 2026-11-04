@@ -147,6 +147,26 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
                 ...(isShape && transparent ? { borderEnabled: true } : {}),
               } }));
             }} />투명 배경</label>
+          {(isShape || element.kind === "image") && <>
+            <label className="col-span-2 flex items-center gap-2 text-xs font-medium">
+              <input type="checkbox" checked={draft.style.shadowEnabled ?? false}
+                onChange={(event) => updateStyle("shadowEnabled", event.target.checked)} />그림자
+            </label>
+            {draft.style.shadowEnabled && <>
+              <label className="grid gap-1.5 text-xs font-medium">그림자 색
+                <Input type="color" className="h-10 p-1" value={draft.style.shadowColor ?? "#000000"}
+                  onChange={(event) => updateStyle("shadowColor", event.target.value)} />
+              </label>
+              <NumberField label="불투명도 (%)" value={(draft.style.shadowOpacity ?? 0.25) * 100} min={0} max={100}
+                onChange={(value) => updateStyle("shadowOpacity", value / 100)} />
+              <NumberField label="흐림 (px)" value={draft.style.shadowBlur ?? 12} min={0} max={100}
+                onChange={(value) => updateStyle("shadowBlur", value)} />
+              <NumberField label="가로 거리 (px)" value={draft.style.shadowOffsetX ?? 0} min={-200} max={200}
+                onChange={(value) => updateStyle("shadowOffsetX", value)} />
+              <NumberField label="세로 거리 (px)" value={draft.style.shadowOffsetY ?? 6} min={-200} max={200}
+                onChange={(value) => updateStyle("shadowOffsetY", value)} />
+            </>}
+          </>}
           {isShape && <>
             <label className="col-span-2 flex items-center gap-2 text-xs font-medium">
               <input type="checkbox" checked={draft.style.borderEnabled ?? false}

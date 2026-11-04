@@ -1,3 +1,5 @@
+import { isExternalProduction } from "@/domains/content-production/domain/start/input";
+import { createTaskProject } from "@/domains/content-production/server/projects/creation";
 import type { EditorDocument } from "@/domains/slideshow/editor/types";
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 import { badgeRepairCommands } from "@/domains/content-production/server/execution/policy/editing/badge/repair";
@@ -7,7 +9,7 @@ import type { ProjectWriteValidator } from "@/domains/slideshow/server/project-w
 import { join } from "node:path";
 import { OperationError } from "@/lib/errors/operation";
 import { readFreshGeneratedImage, generatedImagesRoot } from "@/domains/content-production/server/images/generated";
-import { imageExecution } from "@/domains/content-production/server/execution/runner";
+import { imageExecution, validateProductionCompletion } from "@/domains/content-production/server/execution/runner";
 import { registerSourceTools } from "./sources";
 import { importSlideshowImage } from "@/domains/slideshow/server/import-image";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
@@ -94,6 +96,11 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
       }),
   );
   if (!taskId) return;
+  registerTool(server, "production_validate_completion", {
+    description: "Before returning final output, submit the COMPLETE intended final result for server validation. On failure repair the document or result and retry in this same execution (initial check plus at most 3 retries). Passing does not advance the stage; return the validated result without further edits. Never fabricate approval.",
+    inputSchema: z.object({ result: z.record(z.string(), z.unknown()) }),
+    annotations: annotations(true),
+  }, input => guarded(async () => json(await validateProductionCompletion(taskId, input.result))));
   registerExternalReferenceTools(server, taskId);
   registerTool(server, "production_repair_badge", {
     description: "Restore missing or damaged badge elements from the confirmed internal clone origin. No brand is assumed or added when the source has no badge. Preserves other content; saves as one undoable edit. Re-read and preview ALL slides at the new revision after repair. No custom badge styles accepted.",
@@ -102,6 +109,8 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
   }, input => guarded(async () => {
     const store = productionStore();
     const detail = store.assertActive(taskId, store.get(taskId).task.current_step);
+    if (detail.input && isExternalProduction(detail.input.request.mode))
+      throw new Error("외부 레퍼런스 제작에는 복제 원본 뱃지가 없습니다.");
     const projectId = detail.task.project_id;
     if (!projectId) throw new Error("연결된 프로젝트가 없습니다.");
     const document = contentJobRegistry.get(projectId).editor.document;
@@ -158,7 +167,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     },
     () => guarded(() => {
       const detail = productionStore().get(taskId);
-      return json({ ...stageContext(detail), ...(detail.task.current_step === "visual" ? {
+      return json({ ...stageContext(detail), ...(detail.task.current_step === "visual" && !isExternalProduction(detail.input!.request.mode) ? {
         badge_policy: "Server restores source badges before visual review. Use production_repair_badge for an authoritative source-match check; ambiguous image readings are not blockers."
       } : {}) });
     }),
@@ -216,6 +225,11 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
         return json({ saved: true });
       }),
   );
+  registerTool(server, "production_create_project", {
+    description: "Create and link a blank 4:5 slideshow for external_url/spy_reference using the confirmed analysis plan. No internal source is needed. Reuse the linked project on resume, including older drafts; never erase existing work.",
+    inputSchema: z.object({ slideCount: z.number().int().min(1).max(20) }),
+    annotations: annotations(false),
+  }, input => guarded(() => json(createTaskProject(productionStore(), taskId, input.slideCount))));
   registerTool(
     server,
     "production_clone_project",

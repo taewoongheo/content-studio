@@ -1,3 +1,4 @@
+import { isExternalProduction } from "../../../../../domain/start/input";
 import type { EditorDocument } from "@/domains/slideshow/editor/types";
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
@@ -9,6 +10,7 @@ import { badgeRepairCommands } from "./repair";
 /** Badge integrity is restored before visual AI runs; ambiguous image readings cannot undo it. */
 export async function prepareOriginalBadges(store: ProductionStore, taskId: string) {
   const detail = store.assertActive(taskId, "visual");
+  if (detail.input && isExternalProduction(detail.input.request.mode)) return;
   const projectId = detail.task.project_id;
   const sourceId = (detail.analysis.sources as Array<{clone_project_id?:string}> | undefined)?.find(source => source.clone_project_id)?.clone_project_id
     ?? detail.input?.source?.project_id;

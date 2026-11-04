@@ -52,7 +52,7 @@ export async function verifyEditorAssistant(browser: Browser, origin: string) {
       assert.equal(submitted.at(-1)?.message, "제목을 키워 줘");
       assert.equal(await dialog.getByLabel("AI 편집 명령").inputValue(), "제목을 키워 줘");
       assert.ok(await dialog.getByLabel("AI 편집 명령").isDisabled());
-      await dialog.getByRole("status").getByText("작업 중", { exact: true }).waitFor();
+      await dialog.getByRole("status").getByText("수정·시각 확인 중", { exact: true }).waitFor();
       await dialog.getByRole("button", { name: "AI 명령 닫기" }).click();
       assert.equal(states.get(tabId)?.state, "running", "closing the panel must not stop a command");
       // An actual existing edit endpoint represents the AI tool write, preserving undo.

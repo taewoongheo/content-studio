@@ -1,4 +1,5 @@
 import Konva from "konva";
+import { shadowAttributes } from "@/domains/slideshow/editor/elements/style";
 import type { EditorDocument, EditorSlide, ElementFrame } from "@/domains/slideshow/editor/types";
 import { BACKGROUND_ELEMENT_ID } from "@/domains/slideshow/editor/document";
 import { artworkSize, fittedImage, pixelFrame, renderImageUrl } from "@/domains/slideshow/rendering/layout";
@@ -69,22 +70,41 @@ export async function createArtworkScene(options: Options) {
         const radius = Math.min(style.borderRadius, frame.width / 2, frame.height / 2);
         const shape = shapeGeometry(frame.width, frame.height, style);
 
+        const shadow = shadowAttributes(style);
         if (element.kind === "circle") {
-          group.add(new Konva.Ellipse({ x: frame.width / 2, y: frame.height / 2,
+          group.add(new Konva.Ellipse({ ...shadow, x: frame.width / 2, y: frame.height / 2,
             radiusX: shape.width / 2, radiusY: shape.height / 2, fill: shape.fill,
             stroke: shape.stroke, strokeWidth: shape.strokeWidth, strokeEnabled: shape.strokeEnabled }));
         } else if (element.kind === "triangle") {
-          group.add(new Konva.Path({ x: shape.x, y: shape.y,
+          group.add(new Konva.Path({ ...shadow, x: shape.x, y: shape.y,
             data: roundedTrianglePath(shape.width, shape.height, shape.radius),
             fill: shape.fill, stroke: shape.stroke, strokeWidth: shape.strokeWidth,
             strokeEnabled: shape.strokeEnabled, lineJoin: "round" }));
         } else if (element.kind === "rectangle") {
-          group.add(new Konva.Rect({ ...shape, cornerRadius: shape.radius }));
+          group.add(new Konva.Rect({ ...shadow, ...shape, cornerRadius: shape.radius }));
         } else {
           group.add(new Konva.Rect({ ...bounds, cornerRadius: radius, fill: style.backgroundColor }));
           if (element.kind === "image") {
             const image = images.get(placement.id);
-            if (image) {
+            if (image && style.shadowEnabled) {
+              // Composite the clipped image and background before shadowing so transparent
+              // pixels retain their silhouette and the frame does not clip the shadow.
+              group.destroyChildren();
+              const canvas = window.document.createElement("canvas");
+              const scale = Math.min(1, 4096 / Math.max(frame.width, frame.height));
+              canvas.width = Math.max(1, Math.ceil(frame.width * scale));
+              canvas.height = Math.max(1, Math.ceil(frame.height * scale));
+              const context = canvas.getContext("2d")!;
+              context.scale(canvas.width / frame.width, canvas.height / frame.height);
+              context.beginPath();
+              context.roundRect(0, 0, frame.width, frame.height, radius);
+              context.clip();
+              context.fillStyle = style.backgroundColor;
+              context.fillRect(0, 0, frame.width, frame.height);
+              const fit = fittedImage({ width: image.naturalWidth, height: image.naturalHeight }, bounds, style.imageFit);
+              context.drawImage(image, fit.x, fit.y, fit.width, fit.height);
+              group.add(new Konva.Image({ image: canvas, ...bounds, ...shadow }));
+            } else if (image) {
               const imageGroup = new Konva.Group({ clipFunc(context) {
                 context.beginPath();
                 context.roundRect(0, 0, frame.width, frame.height, radius);
@@ -123,7 +143,7 @@ export async function createArtworkScene(options: Options) {
     let activePreview: string | null = framePreview?.placementId ?? null;
     let lastFrame: ElementFrame | null = framePreview?.frame ?? null;
     function draw() {
-      const bounds = layer.getClientRect({ skipShadow: true, skipTransform: true });
+      const bounds = layer.getClientRect({ skipShadow: false, skipTransform: true });
       const x = options.allowOverflow ? Math.floor(Math.min(0, bounds.x)) : 0;
       const y = options.allowOverflow ? Math.floor(Math.min(0, bounds.y)) : 0;
       const width = options.allowOverflow ? Math.ceil(Math.max(size.width, bounds.x + bounds.width) - x) : size.width;

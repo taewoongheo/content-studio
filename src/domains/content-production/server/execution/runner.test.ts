@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   productionStore,
+  validateProductionCompletion,
   startProduction,
   execute,
   stopProduction,
@@ -70,6 +71,15 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
           review: "The current content meets the review criteria.", review_passed: true,
           ...(step === "visual" ? {reviewed_slide_ids: job.editor.document.slides.map(s => s.id), reviewed_revision: job.editor.revision} : {}) };
       }
+      const candidate = {
+        project_id: projectId,
+        slide_plan: job.editor.document.slides.map(slide => ({ slide_id: slide.id, role: slide.role, purpose: "Prescription", copy: ["3 SETS TO START"], visual: "Exercise" })),
+        content_review: { assessment: "Reviewed", issues: [] },
+        summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "test" }, sources: [],
+      };
+      const beforeValidation = store.get(id);
+      await assert.rejects(validateProductionCompletion(id, candidate), { code: "EMPTY_SLIDE" });
+      assert.deepEqual(store.get(id), beforeValidation);
       new SlideshowProjectWrites(contentJobRegistry, store.db).edit(
         projectId,
         [
@@ -93,6 +103,9 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
         job.editor.revision,
         job.tabId,
       );
+      assert.equal((await validateProductionCompletion(id, candidate)).passed, true);
+      assert.equal(store.get(id).task.current_step, "production");
+      assert.equal(store.get(id).task.state, "running");
       const final = contentJobRegistry.get(projectId);
       return {
         project_id: projectId,

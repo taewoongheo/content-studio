@@ -1,3 +1,6 @@
+import { createBlankDocument } from "@/domains/slideshow/editor/document";
+import { isExternalProduction } from "../../domain/start/input";
+import { OperationError } from "@/lib/errors/operation";
 import { type Row } from "../../domain/contracts";
 import { readContentMetadata } from "@/domains/content-metadata/schema";
 import type { EditorDocument } from "@/domains/slideshow/editor/types";
@@ -85,4 +88,17 @@ export function saveTaskProject(
       return { projectId: job.id, reused: false };
     })(),
   );
+}
+
+/** Creation and linking share the same atomic, resume-safe path as internal clones. */
+export function createTaskProject(store: ProductionStore, taskId: string, slideCount: number) {
+  const detail = store.assertActive(taskId, store.get(taskId).task.current_step);
+  if (!detail.input || !isExternalProduction(detail.input.request.mode))
+    throw new OperationError("PROJECT_CREATION_MODE", "외부 레퍼런스 제작에서만 빈 프로젝트를 만들 수 있습니다.");
+  if (detail.task.project_id) return { projectId: detail.task.project_id, reused: true };
+  if (!Number.isInteger(slideCount) || slideCount < 1 || slideCount > 20)
+    throw new Error("슬라이드 수는 1~20 사이의 정수여야 합니다.");
+  return saveTaskProject(store, taskId, createBlankDocument({
+    structure: "sequential", aspectRatio: "4:5", slideCount,
+  }));
 }

@@ -9,7 +9,7 @@ import { startAssistant, assistantStatus, stopAssistant } from "../service";
 import { POST } from "@/app/api/editor-assistant/[tabId]/agent/route";
 import type { runCodex } from "@/lib/ai/codex";
 
-test("assistant MCP scopes project access and exposes writes only after an edit intent", async () => {
+test("assistant MCP scopes project access and supports one execution, on-demand character references and requires affected-page review", async () => {
   const dir = await mkdtemp(join(tmpdir(), "assistant-policy-")), previous = process.env.CONTENT_STUDIO_DB_PATH;
   process.env.CONTENT_STUDIO_DB_PATH = join(dir, "db.sqlite");
   const job = contentJobRegistry.add({ structure: "sequential", aspectRatio: "4:5", slideCount: 1, outputLanguage: "English" });
@@ -32,16 +32,14 @@ test("assistant MCP scopes project access and exposes writes only after an edit 
     startAssistant(target, {}, "그림을 키워 줘", randomUUID(), "http://127.0.0.1:3000", fake);
     while (!args) await new Promise(resolve => setTimeout(resolve, 5));
     assert.equal((await call("tools/list", {}, "wrong")).status, 403);
-    let list = await (await call("tools/list", {})).json();
-    for (const name of ["preview_slide", "production_external_references", "production_reference_images", "production_read_images"])
+    const list = await (await call("tools/list", {})).json();
+    for (const name of ["preview_slide", "production_external_references", "production_reference_images", "production_read_images", "assistant_character_references"])
       assert.ok(list.result.tools.some((tool: {name:string}) => tool.name === name));
-    assert.ok(!list.result.tools.some((tool: {name:string}) => tool.name === "edit_project"));
+    assert.ok(list.result.tools.some((tool: {name:string}) => tool.name === "edit_project"));
+    const references = await (await call("tools/call", {name:"assistant_character_references",arguments:{}})).json();
+    assert.equal(references.result.content.filter((item:{type:string})=>item.type === "image").length,2);
     const blocked = await (await call("tools/call", { name: "read_project", arguments: { projectId: "another-project" } })).json();
     assert.equal(blocked.result.isError, true);
-    const first = args; release!();
-    while (args === first) await new Promise(resolve => setTimeout(resolve, 5));
-    list = await (await call("tools/list", {})).json();
-    assert.ok(list.result.tools.some((tool: {name:string}) => tool.name === "edit_project"));
     const edited = await (await call("tools/call", { name: "edit_project", arguments: { projectId: job.id, expectedTabId: job.tabId, expectedRevision: 0,
       commands: [{ type: "set_slide_background", slideId: "slide-1", color: "#123456" }] } })).json();
     assert.ok(!edited.result.isError);

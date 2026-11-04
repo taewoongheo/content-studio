@@ -1,4 +1,5 @@
 "use client";
+import { subscribeBackgroundEvents } from "@/domains/workspace/client/editor-load-priority";
 
 import { useCallback, useEffect, useState } from "react";
 import type { ContentJobSnapshot } from "@/domains/slideshow/domain/types";
@@ -10,12 +11,15 @@ export function useContentJob(initialJob: ContentJobSnapshot) {
   const [clientError, setClientError] = useState("");
 
   useEffect(() => {
+    return subscribeBackgroundEvents(() => {
     const events = new EventSource(
       `/api/content-jobs/${encodeURIComponent(initialJob.id)}`,
     );
     events.addEventListener("closed", () => events.close());
     events.onmessage = (event) => {
-      setJob(JSON.parse(event.data) as ContentJobSnapshot);
+      const next = JSON.parse(event.data) as ContentJobSnapshot;
+      // Reconnecting after artwork loads must not redraw an unchanged document.
+      setJob(current => JSON.stringify(current) === JSON.stringify(next) ? current : next);
       setClientError("");
     };
     events.onerror = () => {
@@ -24,6 +28,7 @@ export function useContentJob(initialJob: ContentJobSnapshot) {
       );
     };
     return () => events.close();
+    });
   }, [initialJob.id]);
 
   const send = useCallback(

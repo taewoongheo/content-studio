@@ -24,6 +24,12 @@ export type ElementStyle = {
   fontStyle?: "normal" | "italic";
   textAlign: "left" | "center" | "right";
   borderRadius: number;
+  shadowEnabled?: boolean;
+  shadowColor?: string;
+  shadowOpacity?: number;
+  shadowBlur?: number;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
   borderEnabled?: boolean;
   borderColor?: string;
   borderWidth?: number;

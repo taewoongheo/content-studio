@@ -20,3 +20,20 @@ export function createEditorLoadPriority() {
   };
 }
 export const editorLoadPriority = createEditorLoadPriority();
+
+/** Release persistent HTTP connections while foreground saves and artwork need them. */
+export function subscribeBackgroundEvents(connect: () => () => void) {
+  let disconnect: (() => void) | undefined;
+  const unsubscribe = editorLoadPriority.subscribe(paused => {
+    disconnect?.();
+    disconnect = paused ? undefined : connect();
+  });
+  return () => { unsubscribe(); disconnect?.(); };
+}
+
+/** Keep streams paused until the response body has been consumed, including failures. */
+export async function withEditorRequestPriority<T>(request: () => Promise<T>): Promise<T> {
+  const release = editorLoadPriority.begin();
+  try { return await request(); }
+  finally { release(); }
+}
