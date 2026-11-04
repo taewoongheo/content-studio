@@ -7,6 +7,7 @@ import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import { makeElementDefinition } from "@/domains/slideshow/editor/elements/factory";
 import type { EditorDocument } from "@/domains/slideshow/editor/types";
 import { ProductionStore } from "../../persistence/store";
+import { createTaskProject } from "../creation";
 import { cloneTaskProject } from "../layout";
 import { seedLayoutSource } from "./fixtures";
 
@@ -70,12 +71,12 @@ test("failed clone creation rolls back the draft, DB project and open editor tog
   }finally{db.close();}
 });
 
-test("automatic and external URL clone the confirmed internal origin and retain it across resume",()=>{
+test("automatic requests clone the confirmed internal origin and retain it across resume",()=>{
   const db=openLocalDatabase(":memory:"),store=new ProductionStore(db);
   const source=seedLayoutSource(db,"clone-origin"),other=seedLayoutSource(db,"other-origin");
   const created:string[]=[];
   try {
-    for(const mode of ["automatic","external_url"] as const){
+    for(const mode of ["automatic"] as const){
       const request=mode === "automatic" ? {mode,instructions:""} : {mode,url:"https://www.tiktok.com/@example/photo/123",instructions:""};
       const [id]=store.create([request],[source,other]);store.state(id,"running");
       store.completeAnalysis(id,{...direction,sources:[{kind:"log",id:source.id,clone_project_id:source.project_id,part:"Layout",used_for:"Preserve composition"}]});store.state(id,"running");
@@ -85,4 +86,41 @@ test("automatic and external URL clone the confirmed internal origin and retain 
       assert.equal((store.get(id).analysis.sources as Array<{clone_project_id:string}>)[0].clone_project_id,source.project_id);
     }
   } finally {created.forEach(id=>contentJobRegistry.remove(id));db.close();}
+});
+
+
+test("external blank creation needs no internal origin and preserves linked work on resume", () => {
+  const db = openLocalDatabase(":memory:"), store = new ProductionStore(db), projects = new ContentProjectStore(db);
+  let projectId: string | undefined;
+  try {
+    const [id] = store.create([{mode:"external_url",url:"https://www.tiktok.com/@example/photo/123",instructions:""}], []);
+    store.state(id,"running"); store.completeAnalysis(id,direction); store.state(id,"running");
+    assert.throws(() => cloneTaskProject(store,id,"any-internal","Clone"), {code:"PROJECT_CREATION_MODE"});
+    const result = createTaskProject(store,id,7); projectId = result.projectId;
+    const saved = projects.get(projectId)!;
+    assert.equal(saved.aspectRatio,"4:5");
+    assert.equal((saved.document as EditorDocument).slides.length,7);
+    assert.equal((saved.document as EditorDocument).elements.filter(element => element.kind !== "background").length,0);
+    assert.equal(saved.assets.length,0);
+    assert.equal(saved.topic,direction.topic);
+    assert.deepEqual(createTaskProject(store,id,3), {projectId,reused:true});
+    assert.deepEqual(projects.get(projectId),saved);
+    const [internal] = store.create([{mode:"automatic",instructions:""}], []);
+    store.state(internal,"running");
+    assert.throws(() => createTaskProject(store,internal,3), {code:"PROJECT_CREATION_MODE"});
+  } finally { if(projectId) contentJobRegistry.remove(projectId); db.close(); }
+});
+
+test("blank creation rolls back project and registry if linking fails", () => {
+  const db = openLocalDatabase(":memory:"), store = new ProductionStore(db);
+  try {
+    const [id] = store.create([{mode:"external_url",url:"https://www.tiktok.com/@example/photo/123",instructions:""}], []);
+    store.state(id,"running"); store.completeAnalysis(id,direction); store.state(id,"running");
+    const openBefore = contentJobRegistry.list().map(job => job.id);
+    db.exec("CREATE TRIGGER prevent_blank_link BEFORE UPDATE OF project_id ON content_drafts BEGIN SELECT RAISE(ABORT,'link failed'); END;");
+    assert.throws(() => createTaskProject(store,id,3), /link failed/);
+    assert.equal(store.get(id).task.project_id,null);
+    assert.deepEqual(contentJobRegistry.list().map(job => job.id),openBefore);
+    assert.equal((db.prepare("SELECT count(*) n FROM content_projects").get() as {n:number}).n,0);
+  } finally { db.close(); }
 });

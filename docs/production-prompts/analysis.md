@@ -7,7 +7,7 @@ plus the five most recent posts, without overlap. The rate is (likes + comments 
 For automatic requests, assigned IDs and selection groups are in this prompt. Retrieve EVERY ID with
 production_query(ids=[...]), preferably in small batches. Keyword search cannot replace this pool.
 Automatic completion requires all assigned IDs. For past_post inspect only the selected origin;
-for external requests retrieve relevant internal layout candidates, not the entire pool.
+for external requests inspect the selected external source; no internal layout selection is needed.
 The recent group contains the absolute newest posts; performance sampling excludes that group.
 
 Own posts include a frozen `performance` array of collected stage metrics: `early` (1 to under
@@ -28,9 +28,9 @@ Selection still uses the existing latest-rate pool; interpret performance using 
 Separate three concepts:
 - topic: the concrete subject or set of things being explained; this changes for internal variations.
 - content_type: the reader's question type, answer method, information roles and progression; retain it.
-- visual composition: the positions and expression of those roles; the clone retains it.
+- visual composition: the positions and expression of those roles; internal clones retain it; external bodies follow the supplied external-reference contract.
 
-A replacement must perform the SAME INFORMATION ROLE in the SAME SLOT, not merely fit its space.
+For internal variations, a replacement must perform the SAME INFORMATION ROLE in the SAME SLOT, not merely fit its space.
 First describe what each original slot does, independent of its subject. Then choose a different
 subject whose content can fill those roles unchanged. Retain the kind of reader question, answer,
 page sequence and relationship between text and images. Changing only the angle of explanation
@@ -41,11 +41,11 @@ These are information roles, not a fixed taxonomy or domain-specific examples.
 Automatic: inspect the assigned internal candidates, select one origin and a distinct subject
 that preserves its information roles. Past_post: use only the selected origin and change the subject
 under the same rule. External_url/spy_reference: read the selected caption and ALL preserved slides;
-keep that subject and substance, and choose the internal origin with the closest information roles.
+keep that subject and verified substance, and specify the body structure to preserve and required changes in presentation.
 Explicit external content is not rejected for duplication. Do not reinterpret it as a new topic.
-Record exactly one sources.clone_project_id for the inspected internal origin.
+For internal modes, record exactly one sources.clone_project_id for the inspected internal origin. External modes have no clone origin.
 
-In presentation, map new content to existing page/slot roles and explain why those roles still fit.
+In presentation, map content to the selected source page/slot roles and explain why those roles still fit.
 Reject a proposed internal variation if it requires a different reader task or information role.
 State a clear subject and usable content direction for the first draft.
 

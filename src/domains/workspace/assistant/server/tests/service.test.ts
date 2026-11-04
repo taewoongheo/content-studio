@@ -27,7 +27,7 @@ test("tab sessions isolate context, group real writes, require visual checks, an
   const targets: AssistantTarget[] = [];
   try {
     for (let i = 0; i < 2; i++) {
-      const job = contentJobRegistry.add({ structure: "sequential", aspectRatio: "4:5", slideCount: 1, outputLanguage: "English" });
+      const job = contentJobRegistry.add({ structure: "sequential", aspectRatio: "4:5", slideCount: 3, outputLanguage: "English" });
       targets.push({ projectId: job.id, tabId: job.tabId, projectType: "slideshow" });
     }
     const calls: Array<{ tab: string; thread?: string }> = [];
@@ -36,12 +36,13 @@ test("tab sessions isolate context, group real writes, require visual checks, an
       calls.push({ tab: target.tabId, thread: input.conversation?.threadId });
       input.onThreadStarted?.(target.tabId);
       const run = authorizeAssistant(target.tabId, `Bearer ${input.token}`);
-      if (run.phase === "inspect") return { kind: "edit", text: "", suggestion: "" };
+      assert.equal(input.images, undefined);
+      assert.doesNotMatch(input.prompt, /# 게시용 슬라이드 제작 가이드|# 콘텐츠 리서치|Current snapshot:[\s\S]*frameOverride/);
       const writer = new SlideshowProjectWrites(contentJobRegistry, getLocalDatabase(), undefined, run.id);
       for (const color of ["#111111", "#222222"]) {
         const job = contentJobRegistry.get(target.projectId);
         await writer.edit(job.id, [{ type: "set_slide_background", slideId: job.editor.document.slides[0].id, color }], job.editor.revision, job.tabId);
-        run.changed = true;
+        run.changed = true; run.affectedSlides.add("slide-1");
       }
       const latest = contentJobRegistry.get(target.projectId);
       run.reviewedRevision = latest.editor.revision;
@@ -55,9 +56,11 @@ test("tab sessions isolate context, group real writes, require visual checks, an
     assert.equal(assistantStatus(targets[0]).text,"Caption from the final saved slides");
     assert.equal(contentJobRegistry.getRecord(targets[0].projectId).editorHistory.length, 1);
     assert.equal(contentJobRegistry.get(targets[1].projectId).editor.revision, 0);
-    assert.deepEqual(calls.map(item => item.thread), [undefined, targets[0].tabId]);
+    assert.deepEqual(calls.map(item => item.thread), [undefined]);
     const answer: typeof runCodex = async input => {
       calls.push({ tab: input.taskId, thread: input.conversation?.threadId });
+      input.onAgentMessage?.('{"kind":"answer","text":"제목이 잘');
+      assert.equal(assistantStatus(targets.find(target=>target.tabId === input.taskId)!).text,"제목이 잘");
       return { kind: "answer", text: "제목이 잘 보입니다.", suggestion: "제목을 조금 줄여 줘" };
     };
     startAssistant(targets[0], {}, "제목 어떤가?", randomUUID(), "http://127.0.0.1:3000", answer);

@@ -32,7 +32,7 @@ test("spy source selection validates account and post, persists its identity and
     assert.equal(input.source?.id, "spy");
     assert.ok(input.source?.visual_set_id);
     assert.match(startInputPrompt(input, "analysis"), /Keep its topic/);
-    assert.match(startInputPrompt(input, "production"), /production_clone_project/);
+    assert.match(startInputPrompt(input, "production"), /production_create_project/);
     assert.doesNotMatch(startInputPrompt(input, "visual"), /visual_set_id/);
     assert.equal(stagePolicy("visual", "spy_reference").tools.has("production_read_images"), true);
     assert.equal(stagePolicy("visual", "spy_reference").tools.has("production_external_references"), true);

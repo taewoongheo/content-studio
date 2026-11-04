@@ -38,3 +38,8 @@ export const productionModeLabels: Record<ProductionRequest["mode"], string> = {
 export function preservesSourceFormat(mode: ProductionRequest["mode"]) {
   return mode === "past_post" || mode === "spy_reference";
 }
+
+/** External references supply composition, never an internal clone origin. */
+export function isExternalProduction(mode: ProductionRequest["mode"]) {
+  return mode === "external_url" || mode === "spy_reference";
+}

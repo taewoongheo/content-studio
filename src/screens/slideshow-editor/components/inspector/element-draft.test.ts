@@ -142,3 +142,16 @@ test("부분 굵기 초안은 색상과 독립적으로 저장하며 내용 변�
   ]);
   assert.equal(validElementDraft({ ...changed, textWeights: [{ start: 0, end: 999, fontWeight: 700 }] }), false);
 });
+
+test("이미지 그림자는 기존 문서에서 꺼져 있고 선택 범위에 스타일 패치로 저장된다", () => {
+  const image = { ...element, kind: "image" as const };
+  const draft = makeElementDraft(image, placement);
+  assert.equal(draft.style.shadowEnabled, false);
+  draft.style = { ...draft.style, shadowEnabled: true, shadowOpacity: 0.4, shadowOffsetX: -10 };
+  assert.equal(validElementDraft(draft), true);
+  const commands = commandsFromDraft(draft, image, placement, "slide-1", targets, ["slide-1"]);
+  assert.deepEqual(commands, [{ type: "update_visual", scope: "common", elementId: image.id,
+    style: { shadowEnabled: true, shadowOpacity: 0.4, shadowOffsetX: -10 } }]);
+  assert.equal(validElementDraft({ ...draft, style: { ...draft.style, shadowBlur: -1 } }), false);
+  assert.equal(validElementDraft({ ...draft, style: { ...draft.style, shadowOpacity: 2 } }), false);
+});

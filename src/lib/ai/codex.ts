@@ -23,6 +23,7 @@ export async function runCodex(input: {
   onActivity: (message: string) => void;
   displayOnly?: boolean;
   standalone?: boolean;
+  onAgentMessage?: (text: string) => void;
   onThreadStarted?: (id: string) => void;
   onToolActivity?: (event: {callId:string;name:string;input:unknown;result?:CallToolResult}) => void;
 }) {
@@ -130,6 +131,8 @@ export async function runCodex(input: {
                 if (event.type?.startsWith("item.")) workStarted = true;
                 if (["error", "turn.failed"].includes(event.type) &&
                   (event.error?.message ?? event.message) === "workspace routing discovery failed") routingFailed = true;
+                if (event.item?.type === "agent_message" && typeof event.item.text === "string")
+                  input.onAgentMessage?.(event.item.text);
                 if (event.type === "thread.started" && typeof event.thread_id === "string") input.onThreadStarted?.(event.thread_id);
                 if (event.item?.type === "mcp_tool_call" && ["item.started", "item.completed"].includes(event.type)) {
                   const item = event.item;

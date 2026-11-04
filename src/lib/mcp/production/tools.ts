@@ -1,3 +1,5 @@
+import { isExternalProduction } from "@/domains/content-production/domain/start/input";
+import { createTaskProject } from "@/domains/content-production/server/projects/creation";
 import type { EditorDocument } from "@/domains/slideshow/editor/types";
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 import { badgeRepairCommands } from "@/domains/content-production/server/execution/policy/editing/badge/repair";
@@ -107,6 +109,8 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
   }, input => guarded(async () => {
     const store = productionStore();
     const detail = store.assertActive(taskId, store.get(taskId).task.current_step);
+    if (detail.input && isExternalProduction(detail.input.request.mode))
+      throw new Error("외부 레퍼런스 제작에는 복제 원본 뱃지가 없습니다.");
     const projectId = detail.task.project_id;
     if (!projectId) throw new Error("연결된 프로젝트가 없습니다.");
     const document = contentJobRegistry.get(projectId).editor.document;
@@ -163,7 +167,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     },
     () => guarded(() => {
       const detail = productionStore().get(taskId);
-      return json({ ...stageContext(detail), ...(detail.task.current_step === "visual" ? {
+      return json({ ...stageContext(detail), ...(detail.task.current_step === "visual" && !isExternalProduction(detail.input!.request.mode) ? {
         badge_policy: "Server restores source badges before visual review. Use production_repair_badge for an authoritative source-match check; ambiguous image readings are not blockers."
       } : {}) });
     }),
@@ -221,6 +225,11 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
         return json({ saved: true });
       }),
   );
+  registerTool(server, "production_create_project", {
+    description: "Create and link a blank 4:5 slideshow for external_url/spy_reference using the confirmed analysis plan. No internal source is needed. Reuse the linked project on resume, including older drafts; never erase existing work.",
+    inputSchema: z.object({ slideCount: z.number().int().min(1).max(20) }),
+    annotations: annotations(false),
+  }, input => guarded(() => json(createTaskProject(productionStore(), taskId, input.slideCount))));
   registerTool(
     server,
     "production_clone_project",

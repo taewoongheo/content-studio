@@ -1,3 +1,4 @@
+import { isExternalProduction } from "../../domain/start/input";
 import { PRODUCTION_ASPECT_RATIO } from "../../domain/contracts";
 import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
 import { ensureSharedBackground, validateEditorDocument } from "@/domains/slideshow/editor/document";
@@ -18,9 +19,11 @@ function layoutDocument(savedDocument: EditorDocument): EditorDocument {
   return document;
 }
 
-/** All modes clone the internal source confirmed by analysis. */
+/** Internal modes clone the source confirmed by analysis. */
 export function cloneTaskProject(store: ProductionStore, taskId: string, sourceProjectId: string, reason: string) {
   const detail = store.assertActive(taskId, store.get(taskId).task.current_step);
+  if (detail.input && isExternalProduction(detail.input.request.mode))
+    throw new OperationError("PROJECT_CREATION_MODE", "외부 레퍼런스 제작은 production_create_project로 시작해 주세요.");
   if (detail.task.project_id) return { projectId: detail.task.project_id, reused: true };
   const input = detail.input;
   const selected = (detail.analysis.sources as Array<{clone_project_id?:string}> | undefined)?.find(source => source.clone_project_id)?.clone_project_id

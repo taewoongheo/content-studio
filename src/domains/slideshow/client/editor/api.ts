@@ -1,3 +1,4 @@
+import { withEditorRequestPriority } from "@/domains/workspace/client/editor-load-priority";
 import type { ContentJobSnapshot } from "@/domains/slideshow/domain/types";
 async function readResponse(response: Response): Promise<ContentJobSnapshot> {
   const body = await response.json().catch(() => null);
@@ -5,24 +6,24 @@ async function readResponse(response: Response): Promise<ContentJobSnapshot> {
   return body as ContentJobSnapshot;
 }
 export function createContentJob() {
-  return fetch("/api/content-jobs", {
+  return withEditorRequestPriority(() => fetch("/api/content-jobs", {
     method: "POST",
-  }).then(readResponse);
+  }).then(readResponse));
 }
 export function postContentJobAction(jobId: string, body: Record<string, unknown>) {
-  return fetch(`/api/content-jobs/${encodeURIComponent(jobId)}`, {
+  return withEditorRequestPriority(() => fetch(`/api/content-jobs/${encodeURIComponent(jobId)}`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-  }).then(readResponse);
+  }).then(readResponse));
 }
 export function getContentJob(jobId: string) {
-  return fetch(`/api/content-jobs/${encodeURIComponent(jobId)}`, {
+  return withEditorRequestPriority(() => fetch(`/api/content-jobs/${encodeURIComponent(jobId)}`, {
     headers: { Accept: "application/json" }, cache: "no-store",
-  }).then(readResponse);
+  }).then(readResponse));
 }
 export function uploadEditorImage(jobId: string, image: File, tabId?: string) {
   const form = new FormData();
   form.set("image", image);
-  return fetch(`/api/content-jobs/${encodeURIComponent(jobId)}/assets`, {
+  return withEditorRequestPriority(() => fetch(`/api/content-jobs/${encodeURIComponent(jobId)}/assets`, {
     method: "POST", headers: tabId ? { "x-tab-id": tabId } : {}, body: form,
-  }).then(readResponse);
+  }).then(readResponse));
 }

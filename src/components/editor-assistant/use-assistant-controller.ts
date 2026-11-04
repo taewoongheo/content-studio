@@ -1,4 +1,5 @@
 "use client";
+import { editorLoadPriority } from "@/domains/workspace/client/editor-load-priority";
 import { useEffect, useRef, useState } from "react";
 import { assistantRequest as request } from "@/domains/workspace/assistant/client/api";
 import type { AssistantSelection, AssistantState, AssistantTarget } from "@/domains/workspace/assistant/model";
@@ -43,13 +44,14 @@ export function useAssistantController({ target, selection, beforeStart, onSettl
   async function send(text: string) {
     if (!text.trim() || running || submitted.current) return;
     submitted.current = true; generation.current++; setSending(true); setError("");
+    const release = editorLoadPriority.begin();
     try {
       if (!await callbacks.current.beforeStart()) throw new Error("입력 중인 변경을 저장한 뒤 다시 실행해 주세요.");
       const next = await request<AssistantState>(latest.current.target, { action: "start", requestId: crypto.randomUUID(),
         message: text, selection: typeof latest.current.selection === "function" ? latest.current.selection() : latest.current.selection });
       setStatus(next); return true;
     } catch (cause) { setError(cause instanceof Error ? cause.message : "AI 실행 실패"); }
-    finally { submitted.current = false; setSending(false); }
+    finally { release(); submitted.current = false; setSending(false); }
   }
   async function stop() {
     generation.current++;

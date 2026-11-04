@@ -1,3 +1,5 @@
+import { isExternalProduction } from "../../domain/start/input";
+import { withReferenceImages } from "../start/media/attachments";
 import { executeWithOutputRepair } from "./review/output/output-repair";
 import { reviewedSummary } from "./review/summary";
 import { prepareOriginalBadges } from "./policy/editing/badge/prepare";
@@ -217,12 +219,12 @@ export async function execute(
       const inputs = run.step === "analysis" || run.step === "production" ? store.analysisInputs(id, true) : [];
       const startInput = store.get(id).input!;
       const capabilities = stagePolicy(run.step, startInput.request.mode);
-      const result = await executeWithOutputRepair(executor, {
+      const result = await withReferenceImages(store, startInput, run.step, run.controller.signal, referenceImages => executeWithOutputRepair(executor, {
         capabilities,
         onThreadStarted: threadId => { run.imageThreadId = threadId; },
         model: PRODUCTION_MODEL,
         prompt: stagePrompt(id, run.step, inputs, persona, product, startInput),
-        images: stageImages(run.step),
+        images: [...stageImages(run.step), ...referenceImages],
         schema: resultSchema(run.step),
         origin,
         taskId: id,
@@ -236,7 +238,7 @@ export async function execute(
             kind: "state",
             detail: message,
           }),
-      }, run.step);
+      }, run.step));
       run.controller.signal.throwIfAborted();
       phase = "validation";
       await checkStageCompletion(id, run, result);
@@ -306,7 +308,9 @@ async function checkStageCompletion(id: string, run: Run, result: Record<string,
       throw new OperationError("START_SOURCE_NOT_REVIEWED", "외부 원본 게시글의 전체 슬라이드를 확인해 주세요.");
     const origins = sources.filter(source => source.clone_project_id);
     const origin = origins.length === 1 ? origins[0].clone_project_id : undefined;
-    if (typeof origin !== "string" || !store.sourceProjectAllowed(id, origin) || !run.sourceProjects.has(origin))
+    if (isExternalProduction(startInput.request.mode) && origins.length)
+      throw new OperationError("EXTERNAL_CLONE_SOURCE", "외부 레퍼런스 제작에는 내부 복제 원본을 지정하지 않습니다.");
+    if (!isExternalProduction(startInput.request.mode) && (typeof origin !== "string" || !store.sourceProjectAllowed(id, origin) || !run.sourceProjects.has(origin)))
       throw new OperationError("LAYOUT_SOURCE_NOT_SELECTED", "복제할 내부 게시글을 선택하고 실제 슬라이드를 확인해 주세요.");
     if (startInput.request.mode === "past_post" && origin !== startInput.request.sourceProjectId)
       throw new OperationError("LAYOUT_SOURCE_NOT_SELECTED", "지정한 내부 게시글을 복제해 주세요.");

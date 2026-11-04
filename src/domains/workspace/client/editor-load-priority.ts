@@ -30,3 +30,10 @@ export function subscribeBackgroundEvents(connect: () => () => void) {
   });
   return () => { unsubscribe(); disconnect?.(); };
 }
+
+/** Keep streams paused until the response body has been consumed, including failures. */
+export async function withEditorRequestPriority<T>(request: () => Promise<T>): Promise<T> {
+  const release = editorLoadPriority.begin();
+  try { return await request(); }
+  finally { release(); }
+}

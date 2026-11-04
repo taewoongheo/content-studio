@@ -3,7 +3,7 @@ import type { SlideshowStructure } from "@/domains/slideshow/editor/types";
 import { EDITOR_FONT_FAMILIES } from "@/domains/slideshow/editor/typography/fonts";
 import { remapTextColors, validTextColors } from "@/domains/slideshow/editor/typography/ranges/text-colors";
 import { remapTextWeights, validTextWeights } from "@/domains/slideshow/editor/typography/ranges/text-weights";
-import { validBorder, validRotation, withStyleDefaults } from "@/domains/slideshow/editor/elements/style";
+import { validBorder, validRotation, validShadow, withStyleDefaults } from "@/domains/slideshow/editor/elements/style";
 import { MAX_FRAME_COORDINATE, MAX_FRAME_DIMENSION } from "@/domains/slideshow/editor/types";
 import { BACKGROUND_ELEMENT_ID, BACKGROUND_FRAME, BACKGROUND_PLACEMENT_ID, ensureSharedBackground, syncBackgroundColors } from "@/domains/slideshow/editor/background";
 import type {
@@ -25,7 +25,7 @@ function validFrame(frame: ElementFrame) {
 }
 
 function validStyle(style: ElementStyle) {
-  return validBorder(style) && validRotation(style) && colorPattern.test(style.color) &&
+  return validShadow(style) && validBorder(style) && validRotation(style) && colorPattern.test(style.color) &&
     (colorPattern.test(style.backgroundColor) || style.backgroundColor === "transparent") &&
     Number.isFinite(style.fontSize) && style.fontSize >= 8 && style.fontSize <= 200 &&
     Number.isFinite(style.lineHeight) && style.lineHeight >= 0.8 && style.lineHeight <= 3 &&

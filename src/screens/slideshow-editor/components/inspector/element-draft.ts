@@ -1,7 +1,7 @@
 import type { EditorCommand, ElementDefinition, ElementFrame, ElementStyle, PlacedElement, TextColorRange, TextWeightRange } from "@/domains/slideshow/editor/types";
 import { validTextColors } from "@/domains/slideshow/editor/typography/ranges/text-colors";
 import { validTextWeights } from "@/domains/slideshow/editor/typography/ranges/text-weights";
-import { validBorder, validRotation, withStyleDefaults } from "@/domains/slideshow/editor/elements/style";
+import { validBorder, validRotation, validShadow, withStyleDefaults } from "@/domains/slideshow/editor/elements/style";
 
 export type VisualTarget = { slideId: string; placement: PlacedElement };
 export type ElementDraft = {
@@ -59,7 +59,7 @@ export function validElementDraft(draft: ElementDraft) {
     draft.style.lineHeight >= 0.8 && draft.style.lineHeight <= 3 &&
     ["normal", "italic"].includes(draft.style.fontStyle ?? "normal") &&
     Number.isInteger(draft.style.fontWeight) && draft.style.fontWeight >= 100 && draft.style.fontWeight <= 900 &&
-    draft.style.borderRadius >= 0 && draft.style.borderRadius <= 100 && validBorder(draft.style) && validRotation(draft.style);
+    draft.style.borderRadius >= 0 && draft.style.borderRadius <= 100 && validShadow(draft.style) && validBorder(draft.style) && validRotation(draft.style);
 }
 
 export function commandsFromDraft(

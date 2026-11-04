@@ -147,3 +147,20 @@ test("production attaches both official identity images and instructs real image
   assert.match(stagePrompt("identity","production"),/Pass these ACTUAL images to native image_gen/);
   for(const step of ["analysis","hook","polish","visual"] as const) assert.deepEqual(stageImages(step),paths);
 });
+
+
+test("external stages receive the shared adaptation contract and draft/visual attachment mapping", () => {
+  for (const mode of ["external_url", "spy_reference"] as const) {
+    const request = mode === "external_url"
+      ? { mode, url: "https://www.tiktok.com/@example/photo/123", instructions: "" }
+      : { mode, referenceId: "source", instructions: "" };
+    for (const { id: step } of productionSteps) {
+      const prompt = stagePrompt("external", step, [], null, null, { request });
+      assert.match(prompt, /Do not select or clone an internal project/);
+      assert.match(prompt, /wording AND visual composition in our own style/);
+      assert.match(prompt, /A star rating stays stars/);
+      assert.doesNotMatch(prompt, /Assigned own-post IDs/);
+      assert.equal(prompt.includes("third attachment = source slide 1"), ["production", "visual"].includes(step));
+    }
+  }
+});

@@ -1,3 +1,7 @@
+import { assistantSnapshot } from "@/domains/workspace/assistant/server/service";
+import { affectedSlides } from "@/domains/workspace/assistant/server/review";
+import { registerEditorCharacter } from "@/lib/mcp/production/editor-character";
+import type { EditorDocument } from "@/domains/slideshow/editor/types";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { createStudioMcpServer } from "@/lib/mcp/server";
 import { isLocalRequest } from "@/lib/http/local-request";
@@ -16,8 +20,9 @@ export async function POST(request: Request, context: { params: Promise<{ tabId:
     const run = authorizeAssistant(tabId, auth);
     const reads = run.target.projectType === "video" ? ["read_video_project", "preview_video"] : ["read_project", "preview_slide", "preview_slides"];
     const write = run.target.projectType === "video" ? "edit_video_project" : "edit_project";
+    let beforeDocument: EditorDocument | undefined;
     const server = createStudioMcpServer(new URL(request.url).origin, {
-      allowed: new Set([...referenceTools, ...reads, ...(run.phase === "edit" ? [write] : [])]),
+      allowed: new Set([...referenceTools, ...(run.target.projectType === "slideshow" ? ["assistant_character_references"] : []), ...reads, ...(run.phase === "edit" ? [write] : [])]),
       before(name, input) {
         const active = authorizeAssistant(tabId, auth);
         if (active !== run) throw new Error("이전 실행은 종료됐습니다.");
@@ -26,11 +31,20 @@ export async function POST(request: Request, context: { params: Promise<{ tabId:
           if (data.projectId !== run.target.projectId || (name === write && data.expectedTabId !== tabId))
             throw new Error("현재 에디터 탭만 조회·수정할 수 있습니다.");
         }
-        if (name === write && run.phase !== "edit") throw new Error("질문에서는 수정할 수 없습니다.");
+        if (name === write && run.phase !== "edit") throw new Error("수정 실행이 아닙니다.");
+        if (name === write && run.target.projectType === "slideshow") {
+          const snapshot = assistantSnapshot(run.target);
+          if ("editor" in snapshot) beforeDocument = structuredClone(snapshot.editor.document);
+        }
       },
       after(name, _input, result) {
         if (result.isError) return;
-        if (name === write) { run.changed = true; run.slides.clear(); run.reviewedRevision = undefined; }
+        if (name === write) {
+          run.changed = true; run.slides.clear(); run.reviewedRevision = undefined;
+          const snapshot = assistantSnapshot(run.target);
+          if (beforeDocument && "editor" in snapshot)
+            for (const id of affectedSlides(beforeDocument, snapshot.editor.document)) run.affectedSlides.add(id);
+        }
         if (!["preview_slide", "preview_slides", "preview_video"].includes(name)) return;
         for (const item of result.content) if (item.type === "text") {
           try {
@@ -44,6 +58,7 @@ export async function POST(request: Request, context: { params: Promise<{ tabId:
       },
     }, undefined, () => { authorizeAssistant(tabId, auth); }, run.id, () => { authorizeAssistant(tabId, auth); });
     registerEditorReferences(server);
+    registerEditorCharacter(server);
     const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
     try {
       await server.connect(transport);
