@@ -25,8 +25,13 @@ Interpret performance using these stage records:
 ## Resolve the assigned topic
 
 Automatic requests receive a cached topic candidate with its reader question, intended answer method,
-direct own-post matches, related matches and evidence classification. Keep the candidate's question and
-substance while verifying the answer. Read the assigned own-post evidence; a related post is not direct
+direct own-post matches, related matches and evidence classification. The candidate describes a proposed NEW subject, not the supporting spy post's subject. Keep its reader-question
+type and answer method while verifying the new answer. After inspecting the actual selected origin, check
+that the proposed content is substantively different from that origin, including internal origins.
+If it merely repeats the origin, choose a meaningful subject variation within the assigned direction and
+record why; do not count title paraphrases, factual corrections or artwork changes as a new topic.
+Past performance supports the matched candidate only. If the variation changes the concrete question or
+constraints beyond those matches, label that extension untested; do not claim direct performance proof for it. Read the assigned own-post evidence; a related post is not direct
 validation, and no direct history means untried, not poor performance. The server's evidence classification
 is an operational screen, not causal proof. Do not turn a comparison, explanation, correction or planning
 question into an executable routine merely because a familiar source is convenient.
@@ -56,9 +61,12 @@ Describe the original information roles and map a different subject to them, ret
 answer method and page progression. Changing only the angle of explanation about the same subject is not
 that mode's requested variation. Do not force a different reader task into the same slot.
 
-For automatic origin=spy, the server has already selected and preserved a supporting spy post. Follow the
+For automatic origin=spy, the server has already selected and preserved a spy composition origin. Follow the
 external-reference contract, retaining its page count/order and information roles. No internal clone is needed.
-Keep the assigned question; if the actual source does not support it, report the mismatch rather than inventing pages.
+Map the NEW topic into its existing page roles. Source content is evidence of composition, not the answer
+to reuse. In reasoning.interpretations and presentation, state original subject → new subject, which concrete
+items/claims change, and which page roles/layouts remain. Apply this comparison to internal origins too.
+If the actual source composition cannot express the new topic, report the mismatch rather than inventing pages.
 
 For internal origins, record exactly one sources.clone_project_id for the inspected internal origin.
 External origins, including automatic origin=spy, have no clone origin. Keep topic (subject), content_type (reader question and answer method)

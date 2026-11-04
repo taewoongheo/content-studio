@@ -164,3 +164,16 @@ test("external stages receive the shared adaptation contract and draft/visual at
     }
   }
 });
+
+
+test("automatic internal and spy stages require a new subject without copying source substance", () => {
+  for (const origin of ["internal", "spy"] as const) {
+    for (const { id: step } of productionSteps) {
+      const prompt = stagePrompt("variation", step, [], null, null, { request: { mode: "automatic", instructions: "" }, origin });
+      assert.match(prompt, /Change the concrete subject and substantive content/);
+      assert.match(prompt, /page count, order, information roles and layout relationships/);
+      assert.doesNotMatch(prompt, /Keep its topic and verified substance/);
+      assert.doesNotMatch(prompt, /Keep the source subject, verified substance/);
+    }
+  }
+});

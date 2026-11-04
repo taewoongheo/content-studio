@@ -89,3 +89,27 @@ test("automatic spy capture refreshes expired URLs once and later tasks/nodes on
     assert.equal(apifyCalls, 1); assert.equal(downloads, 2);
   } finally { db.close(); }
 });
+
+
+test("automatic spy topic can change while its source format and image cache remain fixed", async () => {
+  const { db, store } = fixture();
+  const direction = { analysis: "New subject in observed cards", reasoning: { observations: [], interpretations: [], candidates: [] },
+    topic: "Bodyweight legs", content_type: "Exercise cards", message: "Train legs", answer: "Two movements", presentation: "Two source roles",
+    reason: "New subject", expected_response: "Save", goal_connection: "Follow", difference_from_recent: "Different subject", sources: [] };
+  try {
+    const [id] = store.create(1, [], { assignments: [assignment([])], history: [] });
+    store.state(id, "running");
+    await prepareStartInput(store, id, new AbortController().signal,
+      { posts: async () => { throw Error("No Apify needed for available images"); } },
+      async () => [{ data: Buffer.from("one"), width: 540, height: 675 }]);
+    const source = store.get(id).input!.source;
+    store.completeAnalysis(id, direction); store.state(id, "running");
+    const { analysis, reasoning, sources, ...change } = direction;
+    void analysis; void reasoning; void sources;
+    assert.doesNotThrow(() => store.changeDirection(id, { ...change, topic: "Bodyweight shoulders" }, "collision"));
+    assert.equal(store.get(id).analysis.topic, "Bodyweight shoulders");
+    assert.deepEqual(store.get(id).input!.source, source);
+    assert.throws(() => store.changeDirection(id, { ...change, content_type: "Explanation" }, "collision"), /포맷/);
+    assert.throws(() => assertSourcePageCount(store.get(id).input!, 2), { code: "SOURCE_FORMAT_MISMATCH" });
+  } finally { db.close(); }
+});

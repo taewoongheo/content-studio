@@ -8,13 +8,21 @@ object or title alone is not a direction. Keep the pool broad across the observe
 than converting everything to a short executable routine. Preserve account differences without assigning
 quotas proportional to account size or copying a creator's claims. Rewording one idea does not create a new candidate.
 
-Each candidate specifies a concrete topic, the reader's question, the answer method (content_type), a useful
-central message and the supporting reference IDs. Put the ONE actual post that best embodies this question
-and answer format first in reference_ids; it is the production origin when no direct own-post history exists. Derive candidates from topics explicitly present in captions
-or saved descriptions/inspected cover text. Each candidate must have an actual source supporting its reader
-question AND answer method. Vary subjects within observed formats; do not append an unobserved second question,
-new explanatory section or progression guide to an exercise list. A generic save/follow caption cannot
-establish its image content. Use meaningful saved descriptions and the supplied pattern observations instead.
+Each candidate is a NEW concrete subject and substantive answer derived from an observed pattern,
+not a restatement of a spy post. Change the target, situation or meaningful constraint while preserving
+its reader-question type and answer method. Reusing the same list, exercises or prescriptions with a
+new headline, safer claims or different branding is not a new topic. For example, a numbered exercise
+ranking can rank a different muscle group's exercises; an exercise card cannot become an explanation page.
+
+Specify the proposed topic, reader question, content_type, message and reference_ids. In rationale,
+contrast the observed source subject with the proposed new subject and name the composition that stays.
+Put the ONE post that best demonstrates that composition first in reference_ids; it is the composition
+origin when there is no direct own-post history. Its caption, saved description or inspected cover must
+support the observed pattern, not necessarily contain the proposed subject. Clearly distinguish observed
+source facts from proposed new content. Do not claim that the reference already covers the new subject.
+Do not invent an unobserved answer method, append a second question or add explanatory sections to an
+exercise list. A generic save/follow caption cannot establish image content; use meaningful descriptions
+and supplied pattern observations. Choose substantive, audience-relevant variations, not easy slot filling.
 Do not invent source observations, effects, personal experiences or performance forecasts. Unsupported health
 promises may inspire a question, but do not repeat them as the answer. Focus on the active product's audience.
 

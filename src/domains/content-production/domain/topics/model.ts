@@ -1,11 +1,11 @@
 import { z } from "zod";
 export const topicCandidateSchema = z.object({
-  topic: z.string().min(1),
+  topic: z.string().min(1).describe("Proposed new subject, substantively different from its spy composition origin"),
   reader_question: z.string().min(1),
   content_type: z.string().min(1),
   message: z.string().min(1),
-  rationale: z.string().min(1),
-  reference_ids: z.array(z.string()).min(1),
+  rationale: z.string().min(1).describe("Observed source subject -> new subject; name the composition retained"),
+  reference_ids: z.array(z.string()).min(1).describe("Observed composition evidence, with the primary origin first; not proof the source covers the proposed subject"),
 }).strict();
 export const topicPoolSchema = z.object({ candidates: z.array(topicCandidateSchema).min(1) }).strict();
 export const topicMatchSchema = z.object({ matches: z.array(z.object({

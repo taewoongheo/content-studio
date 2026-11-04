@@ -25,5 +25,8 @@ research guide's overlap rule; explicit requests use their selected material.
 Review the actual saved content for accuracy, logic, relevance, text/image agreement and whether the
 body delivers the hook. In content_review.assessment, compare the saved draft page by page with the frozen
 source, including each page's specific information role. Check against the original, not just your own plan.
+For automatic requests, also compare subject and concrete content with the origin: the same list, exercises
+and prescriptions with paraphrased copy is a failed variation even if every page matches structurally.
+Repair content within the preserved composition; do not copy source substance back to improve visual similarity.
 Repair deviations and verify the result. Save metadata, slide_plan,
 content_review and the complete current summary. Use issues=[] when no issues remain to report.

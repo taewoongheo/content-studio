@@ -366,9 +366,9 @@ export class ProductionStore {
     publishChange({ task_id: id, step, kind: "saved" });
   }
   private assertRequestDirection(detail: WorkDetail, direction: Row) {
-    if (detail.input && !isExternalProduction(detail.input) && detail.analysis.content_type && direction.content_type !== detail.analysis.content_type)
-      throw new Error("내부 원본 기반 제작에서는 확정한 표현 포맷을 유지해 주세요.");
-    if (detail.input && isExternalProduction(detail.input) && direction.topic !== detail.analysis.topic)
+    if (detail.input && (detail.input.request.mode === "automatic" || !isExternalProduction(detail.input)) && detail.analysis.content_type && direction.content_type !== detail.analysis.content_type)
+      throw new Error("원본 구성 기반 제작에서는 확정한 표현 포맷을 유지해 주세요.");
+    if (detail.input && detail.input.request.mode !== "automatic" && isExternalProduction(detail.input) && direction.topic !== detail.analysis.topic)
       throw new Error("외부 URL 기반 제작에서는 확정한 원본 소재를 유지해 주세요.");
   }
   changeDirection(
