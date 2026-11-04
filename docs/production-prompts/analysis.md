@@ -74,6 +74,8 @@ that affect the decision; no source count or research length is required.
 
 For automatic requests, call production_comparisons once before finalizing direction and apply the
 attached research guide's overlap rule. If every viable candidate overlaps, record why the duplicate is accepted.
+If overlap requires a different topic, explain the departure from the initial assignment and reassess its own-post
+evidence. Do not transfer the original candidate's proven status to an unrelated replacement.
 
 ## Save the decision
 

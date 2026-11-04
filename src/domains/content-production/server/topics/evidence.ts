@@ -36,7 +36,7 @@ export function evaluateTopics(candidates: TopicCandidate[], matches: TopicMatch
       const records = stages.get(stage)!;
       const qualified = [...new Set(match.direct_log_ids)].flatMap(id => {
         const value = records.get(id);
-        return value !== undefined && value >= baseline ? [value] : [];
+        return value !== undefined && value > 0 && value >= baseline ? [value] : [];
       });
       if (qualified.length < 2) continue;
       const mean = qualified.reduce((sum, value) => sum + value, 0) / qualified.length;

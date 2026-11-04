@@ -117,13 +117,18 @@ export class ProductionStore {
       ? Array.from({ length: requests }, () => productionRequestSchema.parse({ mode: "automatic" }))
       : requests.map(request => productionRequestSchema.parse(request));
     const sources = entries.map(request => this.requestSource(request));
+    const inputIds = new Set(inputs.map(row => String(row.id)));
+    const historyById = new Map(topics.history.map(row => [String(row.id), row]));
     const ids: string[] = [];
     let automaticIndex = 0;
     this.db.transaction(() => {
       for (const [index, request] of entries.entries()) {
         const assignment = request.mode === "automatic" ? topics.assignments[automaticIndex++] : undefined;
         const matchedIds = new Set([...(assignment?.direct_log_ids ?? []), ...(assignment?.related_log_ids ?? [])]);
-        const taskInputs = [...inputs, ...topics.history.filter(row=>matchedIds.has(String(row.id)) && !inputs.some(input=>input.id===row.id))];
+        const taskInputs = [...inputs, ...[...matchedIds].flatMap(matchedId => {
+          const row = historyById.get(matchedId);
+          return row && !inputIds.has(matchedId) ? [row] : [];
+        })];
         const id = randomUUID(),
           log = randomUUID(),
           now = this.now();

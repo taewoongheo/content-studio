@@ -22,3 +22,14 @@ test("revisions ignore bookkeeping, include meaningful state/content changes and
  const input=buildReportInput(value,"analysis",[]);
  assert.match(JSON.stringify(input),/Source could not be cloned/);assert.doesNotMatch(JSON.stringify(input),/private|OUTPUT_SCHEMA_INVALID|tool_calls/);
 });
+test("analysis report explains the selected topic and evidence without exposing candidate or source identifiers",()=>{
+ const value=detail();
+ value.input={request:{mode:"automatic",instructions:""},topic_assignment:{
+  candidate:{id,topic:"Rest between sets",reader_question:"When should I start the next set?",content_type:"Decision guide",message:"Recover enough",rationale:"Observed training-principle questions",reference_ids:[id]},
+  requested_lane:"proven",selected_lane:"exploration",status:"untried",direct_log_ids:[],related_log_ids:[id],evidence:"No direct publication history.",fallback:"No repeatedly supported candidate available.",
+ }};
+ const input=buildReportInput(value,"analysis",[]);
+ assert.match(JSON.stringify(input.results.topic_selection),/Rest between sets|No direct publication history/);
+ assert.doesNotMatch(JSON.stringify(input.results.topic_selection),new RegExp(id));
+ assert.equal(buildReportInput(value,"production",[]).results.topic_selection,undefined);
+});
