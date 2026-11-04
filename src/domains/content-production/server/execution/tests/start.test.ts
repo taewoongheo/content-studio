@@ -5,9 +5,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { productionStore, startProduction, syncState, resetProduction } from "../runner";
 
-test("start uses stored metrics without collecting performance", async () => {
+test("start appends tasks while existing drafts remain and serializes shared preparation", async () => {
   const directory = mkdtempSync(join(tmpdir(), "production-start-"));
-  const previous = process.env.APIFY_API_TOKEN;
+  const previous = process.env.APIFY_API_TOKEN, previousPath = process.env.CONTENT_STUDIO_DB_PATH;
   process.env.APIFY_API_TOKEN = "fixture-key";
   process.env.CONTENT_STUDIO_DB_PATH = join(directory, "test.sqlite");
   const store = productionStore(), calls: string[] = [];
@@ -24,9 +24,26 @@ test("start uses stored metrics without collecting performance", async () => {
     assert.deepEqual(calls,["topics","execute","execute","execute","execute"]);
     for (const id of ids) assert.equal(store.analysisInputs(id)[0].like_count,1);
     assert.equal(syncState().running,false);
+    const states = ["running", "finished", "stopped", "failed"] as const;
+    ids.forEach((id,index) => store.state(id,states[index]));
+    const existing = ids.map(id => store.get(id));
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const appended = startProduction(2, "http://127.0.0.1:3000", {...services, refreshSpy: async () => { await gate; return {} as never; }});
+    assert.equal(syncState().running,true);
+    try {
+      await assert.rejects(startProduction(1,"http://127.0.0.1:3000",services),/분석 자료를 준비/);
+      assert.equal(store.list().length,4);
+    } finally { release(); }
+    const added = await appended;
+    assert.equal(added.length,2);
+    assert.equal(store.list().length,6);
+    assert.deepEqual(ids.map(id => store.get(id)),existing,'starting another batch leaves existing work unchanged');
+    assert.equal(syncState().running,false);
     resetProduction();
   } finally {
     store.db.close(); rmSync(directory, { recursive: true, force: true });
     if (previous === undefined) delete process.env.APIFY_API_TOKEN; else process.env.APIFY_API_TOKEN = previous;
+    if (previousPath === undefined) delete process.env.CONTENT_STUDIO_DB_PATH; else process.env.CONTENT_STUDIO_DB_PATH = previousPath;
   }
 });

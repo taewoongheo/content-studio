@@ -6,7 +6,6 @@ import { PerformanceDetails } from "./details/performance-details";
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { X, History } from "lucide-react";
-import { getOpenDrafts } from "@/domains/content-production/domain/start-policy";
 import { useNodeDetails } from "../hooks/use-node-details";
 import { useDetailReportPrefetch } from "../hooks/display/use-detail-report-prefetch";
 import { useProductionControls } from "../hooks/use-production-controls";
@@ -27,8 +26,7 @@ export function ProductionWorkspace({ runtime, readWork, onOpen }: {
 }) {
   const { data, error, busy, writes, activity, reload, act } = runtime;
   const { taskAction, removeTask, stopAll, resetAll, resetDisabled, controlsBusy, stopDisabled } = useProductionControls(runtime);
-  const openDraftIds = new Set(data ? getOpenDrafts(data.tasks).map(task => task.id) : []);
-  const blockedByDraft = openDraftIds.size > 0;
+  const openDraftIds = new Set(data?.tasks.map(task => task.id) ?? []);
   const details = useNodeDetails(data?.tasks, readWork);
   useDetailReportPrefetch(details);
   const [panel, setPanel] = useState<"library" | "performance" | null>(null);
@@ -39,7 +37,7 @@ export function ProductionWorkspace({ runtime, readWork, onOpen }: {
   const select = (id: string, step: ProductionStep) => { setPanel(null); setSelected({ id, step }); };
   const startContent = <div className="space-y-3"><SamplingControls key={JSON.stringify(data?.sampling)} value={data?.sampling ?? defaultSampling} disabled={busy} onSave={settings=>act({action:"sampling_settings",settings})} /><StartControls key={runtime.resetVersion} posts={data?.publishedPosts ?? []}
     references={(data?.externalReferences ?? []).filter(post => !post.excluded && (Number(post.slide_count) > 0 || String(post.url).includes("/photo/")) && data?.referenceAccounts.some(account => account.username === post.account && account.enabled))}
-    busy={busy} blockedByDraft={blockedByDraft} configured={data?.configured.apify}
+    busy={busy} configured={data?.configured.apify}
     syncing={data?.sync.running ?? false} error={error ?? ""}
     onStart={requests => act({ action: "start", requests })} onReload={() => void reload()} /></div>;
   return <div className="flex h-full min-h-0 overflow-hidden">

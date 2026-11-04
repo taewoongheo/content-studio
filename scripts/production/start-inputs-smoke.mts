@@ -32,6 +32,8 @@ export async function verifyProductionStart(browser: Browser, origin: string, po
     return route.fulfill({json:id.startsWith("source-picker-")?fixtureDocument:sourceDocument});
   });
   let submitted: ProductionRequest[] | undefined, attempts = 0;
+  let releaseStart!: () => void;
+  const startGate = new Promise<void>(resolve => { releaseStart = resolve; });
   await page.route("**/api/content-production", async route => {
     const request = route.request();
     if (request.headers().accept?.includes("text/event-stream")) return route.continue();
@@ -48,6 +50,7 @@ export async function verifyProductionStart(browser: Browser, origin: string, po
     if (input.action !== "start") return route.continue();
     submitted = input.requests;
     attempts++;
+    if (attempts === 2) await startGate;
     return route.fulfill(attempts === 1 ? { status: 400, json: { error: "Fixture start failed" } } : { json: { ids: [] } });
   });
   await page.route("**/api/content-production?image=spy-preview*", route => route.fulfill({ contentType: "image/png", body: artwork }));
@@ -159,14 +162,25 @@ export async function verifyProductionStart(browser: Browser, origin: string, po
     await page.getByRole("alert").filter({ hasText: "Fixture start failed" }).waitFor();
     assert.equal(await page.getByRole("list", { name: "제작 요청 목록" }).getByRole("listitem").count(), 4, "failed start preserves requests");
     await start.click();
-    await page.getByRole("list", { name: "제작 요청 목록" }).waitFor({ state: "detached" });
+    await page.getByRole("button", {name:"제작 준비 중…",exact:true}).waitFor();
+    assert.equal(await page.getByRole("button", {name:"1번 요청 수정",exact:true}).isDisabled(),true);
+    await add.click();
+    await page.getByLabel("추가 지침", {exact:false}).fill("준비 중에 추가한 다음 요청");
+    await page.getByRole("dialog").getByRole("button", {name:"추가",exact:true}).click();
+    releaseStart();
+    await page.getByRole("button", {name:"1개 제작 시작",exact:true}).waitFor();
+    assert.equal(await page.getByRole("list", {name:"제작 요청 목록"}).getByRole("listitem").count(),1);
+    await page.getByText("준비 중에 추가한 다음 요청", {exact:true}).waitFor();
     assert.deepEqual(submitted, [
       { mode: "past_post", sourceProjectId: post.id, instructions: "" },
       { mode: "external_url", url: "https://www.tiktok.com/@example/photo/123", instructions: "초보자 대상" },
       { mode: "automatic", instructions: "" },
       { mode: "spy_reference", referenceId: "spy-pick", instructions: "가슴 운동으로" },
     ]);
+    await page.getByRole("button", {name:"1개 제작 시작",exact:true}).click();
+    await page.getByRole("list", { name: "제작 요청 목록" }).waitFor({ state: "detached" });
+    assert.deepEqual(submitted,[{mode:"automatic",instructions:"준비 중에 추가한 다음 요청"}]);
     assert.deepEqual(browserErrors, []);
     console.log("PASS text-only infinite source list, selection-only images, fixed dialog at four viewport sizes, full-list search, start modal modes, saved preview, optional instructions, edit/delete, narrow viewport and failed-start recovery");
-  } finally { await page.close(); }
+  } finally { releaseStart(); await page.close(); }
 }

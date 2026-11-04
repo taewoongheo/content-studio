@@ -20,7 +20,6 @@ import { beginToolCall, finishToolCall } from "./diagnostics/tools";
 import { z } from "zod";
 import type { PerformanceRefresh } from "../../domain/performance";
 import { discardTask } from "../projects";
-import { OPEN_DRAFT_MESSAGE } from "../../domain/start-policy";
 import { randomUUID } from "node:crypto";
 import { getLocalDatabase } from "@/lib/local-db/database";
 import { ProductionStore } from "../persistence/store";
@@ -137,7 +136,6 @@ export async function startProduction(
   const requests = productionRequestsSchema.parse(typeof count === "number"
     ? Array.from({ length: count }, () => ({ mode: "automatic" })) : count);
   const store = productionStore();
-  if (store.hasOpenDrafts()) throw new Error(OPEN_DRAFT_MESSAGE);
   requests.forEach(request => store.requestSource(request));
   const sampling = readSampling(store.db);
   shared.productionSync = true;

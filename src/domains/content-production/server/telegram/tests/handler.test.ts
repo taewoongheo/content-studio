@@ -39,6 +39,11 @@ test("selection, instructions, replay protection and terminal notifications use 
     assert.match(client.sent.at(-1)!.text,/Test failure/);
     await handler.handle({update_id:4,callback_query:{id:"old",from:{id:1},message:{chat},data:`go:${id}`}});
     assert.equal(requests.length,1);
+    store.state(task.id,"running");
+    await handler.handle(message(5,"/create"));
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(requests.length,2,"new requests can start while an existing task is running");
+    assert.equal(store.get(task.id).task.state,"running");
   } finally {db.close();}
 });
 

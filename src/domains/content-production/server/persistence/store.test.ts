@@ -120,7 +120,7 @@ test("중복 비교는 게시 후 24시간과 보존한 초안만 포함", () =>
 });
 
 
-test("게시 전 draft는 완료 상태라도 새 제작을 막고 게시 연결 완료 후 해제한다", () => {
+test("게시 전 draft는 완료 상태라도 보존되며 제거 후 열린 draft 목록에서 사라진다", () => {
   const db = openLocalDatabase(":memory:"), store = new ProductionStore(db);
   try {
     assert.equal(store.hasOpenDrafts(), false);
