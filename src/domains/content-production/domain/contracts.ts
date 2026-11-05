@@ -7,6 +7,7 @@ import { analysisReadinessSchema, analysisReasoningSchema, firstDraftPlanningSch
 export const PRODUCTION_ASPECT_RATIO = "4:5";
 
 export const stepSchema = z.enum(["analysis", "production", "hook", "polish", "visual"]);
+export const standaloneStepSchema = stepSchema.extract(["analysis", "hook", "visual"]);
 export type ProductionStep = z.infer<typeof stepSchema>;
 export const reviewSteps = ["hook", "polish", "visual"] as const;
 export const productionSteps = [

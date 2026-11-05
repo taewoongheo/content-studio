@@ -1,4 +1,3 @@
-import { experimentStepSchema, assertExperimentEnvironment } from "../experiments/environment";
 import { OperationError } from "@/lib/errors/operation";
 import { externalReferences } from "../references/library";
 import { ANALYSIS_REFERENCE_LIMIT, externalRecord } from "../../domain/references/context";
@@ -11,6 +10,7 @@ import type Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
 import {
   productionSteps,
+  standaloneStepSchema,
   reviewSteps,
   analysisPatchSchema,
   analysisResultSchema,
@@ -272,14 +272,11 @@ export class ProductionStore {
     publishChange({ task_id: id, step, kind: "saved" });
     return this.get(id);
   }
-  prepareExperiment(id:string, rawStep:unknown) {
-    assertExperimentEnvironment();
-    const step=experimentStepSchema.parse(rawStep), detail=this.get(id), now=this.now();
-    if (detail.task.state === "running" || detail.task.state === "pending") throw new Error("진행 중인 작업은 실험을 시작할 수 없습니다.");
-    if (detail.log.post_url) throw new Error("게시된 콘텐츠는 실험 대상으로 사용할 수 없습니다.");
+  prepareNodeRun(id: string, rawStep: unknown) {
+    const step = standaloneStepSchema.parse(rawStep), detail = this.get(id), now = this.now();
+    if (detail.task.state === "running" || detail.task.state === "pending") throw new Error("진행 중인 작업은 노드를 다시 실행할 수 없습니다.");
+    if (detail.log.post_url) throw new Error("게시된 콘텐츠는 노드를 다시 실행할 수 없습니다.");
     if (step !== "analysis" && (!detail.task.project_id || !detail[step])) throw new Error("해당 단계까지 제작된 draft가 필요합니다.");
-    if (detail.input && isExternalProduction(detail.input) && !detail.input.source?.visual_set_id)
-      throw new Error("실험 전에 운영 경로에서 원본 이미지를 확보해야 합니다. 실험은 재수집하지 않습니다.");
     this.db.transaction(()=>{
       this.update("content_drafts","id",id,{current_step:step,state:"stopped",updated_at:now});
       this.update(`content_${step}_drafts`,"draft_id",id,{state:"stopped",error_json:null,completed_at:null,updated_at:now});

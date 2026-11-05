@@ -1,7 +1,3 @@
-import { writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { assertExperimentEnvironment } from "../experiments/environment";
-import { stageContext } from "./policy/context";
 import { assertLayoutReview, type LayoutObservation } from "./review/layout";
 import type { SlideLayout } from "@/domains/slideshow/rendering/inspection/metrics";
 import { isExternalProduction } from "../../domain/start/input";
@@ -191,7 +187,6 @@ export async function execute(
   executor: typeof runCodex = runCodex,
   options: { singleStage?: boolean } = {},
 ) {
-  if (options.singleStage) assertExperimentEnvironment();
   if (runs.has(id)) throw new Error("이미 실행 중인 작업입니다.");
   const store = productionStore(),
     detail = store.get(id);
@@ -238,12 +233,6 @@ export async function execute(
       const capabilities = stagePolicy(run.step, startInput);
       const prompt = stagePrompt(id, run.step, inputs, persona, product, startInput);
       const schema = resultSchema(run.step);
-      if (run.singleStage && process.env.CONTENT_STUDIO_EXPERIMENT_OUTPUT) {
-        await writeFile(join(process.env.CONTENT_STUDIO_EXPERIMENT_OUTPUT,"input.json"),JSON.stringify({
-          step:run.step,model:PRODUCTION_MODEL,prompt,
-          schema,context:stageContext(store.get(id)),capabilities:{...capabilities,tools:[...capabilities.tools]},
-        },null,2));
-      }
       await withReferenceImages(store, startInput, run.step, run.controller.signal, referenceImages => executeWithStageRecovery(executor, {
         capabilities,
         onThreadStarted: threadId => { run.imageThreadId = threadId; },

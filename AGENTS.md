@@ -351,7 +351,7 @@ pnpm test:mcp --production
 
 - 공통 도구 목록과 실행 기능은 `src/domains/content-production/server/execution/policy/stages.ts`에서 관리한다. 단계별 편집 명령 차단은 두지 않으며 작업 연결·실행 유효성·저장 검증을 유지한다.
 
-- 단계별 책임·입력·검증은 [노드 구축 원칙](docs/production-node-design.md), 분석·훅·시각의 단독 재현은 [노드 실험 환경](docs/node-experiments.md)을 따른다.
+- 단계별 책임·입력·검증은 [노드 구축 원칙](docs/production-node-design.md), 분석·훅·시각의 직접 재실행은 [노드 단독 실행](docs/node-runs.md)을 따른다.
 
 - 내부 원본 초안은 복제한 이미지가 새 내용에 적합하면 유지하고 교체가 필요한 이미지만 내장 image_gen으로 생성한다. production_use_generated_image는 이번 CLI 실행 결과를 lossless WebP로 변환해 저장한다. 임의의 과거 생성 파일 가져오기는 제공하지 않는다. 동일 프로젝트 안의 중복 이미지 배치 검증은 유지한다.
 

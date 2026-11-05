@@ -272,5 +272,22 @@ test("single-stage analysis and hook completion preserve downstream rows instead
   assert.equal(store.get(id).task.current_step,"hook");assert.equal(store.get(id).task.state,"finished");
   assert.deepEqual(db.prepare("SELECT * FROM content_polish_drafts WHERE draft_id=?").get(id),downstream);
   assert.equal(store.get(id).task.project_id,"p");
+  const completed = store.get(id);
+  for (const step of ["production", "polish"]) assert.throws(() => store.prepareNodeRun(id, step));
+  assert.deepEqual(store.get(id), completed, "unsupported stages must not mutate the draft");
+  for (const step of ["analysis", "hook", "visual"]) {
+    store.prepareNodeRun(id, step);
+    assert.equal(store.get(id).task.current_step, step);
+    assert.equal(store.get(id).task.state, "stopped");
+    assert.equal(store.get(id).task.project_id, "p", "reruns edit the original project");
+    assert.deepEqual(db.prepare("SELECT * FROM content_polish_drafts WHERE draft_id=?").get(id), downstream);
+    store.state(id, "running");
+    const running = store.get(id);
+    assert.throws(() => store.prepareNodeRun(id, step), /진행 중/);
+    assert.deepEqual(store.get(id), running);
+    store.state(id, "finished");
+  }
+  db.prepare("UPDATE content_creation_logs SET post_url='https://example.com/published' WHERE id=?").run(store.get(id).task.log_id);
+  assert.throws(() => store.prepareNodeRun(id, "visual"), /게시된/);
  }finally{db.close();}
 });

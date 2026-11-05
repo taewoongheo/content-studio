@@ -1,4 +1,3 @@
-import { assertExperimentEnvironment, experimentStepSchema } from "@/domains/content-production/server/experiments/environment";
 import { reportSourceKey } from "@/domains/content-production/domain/report/model";
 import { buildReportInput } from "@/domains/content-production/server/display/report/input";
 import { readStageReport } from "@/domains/content-production/server/display/report/service";
@@ -23,13 +22,13 @@ import { refreshSpy, spyStatus } from "@/domains/content-production/server/refer
 import { listVisuals } from "@/domains/content-production/server/publication/visuals";
 import { registerPublication } from "@/domains/content-production/server/publication/service";
 import { deleteTaskProject } from "@/domains/content-production/server/projects";
-import { stepSchema } from "@/domains/content-production/domain/contracts";
+import { stepSchema, standaloneStepSchema } from "@/domains/content-production/domain/contracts";
 import { displayContent } from "@/domains/content-production/domain/display";
 import { translateDisplay } from "@/domains/content-production/server/display/translation";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const requestSchema = z.discriminatedUnion("action", [
-  z.object({action:z.literal("experiment"),id:z.string().min(1),step:experimentStepSchema}),
+  z.object({action:z.literal("run_node"),id:z.string().min(1),step:standaloneStepSchema}),
   z.object({action:z.literal("stage_report"),id:z.string().min(1),step:stepSchema,sourceKey:z.string().max(2000000)}),
   z.object({ action: z.literal("reset") }),
   z.object({ action: z.literal("translate_display"), id: z.string().min(1), step: stepSchema, stream: z.boolean().optional() }),
@@ -113,10 +112,9 @@ export async function POST(request: Request) {
       `${new URL(request.url).protocol}//${request.headers.get("host")}`,
     ).origin;
     switch (input.action) {
-      case "experiment": {
-        assertExperimentEnvironment();
-        store.prepareExperiment(input.id,input.step);
-        void execute(input.id,origin,undefined,{singleStage:true}).catch(error=>store.state(input.id,"failed",error instanceof Error?error.message:"실험 실패"));
+      case "run_node": {
+        store.prepareNodeRun(input.id,input.step);
+        void execute(input.id,origin,undefined,{singleStage:true}).catch(error=>store.state(input.id,"failed",error instanceof Error?error.message:"노드 실행 실패"));
         break;
       }
       case "stage_report": {
