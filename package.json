@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "tsx --test 'src/**/*.test.ts'",
     "test:mcp": "tsx scripts/test-mcp.mts",
-    "test:video": "tsx scripts/video/smoke.mts"
+    "test:video": "tsx scripts/video/smoke.mts",
+    "experiment:node": "tsx scripts/production/experiment.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

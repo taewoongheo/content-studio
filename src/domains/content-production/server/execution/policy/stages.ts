@@ -11,7 +11,7 @@ const commonTools = [
   "production_context", "production_query", "production_validate_completion",
   "production_save_draft", "production_read_project", "production_preview_project",
 ];
-export const editorReadTools = ["open_project", "read_project", "preview_slide", "preview_slides"];
+export const editorReadTools = ["open_project", "read_project", "preview_slide", "preview_slides", "inspect_slide_layout"];
 export const editorWriteTools = [
   "production_clone_project", "production_create_project", "production_use_generated_image", "production_change_direction",
   "edit_project", "undo_project", "rename_project", "set_content_metadata",

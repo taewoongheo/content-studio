@@ -21,8 +21,7 @@ platform UI, search bars, navigation arrows, watermarks or the reference account
 
 Use our visual language: white (#FFFFFF) slide background, black (#000000) main text, red (#FF0000)
 text emphasis, and gray secondary text. Use selective bold/color on meaningful words instead of
-copying the external highlight bars, palette or decorative type treatment. Body titles and subheadings use Oswald Bold 700 at sizes appropriate to the preserved hierarchy. Descriptions,
-numbers and labels use JetBrains Mono; body text is at least 35px at 1080px slide width. Keep source body
+copying the external highlight bars, palette or decorative type treatment. Apply the supplied typography contract by text role; body text is at least 35px at 1080px slide width. Keep source body
 hierarchy and alignment while changing these styles. Generate new illustrations with the attached
 official character references; preserve their identity while matching the source's information role,
 placement. For automatic variations, use the pose/action required by the NEW subject; do not copy the source exercise just to match its silhouette. External character images are composition evidence, not identity references.
@@ -31,8 +30,7 @@ Use real transparent artwork, editable text and shapes; do not paste source scre
 ## Our hook and CTA
 
 Create the hook's wording AND visual composition in our own style, grounded in the actual body promise
-and persona voice. Do not preserve the external cover layout. Use an uppercase Oswald Bold 700 title,
-110–140px, black with selective red emphasis; at most one optional JetBrains Mono 35px #B0B5BE supporting phrase.
+and persona voice. Do not preserve the external cover layout. Apply the supplied hook typography, using black with selective red emphasis and at most one supporting phrase.
 Make the official character illustration prominent and arrange a coherent, vertically centered group
 with clear spacing. Use a CTA only in the source's existing closing slot; do not append a page. CTA uses our typography and the selected product's facts and CTA, subject to user
 instructions. Never carry over the reference account's product, handle, logo or badge.

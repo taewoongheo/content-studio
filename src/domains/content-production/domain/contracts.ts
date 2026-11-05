@@ -1,3 +1,4 @@
+import { layoutChecksSchema } from "./planning/layout";
 import type { ExternalContext, ReferenceStep } from "./references/context";
 import { z } from "zod";
 import { contentMetadataSchema } from "@/domains/content-metadata/schema";
@@ -83,6 +84,7 @@ export const productionResultSchema = z
 export const visualResultSchema = productionResultSchema.extend({
   reviewed_slide_ids: z.array(z.string()).min(1),
   reviewed_revision: z.number().int().nonnegative(),
+  layout_checks: layoutChecksSchema,
 });
 export const firstDraftResultSchema = productionResultSchema.extend(firstDraftPlanningSchema.shape);
 export type Row = Record<string, unknown>;

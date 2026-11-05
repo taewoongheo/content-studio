@@ -42,7 +42,7 @@ The server reconstructs slide text from the saved document. Record actual change
 use null for unused optional source fields in final output and omit them in draft saves. Analysis
 records exactly one confirmed clone_project_id for internal origins; external origins (including automatic origin=spy) leave it null. The supplied guidance is self-contained.
 
-The server may return exact output validation errors in an output-only repair call. Correct the reported fields and return the complete result using the saved work. Record real source IDs or URLs for each source.
+The server may continue this same CLI session with concrete validation errors and editing tools. Repair the saved work or malformed output, preserve real source IDs/URLs, and validate again.
 
 Before ending this stage, call production_validate_completion with the complete intended final result.
 Validation failures are actionable feedback: repair actual content or document defects using your tools,
@@ -61,7 +61,3 @@ Never flip readiness/review approval without fixing the underlying work. API/aut
 failures and user cancellation must be reported rather than hidden or replayed indefinitely.
 After passing validation, return that result without more edits. The host rechecks saved state and feeds
 recoverable completion/output errors back into the same session instead of abandoning the project.
-
-## Typography by content role
-
-Use Oswald Bold 700 (`fontFamily="oswald"`) for hook/CTA emphasis titles AND body-page titles/subheadings, including exercise names, item headings and section/tier headings. Keep body-heading sizes appropriate to the source hierarchy and layout; the hook size range does not apply to body headings. Use JetBrains Mono (`fontFamily="jetbrains-mono"`) for descriptions, numbers, table labels and supporting copy on all pages. Prefer 500 for regular copy and 700 for emphasis; retain meaningful weight hierarchy. This font rule applies to internal clones and external origins, overriding inherited body fonts while preserving composition. Preserve existing brand marks. Keep titles visually distinct from explanatory copy. After changing fonts, check the rendered text and repair wrapping, overlap or clipping without removing information or changing page roles.

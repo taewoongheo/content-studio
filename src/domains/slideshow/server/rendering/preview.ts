@@ -1,3 +1,4 @@
+import type { SlideLayout } from "../../rendering/inspection/metrics";
 import { chromium, type Browser, type Page } from "playwright";
 import type { ContentJobSnapshot } from "@/domains/slideshow/domain/types";
 import { serializePreview } from "@/lib/media/preview-queue";
@@ -11,8 +12,8 @@ let browser: Browser | undefined, page: Page | undefined, pageOrigin = "";
 let idle: ReturnType<typeof setTimeout> | undefined;
 async function close() { const current = browser; browser = undefined; page = undefined; pageOrigin = ""; await current?.close(); }
 
-export async function previewSlides(origin: string, job: ContentJobSnapshot, slideIds: string[], options: {
-  width?: number; images?: Record<string, string> | (() => Record<string, string>); signal?: AbortSignal; progress?: (progress: number, phase: string) => void;
+async function renderSlides(origin: string, job: ContentJobSnapshot, slideIds: string[], options: {
+  layout?: boolean; width?: number; images?: Record<string, string> | (() => Record<string, string>); signal?: AbortSignal; progress?: (progress: number, phase: string) => void;
 } = {}) {
   const ids = [...new Set(slideIds)];
   if (!ids.length || ids.length > 20 || ids.some(id => !job.editor.document.slides.some(slide => slide.id === id)))
@@ -29,7 +30,7 @@ export async function previewSlides(origin: string, job: ContentJobSnapshot, sli
       const results = [];
       for (const [index, slideId] of ids.entries()) {
         options.signal?.throwIfAborted();
-        const key = JSON.stringify([sourceKey, origin, job.id, job.tabId, job.editor.revision, slideId, options.width ?? 1080]);
+        const key = JSON.stringify([sourceKey, origin, job.id, job.tabId, job.editor.revision, slideId, options.width ?? 1080, !!options.layout]);
         let bytes = cache.get(key);
         if (!bytes) {
           if (!browser?.isConnected()) {
@@ -44,11 +45,13 @@ export async function previewSlides(origin: string, job: ContentJobSnapshot, sli
           let timeout: ReturnType<typeof setTimeout> | undefined;
           try {
             const data = await Promise.race([
-              page.evaluate(({ job, slideId, width, images }) => window.renderStudioPreview!(job, slideId, width, images),
-                { job, slideId, width: options.width, images: typeof options.images === "function" ? options.images() : options.images }),
+              page.evaluate(async ({ job, slideId, width, images, layout }) => layout
+                ? JSON.stringify(await window.inspectStudioLayout!(job, slideId, images))
+                : window.renderStudioPreview!(job, slideId, width, images),
+                { job, slideId, width: options.width, layout: !!options.layout, images: typeof options.images === "function" ? options.images() : options.images }),
               new Promise<never>((_, reject) => { timeout = setTimeout(() => reject(new Error("미리보기 렌더링 시간이 초과되었습니다.")), 30_000); }),
             ]);
-            bytes = Buffer.from(data.substring(data.indexOf(",") + 1), "base64");
+            bytes = options.layout ? Buffer.from(data) : Buffer.from(data.substring(data.indexOf(",") + 1), "base64");
           } catch (error) { await close(); throw error; }
           finally { clearTimeout(timeout); }
           options.signal?.throwIfAborted(); cache.set(key, bytes);
@@ -61,4 +64,13 @@ export async function previewSlides(origin: string, job: ContentJobSnapshot, sli
       idle = setTimeout(() => { void close(); }, 30_000); idle.unref();
     }
   }, options.signal);
+}
+
+export function previewSlides(origin: string, job: ContentJobSnapshot, slideIds: string[], options: Omit<NonNullable<Parameters<typeof renderSlides>[3]>, "layout"> = {}) {
+  return renderSlides(origin,job,slideIds,options);
+}
+
+export async function inspectSlideLayouts(origin: string, job: ContentJobSnapshot, slideIds: string[], options: Omit<NonNullable<Parameters<typeof renderSlides>[3]>, "layout" | "width"> = {}): Promise<SlideLayout[]> {
+  const results = await renderSlides(origin,job,slideIds,{...options,layout:true});
+  return results.map(result => JSON.parse(result.bytes.toString()) as SlideLayout);
 }

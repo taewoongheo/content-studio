@@ -1,3 +1,4 @@
+import { experimentStepSchema, assertExperimentEnvironment } from "../experiments/environment";
 import { OperationError } from "@/lib/errors/operation";
 import { externalReferences } from "../references/library";
 import { ANALYSIS_REFERENCE_LIMIT, externalRecord } from "../../domain/references/context";
@@ -271,7 +272,21 @@ export class ProductionStore {
     publishChange({ task_id: id, step, kind: "saved" });
     return this.get(id);
   }
-  completeAnalysis(id: string, raw: unknown, validateOnly = false) {
+  prepareExperiment(id:string, rawStep:unknown) {
+    assertExperimentEnvironment();
+    const step=experimentStepSchema.parse(rawStep), detail=this.get(id), now=this.now();
+    if (detail.task.state === "running" || detail.task.state === "pending") throw new Error("진행 중인 작업은 실험을 시작할 수 없습니다.");
+    if (detail.log.post_url) throw new Error("게시된 콘텐츠는 실험 대상으로 사용할 수 없습니다.");
+    if (step !== "analysis" && (!detail.task.project_id || !detail[step])) throw new Error("해당 단계까지 제작된 draft가 필요합니다.");
+    if (detail.input && isExternalProduction(detail.input) && !detail.input.source?.visual_set_id)
+      throw new Error("실험 전에 운영 경로에서 원본 이미지를 확보해야 합니다. 실험은 재수집하지 않습니다.");
+    this.db.transaction(()=>{
+      this.update("content_drafts","id",id,{current_step:step,state:"stopped",updated_at:now});
+      this.update(`content_${step}_drafts`,"draft_id",id,{state:"stopped",error_json:null,completed_at:null,updated_at:now});
+    })();
+    publishChange({task_id:id,step,kind:"state"});
+  }
+  completeAnalysis(id: string, raw: unknown, validateOnly = false, singleStage = false) {
     const detail = this.assertActive(id, "analysis"),
       result = analysisResultSchema.parse(raw),
       now = this.now();
@@ -292,14 +307,14 @@ export class ProductionStore {
         state: "completed",
         completed_at: now,
       });
-      this.db
+      if (!singleStage) this.db
         .prepare(
           "INSERT INTO content_production_drafts(draft_id,created_at,updated_at) VALUES(?,?,?)",
         )
         .run(id, now, now);
       this.update("content_drafts", "id", id, {
-        current_step: "production",
-        state: "pending",
+        current_step: singleStage ? "analysis" : "production",
+        state: singleStage ? "finished" : "pending",
         updated_at: now,
       });
     })();
@@ -309,8 +324,9 @@ export class ProductionStore {
   }
   completeProduction(
     id: string,
-    result: { project_id: string; summary: Row; sources: unknown[]; review?: string; slide_plan?: unknown; content_review?: unknown },
+    result: { project_id: string; summary: Row; sources: unknown[]; review?: string; slide_plan?: unknown; content_review?: unknown; layout_checks?: unknown },
     validateOnly = false,
+    singleStage = false,
   ) {
     const step = this.get(id).task.current_step;
     if (step === "analysis") throw new Error("분석 단계는 제작 완료로 저장할 수 없습니다.");
@@ -321,7 +337,7 @@ export class ProductionStore {
     }) : null;
     if (planning?.content_review.issues.some(issue => issue.status === "blocked"))
       throw new OperationError("CONTENT_REVIEW_BLOCKED", "초안의 내용 검토에서 확인한 문제를 해결해 주세요.", { issues: planning.content_review.issues });
-    const next = productionSteps[productionSteps.findIndex(value => value.id === step) + 1]?.id ?? null;
+    const next = singleStage ? null : productionSteps[productionSteps.findIndex(value => value.id === step) + 1]?.id ?? null;
     if (step !== "production" && !result.review?.trim()) throw new Error("검토 결과를 남겨 주세요.");
     const metadata = readContentMetadata(result.summary);
     // The format is selected by analysis; a model paraphrase must not block completion.
@@ -340,6 +356,7 @@ export class ProductionStore {
       const summary = {
         ...result.summary,
         ...metadata,
+        ...(step === "visual" ? {layout_checks:result.layout_checks} : {}),
         direction_changes: detail.production?.direction_changes ?? null,
       };
       this.update("content_creation_logs", "id", detail.task.log_id, {

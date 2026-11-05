@@ -1,3 +1,9 @@
+import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { assertExperimentEnvironment } from "../experiments/environment";
+import { stageContext } from "./policy/context";
+import { assertLayoutReview, type LayoutObservation } from "./review/layout";
+import type { SlideLayout } from "@/domains/slideshow/rendering/inspection/metrics";
 import { isExternalProduction } from "../../domain/start/input";
 import { assertTaskSourceFormat } from "../projects/format/snapshot";
 import { withReferenceImages } from "../start/media/attachments";
@@ -38,6 +44,7 @@ import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import { loadContentProject } from "@/domains/slideshow/projects/service";
 
 type Run = {
+  singleStage?: boolean;
   completionAttempts?: number;
   controller: AbortController;
   token: string;
@@ -49,6 +56,7 @@ type Run = {
   imageStartedAt: number;
   imageThreadId: string | null;
   reviews: Map<string, ObservedReview>;
+  layouts: Map<string, LayoutObservation>;
 };
 const shared = globalThis as typeof globalThis & {
   productionRuns?: Map<string, Run>;
@@ -90,6 +98,13 @@ export function recordReview(
     previous?.revision === revision ? previous.slides : new Set<string>();
   slides.forEach((s) => reviewed.add(s));
   run.reviews.set(projectId, { revision, slides: reviewed });
+}
+export function recordLayoutReview(id:string,projectId:string,revision:number,slides:SlideLayout[]) {
+  const run=runs.get(id); if(!run)return;
+  const previous=run.layouts.get(projectId);
+  const layouts=previous?.revision===revision ? previous.slides : new Map<string,SlideLayout>();
+  slides.forEach(slide=>layouts.set(slide.slideId,slide));
+  run.layouts.set(projectId,{revision,slides:layouts});
 }
 export function recordSourceReview(id: string, projectId?: string, setId?: string, indexes?: number[]) {
   const run = runs.get(id);
@@ -174,7 +189,9 @@ export async function execute(
   id: string,
   origin: string,
   executor: typeof runCodex = runCodex,
+  options: { singleStage?: boolean } = {},
 ) {
+  if (options.singleStage) assertExperimentEnvironment();
   if (runs.has(id)) throw new Error("이미 실행 중인 작업입니다.");
   const store = productionStore(),
     detail = store.get(id);
@@ -182,10 +199,12 @@ export async function execute(
     throw new Error("제작이 끝난 작업입니다.");
   const persona = readPersona(store.db), product = activeProduct(store.db);
   const run: Run = {
+    singleStage: options.singleStage,
     controller: new AbortController(),
     token: randomUUID(),
     step: detail.task.current_step,
     reviews: new Map(),
+    layouts: new Map(),
     analysisRead: new Set(),
     sourceProjects: new Set(),
     sourceSets: new Set(),
@@ -202,6 +221,7 @@ export async function execute(
       store.state(id, "running");
       run.completionAttempts = 0;
       run.reviews.clear();
+      run.layouts.clear();
       run.analysisRead.clear();
       run.sourceProjects.clear();
       run.sourceSets.clear();
@@ -216,13 +236,21 @@ export async function execute(
       const inputs = run.step === "analysis" || run.step === "production" ? store.analysisInputs(id, true) : [];
       const startInput = store.get(id).input!;
       const capabilities = stagePolicy(run.step, startInput);
+      const prompt = stagePrompt(id, run.step, inputs, persona, product, startInput);
+      const schema = resultSchema(run.step);
+      if (run.singleStage && process.env.CONTENT_STUDIO_EXPERIMENT_OUTPUT) {
+        await writeFile(join(process.env.CONTENT_STUDIO_EXPERIMENT_OUTPUT,"input.json"),JSON.stringify({
+          step:run.step,model:PRODUCTION_MODEL,prompt,
+          schema,context:stageContext(store.get(id)),capabilities:{...capabilities,tools:[...capabilities.tools]},
+        },null,2));
+      }
       await withReferenceImages(store, startInput, run.step, run.controller.signal, referenceImages => executeWithStageRecovery(executor, {
         capabilities,
         onThreadStarted: threadId => { run.imageThreadId = threadId; },
         model: PRODUCTION_MODEL,
-        prompt: stagePrompt(id, run.step, inputs, persona, product, startInput),
+        prompt,
         images: [...stageImages(run.step), ...referenceImages],
-        schema: resultSchema(run.step),
+        schema,
         origin,
         taskId: id,
         token: run.token,
@@ -309,7 +337,7 @@ async function checkStageCompletion(id: string, run: Run, result: Record<string,
       throw new OperationError("LAYOUT_SOURCE_NOT_SELECTED", "복제할 내부 게시글을 선택하고 실제 슬라이드를 확인해 주세요.");
     if (startInput.request.mode === "past_post" && origin !== startInput.request.sourceProjectId)
       throw new OperationError("LAYOUT_SOURCE_NOT_SELECTED", "지정한 내부 게시글을 복제해 주세요.");
-    store.completeAnalysis(id, { ...fields, sources }, validateOnly);
+    store.completeAnalysis(id, { ...fields, sources }, validateOnly, run.singleStage);
     return;
   }
   const { review: reviewText, review_passed, ...rest } = fields;
@@ -335,12 +363,13 @@ async function checkStageCompletion(id: string, run: Run, result: Record<string,
   const project = contentJobRegistry.getRecord(output.project_id);
   assertTaskSourceFormat(detail, project.editor.document);
   if (run.step === "visual") {
+    assertLayoutReview(project, visualResultSchema.parse(rawOutput).layout_checks, run.layouts.get(output.project_id));
     assertCompleteProjectReview(project, visualResultSchema.parse(rawOutput),
       run.reviews.get(output.project_id), run.toolCalls);
   } else assertSavedProjectContent(project);
   const previous = (detail.log.content_summary ?? detail.production?.content ?? {}) as Row;
   const summary = run.step === "production" ? output.summary : reviewedSummary(run.step, previous, output.summary, project);
-  store.completeProduction(id, { ...output, summary, review: typeof reviewText === "string" ? reviewText : undefined }, validateOnly);
+  store.completeProduction(id, { ...output, summary, review: typeof reviewText === "string" ? reviewText : undefined }, validateOnly, run.singleStage);
 
 }
 

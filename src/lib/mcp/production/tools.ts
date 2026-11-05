@@ -96,7 +96,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
   );
   if (!taskId) return;
   registerTool(server, "production_validate_completion", {
-    description: "Before returning final output, submit the COMPLETE intended final result for server validation. On failure repair the document or result and retry in this same execution (initial check plus at most 3 retries). Passing does not advance the stage; return the validated result without further edits. Never fabricate approval.",
+    description: "Before returning final output, submit the COMPLETE intended final result for server validation. On failure repair the document or result and retry in this same execution (up to eight validation calls per CLI response). Passing does not advance the stage; return the validated result without further edits. Never fabricate approval.",
     inputSchema: z.object({ result: z.record(z.string(), z.unknown()) }),
     annotations: annotations(true),
   }, input => guarded(async () => json(await validateProductionCompletion(taskId, input.result))));

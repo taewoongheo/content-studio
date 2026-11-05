@@ -1,3 +1,4 @@
+import { layoutChecksSchema } from "../../domain/planning/layout";
 import { isExternalProduction } from "../../domain/start/input";
 import { startInputPrompt } from "../../domain/start/prompt";
 import type { ProductionInput } from "../../domain/start/input";
@@ -93,6 +94,7 @@ export function resultSchema(step: ProductionStep) {
           ...(step === "visual" ? {
             reviewed_slide_ids: { type: "array", items: stringField },
             reviewed_revision: { type: "integer" },
+            layout_checks: jsonShape(layoutChecksSchema),
           } : {}),
         };
   return {
@@ -111,6 +113,8 @@ export function stagePrompt(taskId: string, step: ProductionStep, inputs: Row[] 
   return [
     `You are producing ONE ${product?.name ?? "content"} TikTok slideshow for task ${taskId}. Current stage: ${step}.`,
     common,
+    readFileSync(join(directory,"typography.md"),"utf8").trim(),
+    ...(step === "visual" ? [readFileSync(join(directory,"layout.md"),"utf8").trim()] : []),
     "Current execution capabilities (from code):",
     JSON.stringify({web_search:policy.webSearch ? "live" : "disabled",shell:policy.shell ? "read-only" : "disabled",
       image_generation:policy.imageGeneration,external_collection:policy.externalCollection,external_post_limit:policy.externalLimit,mcp_tools:[...policy.tools]}),

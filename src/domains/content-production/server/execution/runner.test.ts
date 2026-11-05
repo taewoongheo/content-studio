@@ -16,6 +16,7 @@ import {
   execute,
   stopProduction,
   recordReview,
+  recordLayoutReview,
   recordSourceReview,
   recordAnalysisRead,
 } from "./runner";
@@ -79,10 +80,13 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
       const { projectId } = step === "production" ? cloneTaskProject(store, id, source.project_id, "Preserve the source") : { projectId: store.get(id).task.project_id! };
       const job = contentJobRegistry.get(projectId);
       if (step === "hook" || step === "visual" || step === "polish") {
-        if (step === "visual") recordReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => s.id));
+        if (step === "visual") {
+          recordReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => s.id));
+          recordLayoutReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => ({slideId:s.id,width:1080,height:1350,elements:[]})));
+        }
         const result = { project_id: projectId, summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "test" }, sources: [],
           review: "The current content meets the review criteria.", review_passed: true,
-          ...(step === "visual" ? {reviewed_slide_ids: job.editor.document.slides.map(s => s.id), reviewed_revision: job.editor.revision} : {}) };
+          ...(step === "visual" ? {layout_checks: [], reviewed_slide_ids: job.editor.document.slides.map(s => s.id), reviewed_revision: job.editor.revision} : {}) };
         const document = contentJobRegistry.getRecord(projectId).editor.document;
         document.slides.push({ ...structuredClone(document.slides[0]), id: "extra-explanation" });
         await assert.rejects(validateProductionCompletion(id, result), { code: "SOURCE_FORMAT_MISMATCH" });
@@ -160,9 +164,10 @@ test("실행기는 분석 저장 후에만 제작하며 이미지 검토·취소
     await execute(id, "http://127.0.0.1:3000", async () => {
       const job = contentJobRegistry.get(projectId);
       recordReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => s.id));
+      recordLayoutReview(id, projectId, job.editor.revision, job.editor.document.slides.map(s => ({slideId:s.id,width:1080,height:1350,elements:[]})));
       return { project_id: projectId, summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "test" }, sources: [],
         review: "The layout appears readable.", review_passed: true,
-        reviewed_slide_ids: job.editor.document.slides.map(s => s.id), reviewed_revision: job.editor.revision };
+        layout_checks: [], reviewed_slide_ids: job.editor.document.slides.map(s => s.id), reviewed_revision: job.editor.revision };
     });
     assert.equal(store.get(id).task.state, "finished");
     store.state(id, "finished");

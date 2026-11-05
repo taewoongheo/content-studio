@@ -6,6 +6,7 @@ import { dirname, isAbsolute } from "node:path";
 import { PROJECT_SCHEMA } from "@/domains/slideshow/server/persistence/projects/schema";
 
 export const SCHEMA_VERSION = 21;
+export const LOCAL_DATABASE_PATH = "/Users/taewoongheo/Projects/content-studio-workspace/content-studio.sqlite";
 const schema = [PROJECT_SCHEMA, VIDEO_SCHEMA, PRODUCTION_SCHEMA].join("\n");
 
 export function defaultDatabasePath() {
@@ -14,7 +15,7 @@ export function defaultDatabasePath() {
     if (override !== ":memory:" && !isAbsolute(override)) throw new Error("CONTENT_STUDIO_DB_PATH는 절대 경로여야 합니다.");
     return override;
   }
-  return "/Users/taewoongheo/Projects/content-studio-workspace/content-studio.sqlite";
+  return LOCAL_DATABASE_PATH;
 }
 
 export function openLocalDatabase(path = defaultDatabasePath()) {

@@ -3,7 +3,7 @@ import test from "node:test";
 import { mkdtemp, rm, readFile, access } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { productionStore, execute, recordReview, recordSourceReview } from "../runner";
+import { productionStore, execute, recordReview, recordLayoutReview, recordSourceReview } from "../runner";
 import { saveVisuals } from "../../publication/visuals";
 import { createTaskProject } from "../../projects/creation";
 import { cloneTaskProject } from "../../projects/layout";
@@ -78,9 +78,12 @@ test("automatic spy origin reaches every stage using cached images, no internal 
         store.save(id, "production", { slide_plan });
         return { ...result, slide_plan, content_review: { assessment: "Matches source", issues: [] } };
       }
-      if (step === "visual") recordReview(id, projectId!, project.editor.revision, project.editor.document.slides.map(slide => slide.id));
+      if (step === "visual") {
+        recordReview(id, projectId!, project.editor.revision, project.editor.document.slides.map(slide => slide.id));
+        recordLayoutReview(id, projectId!, project.editor.revision, project.editor.document.slides.map(slide => ({slideId:slide.id,width:1080,height:1350,elements:[]})));
+      }
       return { ...result, review: "Source roles retained", review_passed: true,
-        ...(step === "visual" ? { reviewed_revision: project.editor.revision, reviewed_slide_ids: project.editor.document.slides.map(slide => slide.id) } : {}) };
+        ...(step === "visual" ? { layout_checks: [], reviewed_revision: project.editor.revision, reviewed_slide_ids: project.editor.document.slides.map(slide => slide.id) } : {}) };
     });
     assert.deepEqual(stages, ["analysis", "analysis", "production", "production", "hook", "polish", "visual"]);
     assert.equal(store.get(id).task.state, "finished", JSON.stringify(store.get(id).production?.error));

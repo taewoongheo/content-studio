@@ -44,7 +44,7 @@ test("content-stage summaries must be objects, not prose or encoded JSON strings
     const schema = resultSchema(step);
     const validate = ajv.compile(schema);
     const output = {
-      project_id: "project", summary:stageSummary(step), sources: [], ...(step === "visual" ? {reviewed_slide_ids: ["slide-1"], reviewed_revision: 9} : {}),
+      project_id: "project", summary:stageSummary(step), sources: [], ...(step === "visual" ? {reviewed_slide_ids: ["slide-1"], reviewed_revision: 9, layout_checks: []} : {}),
       ...(step !== "production" ? { review: "Ready for the next step.", review_passed: true } : planning),
     };
     assert.ok(validate(output), JSON.stringify(validate.errors));
@@ -66,7 +66,7 @@ test("every stage shares metadata meanings; no stage may discover external posts
   }
   for (const step of ["production","hook","visual","polish"] as const) {
     const validate = new Ajv({strict:false}).compile(resultSchema(step));
-    const output = {project_id:"p",summary:stageSummary(step),sources:[],...(step === "visual" ? {reviewed_slide_ids:["s"],reviewed_revision:0} : {}),
+    const output = {project_id:"p",summary:stageSummary(step),sources:[],...(step === "visual" ? {reviewed_slide_ids:["s"],reviewed_revision:0,layout_checks:[]} : {}),
       ...(step === "production" ? planning : {review:"Checked",review_passed:true})};
     const {content_type: _format,...incomplete} = summary;
     void _format;

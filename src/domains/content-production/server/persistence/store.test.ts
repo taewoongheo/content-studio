@@ -253,3 +253,24 @@ test("collision reselection accepts an unconfirmed format and preserves later-st
     }
   } finally {db.close();}
 });
+
+test("single-stage analysis and hook completion preserve downstream rows instead of advancing",()=>{
+ const db=openLocalDatabase(":memory:"),store=new ProductionStore(db);
+ try {
+  const [id]=store.create(1);
+  store.state(id,"running");
+  db.prepare("INSERT INTO content_production_drafts(draft_id,created_at,updated_at,content_json) VALUES(?,?,?,?)").run(id,"now","now",'{"keep":"original"}');
+  const before=db.prepare("SELECT * FROM content_production_drafts WHERE draft_id=?").get(id);
+  store.completeAnalysis(id,{...direction,analysis:"Ready",readiness:{ready:true,reason:"Ready"},reasoning:{observations:[],interpretations:[],candidates:[]},sources:[]},false,true);
+  assert.equal(store.get(id).task.current_step,"analysis");assert.equal(store.get(id).task.state,"finished");
+  assert.deepEqual(db.prepare("SELECT * FROM content_production_drafts WHERE draft_id=?").get(id),before);
+  db.prepare("INSERT INTO content_projects(id,name,aspect_ratio,slide_count,output_language,document_json,created_at,updated_at) VALUES('p','P','4:5',1,'English','{}','now','now')").run();
+  db.prepare("UPDATE content_drafts SET current_step='hook',state='running',project_id='p' WHERE id=?").run(id);
+  for(const step of ["hook","polish","visual"])db.prepare(`INSERT INTO content_${step}_drafts(draft_id,created_at,updated_at,review) VALUES(?,?,?,?)`).run(id,"now","now","retain");
+  const downstream=db.prepare("SELECT * FROM content_polish_drafts WHERE draft_id=?").get(id);
+  store.completeProduction(id,{project_id:"p",summary:direction,sources:[],review:"Hook checked"},false,true);
+  assert.equal(store.get(id).task.current_step,"hook");assert.equal(store.get(id).task.state,"finished");
+  assert.deepEqual(db.prepare("SELECT * FROM content_polish_drafts WHERE draft_id=?").get(id),downstream);
+  assert.equal(store.get(id).task.project_id,"p");
+ }finally{db.close();}
+});

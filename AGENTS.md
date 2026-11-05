@@ -127,6 +127,7 @@ url = "http://127.0.0.1:3000/mcp"
 | `edit_project` | 편집 명령 배열을 한 묶음으로 적용 |
 | `undo_project` | 직전 편집 묶음 되돌리기 |
 | `preview_slide` | 기존 단일 슬라이드 전체 해상도 PNG 확인 |
+| `inspect_slide_layout` | 실제 렌더링 경계·요소별 픽셀 좌표 측정; 미리보기 확인을 대신하지 않음 |
 | `preview_slides` | 여러 장을 한 번에 축소 미리보기, 생략하면 전체 장 확인 |
 | `rename_project` | 슬라이드쇼 이름만 변경 |
 | `export_slideshow` | 전체 슬라이드를 PNG ZIP으로 내보내는 작업 시작 |
@@ -139,7 +140,7 @@ url = "http://127.0.0.1:3000/mcp"
 - `edit_project`와 `undo_project`에는 최신 읽기·쓰기 응답의 `expectedRevision`과 `expectedTabId`를 사용한다. 닫힌 작업이나 이전 탭 ID는 거부된다. 다시 연 작업은 다시 읽고 최신 값을 사용한다.
 - Element 공유 누락 검증은 문서 쓰기 배치·되돌리기·프로젝트 복제의 최종 문서에서 한 번 실행한다. 읽기·미리보기·이름·메타데이터 변경은 검증하지 않는다. 결과의 `warnings`는 경고이며 저장을 차단하거나 자동 병합하지 않는다. 비교 조건·허용치는 `src/domains/slideshow/editor/inspection/shared-elements.ts` 한 곳에서 관리한다. `includeDocument: false`에서도 경고를 반환한다.
 - `set_slide_role`은 페이지의 `hook`·`body`·`cta` 역할을 변경하며 시각 요소는 유지한다. `remove_element`는 배치에서 사용하지 않는 일반 Element 정의만 삭제한다. 사용 중이거나 배경인 정의는 거부하며 둘 다 기존 배치 저장·되돌리기 계약을 따른다.
-- `rebind_element`는 `slideId`·`placementId`·대상 `elementId`를 받아 같은 종류의 Element로 다시 연결한다. 내용·부분 텍스트 스타일·레이어 순서·실제 외형을 보존하며 차이는 개별 덮어쓰기로 남긴다. 일반 편집과 같은 저장·되돌리기 계약을 따른다. 경고 해석과 배치 작성 기준은 [제작 가이드](docs/content-guidelines.md#3-내용에-맞게-구조와-배치를-만든다)를 따른다.
+- `rebind_element`는 `slideId`·`placementId`·대상 `elementId`를 받아 같은 종류의 Element로 다시 연결한다. 내용·부분 텍스트 스타일·레이어 순서·실제 외형을 보존하며 차이는 개별 덮어쓰기로 남긴다. 일반 편집과 같은 저장·되돌리기 계약을 따른다. 경고 해석과 배치 작성 기준은 [제작 가이드](docs/content-guidelines.md#3-원본을-활용해-내용을-구현하고-검증한다)를 따른다.
 - 편집 명령 배열은 한 단계로 되돌린다. 실패한 묶음은 문서·revision·되돌리기 이력과 신규 이미지 등록을 복구한다. `clone_project`, `edit_project`, `undo_project`는 DB 저장 성공 후 성공을 반환한다.
 - 읽기·열기·미리보기는 자동 저장하지 않는다. MCP 생성·복제·명시적 열기는 탭을 추가하며 브라우저 화면을 강제로 전환하지 않는다. 프로젝트 삭제·탭 닫기는 MCP로 제공하지 않는다.
 - `create_project`·`clone_project`·`create_video_project`·`clone_video_project`·`export_slideshow`·`start_video_export`·`export_video`는 선택적 `requestId`(1~128자)를 지원한다. 새 작업에는 고유 ID를 만들고, 응답 유실/연결 재시도에는 같은 도구·ID·인자를 그대로 사용한다. 동시 요청과 다른 MCP 연결에서도 최초 성공/실패 응답을 재사용하며 같은 ID로 인자를 바꾸면 `REQUEST_ID_REUSED`를 반환한다. 수정한 요청이나 실패한 렌더링을 새로 실행하려면 새 ID를 사용한다. 기록은 서버 메모리에 완료 후 1시간 유지하며 서버 재시작 시 사라진다. 재시작·만료 후 재요청은 중복 방지를 보장하지 않으므로 프로젝트/작업 목록을 먼저 확인한다. 기록 256개 또는 완료 응답 합계 32MiB에 도달하면 기존 기록을 밀어내지 않고 새 ID 요청을 `REQUEST_CACHE_FULL`로 거부한다. 이미 실행 중인 응답이 완료되면서 바이트 기준을 초과할 수 있다. `requestId` 생략 시 기존 동작을 유지한다. 재사용 응답은 최초 스냅샷이며 현재 상태는 다시 읽어야 한다. 내보내기 작업 메타데이터 보관 기간(15분·최대 40개)은 별도이므로 반환된 작업 ID를 즉시 조회한다.
@@ -317,7 +318,7 @@ pnpm test:mcp --production
 
 - `src/domains/content-production`은 작업·단계별 draft, 확정 로그, 외부 자료함, 실행 제어와 게시 연결을 소유한다. 단계는 analysis → production → hook → polish → visual 순서로 고정한다. 각 단계 지침은 docs/production-prompts/의 Markdown에서 관리하고 공통 지침과 합친다.
 - 실행 도구는 작업별 MCP 주소와 실행 토큰으로 제한한다. 분석에는 편집기 열기·읽기·미리보기를 제공하지 않는다. 참고 게시글은 production_read_project / production_preview_project로 DB 저장본을 읽는다. 제작·검토의 일반 편집기 도구도 해당 작업 프로젝트만 열고 읽고 수정할 수 있다. hook은 훅 슬라이드의 텍스트와 local 배치만, visual은 배치·스타일만 수정한다. 검토 단계는 새 프로젝트 생성·방향 변경·이전 단계 undo를 제공하지 않는다. 중간 저장과 상태 변경은 앱 API/MCP를 사용한다.
-- 노드별 책임과 수정·검증 원칙은 [노드 구축 원칙](docs/production-node-design.md)을 따른다. 최종 시각 검증은 최신 저장본 전체 슬라이드 확인이 필요하며 검토 통과 후 finished가 된다.
+- 노드별 책임과 수정·검증 원칙은 [노드 구축 원칙](docs/production-node-design.md)을 따른다. 최종 시각 검증은 최신 저장본 전체 슬라이드 미리보기·경계 측정과 간격 조건 확인이 필요하며 검토 통과 후 finished가 된다.
 - 제작 실패의 `error_json`에는 단계·발생 구간·오류 코드·필드별 오류와 이번 실행의 MCP 호출 기록을 남긴다. 호출 생략·연결/도구 실패·빈 이미지 응답·JSON/스키마 오류·검토 조건 미충족을 구분한다. 재개는 새 실행 기록을 사용하며 기존 실패에 없던 호출 내역을 소급 생성하지 않는다.
 - 서버의 `APIFY_API_TOKEN`으로 공개 TikTok 자료를 수집하며 운영 계정 쿠키를 사용하지 않는다. 키를 프롬프트나 클라이언트로 보내지 않는다.
 - 분석 자료 노드를 누르면 오른쪽에서 각 주제에 직접·간접 연결된 내 게시글의 실제 수치·관측 시각·활용 근거를 확인한다. 최신 갱신 실행의 성공·실패와 결과는 서버 메모리에 유지한다. 서버 재시작 후에는 DB 최신 성과와 남은 분석 draft의 출처를 표시하며 과거 실행의 갱신 결과로 단정하지 않는다.
@@ -350,7 +351,7 @@ pnpm test:mcp --production
 
 - 공통 도구 목록과 실행 기능은 `src/domains/content-production/server/execution/policy/stages.ts`에서 관리한다. 단계별 편집 명령 차단은 두지 않으며 작업 연결·실행 유효성·저장 검증을 유지한다.
 
-- 자동 제작 순서는 분석 → 초안 → 훅 → 영어 폴리싱 → 시각 검증이다. 단계별 책임과 관련 수정 방식은 [노드 구축 원칙](docs/production-node-design.md)을 따른다.
+- 단계별 책임·입력·검증은 [노드 구축 원칙](docs/production-node-design.md), 분석·훅·시각의 단독 재현은 [노드 실험 환경](docs/node-experiments.md)을 따른다.
 
 - 내부 원본 초안은 복제한 이미지가 새 내용에 적합하면 유지하고 교체가 필요한 이미지만 내장 image_gen으로 생성한다. production_use_generated_image는 이번 CLI 실행 결과를 lossless WebP로 변환해 저장한다. 임의의 과거 생성 파일 가져오기는 제공하지 않는다. 동일 프로젝트 안의 중복 이미지 배치 검증은 유지한다.
 

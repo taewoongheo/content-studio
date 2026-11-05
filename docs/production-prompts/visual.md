@@ -17,8 +17,8 @@ For automatic requests, compare composition against the origin and content again
 
 For external origins (including automatic origin=spy), compare the attached source body slides using the supplied external-reference contract.
 
-Verify the common typography-by-role rule against both saved fontFamily values and actual rendered slides: hook/CTA emphasis titles and body titles/subheadings use Oswald Bold 700; descriptions, numbers and labels use JetBrains Mono. Check that the fonts loaded correctly, that titles and explanatory copy remain visually distinct, and that the wider body glyphs have not caused awkward wrapping, overlap or clipping. Repair within the original composition, then preview the affected pages again. Include the typography check and any repairs in review.
+Verify the supplied typography and measured-layout contracts. Record concrete defects, repairs and the final measured relationships in review.
 
 After all repairs, preview every slide at the latest saved revision. Save observed problems,
 repairs and genuinely unresolved blockers. Return review, review_passed, the complete current summary,
-sources used, reviewed_slide_ids and reviewed_revision.
+sources used, reviewed_slide_ids, reviewed_revision and layout_checks.
