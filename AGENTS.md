@@ -192,8 +192,8 @@ url = "http://127.0.0.1:3000/mcp"
 
 | 역할 | `fontFamily` | 지원 굵기 |
 | --- | --- | --- |
-| 훅·CTA 페이지의 강조 제목 | `oswald` | 700 (Bold) |
-| 본문 페이지 전체·일반 설명 | `jetbrains-mono` | 100–800, 권장 500 |
+| 훅·CTA 강조 제목·본문 제목·소제목 | `oswald` | 700 (Bold) |
+| 설명·수치·표 라벨·보조 문구 | `jetbrains-mono` | 100–800, 권장 500 |
 | 기존 문서 호환 | `inter` | 100–900 |
 
 - 지원 글꼴은 Oswald, JetBrains Mono, 기존 문서 호환용 Inter이며 새 텍스트는 JetBrains Mono로 시작한다. 별도 Fallback 글꼴은 제공하거나 로딩하지 않는다.

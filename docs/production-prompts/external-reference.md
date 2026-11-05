@@ -21,7 +21,7 @@ platform UI, search bars, navigation arrows, watermarks or the reference account
 
 Use our visual language: white (#FFFFFF) slide background, black (#000000) main text, red (#FF0000)
 text emphasis, and gray secondary text. Use selective bold/color on meaningful words instead of
-copying the external highlight bars, palette or decorative type treatment. Body text, headings,
+copying the external highlight bars, palette or decorative type treatment. Body titles and subheadings use Oswald Bold 700 at sizes appropriate to the preserved hierarchy. Descriptions,
 numbers and labels use JetBrains Mono; body text is at least 35px at 1080px slide width. Keep source body
 hierarchy and alignment while changing these styles. Generate new illustrations with the attached
 official character references; preserve their identity while matching the source's information role,

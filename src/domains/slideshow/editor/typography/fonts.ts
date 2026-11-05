@@ -1,6 +1,6 @@
 const allWeights = [100, 200, 300, 400, 500, 600, 700, 800, 900] as const;
 export const EDITOR_FONTS = [
-  { value: "oswald", label: "Oswald Bold", group: "훅", variable: "--font-oswald", weights: [700] },
+  { value: "oswald", label: "Oswald Bold", group: "제목", variable: "--font-oswald", weights: [700] },
   { value: "jetbrains-mono", label: "JetBrains Mono", group: "본문", variable: "--font-jetbrains-mono", weights: [100, 200, 300, 400, 500, 600, 700, 800] },
   { value: "inter", label: "Inter", group: "기존 문서", variable: "--font-inter", weights: allWeights },
 ] as const;
