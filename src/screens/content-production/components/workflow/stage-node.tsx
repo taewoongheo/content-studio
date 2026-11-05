@@ -23,6 +23,7 @@ export type StageNodeModel = Node<{
   controls?: StageControl;
   onComplete?: () => void;
   onOpen?: () => void;
+  sourceLinks?: { url: string; name: string }[];
 }, "stage">;
 const stageIcons = { sync: Database, analysis: ScanText, production: Layers, result: FileText, hook: MessageSquare, visual: Eye, polish: SpellCheck };
 export function StageNode({ id, data, selected }: NodeProps<StageNodeModel>) {
@@ -57,6 +58,11 @@ export function StageNode({ id, data, selected }: NodeProps<StageNodeModel>) {
       </span>}
       </div>
     </div>
+    {data.stage === "result" && !!data.sourceLinks?.length && <div className="flex flex-wrap justify-end gap-2 px-4 pb-3" aria-label="참고한 원본">
+      {data.sourceLinks.map(source => <a key={source.url} className="production-button nodrag nopan" href={source.url} target="_blank" rel="noopener noreferrer" title={source.name} onClick={event => event.stopPropagation()}>
+        원본 게시글 열기<ArrowUpRight size={14} />
+      </a>)}
+    </div>}
     {data.stage !== "result" && <Handle type="source" position={Position.Right} />}
   </div>;
 }

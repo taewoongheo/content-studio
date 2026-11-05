@@ -18,6 +18,7 @@ import { layoutNodes } from "../model/layout";
 import { useNodeMeasurements } from "../hooks/use-node-measurements";
 import { getPlaybackAction, type TaskActionHandler, type TaskControlAction } from "../model/task-controls";
 import type {
+  Row,
   WorkItem,
   WorkDetail,
   ProductionStep,
@@ -36,6 +37,7 @@ export function WorkflowCanvas({
   syncing,
   syncReport,
   planningCount,
+  logs,
   selectedNode,
   onSelect,
   onSelectSync,
@@ -57,6 +59,7 @@ export function WorkflowCanvas({
   syncing: boolean;
   syncReport: PerformanceRefresh | null;
   planningCount: number;
+  logs: Row[];
   selectedNode?: string;
   onSelect: (id: string, step: ProductionStep) => void;
   onSelectSync: () => void;
@@ -71,7 +74,7 @@ export function WorkflowCanvas({
   busy: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { nodes, edges } = useMemo(() => buildWorkflowGraph(tasks, details, writes, activity, syncing, syncReport, planningCount), [tasks, details, writes, activity, syncing, syncReport, planningCount]);
+  const { nodes, edges } = useMemo(() => buildWorkflowGraph(tasks, details, writes, activity, syncing, syncReport, planningCount, logs), [tasks, details, writes, activity, syncing, syncReport, planningCount, logs]);
   const { measurements, onNodesChange } = useNodeMeasurements();
   const tasksById = new Map(tasks.map(task => [task.id, task]));
   // Controlled nodes must retain ResizeObserver measurements when their data changes.

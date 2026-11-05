@@ -1,8 +1,8 @@
 import type { Row, WorkDetail } from "@/domains/content-production/domain/contracts";
 import { projectReferences } from "../../../model/project-references";
 
-export function ProjectReferences({ detail, logs, visuals, references, onOpen }: {
-  detail: WorkDetail; logs: Row[]; visuals: Row[]; references: Row[]; onOpen: (id: string) => void;
+export function ProjectReferences({ detail, logs, visuals, references }: {
+  detail: WorkDetail; logs: Row[]; visuals: Row[]; references: Row[];
 }) {
   const origins = projectReferences(detail, logs, visuals, references);
   return <section className="mt-6 space-y-3" aria-label="제작에 사용한 원본">
@@ -11,7 +11,6 @@ export function ProjectReferences({ detail, logs, visuals, references, onOpen }:
       <p className="text-xs text-muted-foreground">{origin.label}</p>
       <p className="mt-1 break-words text-sm font-medium">{origin.name}</p>
       <div className="mt-3 flex flex-wrap gap-2">
-        {origin.projectId && <button className="production-button" onClick={() => onOpen(origin.projectId!)}>원본 프로젝트 열기</button>}
         {origin.url && <a className="production-button" href={origin.url} target="_blank" rel="noreferrer">원본 게시글 ↗</a>}
       </div>
       {origin.setId && origin.slideCount > 0 && <div role="region" aria-label={`${origin.label} 슬라이드`} tabIndex={0} className="mt-3 flex gap-2 overflow-x-auto pb-2">

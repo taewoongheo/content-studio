@@ -1,8 +1,9 @@
+import { projectReferences } from "../../model/project-references";
 import { cleanCanvasText } from "@/domains/content-production/domain/report/model";
 import { stageExecutionIntervals, taskExecutionIntervals } from "@/domains/content-production/domain/timing";
 import type { PerformanceRefresh } from "@/domains/content-production/domain/performance";
 import { MarkerType, type Edge } from "@xyflow/react";
-import { productionSteps, type WorkDetail, type WorkItem } from "@/domains/content-production/domain/contracts";
+import { productionSteps, type WorkDetail, type WorkItem, type Row } from "@/domains/content-production/domain/contracts";
 import type { StartNodeModel } from "./start-node";
 import type { StageNodeModel } from "./stage-node";
 import { getStepState } from "../../model/task-controls";
@@ -17,7 +18,7 @@ const text = cleanCanvasText;
 const progressLabels:Record<string,string>={mcp_tool_call:"제작 내용 확인 중",reasoning:"방향 검토 중",agent_message:"결과 정리 중",image_generation_call:"이미지 제작 중",web_search_call:"필요한 내용 확인 중"};
 const record = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const count = (value: unknown) => Array.isArray(value) ? value.length : 0;
-export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, WorkDetail>, writes: Record<string, number>, activity: Record<string, string>, syncing: boolean, report?: PerformanceRefresh | null, planningCount = 0) {
+export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, WorkDetail>, writes: Record<string, number>, activity: Record<string, string>, syncing: boolean, report?: PerformanceRefresh | null, planningCount = 0, logs: Row[] = []) {
   const nodes: WorkflowNode[] = [{ id: "start", type: "start", position: { x: 0, y: 0 }, data: {} }];
   const edges: Edge[] = [];
   if (syncing || tasks.length || report) {
@@ -46,6 +47,7 @@ export function buildWorkflowGraph(tasks: WorkItem[], details: Record<string, Wo
       const id = `${task.id}:${stage}`;
       nodes.push({ id, type: "stage", position: { x: 760 + stageIndex * 380, y: index * 320 }, data: {
         intervals: stage === "result" ? taskExecutionIntervals(detail) : stageExecutionIntervals(detail, stage),
+        sourceLinks: stage === "result" && detail ? projectReferences(detail, logs, [], []).flatMap(origin => origin.url ? [{url:origin.url,name:origin.name}] : []) : undefined,
         title: stage === "result" ? "완성 포스트" : productionSteps.find(value => value.id === stage)!.label, stage,
         outputTitle: stage === "hook" ? text(detail?.hook?.content && record(detail.hook.content).hook) || text(content.hook) || topic : stage === "production" ? text(content.hook) || topic : topic,
         outputText: stage === "analysis" ? answer : stage === "hook" || stage === "visual" || stage === "polish" ? text(detail?.[stage]?.review) : "", facts: facts.filter((fact): fact is string => !!fact),
