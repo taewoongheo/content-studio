@@ -61,3 +61,7 @@ Never flip readiness/review approval without fixing the underlying work. API/aut
 failures and user cancellation must be reported rather than hidden or replayed indefinitely.
 After passing validation, return that result without more edits. The host rechecks saved state and feeds
 recoverable completion/output errors back into the same session instead of abandoning the project.
+
+## Typography by content role
+
+Keep hook and CTA emphasis titles in Oswald Bold 700 (`fontFamily="oswald"`). Use JetBrains Mono (`fontFamily="jetbrains-mono"`) for all body-page text, including headings, descriptions, numbers and labels, and for supporting copy on hook/CTA pages. Prefer 500 for regular copy and 700 for emphasis; retain meaningful weight hierarchy. This font rule applies to internal clones and external origins, overriding inherited body fonts while preserving composition. Preserve existing brand marks. Never replace hook titles with the body font. After changing fonts, check the rendered text and repair wrapping, overlap or clipping without removing information or changing page roles.

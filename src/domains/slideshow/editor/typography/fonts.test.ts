@@ -7,7 +7,7 @@ import { retiredFontReplacement, EDITOR_FONT_FAMILIES, supportedFontWeight } fro
 
 test("목적별 폰트와 이탤릭은 편집 명령·문서 검증·JSON 왕복에서 지원하고 알 수 없는 폰트는 거부한다", () => {
   const document = createBlankDocument({ structure: "sequential", aspectRatio: "4:5", slideCount: 3 });
-  for (const family of ["oswald", "inter"] as const) {
+  for (const family of ["oswald", "jetbrains-mono", "inter"] as const) {
     const element = makeElementDefinition({ id: family, kind: "text" });
     element.style.fontFamily = family;
     element.style.fontStyle = "italic";
@@ -63,8 +63,8 @@ test("훅 폰트는 기존 Anton 굵기에서도 Oswald Bold로 렌더링한다"
   assert.equal(supportedFontWeight("oswald", 700), 700);
 });
 
-test("글꼴 목록은 Oswald와 Inter뿐이고 이전 본문 글꼴은 Inter로 변환한다", () => {
-  assert.deepEqual(EDITOR_FONT_FAMILIES, ["oswald", "inter"]);
+test("글꼴 목록은 훅 Oswald와 본문 JetBrains Mono 및 기존 Inter를 지원한다", () => {
+  assert.deepEqual(EDITOR_FONT_FAMILIES, ["oswald", "jetbrains-mono", "inter"]);
   for (const family of ["space-grotesk", "sans-serif", "serif", "monospace", "source-sans-3"]) {
     assert.equal(retiredFontReplacement(family), "inter");
   }

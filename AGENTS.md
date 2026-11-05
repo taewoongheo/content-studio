@@ -193,10 +193,11 @@ url = "http://127.0.0.1:3000/mcp"
 | 역할 | `fontFamily` | 지원 굵기 |
 | --- | --- | --- |
 | 훅·CTA 페이지의 강조 제목 | `oswald` | 700 (Bold) |
-| 본문 페이지 전체·일반 설명 | `inter` | 100–900, 권장 400–500 |
+| 본문 페이지 전체·일반 설명 | `jetbrains-mono` | 100–800, 권장 500 |
+| 기존 문서 호환 | `inter` | 100–900 |
 
-- 지원 글꼴은 Oswald와 Inter 두 개뿐이며 새 텍스트는 Inter로 시작한다. 별도 Fallback 글꼴은 제공하거나 로딩하지 않는다.
-- `update_visual`의 `fontStyle`은 `normal` 또는 `italic`이다. Inter는 실제 이탤릭, Oswald는 합성 기울임을 사용한다. 편집기·미리보기·내보내기는 같은 렌더링을 사용한다.
+- 지원 글꼴은 Oswald, JetBrains Mono, 기존 문서 호환용 Inter이며 새 텍스트는 JetBrains Mono로 시작한다. 별도 Fallback 글꼴은 제공하거나 로딩하지 않는다.
+- `update_visual`의 `fontStyle`은 `normal` 또는 `italic`이다. JetBrains Mono와 Inter는 실제 이탤릭, Oswald는 합성 기울임을 사용한다. 편집기·미리보기·내보내기는 같은 렌더링을 사용한다.
 - 이전 문서의 Anton·Bebas Neue·Barlow Condensed는 Oswald, Space Grotesk·Geist(sans-serif)·Source Sans 3·명조·고정폭은 Inter로 정규화한다. `anton`을 새 편집 명령의 지원 글꼴로 안내하지 않는다.
 - 지원 목록의 원문은 `src/domains/slideshow/editor/typography/fonts.ts`, 실제 로딩은 `src/app/layout.tsx`에서 확인한다.
 

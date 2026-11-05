@@ -203,7 +203,7 @@ export function ElementInspector({ ref, element, placement, slideId, selectedSli
                   setDraft((current) => ({ ...current, style: { ...current.style, fontFamily,
                     fontWeight: supportedFontWeight(fontFamily, current.style.fontWeight) } }));
                 }}>
-                  {["훅", "본문"].map((group) => <optgroup key={group} label={group}>
+                  {[...new Set(EDITOR_FONTS.map((font) => font.group))].map((group) => <optgroup key={group} label={group}>
                     {EDITOR_FONTS.filter((font) => font.group === group).map((font) => <option key={font.value} value={font.value}>{font.label}</option>)}
                   </optgroup>)}
                 </select>
