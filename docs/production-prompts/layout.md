@@ -40,3 +40,24 @@ not sequential-gap pairs; assess those visually and explain the grouping in revi
 Compare the before/after result for optical balance and reading order as well as measured gaps.
 A numerically passing result may still need another repair. Call production_validate_completion only
 when the saved geometry satisfies both the recorded relationships and full-slide visual review.
+
+## Supporting illustration framing
+
+Classify each image by its communication role before judging its framing. Supporting characters in
+hooks, CTAs or body pages should emphasize the meaningful face, upper body, gesture or prop. Do not
+shrink a supporting character just to fit its whole body inside the slide. Enlarge and reposition it
+within the existing image area so the relevant part reads prominently; let nonessential legs or
+peripheral areas extend beyond the slide when that improves emphasis. For example, a CTA built around
+an upper-body gesture can show a large upper body with the lower body deliberately cropped.
+
+Exercise demonstrations and comparisons must retain the body parts, movement differences, equipment
+and contact points needed to understand them. Judge this by the image's role, not just the slide role.
+Preserve the original page grouping, text hierarchy and brand visibility while adjusting image framing.
+Intentional peripheral cropping is not an overflow defect. Repair lost essential details or obstructed
+copy, rather than automatically shrinking the image back into the canvas. Cropping is not mandatory:
+the goal is a clear, prominent focal detail, not a crop quota or a fixed zoom percentage.
+
+In the final preview, ask whether full-body framing makes the important part too small, whether a
+closer view improves the message, and whether the crop removes anything needed for understanding.
+Record the chosen focal detail and the crop/retain decision in review. Check the visible exported
+slide, since measured bounds can include artwork intentionally extending outside the canvas.
