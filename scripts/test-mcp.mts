@@ -273,6 +273,13 @@ try {
     ] });
     const beforeColors = await call("preview_slide", { projectId: colorProject.id, slideId: "slide-1" });
     await page.goto(`${origin}/?job=${colorProject.id}`);
+    await page.getByRole("button", { name: "Color title Element 선택 및 레이어 순서 이동", exact: true }).waitFor();
+    const unselectedScopeCanceled = await page.evaluate(() => {
+      const event = new KeyboardEvent("keydown", { key: "d", code: "KeyD", metaKey: true, bubbles: true, cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+    assert.equal(unselectedScopeCanceled, true, "Cmd+D must not bookmark the page when no Element is selected");
     await page.getByRole("button", { name: "Color title Element 선택 및 레이어 순서 이동", exact: true }).click();
     const content = page.getByLabel("내용", { exact: true });
     const scopeToggle = page.getByRole("button", { name: "전체 적용", exact: true });
@@ -280,6 +287,10 @@ try {
     await scopeToggle.click();
     await page.getByRole("button", { name: "전체 적용", exact: true, pressed: true }).waitFor();
     await page.getByRole("button", { name: "전체 적용 · 6/6장", exact: true }).waitFor();
+    const selectionRing = page.getByRole("button", { name: "Color title Element 선택", exact: true }).locator("..");
+    assert.equal(await selectionRing.evaluate(el => getComputedStyle(el).getPropertyValue("--tw-ring-color").trim()),
+      await selectionRing.evaluate(el => getComputedStyle(el).getPropertyValue("--color-sky-400").trim()),
+      "All-slide scope must show a blue selection even for an Element currently placed on one slide");
     await content.press("Meta+d");
     await page.getByRole("button", { name: "전체 적용", exact: true, pressed: false }).waitFor();
     await content.press("Meta+d");

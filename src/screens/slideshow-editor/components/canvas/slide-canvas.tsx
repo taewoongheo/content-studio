@@ -289,7 +289,7 @@ export function SlideCanvas({
         return (
           <div
             key={placement.id}
-            className={`absolute z-30 ${selected ? `ring-2 ${selectionRing}` : ""}`}
+            className={`absolute z-30 transition-shadow motion-reduce:transition-none ${selected ? `ring-2 ${selectionRing}` : ""}`}
             style={{
               left: `${frame.x * 100}%`,
               top: `${frame.y * 100}%`,
@@ -302,7 +302,7 @@ export function SlideCanvas({
           >
             <button
               type="button"
-              className={`relative size-full touch-none ${disabled ? "cursor-pointer" : "cursor-move"} bg-transparent text-left outline-none focus-visible:ring-2 focus-visible:ring-primary ${selected ? "" : "hover:ring-1 hover:ring-foreground/50"}`}
+              className={`relative size-full touch-none ${disabled ? "cursor-pointer" : "cursor-move"} bg-transparent text-left outline-none ${selected ? "" : "focus-visible:ring-2 focus-visible:ring-primary hover:ring-1 hover:ring-foreground/50"}`}
               onClick={() => onSelect(placement.id)}
               onPointerDown={(event) =>
                 beginGesture(event, placement.id, frame, "move")

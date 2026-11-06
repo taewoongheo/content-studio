@@ -84,7 +84,7 @@ export function SlideshowEditorScreen({ ref, initialViewState, initialJob, onNew
   }, [job.editor.revision, job.editor.document]);
   const document = useMemo(() => job.editor.document
     ? ensureSharedBackground(structuredClone(job.editor.document)) : null, [job.editor.document]);
-  const { slide, placement, element, appliedSlides, scopeSlides, visualTargets, scopeKey, selectedSlideIds } =
+  const { slide, placement, element, scopeSlides, visualTargets, scopeKey, selectedSlideIds, selectionAppliesToAll } =
     resolveEditorSelection(document, slideId, placementId, scopeSelection);
   const [assistantBusy, setAssistantBusy] = useState(false);
   const disabled = submitting || assistantBusy;
@@ -463,7 +463,7 @@ export function SlideshowEditorScreen({ ref, initialViewState, initialJob, onNew
               onClick={event => { if (event.target === event.currentTarget) { setPlacementId(null); setScopeSelection(null); } }}>
               <SlideCanvas key={slide.id} onLoadSettled={onLoadSettled} document={document} slide={slide} jobId={job.id}
                 selectedPlacementId={placement?.id ?? null} disabled={disabled} showGuides={showGuides} showOverflow={showOverflow}
-                selectionAppliesToAll={appliedSlides.length > 1 && appliedSlides.every((item) => selectedSlideIds.includes(item.slideId))}
+                selectionAppliesToAll={selectionAppliesToAll}
                 lockImageAspectRatio={imageAspectRatioLocked}
                 onSelect={setPlacementId} onSelectBackground={() => setPlacementId(BACKGROUND_PLACEMENT_ID)}
                 onFrameChange={changeFrame} onDropImage={addDroppedImage} />
