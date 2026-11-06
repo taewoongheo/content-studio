@@ -11,7 +11,7 @@ export type WorkflowNode = StageNodeModel | StartNodeModel;
 const palette = ["#2563eb", "#0f766e", "#b45309", "#7c3aed", "#be185d", "#0369a1"];
 const colors = new Map<string, string>();
 export function instanceColor(id: string) {
-  if (!colors.has(id)) colors.set(id, palette[colors.size % palette.length]);
+  if (!colors.has(id)) colors.set(id, palette[Math.floor(Math.random() * palette.length)]);
   return colors.get(id)!;
 }
 const text = cleanCanvasText;
