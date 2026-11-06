@@ -1,7 +1,6 @@
 import { isExternalProduction } from "@/domains/content-production/domain/start/input";
 import { createTaskProject } from "@/domains/content-production/server/projects/creation";
-import type { EditorDocument } from "@/domains/slideshow/editor/types";
-import { ContentProjectStore } from "@/domains/slideshow/server/persistence/projects/store";
+import { sourceDocument } from "@/domains/content-production/server/projects/format/snapshot";
 import { badgeRepairCommands } from "@/domains/content-production/server/execution/policy/editing/badge/repair";
 import { SlideshowProjectWrites } from "@/domains/slideshow/server/project-writes";
 import { stageContext } from "@/domains/content-production/server/execution/policy/context";
@@ -34,7 +33,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     "production_query",
     {
       description:
-        "During analysis, retrieve assigned own-post IDs with ids; selection and metrics come from the material node snapshot. Query keywords do not replace that set. Production queries only that SAME assigned pool; query filters its title/topic/message/format and never expands it. In other stages, query the stored published logs by topic, title, message or format. Analysis uses five random posts from its configured high-rate pool plus five recent posts. selection_group identifies performance/recent. Missing metrics exclude rate rankings, not recency. Use production_external_references for the shared external library. Unpublished drafts are available through production_comparisons.",
+        "During analysis, retrieve assigned own-post IDs with ids; selection and metrics come from the material node snapshot. Query keywords do not replace that set. Production queries only that SAME assigned pool; query filters its title/topic/message/format and never expands it. Later task stages use the same assigned matches. selection_group identifies direct/related topic matches; related posts are not clone origins. There is no separate recent/high-rate sample. Automatic spy origins use their already preserved selected source. Unpublished drafts are available through production_comparisons.",
       inputSchema: z.object({
         kind: z.literal("logs"),
         query: z.string().default(""),
@@ -45,7 +44,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     (input) => guarded(() => {
       const store = productionStore();
       const step = taskId ? store.get(taskId).task.current_step : undefined;
-      if (taskId && step === "production") {
+      if (taskId && step !== "analysis") {
         const ids = input.ids ?? store.analysisInputs(taskId).map(row=>String(row.id));
         const rows = ids.length ? store.analysisLogs(taskId,ids) : [];
         const query = input.query.toLowerCase();
@@ -97,7 +96,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
   );
   if (!taskId) return;
   registerTool(server, "production_validate_completion", {
-    description: "Before returning final output, submit the COMPLETE intended final result for server validation. On failure repair the document or result and retry in this same execution (initial check plus at most 3 retries). Passing does not advance the stage; return the validated result without further edits. Never fabricate approval.",
+    description: "Before returning final output, submit the COMPLETE intended final result for server validation. On failure repair the document or result and retry in this same execution (up to eight validation calls per CLI response). Passing does not advance the stage; return the validated result without further edits. Never fabricate approval.",
     inputSchema: z.object({ result: z.record(z.string(), z.unknown()) }),
     annotations: annotations(true),
   }, input => guarded(async () => json(await validateProductionCompletion(taskId, input.result))));
@@ -109,7 +108,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
   }, input => guarded(async () => {
     const store = productionStore();
     const detail = store.assertActive(taskId, store.get(taskId).task.current_step);
-    if (detail.input && isExternalProduction(detail.input.request.mode))
+    if (detail.input && isExternalProduction(detail.input))
       throw new Error("외부 레퍼런스 제작에는 복제 원본 뱃지가 없습니다.");
     const projectId = detail.task.project_id;
     if (!projectId) throw new Error("연결된 프로젝트가 없습니다.");
@@ -119,12 +118,9 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
       if (active.task.project_id !== project.id) throw new Error("연결된 프로젝트가 변경되었습니다.");
       validateProject?.(project);
     });
-    const sourceId = (detail.analysis.sources as Array<{clone_project_id?:string}> | undefined)?.find(source => source.clone_project_id)?.clone_project_id
-      ?? detail.input?.source?.project_id;
-    if (!sourceId) throw new Error("확정된 원본이 없습니다.");
-    const source = new ContentProjectStore(store.db).get(sourceId);
-    if (!source) throw new Error("원본 프로젝트를 찾을 수 없습니다.");
-    const commands = badgeRepairCommands(document, source.document as EditorDocument);
+    const source = sourceDocument(store, detail);
+    if (!source) throw new Error("확정된 원본이 없습니다.");
+    const commands = badgeRepairCommands(document, source);
     if (!commands.length) return json({projectId, repaired:false, badge_presence:"matches_source", authoritative:true});
     const result = await writes.edit(projectId, commands, input.expectedRevision, input.expectedTabId);
     return json({ projectId, revision: result.editor.revision, tabId: result.tabId, warnings: result.warnings, badge_presence:"matches_source", authoritative:true });
@@ -167,7 +163,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     },
     () => guarded(() => {
       const detail = productionStore().get(taskId);
-      return json({ ...stageContext(detail), ...(detail.task.current_step === "visual" && !isExternalProduction(detail.input!.request.mode) ? {
+      return json({ ...stageContext(detail), ...(detail.task.current_step === "visual" && !isExternalProduction(detail.input!) ? {
         badge_policy: "Server restores source badges before visual review. Use production_repair_badge for an authoritative source-match check; ambiguous image readings are not blockers."
       } : {}) });
     }),
@@ -206,10 +202,10 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     "production_change_direction",
     {
       description:
-        "Resolve a recent collision within the request constraints. Automatic requests only; preserve the confirmed internal origin format. Explicit requests never change direction for overlap. If all considered alternatives overlap, keep the direction and record why the duplicate is accepted instead of calling this tool repeatedly.",
+        "Resolve a recent collision or topic/source capacity mismatch in automatic analysis/production. cause=source_fit revises the generated topic and answer to fill the existing source roles; supply a reason. Preserve source page count, composition and information roles while using a new subject. A machine-generated assignment is revisable; explicit user constraints remain fixed. Explicit requests never change direction for overlap. If all considered alternatives overlap, keep the direction and record why the duplicate is accepted instead of calling this tool repeatedly.",
       inputSchema: z.object({
         direction: directionSchema,
-        cause: z.literal("collision"),
+        cause: z.enum(["collision", "source_fit"]),
         reason: z.string().optional(),
       }),
       annotations: annotations(false),
@@ -226,7 +222,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
       }),
   );
   registerTool(server, "production_create_project", {
-    description: "Create and link a blank 4:5 slideshow for external_url/spy_reference using the confirmed analysis plan. No internal source is needed. Reuse the linked project on resume, including older drafts; never erase existing work.",
+    description: "Create and link a blank 4:5 slideshow for an external origin (including automatic origin=spy) using the preserved source page count and confirmed analysis plan. No internal source is needed. Reuse the linked project on resume, including older drafts; never erase existing work.",
     inputSchema: z.object({ slideCount: z.number().int().min(1).max(20) }),
     annotations: annotations(false),
   }, input => guarded(() => json(createTaskProject(productionStore(), taskId, input.slideCount))));
@@ -235,7 +231,7 @@ export function registerProductionTools(server: McpServer, taskId?: string, orig
     "production_clone_project",
     {
       description:
-        "Clone the internal project confirmed by analysis sources.clone_project_id. Preserve document, copy and assets; replace only what the approved direction needs. Reuse the linked project on resume.",
+        "Clone the internal project confirmed by analysis sources.clone_project_id. Freeze the original document in analysis.source_format. Preserve page count/order and slot structure; replace corresponding copy/images only. Reuse the linked project on resume and read production_context for the frozen source.",
       inputSchema: z.object({
         sourceProjectId: z.string().min(1),
         reason: z.string().trim().min(1),

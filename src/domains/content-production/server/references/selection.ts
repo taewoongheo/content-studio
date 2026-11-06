@@ -48,7 +48,7 @@ export function queryStageReferences(db: Database.Database, id: string, step: Pr
       saveReferenceContext(db,id,step,context);
       return context;
     })();
-    return { ...context, posts: context.posts.filter(post => !!db.prepare("SELECT 1 FROM content_external_references WHERE id=? AND excluded=0").get(post.id)) };
+    return { ...context, posts: context.posts.filter(post => !!db.prepare("SELECT 1 FROM content_external_references WHERE id=?").get(post.id)) };
   }
 }
 function empty(message: string): ExternalContext {

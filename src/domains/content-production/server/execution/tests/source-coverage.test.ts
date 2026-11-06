@@ -10,7 +10,7 @@ test("indexed source reads cannot complete analysis; an unindexed full read can"
   const dir = await mkdtemp(join(tmpdir(), "source-coverage-"));
   process.env.CONTENT_STUDIO_DB_PATH = join(dir, "test.sqlite");
   const store = productionStore();
-  const direction = { analysis: "Checked", reasoning: { observations: [], interpretations: [], candidates: [] },
+  const direction = { analysis: "Checked", readiness: { ready: true, reason: "All source roles mapped" }, reasoning: { observations: [], interpretations: [], candidates: [] },
     topic: "Arms", content_type: "Routine", message: "Train arms", answer: "Exercises", presentation: "Cards", reason: "Useful",
     expected_response: "Save", goal_connection: "Follow", difference_from_recent: "New", sources: [] };
   try {

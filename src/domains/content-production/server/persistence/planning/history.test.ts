@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { openLocalDatabase } from "@/lib/local-db/database";
+import { topicHistory } from "../../topics/input";
 import { ProductionStore } from "../store";
 
 function fixture(count: number) {
@@ -17,22 +18,21 @@ function fixture(count: number) {
   return { db, store: new ProductionStore(db) };
 }
 
-test("최근 5개와 나머지 성과 상위 후보 10개 중 5개를 중복 없이 선정한다", () => {
+test("topic matching considers all published history without a recent/high-rate sample", () => {
  const {db,store}=fixture(40);
  try {
-  const rows=store.planningLogs();
-  assert.equal(rows.length,10);assert.equal(new Set(rows.map(row=>row.id)).size,10);
-  assert.deepEqual(rows.slice(5).map(row=>row.id),Array.from({length:5},(_,i)=>`post-${i}`));
-  assert.ok(rows.slice(0,5).every(row=>Number(String(row.id).split('-')[1])>=5&&Number(String(row.id).split('-')[1])<15));
-  assert.equal(store.logs().length,40);assert.equal(store.planningLogs("missing").length,0);
+  const rows=topicHistory(db);
+  assert.equal(rows.length,40);assert.equal(new Set(rows.map(row=>row.id)).size,40);
+  assert.equal(store.logs().length,40);
+  const [id]=store.create(1);
+  assert.deepEqual(store.analysisInputs(id),[],"creating a draft must not draw unrelated posts from history");
  }finally{db.close();}
 });
-test("성과가 누락된 게시글은 최근 그룹으로만 포함하고 작은 풀은 중복하지 않는다",()=>{
- const {db,store}=fixture(6);
+test("missing metrics do not remove a post from semantic matching",()=>{
+ const {db}=fixture(6);
  try{
   db.prepare("UPDATE content_creation_logs SET like_count=NULL WHERE id='post-5'").run();
-  assert.equal(store.planningLogs().length,5);
-  db.prepare("UPDATE content_creation_logs SET view_count=100,like_count=1,comment_count=40,save_count=0 WHERE id='post-0'").run();
-  assert.equal(store.planningLogs().find(row=>row.id==='post-0')?.engagement_rate,0.41);
+  assert.equal(topicHistory(db).length,6);
+  assert.equal(topicHistory(db).find(row=>row.id==='post-5')?.like_count,null);
  }finally{db.close();}
 });

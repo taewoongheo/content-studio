@@ -1,3 +1,4 @@
+import { isExternalProduction } from "../../domain/start/input";
 import { collectYouTube } from "@/domains/research/collectors/platforms/youtube";
 import { socialSource } from "@/domains/research/domain/source";
 import { ensureReferenceImages } from "../references/spy/images";
@@ -11,13 +12,14 @@ export async function prepareStartInput(store: ProductionStore, id: string, sign
   client: Pick<ApifyTikTokClient, "posts"> = new ApifyTikTokClient(), capture = collectVisuals, youtube = collectYouTube) {
   const input = store.assertActive(id, "analysis").input!;
   if (input.source?.visual_set_id) return;
-  if (input.request.mode === "spy_reference") {
+  if (input.request.mode === "spy_reference" || (input.request.mode === "automatic" && isExternalProduction(input))) {
+    const request = { mode: "spy_reference" as const, referenceId: input.request.mode === "spy_reference" ? input.request.referenceId : input.source!.id, instructions: input.request.instructions };
     // Reuse the library image cache; selecting a post never collects the entire account.
-    const source = store.requestSource(input.request)!;
-    const setId = await ensureReferenceImages(store.db, input.request.referenceId, client, capture, signal);
+    const source = store.requestSource(request)!;
+    const setId = await ensureReferenceImages(store.db, request.referenceId, client, capture, signal);
     signal.throwIfAborted();
     store.assertActive(id, "analysis");
-    store.requestSource(input.request);
+    store.requestSource(request);
     const set = store.db.prepare("SELECT slide_count FROM content_visual_sets WHERE id=?").get(setId) as { slide_count: number };
     store.savePreparedSource(id, { ...source, visual_set_id: setId, slide_count: set.slide_count });
     return;

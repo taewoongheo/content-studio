@@ -18,26 +18,20 @@ export function addReferenceAccount(db: Database.Database, raw: string) {
     .run(username, url, new Date().toISOString());
   publishChange({ kind: "library" });
 }
-export function externalReferences(db: Database.Database, query = "", type = "", includeExcluded = false) {
-  const rows = db.prepare(`SELECT r.*,
-    CASE WHEN view_count>0 AND like_count IS NOT NULL AND comment_count IS NOT NULL AND save_count IS NOT NULL
-      THEN 1.0*(like_count+comment_count+save_count)/view_count END AS engagement_rate,
+export function externalReferences(db: Database.Database, query = "", type = "") {
+  const rows = db.prepare(`SELECT r.id,r.url,r.account,r.caption,r.title,r.topic,r.content_type,r.message,
+    r.published_at,r.observed_at,r.visual_set_id,r.image_error,r.created_at,r.last_selected_at,
     COALESCE(v.slide_count,json_array_length(r.images_json)) AS slide_count
     FROM content_external_references r LEFT JOIN content_visual_sets v ON v.id=r.visual_set_id
-    WHERE (? OR r.excluded=0) AND (r.caption LIKE ? OR r.title LIKE ? OR r.topic LIKE ? OR r.message LIKE ? OR r.content_type LIKE ?)
+    WHERE (r.caption LIKE ? OR r.title LIKE ? OR r.topic LIKE ? OR r.message LIKE ? OR r.content_type LIKE ?)
       AND (?='' OR r.content_type LIKE ? OR r.content_type='')
-    ORDER BY engagement_rate DESC,r.published_at DESC,r.id`)
-    .all(includeExcluded ? 1 : 0, ...Array(5).fill(`%${query}%`), type, `%${type}%`) as Row[];
-  return rows.map(({images_json: images,...post}) => { void images; return post; });
-}
-export function setReferenceExcluded(db: Database.Database, id: string, excluded: boolean) {
-  if (!db.prepare("UPDATE content_external_references SET excluded=? WHERE id=?").run(excluded ? 1 : 0, id).changes)
-    throw new Error("외부 레퍼런스를 찾을 수 없습니다.");
-  publishChange({ kind: "library" });
+    ORDER BY r.published_at DESC,r.id`)
+    .all(...Array(5).fill(`%${query}%`), type, `%${type}%`) as Row[];
+  return rows;
 }
 export function describeReference(db: Database.Database, id: string, description: ContentMetadata & { title: string }) {
   const metadata = readContentMetadata(description);
-  if (!db.prepare("UPDATE content_external_references SET title=?,topic=?,content_type=?,message=? WHERE id=? AND excluded=0")
+  if (!db.prepare("UPDATE content_external_references SET title=?,topic=?,content_type=?,message=? WHERE id=?")
     .run(description.title, metadata.topic, metadata.content_type, metadata.message, id).changes)
     throw new Error("사용 가능한 외부 레퍼런스가 아닙니다.");
   publishChange({ kind: "library" });

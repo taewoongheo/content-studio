@@ -19,10 +19,10 @@ test("language detection does not reject authored drafts; output structure remai
   try {
     const [id] = store.create(1);
     store.state(id, "running");
-    store.save(id, "analysis", { analysis: "분석 메모", reasoning: { observations: [], interpretations: [], candidates: [] } });
+    store.save(id, "analysis", { analysis: "분석 메모", readiness: { ready: true, reason: "All source roles mapped" }, reasoning: { observations: [], interpretations: [], candidates: [] } });
     assert.equal(store.get(id).analysis.analysis, "분석 메모");
-    assert.throws(() => store.completeAnalysis(id, { analysis: "No required direction fields", reasoning: { observations: [], interpretations: [], candidates: [] } }));
-    store.completeAnalysis(id, { ...direction, analysis: "분석 메모", reasoning: { observations: [], interpretations: [], candidates: [] }, sources: [] });
+    assert.throws(() => store.completeAnalysis(id, { analysis: "No required direction fields", readiness: { ready: true, reason: "All source roles mapped" }, reasoning: { observations: [], interpretations: [], candidates: [] } }));
+    store.completeAnalysis(id, { ...direction, analysis: "분석 메모", readiness: { ready: true, reason: "All source roles mapped" }, reasoning: { observations: [], interpretations: [], candidates: [] }, sources: [] });
     store.state(id, "running");
     const content = { slides: [{ visual: "Fixed bottom-left LIFTCODE badge", copy: ["3 sets of 8 reps", "설명"] }] };
     store.save(id, "production", { content, research: [{ question:"Question",source:"https://example.com",finding:"조사 기록",judgment:"참고" }] });
@@ -43,7 +43,7 @@ test("단계 출력 검사·분리 저장·재개·취소 후 쓰기 거부", ()
     store.state(id, "running");
     assert.throws(() => store.save(id, "production", {}), /현재 실행 단계/);
     store.save(id, "analysis", {
-      analysis: "partial", reasoning: { observations: [], interpretations: [], candidates: [] },
+      analysis: "partial", readiness: { ready: true, reason: "All source roles mapped" }, reasoning: { observations: [], interpretations: [], candidates: [] },
       research: [{ question: "q", source: "url", finding: "f", judgment: "j" }],
     });
     assert.throws(() => store.completeAnalysis(id, {}));
@@ -52,7 +52,7 @@ test("단계 출력 검사·분리 저장·재개·취소 후 쓰기 거부", ()
     store.state(id, "running");
     store.completeAnalysis(id, {
       ...direction,
-      analysis: "observation", reasoning: { observations: [], interpretations: [], candidates: [] },
+      analysis: "observation", readiness: { ready: true, reason: "All source roles mapped" }, reasoning: { observations: [], interpretations: [], candidates: [] },
       sources: [],
     });
     assert.equal(store.get(id).analysis.state, "completed");
@@ -120,7 +120,7 @@ test("중복 비교는 게시 후 24시간과 보존한 초안만 포함", () =>
 });
 
 
-test("게시 전 draft는 완료 상태라도 새 제작을 막고 게시 연결 완료 후 해제한다", () => {
+test("게시 전 draft는 완료 상태라도 보존되며 제거 후 열린 draft 목록에서 사라진다", () => {
   const db = openLocalDatabase(":memory:"), store = new ProductionStore(db);
   try {
     assert.equal(store.hasOpenDrafts(), false);
@@ -177,7 +177,7 @@ test("검토 draft는 분리 저장하고 훅 통과 후 시각 검증까지 끝
   try {
     const [id] = store.create(1);
     store.state(id, "running");
-    store.completeAnalysis(id, { ...direction, content_type: "Routine cards", analysis: "A clear starting plan.", reasoning: { observations: [], interpretations: [], candidates: [] }, sources: [] });
+    store.completeAnalysis(id, { ...direction, content_type: "Routine cards", analysis: "A clear starting plan.", readiness: { ready: true, reason: "All source roles mapped" }, reasoning: { observations: [], interpretations: [], candidates: [] }, sources: [] });
     store.state(id, "running");
     db.prepare("INSERT INTO content_projects(id,name,aspect_ratio,slide_count,output_language,document_json,created_at,updated_at) VALUES('review-project','Review','4:5',1,'English','{}','now','now')").run();
     db.prepare("UPDATE content_drafts SET project_id='review-project' WHERE id=?").run(id);
@@ -252,4 +252,42 @@ test("collision reselection accepts an unconfirmed format and preserves later-st
       assert.deepEqual(store.get(id),before);
     }
   } finally {db.close();}
+});
+
+test("single-stage analysis and hook completion preserve downstream rows instead of advancing",()=>{
+ const db=openLocalDatabase(":memory:"),store=new ProductionStore(db);
+ try {
+  const [id]=store.create(1);
+  store.state(id,"running");
+  db.prepare("INSERT INTO content_production_drafts(draft_id,created_at,updated_at,content_json) VALUES(?,?,?,?)").run(id,"now","now",'{"keep":"original"}');
+  const before=db.prepare("SELECT * FROM content_production_drafts WHERE draft_id=?").get(id);
+  store.completeAnalysis(id,{...direction,analysis:"Ready",readiness:{ready:true,reason:"Ready"},reasoning:{observations:[],interpretations:[],candidates:[]},sources:[]},false,true);
+  assert.equal(store.get(id).task.current_step,"analysis");assert.equal(store.get(id).task.state,"finished");
+  assert.deepEqual(db.prepare("SELECT * FROM content_production_drafts WHERE draft_id=?").get(id),before);
+  db.prepare("INSERT INTO content_projects(id,name,aspect_ratio,slide_count,output_language,document_json,created_at,updated_at) VALUES('p','P','4:5',1,'English','{}','now','now')").run();
+  db.prepare("UPDATE content_drafts SET current_step='hook',state='running',project_id='p' WHERE id=?").run(id);
+  for(const step of ["hook","polish","visual"])db.prepare(`INSERT INTO content_${step}_drafts(draft_id,created_at,updated_at,review) VALUES(?,?,?,?)`).run(id,"now","now","retain");
+  const downstream=db.prepare("SELECT * FROM content_polish_drafts WHERE draft_id=?").get(id);
+  store.completeProduction(id,{project_id:"p",summary:direction,sources:[],review:"Hook checked"},false,true);
+  assert.equal(store.get(id).task.current_step,"hook");assert.equal(store.get(id).task.state,"finished");
+  assert.deepEqual(db.prepare("SELECT * FROM content_polish_drafts WHERE draft_id=?").get(id),downstream);
+  assert.equal(store.get(id).task.project_id,"p");
+  const completed = store.get(id);
+  for (const step of ["production", "polish"]) assert.throws(() => store.prepareNodeRun(id, step));
+  assert.deepEqual(store.get(id), completed, "unsupported stages must not mutate the draft");
+  for (const step of ["analysis", "hook", "visual"]) {
+    store.prepareNodeRun(id, step);
+    assert.equal(store.get(id).task.current_step, step);
+    assert.equal(store.get(id).task.state, "stopped");
+    assert.equal(store.get(id).task.project_id, "p", "reruns edit the original project");
+    assert.deepEqual(db.prepare("SELECT * FROM content_polish_drafts WHERE draft_id=?").get(id), downstream);
+    store.state(id, "running");
+    const running = store.get(id);
+    assert.throws(() => store.prepareNodeRun(id, step), /진행 중/);
+    assert.deepEqual(store.get(id), running);
+    store.state(id, "finished");
+  }
+  db.prepare("UPDATE content_creation_logs SET post_url='https://example.com/published' WHERE id=?").run(store.get(id).task.log_id);
+  assert.throws(() => store.prepareNodeRun(id, "visual"), /게시된/);
+ }finally{db.close();}
 });

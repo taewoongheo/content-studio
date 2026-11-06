@@ -1,0 +1,5 @@
+# Typography by content role
+
+Use Oswald Bold 700 (`fontFamily="oswald"`) for hook/CTA emphasis titles AND body-page titles/subheadings, including exercise names, item headings and section/tier headings. Keep body-heading sizes appropriate to the source hierarchy and layout; the hook size range does not apply to body headings. Use JetBrains Mono (`fontFamily="jetbrains-mono"`) for descriptions, numbers, table labels and supporting copy on all pages. Prefer 500 for regular copy and 700 for emphasis; retain meaningful weight hierarchy. This font rule applies to internal clones and external origins, overriding inherited body fonts while preserving composition. Preserve existing brand marks. Keep titles visually distinct from explanatory copy. After changing fonts, check the rendered text and repair wrapping, overlap or clipping without removing information or changing page roles.
+
+For newly composed hook/CTA emphasis titles, use uppercase 110–140px at 1080px width. This size range does not apply to body headings. Optional hook/CTA supporting copy uses JetBrains Mono, 35px, #B0B5BE, at most one phrase.

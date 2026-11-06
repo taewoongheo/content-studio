@@ -33,7 +33,6 @@ export class TelegramHandler {
     const parsed=productionRequestSchema.parse(request);
     const store=this.services.store();
     store.requestSource(parsed);
-    if(store.hasOpenDrafts()) throw new Error("기존 제작 작업이 남아 있습니다. 앱에서 기존 작업을 정리한 뒤 시작해 주세요.");
     await this.client.send(this.user,`${productionModeLabels[parsed.mode]} 접수. 분석 자료를 준비합니다.${parsed.instructions ? `\n추가요청: ${parsed.instructions}` : ""}`);
     acknowledge();
     this.state.set("pending",null);

@@ -24,6 +24,19 @@ export function buildReportInput(detail: WorkDetail, step: ProductionStep, ownPo
     return value;
   }
   const fields=Object.fromEntries(reportFields.filter(key=>key!=="sources"&&context[key]!=null).map(key=>[key,prose(context[key])]));
+  const assignment = detail.input?.topic_assignment;
+  if (step === "analysis" && assignment) {
+    fields.topic_selection = prose({
+      topic: assignment.candidate.topic,
+      reader_question: assignment.candidate.reader_question,
+      answer_method: assignment.candidate.content_type,
+      pattern_reason: assignment.candidate.rationale,
+      evidence_status: assignment.status,
+      selection_path: assignment.selected_lane,
+      evidence: assignment.evidence,
+      fallback: assignment.fallback,
+    });
+  }
   const reasoning=context.reasoning as Row|undefined;
   if(reasoning&&Array.isArray(reasoning.observations)) {
     fields.reasoning={...prose(reasoning) as Row,observations:(reasoning.observations as Row[]).map(item=>({example:clean(String(item.source??"")),observation:prose(item.observation)}))};

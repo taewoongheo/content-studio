@@ -15,9 +15,6 @@ export function ReferencePicker({ posts, value, onChange }: {
     [post.title, post.caption, post.topic, post.content_type, post.account].some(v => String(v ?? "").toLowerCase().includes(term)))
     .sort((a, b) => String(b.published_at ?? "").localeCompare(String(a.published_at ?? "")));
   const list = filtered.map(post => ({ id: String(post.id), name: String(post.title || post.caption || "캡션 없음"),
-    metrics: {view_count: typeof post.view_count === "number" ? post.view_count : null,
-      like_count: typeof post.like_count === "number" ? post.like_count : null,
-      save_count: typeof post.save_count === "number" ? post.save_count : null},
     topic: `@${post.account}`, content_type: String(post.content_type ?? ""), updatedAt: String(post.observed_at ?? ""),
     publishedOn: post.published_at ? new Date(String(post.published_at)).toLocaleDateString("ko-KR") : "게시일 미상", slideCount: Number(post.slide_count) || 0 }));
   return <div className="flex min-h-0 flex-1 flex-col gap-2">
@@ -28,8 +25,8 @@ export function ReferencePicker({ posts, value, onChange }: {
       </select>
     </div>
     <span id="source-list-label" className="sr-only">레퍼런스 원본 게시글</span>
-    <SourceList key={`${term}:${account}`} posts={list} value={value} onChange={onChange} />
-    {!filtered.length && <p className="text-xs text-muted-foreground">선택할 슬라이드쇼가 없습니다. 스파이 계정의 수집 게시글과 제외 상태를 확인해 주세요.</p>}
+    <SourceList showPerformance={false} key={`${term}:${account}`} posts={list} value={value} onChange={onChange} />
+    {!filtered.length && <p className="text-xs text-muted-foreground">선택할 슬라이드쇼가 없습니다. 스파이 계정에 수집된 게시글을 확인해 주세요.</p>}
     {selected && <div className="min-w-0 shrink-0 rounded-lg border p-2 text-xs">
       <p className="truncate font-medium">선택한 게시글: {String(selected.title || selected.caption || "캡션 없음")}</p>
       <a href={String(selected.url)} target="_blank" rel="noreferrer" className="underline">@{String(selected.account)} 원본 보기 ↗</a>

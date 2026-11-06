@@ -10,6 +10,7 @@ import { join } from "node:path";
 
 export async function runCodex(input: {
   model?: string;
+  reasoningEffort?: "low" | "medium" | "high";
   toolUrl?: string;
   conversation?: { directory: string; threadId?: string };
   capabilities?: {webSearch: boolean; shell: boolean; imageGeneration?: boolean};
@@ -74,7 +75,7 @@ export async function runCodex(input: {
               !input.displayOnly && input.capabilities?.webSearch ? 'web_search="live"' : 'web_search="disabled"',
               ...(!input.capabilities?.shell || input.displayOnly ? ["-c", "features.shell_tool=false", "-c", "features.unified_exec=false"] : []),
               "--skip-git-repo-check",
-              ...(input.displayOnly ? ["-c", 'model_reasoning_effort="low"'] : []),
+              ...(input.displayOnly || input.reasoningEffort ? ["-c", `model_reasoning_effort=${JSON.stringify(input.displayOnly ? "low" : input.reasoningEffort)}`] : []),
               "-c", 'sandbox_mode="read-only"',
               "--output-schema",
               schema,

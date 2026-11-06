@@ -6,13 +6,15 @@ import { ProductionStore } from "../store";
 import { stageContext } from "../../execution/policy/context";
 import { resultSchema } from "../../execution/prompts";
 import { displayContent } from "../../../domain/display";
+import { createBlankDocument } from "@/domains/slideshow/editor/document";
+import { saveStageDocument } from "./documents";
 
 const reasoning = {
   observations: [{ source: "log-one, slide 2", observation: "Two alternatives are shown with a concrete selection criterion." }],
   interpretations: [{ finding: "A visible choice may help readers apply the answer.", support: "The stronger comparison gives a criterion; the weaker case only lists options.", limits: "The posts also differ in publication age." }],
   candidates: [{ direction: "Compare two exercise options using one criterion.", viewer_value: "Choose the option that fits the available equipment.", assessment: "Selected because it makes the tradeoff actionable." }],
 };
-const direction = { analysis: "Choose an actionable comparison.", reasoning, topic: "Exercise choices", message: "Choose for your equipment",
+const direction = { analysis: "Choose an actionable comparison.", reasoning, readiness: { ready: true, reason: "All source roles mapped" }, topic: "Exercise choices", message: "Choose for your equipment",
   content_type: "Comparison", answer: "Two options and their selection criterion", presentation: "Show the choice, then demonstrate each option",
   reason: "The observed comparison makes the decision usable", expected_response: "Save the comparison", goal_connection: "Build trust", difference_from_recent: "A different equipment choice", sources: [] };
 const slide_plan = [{ slide_id: "s1", role: "body" as const, purpose: "Make the choice actionable", copy: ["Choose for your equipment"], visual: "Show two equipment options side by side" }];
@@ -32,6 +34,14 @@ test("decisions and plans survive progress saves, resume, completion and removal
     store.completeAnalysis(id, direction);
     assert.equal(stageContext(store.get(id)).analysis.reasoning, undefined);
     store.state(id, "running");
+    assert.throws(() => store.save(id, "production", { slide_plan }), { code: "SOURCE_FORMAT_MISSING" });
+    const original = createBlankDocument({ structure: "sequential", aspectRatio: "4:5", slideCount: 1 });
+    original.slides[0].id = "s1"; original.slides[0].role = "body";
+    saveStageDocument(db, store.get(id).task.log_id, "analysis", { source_format: { project_id: "origin", document: original } });
+    const beforePlan = store.get(id);
+    assert.throws(() => store.save(id, "production", { slide_plan: [...slide_plan, { ...slide_plan[0], slide_id: "extra-explanation" }] }),
+      { code: "SOURCE_PLAN_MISMATCH" });
+    assert.deepEqual(store.get(id), beforePlan, "an invented page plan must fail before image generation or progress writes");
     store.save(id, "production", { slide_plan });
     assert.equal(store.get(id).production?.draft_saved_at, null, "planning alone is not actual content");
     store.save(id, "production", { content: { hook: "Choose for your equipment" } });
@@ -74,7 +84,7 @@ test("CLI schemas accept flexible comparisons and issue-free review using the pr
   const ajv = new Ajv({ strict: false });
   const analysis = ajv.compile(resultSchema("analysis"));
   assert.equal(analysis(direction), true, JSON.stringify(analysis.errors));
-  assert.equal(analysis({ ...direction, reasoning: { observations: [], interpretations: [], candidates: [] } }), true);
+  assert.equal(analysis({ ...direction, readiness: { ready: true, reason: "All source roles mapped" }, reasoning: { observations: [], interpretations: [], candidates: [] } }), true);
   assert.equal(analysis({ ...direction, reasoning: "A freeform replacement" }), false);
   const production = ajv.compile(resultSchema("production"));
   const result = { project_id: "planned", summary: { topic: direction.topic, message: direction.message, content_type: direction.content_type, hook: "Choose", slides: [{ slide_id: "s1", role: "body", copy: ["Choose"], visual: "Two options" }], changes: [] }, sources: [], slide_plan, content_review };

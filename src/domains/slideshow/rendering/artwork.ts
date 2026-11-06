@@ -1,4 +1,5 @@
 import Konva from "konva";
+import { measureScene } from "./inspection/measure";
 import { shadowAttributes } from "@/domains/slideshow/editor/elements/style";
 import type { EditorDocument, EditorSlide, ElementFrame } from "@/domains/slideshow/editor/types";
 import { BACKGROUND_ELEMENT_ID } from "@/domains/slideshow/editor/document";
@@ -175,7 +176,7 @@ export async function createArtworkScene(options: Options) {
       }
       return draw();
     }
-    return { ...draw(), updatePreview, snapshot: () => stage.toCanvas({ pixelRatio: 1 }), destroy: () => stage.destroy() };
+    return { ...draw(), updatePreview, inspectLayout: () => measureScene(doc, slide, nodes, size), snapshot: () => stage.toCanvas({ pixelRatio: 1 }), destroy: () => stage.destroy() };
   } catch (error) {
     stage.destroy();
     throw error;

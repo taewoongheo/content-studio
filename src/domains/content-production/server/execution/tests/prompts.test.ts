@@ -23,6 +23,7 @@ test("all CLI output schemas require source parts and usage as structured fields
         key, key === "summary" ? stageSummary(step) : field.type === "array" ? [] : field.type === "boolean" ? true : field.type === "integer" ? 0 : "English output",
       ]),
     );
+    if (step === "analysis") output.readiness = { ready: true, reason: "Ready" };
     if (step === "analysis") output.reasoning = { observations: [], interpretations: [], candidates: [] };
     if (step === "production") Object.assign(output, planning);
     const source = { kind: "url", id: null, url: "https://example.com", part: "Research summary", used_for: "Checked the prescription.", visual_set_id: null, clone_project_id: null };
@@ -43,7 +44,7 @@ test("content-stage summaries must be objects, not prose or encoded JSON strings
     const schema = resultSchema(step);
     const validate = ajv.compile(schema);
     const output = {
-      project_id: "project", summary:stageSummary(step), sources: [], ...(step === "visual" ? {reviewed_slide_ids: ["slide-1"], reviewed_revision: 9} : {}),
+      project_id: "project", summary:stageSummary(step), sources: [], ...(step === "visual" ? {reviewed_slide_ids: ["slide-1"], reviewed_revision: 9, layout_checks: []} : {}),
       ...(step !== "production" ? { review: "Ready for the next step.", review_passed: true } : planning),
     };
     assert.ok(validate(output), JSON.stringify(validate.errors));
@@ -65,7 +66,7 @@ test("every stage shares metadata meanings; no stage may discover external posts
   }
   for (const step of ["production","hook","visual","polish"] as const) {
     const validate = new Ajv({strict:false}).compile(resultSchema(step));
-    const output = {project_id:"p",summary:stageSummary(step),sources:[],...(step === "visual" ? {reviewed_slide_ids:["s"],reviewed_revision:0} : {}),
+    const output = {project_id:"p",summary:stageSummary(step),sources:[],...(step === "visual" ? {reviewed_slide_ids:["s"],reviewed_revision:0,layout_checks:[]} : {}),
       ...(step === "production" ? planning : {review:"Checked",review_passed:true})};
     const {content_type: _format,...incomplete} = summary;
     void _format;
@@ -157,10 +158,38 @@ test("external stages receive the shared adaptation contract and draft/visual at
     for (const { id: step } of productionSteps) {
       const prompt = stagePrompt("external", step, [], null, null, { request });
       assert.match(prompt, /Do not select or clone an internal project/);
-      assert.match(prompt, /wording AND visual composition in our own style/);
+      assert.match(prompt, /hook-to-body relationship identified in analysis.presentation/);
+      assert.match(prompt, /Create its visual composition in our own/);
       assert.match(prompt, /A star rating stays stars/);
       assert.doesNotMatch(prompt, /Assigned own-post IDs/);
       assert.equal(prompt.includes("third attachment = source slide 1"), ["production", "visual"].includes(step));
     }
   }
+});
+
+
+test("automatic internal and spy stages require a new subject without copying source substance", () => {
+  for (const origin of ["internal", "spy"] as const) {
+    for (const { id: step } of productionSteps) {
+      const prompt = stagePrompt("variation", step, [], null, null, { request: { mode: "automatic", instructions: "" }, origin });
+      assert.match(prompt, /Change the concrete subject and substantive content/);
+      assert.match(prompt, /page count, order, information roles and layout relationships/);
+      assert.doesNotMatch(prompt, /Keep its topic and verified substance/);
+      assert.doesNotMatch(prompt, /Keep the source subject, verified substance/);
+    }
+  }
+});
+
+
+test("CLI schemas close every nested object including union branches", () => {
+  function inspect(value: unknown): void {
+    if (!value || typeof value !== "object") return;
+    const schema = value as Record<string, unknown>;
+    if (schema.properties) {
+      assert.equal(schema.additionalProperties, false);
+      assert.deepEqual(new Set(schema.required as string[]), new Set(Object.keys(schema.properties as object)));
+    }
+    for (const child of Object.values(schema)) inspect(child);
+  }
+  for (const { id } of productionSteps) inspect(resultSchema(id));
 });

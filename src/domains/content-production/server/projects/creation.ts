@@ -12,6 +12,7 @@ import {
 import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import type { ProductionStore } from "../persistence/store";
 import { publishChange } from "../events";
+import { assertSourcePageCount } from "./format/snapshot";
 
 /** Link document creation, saved project and production provenance in one transaction. */
 export function saveTaskProject(
@@ -93,9 +94,10 @@ export function saveTaskProject(
 /** Creation and linking share the same atomic, resume-safe path as internal clones. */
 export function createTaskProject(store: ProductionStore, taskId: string, slideCount: number) {
   const detail = store.assertActive(taskId, store.get(taskId).task.current_step);
-  if (!detail.input || !isExternalProduction(detail.input.request.mode))
+  if (!detail.input || !isExternalProduction(detail.input))
     throw new OperationError("PROJECT_CREATION_MODE", "외부 레퍼런스 제작에서만 빈 프로젝트를 만들 수 있습니다.");
   if (detail.task.project_id) return { projectId: detail.task.project_id, reused: true };
+  assertSourcePageCount(detail.input, slideCount);
   if (!Number.isInteger(slideCount) || slideCount < 1 || slideCount > 20)
     throw new Error("슬라이드 수는 1~20 사이의 정수여야 합니다.");
   return saveTaskProject(store, taskId, createBlankDocument({

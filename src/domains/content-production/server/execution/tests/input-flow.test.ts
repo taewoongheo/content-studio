@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { productionStore, execute, recordAnalysisRead, recordSourceReview } from "../runner";
 import type { runCodex } from "../process";
 
-const direction={analysis:"Compare observed post performance.",reasoning:{observations:[{source:"assigned-log",observation:"The comparison makes exercise choices visible."}],interpretations:[],candidates:[]},topic:"Arms",content_type:"Comparison",message:"Choose an exercise",answer:"Compare available options",presentation:"Comparison cards",reason:"Observed interest",expected_response:"Save",goal_connection:"Relevant audience",difference_from_recent:"Another choice",sources:[]};
+const direction={analysis:"Compare observed post performance.",readiness: { ready: true, reason: "All source roles mapped" }, reasoning: {observations:[{source:"assigned-log",observation:"The comparison makes exercise choices visible."}],interpretations:[],candidates:[]},topic:"Arms",content_type:"Comparison",message:"Choose an exercise",answer:"Compare available options",presentation:"Comparison cards",reason:"Observed interest",expected_response:"Save",goal_connection:"Relevant audience",difference_from_recent:"Another choice",sources:[]};
 test("analysis cannot finish without all assigned reads; input IDs and repair capabilities reach the CLI", async()=>{
   const dir=await mkdtemp(join(tmpdir(),"analysis-input-flow-"));
   process.env.CONTENT_STUDIO_DB_PATH=join(dir,"test.sqlite");
@@ -14,7 +14,7 @@ test("analysis cannot finish without all assigned reads; input IDs and repair ca
   try {
     store.db.prepare("INSERT INTO content_projects(id,name,aspect_ratio,slide_count,output_language,document_json,created_at,updated_at) VALUES('p','Unique private post label','4:5',1,'English','{}','now','now')").run();
     store.db.prepare("INSERT INTO content_creation_logs(id,project_id,post_url,actual_published_at,view_count,like_count,comment_count,save_count,created_at,updated_at) VALUES('assigned-log','p','https://example.com/post','2026-10-25',100,1,1,1,'now','now')").run();
-    const [id]=store.create(1);
+    const [id]=store.create(1, [{id:"assigned-log",project_id:"p",selection_group:"direct"}]);
     const missing:typeof runCodex=async input=>{
       assert.equal(input.capabilities?.webSearch,true);
       assert.equal(input.capabilities?.shell,true);

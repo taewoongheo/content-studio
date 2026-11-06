@@ -1,6 +1,6 @@
 import type { Row, WorkDetail } from "../../../domain/contracts";
 
-const decisionFields = ["topic", "message", "answer", "content_type", "presentation", "sources"];
+const decisionFields = ["topic", "message", "answer", "content_type", "presentation", "sources", "source_format", "readiness"];
 const progressFields = ["state", "content", "slide_plan", "content_review", "review", "sources", "remaining_actions"];
 function pick(row: Row, fields: string[]): Row {
   return Object.fromEntries(fields.filter(key => key in row).map(key => [key, row[key]]));

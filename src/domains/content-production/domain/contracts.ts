@@ -1,11 +1,13 @@
+import { layoutChecksSchema } from "./planning/layout";
 import type { ExternalContext, ReferenceStep } from "./references/context";
 import { z } from "zod";
 import { contentMetadataSchema } from "@/domains/content-metadata/schema";
-import { analysisReasoningSchema, firstDraftPlanningSchema, slidePlanSchema, contentReviewSchema } from "./planning/contracts";
+import { analysisReadinessSchema, analysisReasoningSchema, firstDraftPlanningSchema, slidePlanSchema, contentReviewSchema } from "./planning/contracts";
 
 export const PRODUCTION_ASPECT_RATIO = "4:5";
 
 export const stepSchema = z.enum(["analysis", "production", "hook", "polish", "visual"]);
+export const standaloneStepSchema = stepSchema.extract(["analysis", "hook", "visual"]);
 export type ProductionStep = z.infer<typeof stepSchema>;
 export const reviewSteps = ["hook", "polish", "visual"] as const;
 export const productionSteps = [
@@ -54,7 +56,7 @@ export const reviewDraftPatchSchema = z.object({
 }).strict();
 export const analysisPatchSchema = directionSchema
   .partial()
-  .extend({ analysis: z.string().optional(), reasoning: analysisReasoningSchema.optional(), ...progress })
+  .extend({ analysis: z.string().optional(), reasoning: analysisReasoningSchema.optional(), readiness: analysisReadinessSchema.optional(), ...progress })
   .strict();
 export const productionPatchSchema = z
   .object({
@@ -69,6 +71,7 @@ export const analysisResultSchema = directionSchema
   .extend({
     analysis: z.string().trim().min(1),
     reasoning: analysisReasoningSchema,
+    readiness: analysisReadinessSchema,
     sources: z.array(sourceSchema),
   })
   .strict();
@@ -82,6 +85,7 @@ export const productionResultSchema = z
 export const visualResultSchema = productionResultSchema.extend({
   reviewed_slide_ids: z.array(z.string()).min(1),
   reviewed_revision: z.number().int().nonnegative(),
+  layout_checks: layoutChecksSchema,
 });
 export const firstDraftResultSchema = productionResultSchema.extend(firstDraftPlanningSchema.shape);
 export type Row = Record<string, unknown>;

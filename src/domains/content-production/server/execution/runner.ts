@@ -1,11 +1,13 @@
+import { assertLayoutReview, type LayoutObservation } from "./review/layout";
+import type { SlideLayout } from "@/domains/slideshow/rendering/inspection/metrics";
 import { isExternalProduction } from "../../domain/start/input";
+import { assertTaskSourceFormat } from "../projects/format/snapshot";
 import { withReferenceImages } from "../start/media/attachments";
-import { executeWithOutputRepair } from "./review/output/output-repair";
+import { executeWithStageRecovery } from "./review/output/stage-recovery";
 import { reviewedSummary } from "./review/summary";
 import { prepareOriginalBadges } from "./policy/editing/badge/prepare";
 import { refreshSpy } from "../references/spy/refresh";
-import { readSampling } from "../settings/sampling";
-import { readPlanningLogs } from "../persistence/planning/logs";
+import { prepareTopics } from "../topics/service";
 import { productionRequestsSchema, type ProductionRequest } from "../../domain/start/input";
 import { prepareStartInput } from "../start/prepare";
 import { activeProduct } from "../products/store";
@@ -19,7 +21,6 @@ import { beginToolCall, finishToolCall } from "./diagnostics/tools";
 import { z } from "zod";
 import type { PerformanceRefresh } from "../../domain/performance";
 import { discardTask } from "../projects";
-import { OPEN_DRAFT_MESSAGE } from "../../domain/start-policy";
 import { randomUUID } from "node:crypto";
 import { getLocalDatabase } from "@/lib/local-db/database";
 import { ProductionStore } from "../persistence/store";
@@ -39,6 +40,7 @@ import { contentJobRegistry } from "@/domains/slideshow/workflow/service";
 import { loadContentProject } from "@/domains/slideshow/projects/service";
 
 type Run = {
+  singleStage?: boolean;
   completionAttempts?: number;
   controller: AbortController;
   token: string;
@@ -50,6 +52,7 @@ type Run = {
   imageStartedAt: number;
   imageThreadId: string | null;
   reviews: Map<string, ObservedReview>;
+  layouts: Map<string, LayoutObservation>;
 };
 const shared = globalThis as typeof globalThis & {
   productionRuns?: Map<string, Run>;
@@ -92,6 +95,13 @@ export function recordReview(
   slides.forEach((s) => reviewed.add(s));
   run.reviews.set(projectId, { revision, slides: reviewed });
 }
+export function recordLayoutReview(id:string,projectId:string,revision:number,slides:SlideLayout[]) {
+  const run=runs.get(id); if(!run)return;
+  const previous=run.layouts.get(projectId);
+  const layouts=previous?.revision===revision ? previous.slides : new Map<string,SlideLayout>();
+  slides.forEach(slide=>layouts.set(slide.slideId,slide));
+  run.layouts.set(projectId,{revision,slides:layouts});
+}
 export function recordSourceReview(id: string, projectId?: string, setId?: string, indexes?: number[]) {
   const run = runs.get(id);
   if (run) { if (projectId) run.sourceProjects.add(projectId); if (setId && indexes === undefined) run.sourceSets.add(setId); }
@@ -125,7 +135,7 @@ export function syncState() {
 }
 export async function startProduction(
   count: number | ProductionRequest[], origin: string,
-  services: {execute: typeof execute;refreshSpy?: typeof refreshSpy} = { execute, refreshSpy },
+  services: {execute: typeof execute;refreshSpy?: typeof refreshSpy;prepareTopics?:typeof prepareTopics} = { execute, refreshSpy },
 ) {
   if (!process.env.APIFY_API_TOKEN?.trim())
     throw new Error("Apify에 연결되지 않아 제작을 시작할 수 없습니다. APIFY_API_TOKEN을 설정해 주세요.");
@@ -136,17 +146,15 @@ export async function startProduction(
   const requests = productionRequestsSchema.parse(typeof count === "number"
     ? Array.from({ length: count }, () => ({ mode: "automatic" })) : count);
   const store = productionStore();
-  if (store.hasOpenDrafts()) throw new Error(OPEN_DRAFT_MESSAGE);
   requests.forEach(request => store.requestSource(request));
-  const sampling = readSampling(store.db);
   shared.productionSync = true;
   const report: PerformanceRefresh = { started_at: new Date().toISOString(), completed_at: null, state: "running", records: [], error: null };
   shared.productionRefresh = report;
   publishChange({ kind: "sync", detail: "running" });
   try {
-    await (services.refreshSpy ?? refreshSpy)(store.db);
-    const inputs = readPlanningLogs(store.db,"",sampling.internalCandidates);
-    const ids = store.create(requests, inputs, sampling);
+    if (requests.some(request => request.mode === "automatic")) await (services.refreshSpy ?? refreshSpy)(store.db);
+    const topics = await (services.prepareTopics ?? prepareTopics)(store.db, requests.filter(request=>request.mode==='automatic').length, origin);
+    const ids = store.create(requests, [], topics);
     report.state = "completed";
     report.completed_at = new Date().toISOString();
     ids.forEach((id) => {
@@ -177,6 +185,7 @@ export async function execute(
   id: string,
   origin: string,
   executor: typeof runCodex = runCodex,
+  options: { singleStage?: boolean } = {},
 ) {
   if (runs.has(id)) throw new Error("이미 실행 중인 작업입니다.");
   const store = productionStore(),
@@ -185,10 +194,12 @@ export async function execute(
     throw new Error("제작이 끝난 작업입니다.");
   const persona = readPersona(store.db), product = activeProduct(store.db);
   const run: Run = {
+    singleStage: options.singleStage,
     controller: new AbortController(),
     token: randomUUID(),
     step: detail.task.current_step,
     reviews: new Map(),
+    layouts: new Map(),
     analysisRead: new Set(),
     sourceProjects: new Set(),
     sourceSets: new Set(),
@@ -205,6 +216,7 @@ export async function execute(
       store.state(id, "running");
       run.completionAttempts = 0;
       run.reviews.clear();
+      run.layouts.clear();
       run.analysisRead.clear();
       run.sourceProjects.clear();
       run.sourceSets.clear();
@@ -212,20 +224,22 @@ export async function execute(
       run.imageStartedAt = Date.now();
       run.imageThreadId = null;
       phase = "source_collection";
-      if (run.step === "analysis" && ["external_url", "spy_reference"].includes(store.get(id).input!.request.mode))
+      if (run.step === "analysis" && isExternalProduction(store.get(id).input!))
         await prepareStartInput(store, id, run.controller.signal);
       if (run.step === "visual") await prepareOriginalBadges(store, id);
       phase = "cli";
       const inputs = run.step === "analysis" || run.step === "production" ? store.analysisInputs(id, true) : [];
       const startInput = store.get(id).input!;
-      const capabilities = stagePolicy(run.step, startInput.request.mode);
-      const result = await withReferenceImages(store, startInput, run.step, run.controller.signal, referenceImages => executeWithOutputRepair(executor, {
+      const capabilities = stagePolicy(run.step, startInput);
+      const prompt = stagePrompt(id, run.step, inputs, persona, product, startInput);
+      const schema = resultSchema(run.step);
+      await withReferenceImages(store, startInput, run.step, run.controller.signal, referenceImages => executeWithStageRecovery(executor, {
         capabilities,
         onThreadStarted: threadId => { run.imageThreadId = threadId; },
         model: PRODUCTION_MODEL,
-        prompt: stagePrompt(id, run.step, inputs, persona, product, startInput),
+        prompt,
         images: [...stageImages(run.step), ...referenceImages],
-        schema: resultSchema(run.step),
+        schema,
         origin,
         taskId: id,
         token: run.token,
@@ -238,10 +252,10 @@ export async function execute(
             kind: "state",
             detail: message,
           }),
-      }, run.step));
-      run.controller.signal.throwIfAborted();
-      phase = "validation";
-      await checkStageCompletion(id, run, result);
+      }, run.step, async result => {
+        phase = "validation";
+        await checkStageCompletion(id, run, result);
+      }, () => { phase = "cli"; run.completionAttempts = 0; }));
       if (store.get(id).task.state === "finished") break;
     }
   } catch (error) {
@@ -287,8 +301,6 @@ export function resetProduction() {
 
 async function checkStageCompletion(id: string, run: Run, result: Record<string, unknown>, validateOnly = false) {
   run.controller.signal.throwIfAborted();
-  if ((run.completionAttempts ?? 0) > 4)
-    throw new OperationError("COMPLETION_REPAIR_EXHAUSTED", "완료 검증 수정 횟수를 초과했습니다.");
   const store = productionStore();
   store.assertActive(id, run.step);
   const startInput = store.get(id).input!;
@@ -304,17 +316,17 @@ async function checkStageCompletion(id: string, run: Run, result: Record<string,
     if (missingInputs.length) throw new OperationError("ANALYSIS_INPUTS_NOT_READ", "분석용 게시글 조회가 누락됐습니다.", {ids:missingInputs});
     if (startInput.request.mode === "past_post" && !run.sourceProjects.has(startInput.request.sourceProjectId))
       throw new OperationError("START_SOURCE_NOT_REVIEWED", "선택한 원본 게시글의 실제 슬라이드를 확인해 주세요.");
-    if ((startInput.request.mode === "external_url" || startInput.request.mode === "spy_reference") && !run.sourceSets.has(startInput.source?.visual_set_id ?? ""))
+    if (isExternalProduction(startInput) && !run.sourceSets.has(startInput.source?.visual_set_id ?? ""))
       throw new OperationError("START_SOURCE_NOT_REVIEWED", "외부 원본 게시글의 전체 슬라이드를 확인해 주세요.");
     const origins = sources.filter(source => source.clone_project_id);
     const origin = origins.length === 1 ? origins[0].clone_project_id : undefined;
-    if (isExternalProduction(startInput.request.mode) && origins.length)
+    if (isExternalProduction(startInput) && origins.length)
       throw new OperationError("EXTERNAL_CLONE_SOURCE", "외부 레퍼런스 제작에는 내부 복제 원본을 지정하지 않습니다.");
-    if (!isExternalProduction(startInput.request.mode) && (typeof origin !== "string" || !store.sourceProjectAllowed(id, origin) || !run.sourceProjects.has(origin)))
+    if (!isExternalProduction(startInput) && (typeof origin !== "string" || !store.cloneSourceAllowed(id, origin) || !run.sourceProjects.has(origin)))
       throw new OperationError("LAYOUT_SOURCE_NOT_SELECTED", "복제할 내부 게시글을 선택하고 실제 슬라이드를 확인해 주세요.");
     if (startInput.request.mode === "past_post" && origin !== startInput.request.sourceProjectId)
       throw new OperationError("LAYOUT_SOURCE_NOT_SELECTED", "지정한 내부 게시글을 복제해 주세요.");
-    store.completeAnalysis(id, { ...fields, sources }, validateOnly);
+    store.completeAnalysis(id, { ...fields, sources }, validateOnly, run.singleStage);
     return;
   }
   const { review: reviewText, review_passed, ...rest } = fields;
@@ -338,13 +350,15 @@ async function checkStageCompletion(id: string, run: Run, result: Record<string,
   if (firstDraft)
     assertCurrentSlidePlan(contentJobRegistry.getRecord(output.project_id), firstDraft.slide_plan);
   const project = contentJobRegistry.getRecord(output.project_id);
+  assertTaskSourceFormat(detail, project.editor.document);
   if (run.step === "visual") {
+    assertLayoutReview(project, visualResultSchema.parse(rawOutput).layout_checks, run.layouts.get(output.project_id));
     assertCompleteProjectReview(project, visualResultSchema.parse(rawOutput),
       run.reviews.get(output.project_id), run.toolCalls);
   } else assertSavedProjectContent(project);
   const previous = (detail.log.content_summary ?? detail.production?.content ?? {}) as Row;
   const summary = run.step === "production" ? output.summary : reviewedSummary(run.step, previous, output.summary, project);
-  store.completeProduction(id, { ...output, summary, review: typeof reviewText === "string" ? reviewText : undefined }, validateOnly);
+  store.completeProduction(id, { ...output, summary, review: typeof reviewText === "string" ? reviewText : undefined }, validateOnly, run.singleStage);
 
 }
 
@@ -353,8 +367,8 @@ export async function validateProductionCompletion(id: string, result: Record<st
   const run = runs.get(id);
   if (!run) throw new OperationError("RUN_NOT_ACTIVE", "실행 중인 작업만 검증할 수 있습니다.");
   run.completionAttempts = (run.completionAttempts ?? 0) + 1;
-  if (run.completionAttempts > 4)
-    throw new OperationError("COMPLETION_REPAIR_EXHAUSTED", "완료 검증 수정은 최대 3회까지 가능합니다. 미해결 문제를 보고해 주세요.");
+  if (run.completionAttempts > 8)
+    throw new OperationError("COMPLETION_REPAIR_EXHAUSTED", "이번 CLI 응답에서 검증을 8회 시도했습니다. 미해결 문제와 현재 결과를 반환하면 같은 세션에서 계속 수정합니다.");
   await checkStageCompletion(id, run, result, true);
   run.controller.signal.throwIfAborted();
   return { passed: true, step: run.step };

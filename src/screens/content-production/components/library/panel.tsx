@@ -46,7 +46,7 @@ export function LibraryPanel({
             onClick={() => setTab("references")}
           >
             외부 레퍼런스{" "}
-            <span className="ml-1 text-xs">{externalReferences.filter(post=>!post.excluded).length}</span>
+            <span className="ml-1 text-xs">{externalReferences.length}</span>
           </button>
         </div>
 
@@ -185,7 +185,7 @@ export function LibraryPanel({
           )}
         </div>
       ) : (
-        <ExternalLibrary posts={externalReferences} accounts={referenceAccounts} act={act} />
+        <ExternalLibrary posts={externalReferences} accounts={referenceAccounts} />
       )}
     </section>
   );

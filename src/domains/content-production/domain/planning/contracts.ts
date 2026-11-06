@@ -2,6 +2,11 @@ import { z } from "zod";
 
 const prose = z.string().trim().min(1);
 
+export const analysisReadinessSchema = z.object({
+  ready: z.boolean().describe("True only when every source page role has concrete new content and no unresolved production blocker remains."),
+  reason: prose.describe("Explain the completed source-to-new-topic mapping, or the actual unresolved blocker. Never mark an unresolved plan ready."),
+}).strict();
+
 /** Decision records capture consequential evidence, without prescribing case or candidate counts. */
 export const analysisReasoningSchema = z.object({
   observations: z.array(z.object({
@@ -23,7 +28,7 @@ export const analysisReasoningSchema = z.object({
 export const slidePlanSchema = z.array(z.object({
   slide_id: prose,
   role: z.enum(["hook", "body", "cta"]),
-  purpose: prose.describe("This slide's contribution to the selected answer and progression. Do not force the same information fields onto every page."),
+  purpose: prose.describe("The corresponding source page's specific information role and how the replacement preserves it. A generic body label is not enough. Do not invent additional page roles."),
   copy: z.array(prose).min(1).describe("Planned public-facing wording, including only information useful for this content."),
   visual: prose.describe("What the image explains and the subject/pose/equipment/composition needed to do so."),
 }).strict()).min(1);

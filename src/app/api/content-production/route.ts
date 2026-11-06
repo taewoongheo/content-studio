@@ -17,19 +17,18 @@ import {
 import {
   productionEvents,
 } from "@/domains/content-production/server/events";
-import { accountIdentity, addReferenceAccount, referenceAccounts, externalReferences, removeReferenceAccount, setReferenceExcluded } from "@/domains/content-production/server/references/library";
+import { accountIdentity, addReferenceAccount, referenceAccounts, externalReferences, removeReferenceAccount } from "@/domains/content-production/server/references/library";
 import { refreshSpy, spyStatus } from "@/domains/content-production/server/references/spy/refresh";
-import { readSampling, saveSampling } from "@/domains/content-production/server/settings/sampling";
-import { samplingSchema } from "@/domains/content-production/domain/references/sampling";
 import { listVisuals } from "@/domains/content-production/server/publication/visuals";
 import { registerPublication } from "@/domains/content-production/server/publication/service";
 import { deleteTaskProject } from "@/domains/content-production/server/projects";
-import { stepSchema } from "@/domains/content-production/domain/contracts";
+import { stepSchema, standaloneStepSchema } from "@/domains/content-production/domain/contracts";
 import { displayContent } from "@/domains/content-production/domain/display";
 import { translateDisplay } from "@/domains/content-production/server/display/translation";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const requestSchema = z.discriminatedUnion("action", [
+  z.object({action:z.literal("run_node"),id:z.string().min(1),step:standaloneStepSchema}),
   z.object({action:z.literal("stage_report"),id:z.string().min(1),step:stepSchema,sourceKey:z.string().max(2000000)}),
   z.object({ action: z.literal("reset") }),
   z.object({ action: z.literal("translate_display"), id: z.string().min(1), step: stepSchema, stream: z.boolean().optional() }),
@@ -53,8 +52,6 @@ const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("reference_account"), account: z.string().min(1) }),
   z.object({ action: z.literal("remove_reference_account"), username: z.string() }),
   z.object({ action: z.literal("refresh_spy") }),
-  z.object({ action: z.literal("sampling_settings"), settings: samplingSchema }),
-  z.object({ action: z.literal("exclude_reference"), id: z.string(), excluded: z.boolean() }),
 ]);
 export async function GET(request: Request) {
   if (!isLocalRequest(request)) return new Response(null, { status: 403 });
@@ -86,12 +83,11 @@ export async function GET(request: Request) {
         ? store.get(id)
         : {
             tasks,
-            sampling: readSampling(store.db),
             spy: spyStatus(store.db),
             publishedPosts: listPublishedPosts(store.db),
             logs: store.logs(params.get("query") ?? ""),
-            planningLogs: tasks.length ? store.analysisInputs(tasks[0].id) : store.planningLogs(),
-            externalReferences: externalReferences(store.db, "", "", true),
+            planningLogs: [...new Map(tasks.flatMap(task => store.analysisInputs(task.id)).map(row => [row.id, row])).values()],
+            externalReferences: externalReferences(store.db),
             referenceAccounts: referenceAccounts(store.db),
             visuals: listVisuals(store.db),
             sync: syncState(),
@@ -116,6 +112,11 @@ export async function POST(request: Request) {
       `${new URL(request.url).protocol}//${request.headers.get("host")}`,
     ).origin;
     switch (input.action) {
+      case "run_node": {
+        store.prepareNodeRun(input.id,input.step);
+        void execute(input.id,origin,undefined,{singleStage:true}).catch(error=>store.state(input.id,"failed",error instanceof Error?error.message:"노드 실행 실패"));
+        break;
+      }
       case "stage_report": {
         const detail=store.get(input.id),sourceKey=reportSourceKey(detail,input.step);
         if(!sourceKey||sourceKey!==input.sourceKey)return Response.json({error:"단계 내용이 갱신되었습니다. 다시 확인해 주세요."},{status:409});
@@ -180,11 +181,7 @@ export async function POST(request: Request) {
       case "remove_reference_account":
         removeReferenceAccount(store.db, input.username); break;
       case "refresh_spy":
-        return Response.json(await refreshSpy(store.db));
-      case "sampling_settings":
-        return Response.json(saveSampling(store.db,input.settings));
-      case "exclude_reference":
-        setReferenceExcluded(store.db,input.id,input.excluded); break;
+        return Response.json(await refreshSpy(store.db,undefined,undefined,{force:true}));
     }
     return Response.json({ ok: true });
   } catch (error) {

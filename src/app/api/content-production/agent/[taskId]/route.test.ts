@@ -35,7 +35,7 @@ test("visual task route provides repair tools and preserves schema diagnostics",
     store.db.prepare("UPDATE content_drafts SET project_id=? WHERE id=?").run(project.id,id);
     let requestId=0;
     await execute(id,"http://127.0.0.1:3000",async input=>{
-      if(input.standalone) return {};
+      if(input.conversation?.threadId) return {};
       const call=async(name:string,args:Record<string,unknown>)=>{
         const response=await POST(new Request(`http://127.0.0.1:3000/api/content-production/agent/${id}`,{
           method:"POST",headers:{host:"127.0.0.1:3000",authorization:`Bearer ${input.token}`,"Content-Type":"application/json",Accept:"application/json, text/event-stream"},

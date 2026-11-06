@@ -13,7 +13,7 @@ import { cloneSchema, editSchema, previewSchema, projectSchema, readProjectSchem
 import type { LocalImageCommand } from "@/domains/slideshow/server/local-images";
 import { SlideshowProjectWrites, type ProjectWriteValidator } from "@/domains/slideshow/server/project-writes";
 import { previewRegion } from "@/domains/slideshow/server/rendering/inspection/region";
-import { previewSlides } from "@/domains/slideshow/server/rendering/preview";
+import { previewSlides, inspectSlideLayouts } from "@/domains/slideshow/server/rendering/preview";
 import { captureSlideshowRender } from "@/domains/slideshow/server/rendering/input";
 import { exportSlideshow } from "@/domains/slideshow/server/rendering/export";
 import { validateExportPath } from "@/lib/media/export/file";
@@ -98,6 +98,14 @@ export function registerProjectTools(server: McpServer, origin: string, validate
     const data = (region ? await previewRegion(bytes, region) : bytes).toString("base64");
     return { content: [{ type: "image", mimeType: "image/png", data },
       { type: "text", text: JSON.stringify({ projectId, slideId, revision: input.job.editor.revision, ...(region ? { region } : {}) }) }] };
+  }));
+  registerTool(server, "inspect_slide_layout", {
+    description: "Measure actual visible bounds in pixels using the editor/export renderer, after wrapping and font loading. Excludes transparent image padding and shadows. Returns frame and visible bounds for every placement, with IDs and copy. Gap below A to B = B.visible.y - (A.visible.y + A.visible.height); x is analogous. Background sentinel omitted; filled containers retain their full visible bounds. Use to plan related spacing, then remeasure after edits. This does not count as visual preview. Supports up to 20 slides and 200 placements per slide; cached by revision.",
+    inputSchema: projectSchema.extend({ slideIds: z.array(z.string().min(1)).min(1).max(20).optional() }), annotations: annotations(true),
+  }, ({projectId,slideIds}) => guarded(async () => {
+    const input = captureSlideshowRender(contentJobRegistry,projectId,slideIds);
+    const slides = await inspectSlideLayouts(origin,input.job,slideIds ?? input.job.editor.document.slides.map(s=>s.id),{images:input.images});
+    return json({projectId,revision:input.job.editor.revision,slides});
   }));
   registerTool(server, "preview_slides", {
     description: "Review several slides in ONE call with a reused renderer and revision cache. Omit slideIds to review all slides; IDs preserve requested order. Width defaults to 540px (64-1920, capped at original width). Returns PNG images with slide IDs and captured revision. Does not edit, save or navigate the UI.",

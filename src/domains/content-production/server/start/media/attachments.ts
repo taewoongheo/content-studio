@@ -12,7 +12,7 @@ export async function withReferenceImages<T>(
   signal: AbortSignal, execute: (paths: string[]) => Promise<T>,
 ): Promise<T> {
   signal.throwIfAborted();
-  if (!isExternalProduction(input.request.mode) || !["production", "visual"].includes(step)) return execute([]);
+  if (!isExternalProduction(input) || !["production", "visual"].includes(step)) return execute([]);
   const setId = input.source?.visual_set_id;
   const set = store.db.prepare("SELECT slide_count FROM content_visual_sets WHERE id=?").get(setId ?? "") as { slide_count: number } | undefined;
   const slides = store.db.prepare("SELECT slide_index,data FROM content_visual_slides WHERE set_id=? ORDER BY slide_index").all(setId ?? "") as Array<{ slide_index: number; data: Buffer }>;

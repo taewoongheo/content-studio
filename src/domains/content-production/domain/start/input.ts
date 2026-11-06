@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { socialSource } from "@/domains/research/domain/source";
+import type { TopicAssignment } from "../topics/model";
 
 const instructions = z.string().trim().max(10000).default("");
 const referenceUrl = z.string().trim().transform((value, context) => {
@@ -29,7 +30,10 @@ export interface PreparedSource {
 }
 export interface ProductionInput {
   request: ProductionRequest;
+  /** Automatic requests keep their overlap policy while resolving a production origin. */
+  origin?: "internal" | "spy";
   source?: PreparedSource;
+  topic_assignment?: TopicAssignment;
 }
 export const productionModeLabels: Record<ProductionRequest["mode"], string> = {
   spy_reference: "레퍼런스 · 스파이 게시글", automatic: "자동 생성", past_post: "레퍼런스 · 내 게시글", external_url: "외부 URL",
@@ -40,6 +44,8 @@ export function preservesSourceFormat(mode: ProductionRequest["mode"]) {
 }
 
 /** External references supply composition, never an internal clone origin. */
-export function isExternalProduction(mode: ProductionRequest["mode"]) {
-  return mode === "external_url" || mode === "spy_reference";
+export function isExternalProduction(input: ProductionRequest["mode"] | ProductionInput) {
+  const mode = typeof input === "string" ? input : input.request.mode;
+  return mode === "external_url" || mode === "spy_reference"
+    || (typeof input !== "string" && mode === "automatic" && input.origin === "spy");
 }

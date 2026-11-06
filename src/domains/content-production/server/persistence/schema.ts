@@ -8,7 +8,6 @@ const progress = `research_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(rese
   completed_actions_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(completed_actions_json)),
   remaining_actions_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(remaining_actions_json)), error_json TEXT CHECK(error_json IS NULL OR json_valid(error_json))`;
 export const PRODUCTION_SCHEMA = `
-CREATE TABLE IF NOT EXISTS content_production_settings (id INTEGER PRIMARY KEY CHECK(id=1), document_json TEXT NOT NULL CHECK(json_valid(document_json)));
 CREATE TABLE IF NOT EXISTS content_products (
  id TEXT PRIMARY KEY, document_json TEXT NOT NULL CHECK(json_valid(document_json)),
  revision INTEGER NOT NULL CHECK(revision>0), active INTEGER NOT NULL DEFAULT 0 CHECK(active IN (0,1)),
@@ -37,6 +36,11 @@ CREATE TABLE IF NOT EXISTS content_performance (
 CREATE TABLE IF NOT EXISTS content_telegram_state (
  bot TEXT NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL CHECK(json_valid(value)),
  PRIMARY KEY(bot,key)
+);
+CREATE TABLE IF NOT EXISTS content_performance_retries (
+ log_id TEXT NOT NULL REFERENCES content_creation_logs(id) ON DELETE CASCADE,
+ stage TEXT NOT NULL, attempts INTEGER NOT NULL, next_retry_at INTEGER NOT NULL,
+ PRIMARY KEY(log_id,stage)
 );
 CREATE INDEX IF NOT EXISTS content_logs_published_idx ON content_creation_logs(actual_published_at);
 CREATE INDEX IF NOT EXISTS content_logs_created_idx ON content_creation_logs(created_at);
@@ -98,9 +102,17 @@ CREATE TABLE IF NOT EXISTS content_reference_accounts (
 CREATE TABLE IF NOT EXISTS content_external_references (
  id TEXT PRIMARY KEY, url TEXT NOT NULL UNIQUE, account TEXT NOT NULL, caption TEXT NOT NULL,
  title TEXT NOT NULL DEFAULT '', topic TEXT NOT NULL DEFAULT '', content_type TEXT NOT NULL DEFAULT '', message TEXT NOT NULL DEFAULT '',
- published_at TEXT, observed_at TEXT NOT NULL, view_count INTEGER, like_count INTEGER, comment_count INTEGER, save_count INTEGER, share_count INTEGER,
+ published_at TEXT, observed_at TEXT NOT NULL,
  images_json TEXT NOT NULL CHECK(json_valid(images_json)), visual_set_id TEXT REFERENCES content_visual_sets(id), image_error TEXT,
- excluded INTEGER NOT NULL DEFAULT 0 CHECK(excluded IN (0,1)), created_at TEXT NOT NULL, last_selected_at TEXT
+ created_at TEXT NOT NULL, last_selected_at TEXT
 );
 CREATE INDEX IF NOT EXISTS external_references_account_idx ON content_external_references(account);
+CREATE TABLE IF NOT EXISTS content_topic_cache (
+ key TEXT PRIMARY KEY, signature TEXT NOT NULL, document_json TEXT NOT NULL CHECK(json_valid(document_json)), updated_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS content_topic_selections (
+ log_id TEXT PRIMARY KEY REFERENCES content_creation_logs(id) ON DELETE CASCADE,
+ candidate_id TEXT NOT NULL, requested_lane TEXT NOT NULL CHECK(requested_lane IN ('proven','exploration')),
+ document_json TEXT NOT NULL CHECK(json_valid(document_json))
+);
 `;

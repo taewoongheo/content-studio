@@ -11,6 +11,7 @@ import {
   authorizeRun,
   productionStore,
   recordReview,
+  recordLayoutReview,
   recordToolCall,
   recordAnalysisRead,
   recordSourceReview,
@@ -37,7 +38,7 @@ export async function POST(
   const server = createStudioMcpServer(
     origin,
     {
-      allowed: stagePolicy(step, startInput.request.mode).tools,
+      allowed: stagePolicy(step, startInput).tools,
       observe(event) { if (run.step === step) recordToolCall(taskId, event); },
       before(name, input) {
         const active = authorizeRun(taskId, request.headers.get("authorization"));
@@ -64,6 +65,10 @@ export async function POST(
       },
       after(name, input, result) {
         if (run.step !== step) return;
+        if (!result.isError && name === "inspect_slide_layout") {
+          const meta=result.structuredContent as {projectId:string;revision:number;slides:import("@/domains/slideshow/rendering/inspection/metrics").SlideLayout[]};
+          recordLayoutReview(taskId,meta.projectId,meta.revision,meta.slides);
+        }
         if (!result.isError && name === "production_query" && Array.isArray(result.structuredContent?.items))
           recordAnalysisRead(taskId, (result.structuredContent.items as Array<{id:string}>).map(row => row.id));
         if (!result.isError && result.content?.some(item => item.type === "image") && (name === "production_preview_project" || name === "production_read_images"))

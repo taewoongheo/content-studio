@@ -1,12 +1,9 @@
 "use client";
-import { SamplingControls } from "./start/sampling-settings";
-import { defaultSampling } from "@/domains/content-production/domain/references/sampling";
 import { StartControls } from "./start/start-controls";
 import { PerformanceDetails } from "./details/performance-details";
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { X, History } from "lucide-react";
-import { getOpenDrafts } from "@/domains/content-production/domain/start-policy";
 import { useNodeDetails } from "../hooks/use-node-details";
 import { useDetailReportPrefetch } from "../hooks/display/use-detail-report-prefetch";
 import { useProductionControls } from "../hooks/use-production-controls";
@@ -27,8 +24,7 @@ export function ProductionWorkspace({ runtime, readWork, onOpen }: {
 }) {
   const { data, error, busy, writes, activity, reload, act } = runtime;
   const { taskAction, removeTask, stopAll, resetAll, resetDisabled, controlsBusy, stopDisabled } = useProductionControls(runtime);
-  const openDraftIds = new Set(data ? getOpenDrafts(data.tasks).map(task => task.id) : []);
-  const blockedByDraft = openDraftIds.size > 0;
+  const openDraftIds = new Set(data?.tasks.map(task => task.id) ?? []);
   const details = useNodeDetails(data?.tasks, readWork);
   useDetailReportPrefetch(details);
   const [panel, setPanel] = useState<"library" | "performance" | null>(null);
@@ -37,9 +33,9 @@ export function ProductionWorkspace({ runtime, readWork, onOpen }: {
   const publishTask = data?.tasks.find(task => task.id === publishTaskId && task.state === "finished");
   const current = data?.tasks.find(t => t.id === selected?.id);
   const select = (id: string, step: ProductionStep) => { setPanel(null); setSelected({ id, step }); };
-  const startContent = <div className="space-y-3"><SamplingControls key={JSON.stringify(data?.sampling)} value={data?.sampling ?? defaultSampling} disabled={busy} onSave={settings=>act({action:"sampling_settings",settings})} /><StartControls key={runtime.resetVersion} posts={data?.publishedPosts ?? []}
-    references={(data?.externalReferences ?? []).filter(post => !post.excluded && (Number(post.slide_count) > 0 || String(post.url).includes("/photo/")) && data?.referenceAccounts.some(account => account.username === post.account && account.enabled))}
-    busy={busy} blockedByDraft={blockedByDraft} configured={data?.configured.apify}
+  const startContent = <div className="space-y-3"><StartControls key={runtime.resetVersion} posts={data?.publishedPosts ?? []}
+    references={(data?.externalReferences ?? []).filter(post => (Number(post.slide_count) > 0 || String(post.url).includes("/photo/")) && data?.referenceAccounts.some(account => account.username === post.account && account.enabled))}
+    busy={busy} configured={data?.configured.apify}
     syncing={data?.sync.running ?? false} error={error ?? ""}
     onStart={requests => act({ action: "start", requests })} onReload={() => void reload()} /></div>;
   return <div className="flex h-full min-h-0 overflow-hidden">
@@ -49,7 +45,7 @@ export function ProductionWorkspace({ runtime, readWork, onOpen }: {
     <main className="relative min-h-0 min-w-0 flex-1" aria-label="제작 작업 공간">
       <WorkflowCanvas key={runtime.resetVersion} onReset={() => void (async () => {
         if (await resetAll()) { setSelected(null); setPanel(null); setPublishTaskId(null); }
-      })()} resetDisabled={resetDisabled} startContent={startContent} details={details} selectedNode={panel === "performance" ? "sync" : selected ? `${selected.id}:${selected.step === "project" && current?.state === "finished" ? "result" : selected.step}` : undefined} tasks={data?.tasks ?? []} writes={writes} activity={activity} syncing={data?.sync.running ?? false} syncReport={data?.sync.report ?? null} planningCount={data?.planningLogs.length ?? 0} onSelect={select} onSelectSync={() => { setSelected(null); setPanel("performance"); }} onComplete={setPublishTaskId} onOpen={id => void onOpen(id)} onSelectProject={id => { setPanel(null); setSelected({id,step:"project"}); }} onStop={() => void stopAll()} stopDisabled={stopDisabled} onTaskAction={taskAction} busy={controlsBusy} />
+      })()} resetDisabled={resetDisabled} startContent={startContent} details={details} selectedNode={panel === "performance" ? "sync" : selected ? `${selected.id}:${selected.step === "project" && current?.state === "finished" ? "result" : selected.step}` : undefined} tasks={data?.tasks ?? []} writes={writes} activity={activity} syncing={data?.sync.running ?? false} syncReport={data?.sync.report ?? null} planningCount={data?.planningLogs.length ?? 0} logs={data?.logs ?? []} onSelect={select} onSelectSync={() => { setSelected(null); setPanel("performance"); }} onComplete={setPublishTaskId} onOpen={id => void onOpen(id)} onSelectProject={id => { setPanel(null); setSelected({id,step:"project"}); }} onStop={() => void stopAll()} stopDisabled={stopDisabled} onTaskAction={taskAction} busy={controlsBusy} />
 
       {selected && current && <aside className="absolute inset-y-0 right-0 z-20 w-[420px] max-w-full overflow-y-auto border-l bg-background shadow-lg" aria-label="작업 상세">
         {selected.step === "project" ? <ProjectDetails key={current.id} task={current} detail={details[current.id]} logs={data?.logs ?? []} visuals={data?.visuals ?? []} references={data?.externalReferences ?? []} onSelectStep={select} onOpen={id => void onOpen(id)} onClose={() => setSelected(null)} /> : <StepDetails id={selected.id} step={selected.step} updated={current.updated_at} write={writes[`${selected.id}:${selected.step}`] ?? 0} readWork={readWork} onClose={() => setSelected(null)} />}

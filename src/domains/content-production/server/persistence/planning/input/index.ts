@@ -10,7 +10,7 @@ export function analysisInputRecord(rows: Row[]) {
   return {
     question: ANALYSIS_INPUTS, source: "Own-post analysis material node",
     finding: JSON.stringify(rows.map(row => Object.fromEntries(snapshotFields.filter(key => key in row).map(key => [key, row[key]])))),
-    judgment: "Server-selected inputs shared by this batch. Read each assigned ID before selecting content.",
+    judgment: "Own-post matches for this task topic. Read each assigned ID; only direct matches can be clone origins.",
   };
 }
 export function readAnalysisInputs(research: Row[]): Row[] | null {

@@ -14,7 +14,7 @@ test("reset removes drafts/projects/assets, cancels late output and preserves fo
   const directory = await mkdtemp(join(tmpdir(), "production-reset-"));
   process.env.CONTENT_STUDIO_DB_PATH = join(directory, "test.sqlite");
   const store = productionStore();
-  const direction = { analysis: "A practical plan.", reasoning: { observations: [], interpretations: [], candidates: [] }, topic: "arms", content_type: "routine", message: "train",
+  const direction = { analysis: "A practical plan.", readiness: { ready: true, reason: "All source roles mapped" }, reasoning: { observations: [], interpretations: [], candidates: [] }, topic: "arms", content_type: "routine", message: "train",
     answer: "3 sets", presentation: "cards", reason: "useful", expected_response: "save",
     goal_connection: "install", difference_from_recent: "new", sources: [] };
   try {
@@ -36,8 +36,11 @@ test("reset removes drafts/projects/assets, cancels late output and preserves fo
     store.db.prepare("INSERT INTO content_external_references(id,url,account,caption,observed_at,images_json,created_at) VALUES('reference','https://www.tiktok.com/@example/photo/123','example','A routine','now','[]','now')").run();
     store.state(ids[1], "stopped");
     store.state(ids[2], "stopped");
+    let signalStarted!: () => void;
+    const started = new Promise<void>(resolve => { signalStarted = resolve; });
     let finish!: (value: Record<string, unknown>) => void;
-    const execution = execute(ids[2], "http://127.0.0.1:3000", () => new Promise(resolve => { finish = resolve; }));
+    const execution = execute(ids[2], "http://127.0.0.1:3000", () => new Promise(resolve => { finish = resolve; signalStarted(); }));
+    await started;
     resetProduction();
     finish({ bad: "late output" });
     await execution;

@@ -1,3 +1,4 @@
+import { isExternalProduction } from "@/domains/content-production/domain/start/input";
 import type { Row, WorkDetail } from "@/domains/content-production/domain/contracts";
 
 export interface ProjectReference {
@@ -23,19 +24,21 @@ export function projectReferences(detail: WorkDetail, logs: Row[], visuals: Row[
   const result: ProjectReference[] = [];
   if (projectId) {
     const log = logs.find(log => log.project_id === projectId);
-    const url = webUrl(log?.post_url) ?? webUrl(origin?.url);
+    const url = webUrl(log?.post_url) ?? webUrl(origin?.url)
+      ?? (detail.input?.source?.project_id === projectId ? webUrl(detail.input.source.url) : undefined);
     const visual = visuals.find(visual => (log && visual.log_id === log.id) || (url && visual.source_url === url));
     result.push({ label: "복제한 내부 원본", name: text(log?.title) ?? text(log?.topic) ?? "내 게시글 원본", projectId, url,
       setId: text(visual?.id), slideCount: Number(visual?.slide_count ?? 0) });
   }
   const input = detail.input;
-  if (input?.request.mode === "external_url" || input?.request.mode === "spy_reference") {
+  if (input && isExternalProduction(input)) {
     const source = input.source;
     const request = input.request;
-    const reference = references.find(reference => request.mode === "spy_reference" ? reference.id === request.referenceId : reference.url === request.url);
+    const reference = references.find(reference => request.mode === "spy_reference" ? reference.id === request.referenceId
+      : request.mode === "external_url" ? reference.url === request.url : reference.id === source?.id);
     const url = webUrl(source?.url) ?? webUrl(reference?.url) ?? (request.mode === "external_url" ? webUrl(request.url) : undefined);
     const visual = visuals.find(visual => visual.source_url === url);
-    result.unshift({label: "지정한 외부 레퍼런스", name: source?.name ?? text(reference?.title) ?? "외부 게시글 원본", url,
+    result.unshift({label: input.origin === "spy" ? "선정한 spy 원본" : "지정한 외부 레퍼런스", name: source?.name ?? text(reference?.title) ?? "외부 게시글 원본", url,
       setId: source?.visual_set_id ?? text(reference?.visual_set_id) ?? text(visual?.id),
       slideCount: source?.slide_count ?? Number(reference?.slide_count ?? visual?.slide_count ?? 0)});
   }

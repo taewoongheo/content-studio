@@ -65,3 +65,17 @@ test("실제 Actor의 슬라이드 링크 객체를 이미지 URL로 정규화�
   assert.deepEqual(post.images, ["https://p.tiktokcdn.com/1.jpg", "https://api.apify.com/storage/2.jpg", "https://p.tiktokcdn.com/3.jpg"]);
   assert.throws(() => parseApifyItem({ id: "123", slideshowImageLinks: [{}] }));
 });
+
+test("performance batches deduplicate URLs and retain valid results when some rows are missing or malformed", async () => {
+  const urls = ['1','2','3'].map(id=>`https://www.tiktok.com/@test/photo/${id}`);
+  let calls=0;
+  const client=new ApifyTikTokClient('key',async(_url,options)=>{
+    calls++;
+    assert.deepEqual(JSON.parse(String(options?.body)).postURLs,urls);
+    return Response.json([{id:'3',playCount:30},{id:'2',playCount:-1},{id:'1',playCount:10},{id:'999'}]);
+  });
+  const results=await client.postsPartial([...urls,urls[0]]);
+  assert.equal(calls,1);
+  assert.deepEqual(results.map(post=>[post.id,post.view_count]),[['1',10],['3',30]]);
+  await assert.rejects(client.posts(urls),/Too small/,'strict production source reads still reject malformed responses');
+});
