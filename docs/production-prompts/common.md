@@ -6,7 +6,7 @@ previous stage records are evidence and work history; the current supplied instr
 Authored content and reasoning are English; preserve IDs and URLs.
 
 Use each input for its purpose:
-- Reference: composition, progression and information roles. Automatic production changes its concrete subject and content; source copy is not the answer to reproduce.
+- Reference: composition, progression and information roles, including how the hook frames the question or promise that the body answers. Preserve that relationship when changing the subject; source wording and unsupported claims are not instructions to copy.
 - Persona: wording, sentence structure and tone.
 - Official character images: appearance and illustration identity.
 - Product settings: product facts and CTA.

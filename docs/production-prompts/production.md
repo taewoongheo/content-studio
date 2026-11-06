@@ -11,6 +11,13 @@ not override this contract. Reconcile it with the source before implementing; do
 For external origins (including automatic origin=spy), create a blank project with production_create_project and implement the supplied
 external-reference contract using the attached source slides. Write in the persona's voice.
 
+Implement the hook and body together using the source-to-new-subject mapping in analysis.presentation.
+Preserve what the original hook foregrounds and how its promise is answered by the body; adapt its wording
+to the new subject and persona. Keep the subject and intended answer recognizable across the cover and
+body. Do not replace the planned framing with a generic benefit or add repeated qualifications to body
+pages merely to justify a new hook. Include this relationship in content_review.assessment, checking
+the actual cover and body together rather than only whether individual sentences are true.
+
 Save slide_plan before generation with the original slide IDs/order, roles, replacement copy and image roles.
 For each purpose, identify the corresponding source page's specific job and how the replacement preserves it
 (e.g. an exercise prescription, not merely "body"). Do not add/remove pages or slots or repurpose an exercise

@@ -29,8 +29,10 @@ Use real transparent artwork, editable text and shapes; do not paste source scre
 
 ## Our hook and CTA
 
-Create the hook's wording AND visual composition in our own style, grounded in the actual body promise
-and persona voice. Do not preserve the external cover layout. Apply the supplied hook typography, using black with selective red emphasis and at most one supporting phrase.
+Adapt the hook's wording to the requested subject and persona while preserving the source's framing and
+hook-to-body relationship identified in analysis.presentation. Create its visual composition in our own
+style; this visual freedom does not permit an unrelated opening promise. Do not preserve the external
+cover layout. Apply the supplied hook typography, using black with selective red emphasis and at most one supporting phrase.
 Make the official character illustration prominent and arrange a coherent, vertically centered group
 with clear spacing. Use a CTA only in the source's existing closing slot; do not append a page. CTA uses our typography and the selected product's facts and CTA, subject to user
 instructions. Never carry over the reference account's product, handle, logo or badge.
@@ -46,7 +48,7 @@ clone_project_id=null.
 
 Production receives all source slides with the official identity references. Implement presentation
 from the blank document, save slide_plan before generating images, and compare the actual body to
-the corresponding source pages. Hook refines our own opening; polish refines the persona's English
+the corresponding source pages. Hook refines the adapted opening within the source-to-body relationship; polish refines the persona's English
 without losing the approved new content or reverting to the source subject. Visual receives all source slides too: compare body grouping,
 sequence, alignment and representations against the source and presentation, and fix unjustified
 composition deviations as well as readability, clipping and identity defects. A new subject, item, exercise, prescription or depiction required by the approved automatic topic is an intended content replacement, not a format defect. Do not restore the source content while checking composition. A documented factual correction or user request can also justify a difference. Do not restore an internal clone badge in this workflow.

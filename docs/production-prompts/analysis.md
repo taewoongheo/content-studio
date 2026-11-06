@@ -45,6 +45,16 @@ external-reference contract. Explicit sources are not rejected for duplication.
 
 ## Plan the presentation after choosing the content
 
+Inspect the original hook and body as one composition. In presentation, record the observed cover wording
+(including supporting copy), what it foregrounds, the reader question or promise it establishes, and how
+the body answers it. Then map that relationship to the requested subject: propose the adapted hook and
+identify how the planned body fulfills it. Keep the original framing and level of specificity while
+changing concrete subject matter and expressing it in the persona's voice. Do not copy unsupported claims.
+Do not invent an urgency, audience problem or benefit just to make the hook catchier, then retrofit each
+body page with repeated justification for that angle. A new condition must materially guide the answer
+and fit the source's hook-to-body relationship. If an automatic candidate fails this check, repair its
+scope under the existing source_fit rules before handing it off. Respect explicit user constraints.
+
 For automatic requests with origin=internal, select and inspect ONE directly matched internal project using
 matching-stage performance and topic fit. Its actual reader question and
 answer method must match the chosen topic. It is the format origin, not loose visual inspiration. Preserve its

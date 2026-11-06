@@ -13,6 +13,9 @@ not a restatement of a spy post. Change the target, situation or meaningful cons
 its reader-question type and answer method. Reusing the same list, exercises or prescriptions with a
 new headline, safer claims or different branding is not a new topic. For example, a numbered exercise
 ranking can rank a different muscle group's exercises; an exercise card cannot become an explanation page.
+Where the supplied evidence establishes the original hook and body relationship, preserve that framing
+when proposing variations. Do not introduce a catchy urgency or benefit unrelated to the observed answer
+method. Leave unobserved cover/body details for analysis to verify from the selected source slides.
 
 Specify the proposed topic, reader question, content_type, message and reference_ids. In rationale,
 contrast the observed source subject with the proposed new subject and name the composition that stays.

@@ -158,7 +158,8 @@ test("external stages receive the shared adaptation contract and draft/visual at
     for (const { id: step } of productionSteps) {
       const prompt = stagePrompt("external", step, [], null, null, { request });
       assert.match(prompt, /Do not select or clone an internal project/);
-      assert.match(prompt, /wording AND visual composition in our own style/);
+      assert.match(prompt, /hook-to-body relationship identified in analysis.presentation/);
+      assert.match(prompt, /Create its visual composition in our own/);
       assert.match(prompt, /A star rating stays stars/);
       assert.doesNotMatch(prompt, /Assigned own-post IDs/);
       assert.equal(prompt.includes("third attachment = source slide 1"), ["production", "visual"].includes(step));

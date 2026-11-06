@@ -18,6 +18,7 @@
 - 공통 서체 기준은 [typography.md](production-prompts/typography.md)를 모든 단계에, 측정 기반 레이아웃 기준은 [layout.md](production-prompts/layout.md)를 시각 단계에 주입한다. 수동 제작 가이드의 전체 내용을 자동 프롬프트에 복사하지 않는다.
 - 기준의 원문은 한 곳에 두고 개발 문서는 링크한다. 실행 프롬프트에는 필요한 원문을 주입하며 실행 중 저장소 문서를 다시 읽게 하지 않는다.
 - 전달 데이터에는 결정, 현재 결과, 수정 근거와 미해결 문제를 둔다. 과거 작업 지시는 현재의 새 규칙으로 취급하지 않는다.
+- 원본 훅과 본문의 연결도 보존할 구성에 포함한다. [분석](production-prompts/analysis.md)은 기존 presentation에 원본 관찰과 새 주제의 연결을 기록하고, [초안](production-prompts/production.md)과 [훅 검토](production-prompts/hook.md)는 이를 구현·검토한다. 별도 노드나 저장 필드는 추가하지 않는다. 외부 표지의 시각적 재구성과 훅의 의미적 연결은 구분한다.
 
 ## 도구와 결과
 
