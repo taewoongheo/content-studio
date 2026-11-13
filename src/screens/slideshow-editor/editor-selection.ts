@@ -28,5 +28,9 @@ export function resolveEditorSelection(
         : element?.id === BACKGROUND_ELEMENT_ID ? [slide.id] : appliedSlides.map((item) => item.slideId),
       { slideId: slide.id, checked: true })
     : [];
-  return { slide, placement, element, appliedSlides, scopeSlides, visualTargets, scopeKey, selectedSlideIds };
+  const selectionAppliesToAll = selectedSlideIds.length > 1 && (
+    selectedSlideIds.length === scopeSlides.length ||
+    (appliedSlides.length > 1 && appliedSlides.every((item) => selectedSlideIds.includes(item.slideId)))
+  );
+  return { slide, placement, element, appliedSlides, scopeSlides, visualTargets, scopeKey, selectedSlideIds, selectionAppliesToAll };
 }

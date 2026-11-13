@@ -125,6 +125,7 @@ export function WorkspaceScreen() {
     const activeTab = tabs?.find(tab => tab.tabId === (job?.tabId ?? video?.tabId));
     // Reserve workspace shortcuts even while blocked, so a dialog or pending save cannot close the browser or navigate its history.
     event.preventDefault();
+    event.stopImmediatePropagation();
     if (event.repeat || busy || chooser || lifecycle.closing || lifecycle.renaming ||
       document.querySelector("[role='dialog'], [role='alertdialog']")) return;
     if (!activeTab) {

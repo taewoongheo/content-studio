@@ -26,6 +26,7 @@ test("직접 선택한 Element와 공유 범위를 찾는다", () => {
   assert.deepEqual(selection.selectedSlideIds, ["slide-2", "slide-3"]);
   assert.deepEqual(selection.scopeSlides.map((slide) => slide.hasElement), [false, true, true, false]);
   assert.equal(selection.visualTargets.length, 2);
+  assert.equal(selection.selectionAppliesToAll, true);
 });
 
 test("선택하지 않은 장에서는 배경도 자동 선택하지 않는다", () => {
@@ -60,4 +61,16 @@ test("사용자가 현재 장만 선택하면 같은 Element가 있는 다른 �
   const selection = resolveEditorSelection(document, "slide-2", initial.placement!.id,
     { key: initial.scopeKey, slideIds: ["slide-2"] });
   assert.deepEqual(selection.selectedSlideIds, ["slide-2"]);
+  assert.equal(selection.selectionAppliesToAll, false);
+});
+
+test("한 장에만 있는 요소도 전체 적용을 켜면 파란색 선택 상태가 된다", () => {
+  const document = createDocumentFromAnalysis(analysis, "repeating", 4, "9:16");
+  document.slides[2].placements = [];
+  const placementId = document.slides[1].placements[0].id;
+  const initial = resolveEditorSelection(document, "slide-2", placementId, null);
+  assert.equal(initial.selectionAppliesToAll, false);
+  const all = resolveEditorSelection(document, "slide-2", placementId,
+    { key: initial.scopeKey, slideIds: document.slides.map(slide => slide.id) });
+  assert.equal(all.selectionAppliesToAll, true);
 });

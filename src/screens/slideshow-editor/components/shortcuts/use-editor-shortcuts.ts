@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useEffectEvent } from "react";
-import { editorShortcut, type EditorShortcut } from "./editor-shortcut";
+import type { EditorShortcut } from "./editor-shortcut";
+import { dispatchEditorShortcut } from "./dispatch-editor-shortcut";
 
 function isTextInput(target: EventTarget | null) {
   return target instanceof Element && Boolean(target.closest(
@@ -13,17 +14,9 @@ export function useEditorShortcuts(onShortcut: (action: EditorShortcut) => boole
   const handleKey = useEffectEvent((event: KeyboardEvent) => {
     const editingText = isTextInput(event.target) || isTextInput(document.activeElement);
     const hasSelectedText = Boolean(window.getSelection()?.toString());
-    const action = editorShortcut(event, editingText, hasSelectedText);
-    if (!action || event.defaultPrevented) return;
-    if (document.querySelector("[role='dialog'], [role='alertdialog']")) {
-      if (action === "save" || action === "toggle-scope") event.preventDefault();
-      return;
-    }
-    if (action === "toggle-scope" && event.repeat) {
-      event.preventDefault();
-      return;
-    }
-    if (onShortcut(action)) event.preventDefault();
+    dispatchEditorShortcut(event, { editingText, hasSelectedText,
+      dialogOpen: Boolean(document.querySelector("[role='dialog'], [role='alertdialog']")),
+    }, onShortcut);
   });
   useEffect(() => {
     // Capture before sortable components consume keyboard events. Also works when focus is on body.

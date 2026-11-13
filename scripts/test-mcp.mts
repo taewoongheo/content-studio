@@ -89,7 +89,7 @@ try {
   assert.deepEqual([...tools].sort(), [
     "create_project", "production_query", "production_read_project", "production_preview_project", "production_read_images",
     "list_projects", "set_content_metadata", "open_project", "clone_project", "read_project",
-    "edit_project", "undo_project", "preview_slide", "preview_slides", "export_slideshow", "rename_project", "get_render_job", "cancel_render_job",
+    "edit_project", "undo_project", "preview_slide", "preview_slides", "inspect_slide_layout", "export_slideshow", "rename_project", "get_render_job", "cancel_render_job",
     "list_video_projects", "create_video_project", "open_video_project", "read_video_project", "edit_video_project", "undo_video_project", "redo_video_project", "rename_video_project", "clone_video_project", "preview_video", "export_video", "start_video_export", "close_video_project", "delete_video_project",
     "search_social_candidates", "list_account_posts", "read_social_post", "read_post_images", "get_collection_job",
     "resume_collection", "close_collection_session",
@@ -273,6 +273,13 @@ try {
     ] });
     const beforeColors = await call("preview_slide", { projectId: colorProject.id, slideId: "slide-1" });
     await page.goto(`${origin}/?job=${colorProject.id}`);
+    await page.getByRole("button", { name: "Color title Element 선택 및 레이어 순서 이동", exact: true }).waitFor();
+    const unselectedScopeCanceled = await page.evaluate(() => {
+      const event = new KeyboardEvent("keydown", { key: "d", code: "KeyD", metaKey: true, bubbles: true, cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+    assert.equal(unselectedScopeCanceled, true, "Cmd+D must not bookmark the page when no Element is selected");
     await page.getByRole("button", { name: "Color title Element 선택 및 레이어 순서 이동", exact: true }).click();
     const content = page.getByLabel("내용", { exact: true });
     const scopeToggle = page.getByRole("button", { name: "전체 적용", exact: true });
@@ -280,6 +287,23 @@ try {
     await scopeToggle.click();
     await page.getByRole("button", { name: "전체 적용", exact: true, pressed: true }).waitFor();
     await page.getByRole("button", { name: "전체 적용 · 6/6장", exact: true }).waitFor();
+    const placementButton = page.getByRole("button", { name: "Color title Element 선택", exact: true });
+    await page.getByRole("button", { name: "슬라이드 배경 선택", exact: true }).focus();
+    await page.keyboard.press("Tab");
+    assert.equal(await placementButton.evaluate(el => el === document.activeElement && el.matches(":focus-visible")), true);
+    const focusOutline = await placementButton.evaluate(el => {
+      const style = getComputedStyle(el);
+      return { width: style.outlineWidth, style: style.outlineStyle, offset: style.outlineOffset };
+    });
+    assert.deepEqual(focusOutline, { width: "2px", style: "solid", offset: "4px" },
+      "Selected placements must retain a distinct keyboard-focus outline outside the scope ring");
+    const selectionRing = page.getByRole("button", { name: "Color title Element 선택", exact: true }).locator("..");
+    assert.equal(await selectionRing.evaluate(el => getComputedStyle(el).getPropertyValue("--tw-ring-color").trim()),
+      await selectionRing.evaluate(el => getComputedStyle(el).getPropertyValue("--color-sky-400").trim()),
+      "All-slide scope must show a blue selection even for an Element currently placed on one slide");
+    await page.keyboard.press("Tab");
+    assert.equal(await placementButton.evaluate(el => el.matches(":focus-visible")), false);
+    console.log("PASS selected placement keyboard focus remains distinct from the blue scope ring");
     await content.press("Meta+d");
     await page.getByRole("button", { name: "전체 적용", exact: true, pressed: false }).waitFor();
     await content.press("Meta+d");

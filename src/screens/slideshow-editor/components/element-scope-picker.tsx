@@ -18,6 +18,9 @@ type Props = {
 export function ElementScopePicker({ currentSlideId, slides, selectedSlideIds, isBackground, disabled, onChange }: Props) {
   const [busy, setBusy] = useState(false);
   const allSelected = selectedSlideIds.length === slides.length;
+  const allSelectedClassName = allSelected && slides.length > 1
+    ? "border-sky-400 bg-sky-50 text-sky-700 hover:bg-sky-100 hover:text-sky-800 aria-expanded:bg-sky-100 aria-expanded:text-sky-800 dark:border-sky-400 dark:bg-sky-950 dark:text-sky-200 dark:hover:bg-sky-900 dark:aria-expanded:bg-sky-900 dark:aria-expanded:text-sky-200"
+    : undefined;
 
   async function choose(choice: ScopeChoice) {
     if (disabled || busy) return;
@@ -28,14 +31,14 @@ export function ElementScopePicker({ currentSlideId, slides, selectedSlideIds, i
 
   return (
     <div className="flex items-center gap-1.5">
-      <Button variant={allSelected ? "secondary" : "outline"} size="sm" disabled={disabled || busy || slides.length <= 1}
+      <Button variant="outline" className={allSelectedClassName} size="sm" disabled={disabled || busy || slides.length <= 1}
         aria-pressed={allSelected} aria-keyshortcuts="Meta+D Control+D"
         title="전체 적용 켜기/끄기 (⌘D / Ctrl+D)"
         onClick={() => void choose(allSelected ? "current" : "all")}>
         <Layers3 aria-hidden="true" /> 전체 적용
       </Button>
       <Popover.Root>
-        <Popover.Trigger render={<Button variant={allSelected ? "secondary" : "outline"} size="sm" disabled={disabled || busy} />}>
+        <Popover.Trigger render={<Button variant="outline" className={allSelectedClassName} size="sm" disabled={disabled || busy} />}>
           <Layers3 aria-hidden="true" /> {visualScopeLabel(selectedSlideIds.length, slides.length)}
         </Popover.Trigger>
         <Popover.Portal>
@@ -47,7 +50,7 @@ export function ElementScopePicker({ currentSlideId, slides, selectedSlideIds, i
                 : "변경·삭제는 Element가 있는 장에만 적용됩니다. 복제는 없는 장에도 추가합니다. 내용은 현재 장에서만 바뀝니다."}</Popover.Description>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <Button variant={selectedSlideIds.length === 1 ? "secondary" : "outline"} size="sm" disabled={disabled || busy} onClick={() => void choose("current")}>현재 장</Button>
-                <Button variant={allSelected ? "secondary" : "outline"} size="sm" disabled={disabled || busy} onClick={() => void choose("all")}>전체 장</Button>
+                <Button variant="outline" className={allSelectedClassName} size="sm" disabled={disabled || busy} onClick={() => void choose("all")}>전체 장</Button>
               </div>
               {slides.length > 1 && <div className="mt-3 space-y-0.5 border-t pt-2">
                 {slides.map((slide) => {
